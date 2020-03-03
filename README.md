@@ -1,2 +1,2 @@
 # Design_Opt_HALE
- MDO for HA
+ MDO for HALE aircraft.
