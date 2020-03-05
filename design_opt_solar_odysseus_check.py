@@ -18,17 +18,16 @@ from aerosandbox.library.airfoils import e216, generic_airfoil
 opti = cas.Opti()
 
 ##### Operating Parameters
-latitude = 26  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
-day_of_year = 244  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
+latitude = 35  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
+day_of_year = 0  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 min_altitude = 19812  # meters. 19812 m = 65000 ft.
 required_headway_per_day = 0#10e3  # meters
 days_to_simulate = 1
 propulsion_type = "solar"
-wing_type = "multi-wire"
+wing_type = "cantilevered"
 optimistic = False  # Are you optimistic (as opposed to conservative)? Replaces a variety of constants...
-allow_altitude_cycling = True
-allow_groundtrack_cycling = True
-minimize = "span" # "span" or "TOGW"
+allow_altitude_cycling = False
+allow_groundtrack_cycling = False
 
 ##### Simulation Parameters
 n_timesteps = 200  # Quick convergence testing indicates you can get bad analyses below 200 or so...
@@ -88,7 +87,7 @@ opti.subject_to([
 
 battery_capacity = 3600 * 40000 * opti.variable()  # Joules, not watt-hours!
 opti.set_initial(battery_capacity,
-                 3600 * 10000 if optimistic else 3600 * 20000
+                 3600 * 15000
                  )
 opti.subject_to([
     battery_capacity > 0
@@ -107,7 +106,7 @@ opti.subject_to([
 
 thrust_force = 1e2 * opti.variable(n_timesteps)
 opti.set_initial(thrust_force,
-                 60 if optimistic else 120
+                 100
                  )
 opti.subject_to([
     thrust_force > 0
@@ -150,7 +149,7 @@ mass_total_eff = cas.fmax(mass_total, min_mass)
 # Initialize any variables
 wing_span = 80 * opti.variable()
 opti.set_initial(wing_span,
-                 50
+                 70
                  )
 opti.subject_to([
     wing_span > 1,
@@ -159,7 +158,7 @@ opti.subject_to([
 
 wing_root_chord = 4 * opti.variable()
 opti.set_initial(wing_root_chord,
-                 4
+                 5
                  )
 opti.subject_to([
     wing_root_chord > 0.1,
@@ -176,13 +175,14 @@ opti.set_initial(boom_length, 26)
 opti.subject_to([
     boom_length > 23 # you can relax this, but you need to change the fuselage shape first
 ])
+# boom_length=23.1
 
 hstab_chord = 2
 vstab_chord = 2
 
 wing = asb.Wing(
     name="Main Wing",
-    x_le=(0.25 - 0.1) * wing_root_chord,  # Coordinates of the wing's leading edge # TODO make this a free parameter?
+    x_le=0.1 * wing_root_chord,  # Coordinates of the wing's leading edge # TODO make this a free parameter?
     y_le=0,  # Coordinates of the wing's leading edge
     z_le=0,  # Coordinates of the wing's leading edge
     symmetric=True,
@@ -290,7 +290,6 @@ fuse = asb.Fuselage(
         asb.FuselageXSec(x_c=11, radius=0.4),
         asb.FuselageXSec(x_c=12, radius=0.3),
         asb.FuselageXSec(x_c=13, radius=0.25),
-        asb.FuselageXSec(x_c=17, radius=0.25),
         asb.FuselageXSec(x_c=boom_length-6, radius=0.25),
         asb.FuselageXSec(x_c=boom_length-4, radius=0.25),
         asb.FuselageXSec(x_c=boom_length-3, radius=0.25),
@@ -492,7 +491,7 @@ else:
 
 solar_flux_on_horizontal = lib_solar.solar_flux_on_horizontal(latitude, day_of_year, time, scattering=True)
 
-realizable_solar_cell_efficiency = 0.205 if optimistic else 0.19  # This figure should take into account all temperature factors, MPPT losses,
+realizable_solar_cell_efficiency = 0.205  # This figure should take into account all temperature factors, MPPT losses,
 # spectral losses (different spectrum at altitude), multi-junction effects, etc.
 # Kevin Uleck gives this figure as 0.205.
 # This paper (https://core.ac.uk/download/pdf/159146935.pdf) gives it as 0.19.
@@ -516,19 +515,18 @@ area_solar = wing.area() * solar_area_fraction
 power_in = solar_power_flux * area_solar
 
 # Solar cell weight
-rho_solar_cells = 0.27 if optimistic else 0.32  # kg/m^2, solar cell area density.
+rho_solar_cells = 0.30  # kg/m^2, solar cell area density.
 # The solar_simple_demo model gives this as 0.27. Burton's model gives this as 0.30.
 # This paper (https://core.ac.uk/download/pdf/159146935.pdf) gives it as 0.42.
 # This paper (https://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=4144&context=facpub) effectively gives it as 0.3143.
 mass_solar_cells = rho_solar_cells * area_solar
 
 ### Battery calculations
-battery_specific_energy_Wh_kg = 550 if optimistic else 300  # Wh/kg.
+battery_specific_energy_Wh_kg = 300  # Wh/kg.
 # Burton's solar model uses 350, and public specs from Amprius seem to indicate that's possible.
-# Jim Anderson believes 550 Wh/kg is possible.
 # Odysseus had cells that were 265 Wh/kg.
 
-battery_pack_cell_percentage = 0.70  # What percent of the battery pack consists of the module, by weight?
+battery_pack_cell_percentage = 0.85  # What percent of the battery pack consists of the module, by weight?
 # Accounts for module HW, BMS, pack installation, etc.
 # Ed Lovelace (in his presentation) gives 70% as a state-of-the-art fraction.
 
@@ -550,25 +548,25 @@ mass_power_systems = mass_solar_cells + mass_battery_pack + mass_wires
 # propeller_diameter = 3.0
 propeller_diameter = opti.variable()
 opti.set_initial(propeller_diameter,
-                 3 if optimistic else 5
+                 2.5 if optimistic else 4.5
                  )
 opti.subject_to([
     propeller_diameter > 1,
     propeller_diameter < 10
 ])
 
-# n_propellers = 2
-n_propellers = opti.variable()
-opti.set_initial(n_propellers,
-                 2 if optimistic else 2
-                 )
-opti.subject_to([
-    n_propellers > 2,
-    n_propellers < 6
-])
+n_propellers = 6
+# n_propellers = opti.variable()
+# opti.set_initial(n_propellers,
+#                  2 if optimistic else 2
+#                  )
+# opti.subject_to([
+#     n_propellers > 2,
+#     n_propellers < 6
+# ])
 
 area_propulsive = cas.pi / 4 * propeller_diameter ** 2 * n_propellers
-propeller_efficiency = 0.85 if optimistic else 0.8  # a total WAG
+propeller_efficiency = 0.8  # a total WAG
 motor_efficiency = 0.856 / (0.856 + 0.026 + 0.018 + 0.004) # back-calculated from motor efficiency
 
 power_out_propulsion_shaft = lib_prop_prop.propeller_shaft_power_from_thrust(
@@ -602,16 +600,11 @@ mass_ESC = lib_prop_elec.mass_ESC(max_power=power_out_max)
 mass_propulsion = mass_motor_mounted + mass_propellers + mass_ESC
 
 # Account for payload power
-power_out_payload = cas.if_else(
-    solar_flux_on_horizontal > 1,
-    500,
-    150
-)
+power_out_payload = 250
 
 
 # Account for avionics power
-# power_out_avionics = 50 # a total guess
-power_out_avionics = 250 * ((0.4 + 2.0)/4.1) # back-calculated from Kevin Uleck's figures in MIT 16.82 presentation
+power_out_avionics = 250 * ((0.4 + 2.0)/4.1) # a total guess
 
 ### Power accounting
 power_out = power_out_propulsion + power_out_payload + power_out_avionics
@@ -620,7 +613,7 @@ power_out = power_out_propulsion + power_out_payload + power_out_avionics
 
 # region Weights
 # Payload mass
-mass_payload = 30
+mass_payload = 25
 
 # Structural mass
 n_ribs_wing = 100 * opti.variable()
@@ -673,17 +666,17 @@ mass_tail_boom = lib_mass_struct.mass_hpa_tail_boom(
     mean_tail_surface_area=hstab.area()
 )
 
-mass_structural = mass_wing + mass_hstab + mass_vstab + mass_tail_boom
-# mass_structural = mass_total * 0.31
+# mass_structural = mass_wing + mass_hstab + mass_vstab + mass_tail_boom
+mass_structural = mass_total * 0.31
 
-### Avionics
+# ### Avionics
 # mass_flight_computer = 0.038  # a total guess - Pixhawks are 38 grams?
 # mass_sensors = 0.120  # GPS receiver, pitot probe, IMU, etc.
 # mass_communications = 0.75  # a total guess
-# mass_servos = 6 * 0.100  # a total guess
+# mass_servos = 6 * 0.300  # a total guess
 #
 # mass_avionics = mass_flight_computer + mass_sensors + mass_communications + mass_servos
-mass_avionics = 3.7/3.8 * 25 # back-calculated from Kevin Uleck's figures in MIT 16.82 presentation
+mass_avionics = 3.7/3.8 * 25
 
 opti.subject_to([
     mass_total == mass_payload + mass_structural + mass_propulsion + mass_power_systems + mass_avionics,
@@ -732,8 +725,8 @@ net_power_trapz = trapz(net_power)
 
 ##### Winds
 
-wind_speed = lib_winds.wind_speed_conus_summer_99(y, latitude)
-wind_speed_midpoints = lib_winds.wind_speed_conus_summer_99(trapz(y), latitude)
+wind_speed = 29#lib_winds.wind_speed_conus_summer_99(y, latitude)
+wind_speed_midpoints = wind_speed#lib_winds.wind_speed_conus_summer_99(trapz(y), latitude)
 
 # Total
 opti.subject_to([
@@ -770,23 +763,21 @@ if not allow_altitude_cycling:
     opti.subject_to([
         y > y_fixed - 50,
         y < y_fixed + 50
+        # y == y_fixed
     ])
 # Prevent groundspeed loss
 if not allow_groundtrack_cycling:
     opti.subject_to([
         # airspeed / 2e1 > wind_speed / 2e1
+        # airspeed / 2e1 > 15 / 2e1
         x > 0
     ])
 
 # constraints_jacobian = cas.jacobian(opti.g, opti.x)
 
 ##### Add objective
-if minimize == "TOGW":
-    objective = mass_total / 3e2
-elif minimize == "span":
-    objective = wing_span / 1e2
-else:
-    raise ValueError("Bad value of minimize!")
+# objective = mass_total / 3e2
+objective = wing_span / 1e2
 
 ##### Add tippers
 things_to_slightly_minimize = (
@@ -924,4 +915,5 @@ if __name__ == "__main__":
     # ax.axis('equal')
     plt.pie(pie_values, labels=pie_labels, autopct='%1.1f%%', colors = colors)
     plt.title("Mass Breakdown")
+    # plt.savefig("bd.png", dpi=300)
     plt.show()
