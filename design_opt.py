@@ -4,6 +4,7 @@ import aerosandbox.library.aerodynamics as aero
 import aerosandbox.library.atmosphere as atmo
 from aerosandbox.casadi_helpers import *
 from aerosandbox.library import mass_structural as lib_mass_struct
+from aerosandbox.library import power_gas as lib_gas
 from aerosandbox.library import power_solar as lib_solar
 from aerosandbox.library import propulsion_electric as lib_prop_elec
 from aerosandbox.library import propulsion_propeller as lib_prop_prop
@@ -19,20 +20,24 @@ latitude = 26  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
 day_of_year = 244  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 min_altitude = 19812  # meters. 19812 m = 65000 ft.
 required_headway_per_day = 0  # 10e3  # meters
-days_to_simulate = 1
-propulsion_type = "solar"
+days_to_simulate = opti.parameter()
+opti.set_value(days_to_simulate, 1)
+propulsion_type = "gas"  # "solar" or "gas"
+enforce_periodicity = False  # Tip: turn this off when looking at gas models or models w/o trajectory opt. enabled.
 wing_type = "multi-wire"
 optimistic = False  # Are you optimistic (as opposed to conservative)? Replaces a variety of constants...
-allow_altitude_cycling = True
-allow_groundtrack_cycling = True
-minimize = "span"  # "span" or "TOGW"
+allow_trajectory_optimization = False
+minimize = "TOGW"  # "span" or "TOGW" or "endurance"
+mass_payload = 30
+wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
 
 ##### Simulation Parameters
-n_timesteps = 200  # Quick convergence testing indicates you can get bad analyses below 200 or so...
+n_timesteps = 200  # Only relevant if allow_trajectory_optimization is True.
+# Quick convergence testing indicates you can get bad analyses below 150 or so...
 
 ##### Optimization bounds
 min_speed = 1  # Specify a minimum speed - keeps the speed-gamma velocity parameterization from NaNing
-min_mass = 30  # Specify a minimum mass - keeps the optimization from NaNing.
+min_mass = 10  # Specify a minimum mass - keeps the optimization from NaNing.
 
 # endregion
 
@@ -72,27 +77,6 @@ opti.subject_to([
     flight_path_angle > -90,
 ])
 
-battery_stored_energy_nondim = 1 * opti.variable(n_timesteps)
-opti.set_initial(battery_stored_energy_nondim,
-                 0.5,
-                 # 0.5 + 0.5 * cas.sin(cas.linspace(0, 2 * cas.pi, n_timesteps)),
-                 )
-allowable_battery_depth_of_discharge = 0.9  # How much of the battery can you actually use?
-opti.subject_to([
-    battery_stored_energy_nondim > 0,
-    battery_stored_energy_nondim < allowable_battery_depth_of_discharge,
-])
-
-battery_capacity = 3600 * 40000 * opti.variable()  # Joules, not watt-hours!
-opti.set_initial(battery_capacity,
-                 3600 * 10000 if optimistic else 3600 * 20000
-                 )
-opti.subject_to([
-    battery_capacity > 0
-])
-battery_capacity_watt_hours = battery_capacity / 3600
-battery_stored_energy = battery_stored_energy_nondim * battery_capacity
-
 alpha = 4 * opti.variable(n_timesteps)
 opti.set_initial(alpha,
                  3
@@ -109,12 +93,6 @@ opti.set_initial(thrust_force,
 opti.subject_to([
     thrust_force > 0
 ])
-
-net_power = 1000 * opti.variable(n_timesteps)
-opti.set_initial(net_power,
-                 0,
-                 # 1000 * cas.cos(cas.linspace(0, 2 * cas.pi, n_timesteps))
-                 )
 
 net_accel_parallel = 1e-2 * opti.variable(n_timesteps)
 opti.set_initial(net_accel_parallel,
@@ -135,7 +113,18 @@ time = time_nondim * days_to_simulate * seconds_per_day
 
 # region Design Optimization Variables
 ##### Initialize design optimization variables (all units in base SI or derived units)
-mass_total = 3e2 * opti.variable()
+if propulsion_type == "solar":
+    mass_total = 3e2 * opti.variable()
+    max_mass_total = mass_total
+elif propulsion_type == "gas":
+    mass_total = 3e2 * opti.variable(n_timesteps)
+    max_mass_total = 3e2 * opti.variable()
+    opti.set_initial(max_mass_total, 300 if optimistic else 800)
+    opti.subject_to([
+        mass_total < max_mass_total
+    ])
+else:
+    raise ValueError("Bad value of propulsion_type!")
 opti.set_initial(mass_total,
                  300 if optimistic else 800
                  )
@@ -198,7 +187,7 @@ wing = asb.Wing(
         asb.WingXSec(  # Tip
             x_le=-wing_root_chord * 0.5 / 4,
             y_le=wing_span / 2,
-            z_le=4,
+            z_le=0,  # wing_span / 2 * cas.pi / 180 * 5,
             chord=wing_root_chord * 0.5,
             twist=0,
             airfoil=e216,
@@ -324,7 +313,8 @@ mu = atmo.get_viscosity_from_temperature(T)
 a = atmo.get_speed_of_sound_from_temperature(T)
 mach = airspeed / a
 g = 9.81  # gravitational acceleration, m/s^2
-q = 1 / 2 * rho * airspeed ** 2
+q = 1 / 2 * rho * airspeed ** 2  # Solar calculations
+solar_flux_on_horizontal = lib_solar.solar_flux_on_horizontal(latitude, day_of_year, time, scattering=True)
 # endregion
 
 # region Aerodynamics
@@ -485,63 +475,6 @@ else:
 
 # endregion
 
-# region Power Systems
-
-solar_flux_on_horizontal = lib_solar.solar_flux_on_horizontal(latitude, day_of_year, time, scattering=True)
-
-realizable_solar_cell_efficiency = 0.205 if optimistic else 0.19  # This figure should take into account all temperature factors, MPPT losses,
-# spectral losses (different spectrum at altitude), multi-junction effects, etc.
-# Kevin Uleck gives this figure as 0.205.
-# This paper (https://core.ac.uk/download/pdf/159146935.pdf) gives it as 0.19.
-
-# Total cell power flux
-solar_power_flux = (
-        solar_flux_on_horizontal *
-        realizable_solar_cell_efficiency
-)
-
-solar_area_fraction = opti.variable()
-opti.set_initial(solar_area_fraction,
-                 0.25
-                 )
-opti.subject_to([
-    solar_area_fraction > 0,
-    solar_area_fraction < 1,
-])
-
-area_solar = wing.area() * solar_area_fraction
-power_in = solar_power_flux * area_solar
-
-# Solar cell weight
-rho_solar_cells = 0.27 if optimistic else 0.32  # kg/m^2, solar cell area density.
-# The solar_simple_demo model gives this as 0.27. Burton's model gives this as 0.30.
-# This paper (https://core.ac.uk/download/pdf/159146935.pdf) gives it as 0.42.
-# This paper (https://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=4144&context=facpub) effectively gives it as 0.3143.
-mass_solar_cells = rho_solar_cells * area_solar
-
-### Battery calculations
-battery_specific_energy_Wh_kg = 550 if optimistic else 300  # Wh/kg.
-# Burton's solar model uses 350, and public specs from Amprius seem to indicate that's possible.
-# Jim Anderson believes 550 Wh/kg is possible.
-# Odysseus had cells that were 265 Wh/kg.
-
-battery_pack_cell_percentage = 0.70  # What percent of the battery pack consists of the module, by weight?
-# Accounts for module HW, BMS, pack installation, etc.
-# Ed Lovelace (in his presentation) gives 70% as a state-of-the-art fraction.
-
-mass_battery_pack = lib_prop_elec.mass_battery_pack(
-    battery_capacity_Wh=battery_capacity_watt_hours,
-    battery_cell_specific_energy_Wh_kg=battery_specific_energy_Wh_kg,
-    battery_pack_cell_fraction=battery_pack_cell_percentage
-)
-
-mass_wires = 0.015 * (wing.span() / 2) * ((battery_capacity / 86400 * 2) / 3000)  # a guess from 10 AWG aluminum wire
-
-# Total system mass
-mass_power_systems = mass_solar_cells + mass_battery_pack + mass_wires
-
-# endregion
-
 # region Propulsion
 ### Propeller calculations
 # propeller_diameter = 3.0
@@ -614,9 +547,138 @@ power_out = power_out_propulsion + power_out_payload + power_out_avionics
 
 # endregion
 
+
+if propulsion_type == "solar":
+    # region Solar Power Systems
+
+    # Battery design variables
+    net_power = 1000 * opti.variable(n_timesteps)
+    opti.set_initial(net_power,
+                     0,
+                     # 1000 * cas.cos(cas.linspace(0, 2 * cas.pi, n_timesteps))
+                     )
+
+    battery_stored_energy_nondim = 1 * opti.variable(n_timesteps)
+    opti.set_initial(battery_stored_energy_nondim,
+                     0.5,
+                     # 0.5 + 0.5 * cas.sin(cas.linspace(0, 2 * cas.pi, n_timesteps)),
+                     )
+    allowable_battery_depth_of_discharge = 0.9  # How much of the battery can you actually use?
+    opti.subject_to([
+        battery_stored_energy_nondim > 0,
+        battery_stored_energy_nondim < allowable_battery_depth_of_discharge,
+    ])
+
+    battery_capacity = 3600 * 40000 * opti.variable()  # Joules, not watt-hours!
+    opti.set_initial(battery_capacity,
+                     3600 * 10000 if optimistic else 3600 * 20000
+                     )
+    opti.subject_to([
+        battery_capacity > 0
+    ])
+    battery_capacity_watt_hours = battery_capacity / 3600
+    battery_stored_energy = battery_stored_energy_nondim * battery_capacity
+
+    ### Solar calculations
+
+    realizable_solar_cell_efficiency = 0.205 if optimistic else 0.19  # This figure should take into account all temperature factors, MPPT losses,
+    # spectral losses (different spectrum at altitude), multi-junction effects, etc.
+    # Kevin Uleck gives this figure as 0.205.
+    # This paper (https://core.ac.uk/download/pdf/159146935.pdf) gives it as 0.19.
+
+    # Total cell power flux
+    solar_power_flux = (
+            solar_flux_on_horizontal *
+            realizable_solar_cell_efficiency
+    )
+
+    solar_area_fraction = opti.variable()
+    opti.set_initial(solar_area_fraction,
+                     0.25
+                     )
+    opti.subject_to([
+        solar_area_fraction > 0,
+        solar_area_fraction < 1,
+    ])
+
+    area_solar = wing.area() * solar_area_fraction
+    power_in = solar_power_flux * area_solar
+
+    # Solar cell weight
+    rho_solar_cells = 0.27 if optimistic else 0.32  # kg/m^2, solar cell area density.
+    # The solar_simple_demo model gives this as 0.27. Burton's model gives this as 0.30.
+    # This paper (https://core.ac.uk/download/pdf/159146935.pdf) gives it as 0.42.
+    # This paper (https://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=4144&context=facpub) effectively gives it as 0.3143.
+    mass_solar_cells = rho_solar_cells * area_solar
+
+    ### Battery calculations
+    battery_specific_energy_Wh_kg = opti.parameter()
+    opti.set_value(battery_specific_energy_Wh_kg, 550 if optimistic else 265)
+    # Burton's solar model uses 350, and public specs from Amprius seem to indicate that's possible.
+    # Jim Anderson believes 550 Wh/kg is possible.
+    # Odysseus had cells that were 265 Wh/kg.
+
+    battery_pack_cell_percentage = 0.70  # What percent of the battery pack consists of the module, by weight?
+    # Accounts for module HW, BMS, pack installation, etc.
+    # Ed Lovelace (in his presentation) gives 70% as a state-of-the-art fraction.
+
+    mass_battery_pack = lib_prop_elec.mass_battery_pack(
+        battery_capacity_Wh=battery_capacity_watt_hours,
+        battery_cell_specific_energy_Wh_kg=battery_specific_energy_Wh_kg,
+        battery_pack_cell_fraction=battery_pack_cell_percentage
+    )
+
+    mass_wires = 0.015 * (wing.span() / 2) * (
+            (battery_capacity / 86400 * 2) / 3000)  # a guess from 10 AWG aluminum wire
+
+    # Total system mass
+    mass_power_systems = mass_solar_cells + mass_battery_pack + mass_wires
+
+    # endregion
+elif propulsion_type == "gas":
+    # region Gas Power Systems
+
+    # Gas design variables
+    mass_fuel_nondim = 1 * opti.variable(n_timesteps)  # What fraction of the fuel tank is filled at timestep i?
+    opti.set_initial(mass_fuel_nondim,
+                     cas.linspace(1, 0, n_timesteps)
+                     )
+    opti.subject_to([
+        mass_fuel_nondim > 0,
+        mass_fuel_nondim < 1,
+    ])
+    mass_fuel_max = 100 * opti.variable()  # How many kilograms of fuel in a full tank?
+    opti.set_initial(mass_fuel_max,
+                     100
+                     )
+    opti.subject_to([
+        mass_fuel_max > 0
+    ])
+    mass_fuel = mass_fuel_nondim * mass_fuel_max
+
+    # Gas engine
+    mass_gas_engine = lib_gas.mass_gas_engine(power_out_max)
+    mass_alternator = 0  # for now! TODO fix this!
+
+    # Assume you're always providing power, with no battery storage.
+    power_in = power_out
+
+    # How much fuel do you burn?
+    fuel_specific_energy = 43.02e6  # J/kg, for Jet A. Source: https://en.wikipedia.org/wiki/Jet_fuel#Jet_A
+    gas_engine_efficiency = 0.24 if optimistic else 0.15  # Fuel-to-alternator efficiency.
+    # Taken from 3/5/20 propulsion team WAG in MIT 16.82. Numbers given: 24%/19%/15% for opti./med./consv. assumptions.
+
+    fuel_burn_rate = power_in / fuel_specific_energy / gas_engine_efficiency  # kg/s
+
+    mass_power_systems = mass_gas_engine + mass_alternator + mass_fuel
+
+    # endregion
+else:
+    raise ValueError("Bad value of propulsion_type!")
+
 # region Weights
 # Payload mass
-mass_payload = 30
+# mass_payload = # defined above
 
 # Structural mass
 n_ribs_wing = 100 * opti.variable()
@@ -627,7 +689,7 @@ opti.subject_to([
 mass_wing = lib_mass_struct.mass_hpa_wing(
     span=wing.span(),
     chord=wing.mean_geometric_chord(),
-    vehicle_mass=mass_total,
+    vehicle_mass=max_mass_total,
     n_ribs=n_ribs_wing,
     n_wing_sections=1,
     ultimate_load_factor=1.75,
@@ -705,31 +767,28 @@ net_force_perpendicular_calc = (
 opti.subject_to([
     net_accel_parallel / 1e-2 == net_force_parallel_calc / mass_total_eff / 1e-2,
     net_accel_perpendicular / 1e-2 == net_force_perpendicular_calc / mass_total_eff / 1e-2,
-    net_power / 5e3 < (power_in - power_out) / 5e3,
 ])
 
 speeddot = net_accel_parallel
 gammadot = (net_accel_perpendicular * 1 / cas.fmax(min_speed, airspeed)) * 180 / np.pi
+
+trapz = lambda x: (x[1:] + x[:-1]) / 2
 
 dt = cas.diff(time)
 dx = cas.diff(x)
 dy = cas.diff(y)
 dspeed = cas.diff(airspeed)
 dgamma = cas.diff(flight_path_angle)
-dbattery_stored_energy_nondim = cas.diff(battery_stored_energy_nondim)
-
-trapz = lambda x: (x[1:] + x[:-1]) / 2
 
 xdot_trapz = trapz(airspeed * cosd(flight_path_angle))
 ydot_trapz = trapz(airspeed * sind(flight_path_angle))
 speeddot_trapz = trapz(speeddot)
 gammadot_trapz = trapz(gammadot)
-net_power_trapz = trapz(net_power)
 
 ##### Winds
 
-wind_speed = lib_winds.wind_speed_conus_summer_99(y, latitude)
-wind_speed_midpoints = lib_winds.wind_speed_conus_summer_99(trapz(y), latitude)
+wind_speed = wind_speed_func(y)
+wind_speed_midpoints = wind_speed_func(trapz(y))
 
 # Total
 opti.subject_to([
@@ -737,21 +796,45 @@ opti.subject_to([
     dy / 1e2 == ydot_trapz * dt / 1e2,
     dspeed / 1e0 == speeddot_trapz * dt / 1e0,
     dgamma / 1e-1 == gammadot_trapz * dt / 1e-1,
-    dbattery_stored_energy_nondim / 1e-2 == (net_power_trapz / battery_capacity) * dt / 1e-2,
 ])
+
+# Powertrain-specific
+if propulsion_type == "solar":
+    opti.subject_to([
+        net_power / 5e3 < (power_in - power_out) / 5e3,
+    ])
+    net_power_trapz = trapz(net_power)
+
+    dbattery_stored_energy_nondim = cas.diff(battery_stored_energy_nondim)
+    opti.subject_to([
+        dbattery_stored_energy_nondim / 1e-2 == (net_power_trapz / battery_capacity) * dt / 1e-2,
+    ])
+    opti.subject_to([
+        battery_stored_energy_nondim[-1] > battery_stored_energy_nondim[0],
+    ])
+elif propulsion_type == "gas":
+    pass  # TODO finish
+    dmass_fuel_nondim = cas.diff(mass_fuel_nondim)
+    opti.subject_to([
+        # dmass_fuel_nondim / 1e-2 == -(trapz(fuel_burn_rate) / mass_fuel_max) * dt / 1e-2
+        cas.diff(mass_fuel) == -(trapz(fuel_burn_rate)) * dt
+    ])
+else:
+    raise ValueError("Bad value of propulsion_type!")
+
 # endregion
 
 # region Finalize Optimization Problem
 ##### Add periodic constraints
-opti.subject_to([
-    x[-1] / 1e5 > (x[0] + days_to_simulate * required_headway_per_day) / 1e5,
-    y[-1] / 1e4 > y[0] / 1e4,
-    battery_stored_energy_nondim[-1] > battery_stored_energy_nondim[0],
-    airspeed[-1] / 2e1 > airspeed[0] / 2e1,
-    flight_path_angle[-1] == flight_path_angle[0],
-    alpha[-1] == alpha[0],
-    thrust_force[-1] / 1e2 == thrust_force[0] / 1e2,
-])
+if enforce_periodicity:
+    opti.subject_to([
+        x[-1] / 1e5 > (x[0] + days_to_simulate * required_headway_per_day) / 1e5,
+        y[-1] / 1e4 > y[0] / 1e4,
+        airspeed[-1] / 2e1 > airspeed[0] / 2e1,
+        flight_path_angle[-1] == flight_path_angle[0],
+        alpha[-1] == alpha[0],
+        thrust_force[-1] / 1e2 == thrust_force[0] / 1e2,
+    ])
 
 ##### Add initial state constraints
 opti.subject_to([  # Air Launch
@@ -759,28 +842,32 @@ opti.subject_to([  # Air Launch
 ])
 
 ##### Optional constraints
-# Prevent altitude cycling
-if not allow_altitude_cycling:
-    y_fixed = min_altitude * opti.variable()
-    opti.set_initial(y_fixed, min_altitude)
+if not allow_trajectory_optimization:
+    # Prevent altitude cycling
+    #     y_fixed = min_altitude * opti.variable()
+    #     opti.set_initial(y_fixed, min_altitude)
+    #     opti.subject_to([
+    #         y > y_fixed - 100,
+    #         y < y_fixed + 100
+    #     ])
     opti.subject_to([
-        y > y_fixed - 50,
-        y < y_fixed + 50
+        flight_path_angle / 100 == 0
     ])
-# Prevent groundspeed loss
-if not allow_groundtrack_cycling:
+    # Prevent groundspeed loss
     opti.subject_to([
-        # airspeed / 2e1 > wind_speed / 2e1
-        x > 0
+        # x > 0
+        airspeed > wind_speed
     ])
 
 # constraints_jacobian = cas.jacobian(opti.g, opti.x)
 
 ##### Add objective
 if minimize == "TOGW":
-    objective = mass_total / 3e2
+    objective = max_mass_total / 3e2
 elif minimize == "span":
     objective = wing_span / 1e2
+elif minimize == "endurance":
+    objective = -days_to_simulate / 1
 else:
     raise ValueError("Bad value of minimize!")
 
@@ -790,14 +877,14 @@ things_to_slightly_minimize = (
         - x[-1] / 1e6
         + n_propellers / 1
         + propeller_diameter / 2
-        + battery_capacity_watt_hours / 30000
-        + solar_area_fraction / 0.5
+    # + battery_capacity_watt_hours / 30000
+    # + solar_area_fraction / 0.5
 )
 
 # Dewiggle
 penalty = 0
 penalty_denominator = n_timesteps
-penalty += cas.sum1(cas.diff(net_power / 3000) ** 2) / penalty_denominator
+penalty += cas.sum1(cas.diff(thrust_force / 100) ** 2) / penalty_denominator
 penalty += cas.sum1(cas.diff(net_accel_parallel / 1) ** 2) / penalty_denominator
 penalty += cas.sum1(cas.diff(net_accel_perpendicular / 1) ** 2) / penalty_denominator
 penalty += cas.sum1(cas.diff(airspeed / 30) ** 2) / penalty_denominator
@@ -851,9 +938,12 @@ if __name__ == "__main__":
         ap_sols = [ap_sol.substitute_solution(sol) for ap_sol in ap_sols]
 
     # Find dusk and dawn
-    si = sol.value(solar_flux_on_horizontal)
-    dusk = np.argwhere(si[:round(len(si) / 2)] < 1)[0, 0]
-    dawn = np.argwhere(si[round(len(si) / 2):] > 1)[0, 0] + round(len(si) / 2)
+    try:
+        si = sol.value(solar_flux_on_horizontal)
+        dusk = np.argwhere(si[:round(len(si) / 2)] < 1)[0, 0]
+        dawn = np.argwhere(si[round(len(si) / 2):] > 1)[0, 0] + round(len(si) / 2)
+    except IndexError:
+        print("Could not find dusk and dawn - you likely have a shorter-than-one-day mission.")
 
     # # region Text Postprocessing & Utilities
     # ##### Text output
@@ -864,7 +954,7 @@ if __name__ == "__main__":
 
     print_title("Key Results")
     outs([
-        "mass_total",
+        "max_mass_total",
         "wing_span",
         "wing_root_chord"
     ])
@@ -896,8 +986,10 @@ if __name__ == "__main__":
     import matplotlib.style as style
     import plotly.express as px
     import plotly.graph_objects as go
+    import dash
+    import seaborn as sns
+    sns.set(font_scale=1)
 
-    style.use("seaborn")
 
     pie_labels = [
         "Payload",
@@ -910,15 +1002,12 @@ if __name__ == "__main__":
         sol.value(mass_payload),
         sol.value(mass_structural),
         sol.value(mass_propulsion),
-        sol.value(mass_power_systems),
+        sol.value(cas.mmax(mass_power_systems)),
         sol.value(mass_avionics),
     ]
     # colors = plt.cm.rainbow(np.linspace(0,1,5))
     # colors = plt.cm.tab20c(np.linspace(0,1,5))
     colors = plt.cm.Set2(np.arange(5))
-    # fig, ax = plt.subplots()
-    # ax.pie(pie_values, labels=pie_labels, autopct='%1.1f%%', colors = colors)
-    # ax.axis('equal')
     plt.pie(pie_values, labels=pie_labels, autopct='%1.1f%%', colors=colors)
-    plt.title("Mass Breakdown")
+    plt.title("Mass Breakdown at Takeoff")
     plt.show()
