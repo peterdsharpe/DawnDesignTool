@@ -22,13 +22,14 @@ min_altitude = 19812  # meters. 19812 m = 65000 ft.
 required_headway_per_day = 0  # 10e3  # meters
 days_to_simulate = opti.parameter()
 opti.set_value(days_to_simulate, 1)
-propulsion_type = "gas"  # "solar" or "gas"
-enforce_periodicity = False  # Tip: turn this off when looking at gas models or models w/o trajectory opt. enabled.
+propulsion_type = "solar"  # "solar" or "gas"
+enforce_periodicity = True  # Tip: turn this off when looking at gas models or models w/o trajectory opt. enabled.
 wing_type = "multi-wire"
 optimistic = False  # Are you optimistic (as opposed to conservative)? Replaces a variety of constants...
-allow_trajectory_optimization = False
+allow_trajectory_optimization = True
 minimize = "TOGW"  # "span" or "TOGW" or "endurance"
-mass_payload = 30
+mass_payload = opti.parameter()
+opti.set_value(mass_payload, 30)
 wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
 
 ##### Simulation Parameters
@@ -37,7 +38,6 @@ n_timesteps = 200  # Only relevant if allow_trajectory_optimization is True.
 
 ##### Optimization bounds
 min_speed = 1  # Specify a minimum speed - keeps the speed-gamma velocity parameterization from NaNing
-min_mass = 10  # Specify a minimum mass - keeps the optimization from NaNing.
 
 # endregion
 
@@ -68,6 +68,10 @@ opti.subject_to([
     airspeed > min_speed
 ])
 
+# log_airspeed = opti.variable(n_timesteps) # Log-transformed airspeed
+# opti.set_initial(log_airspeed, cas.log(20))
+# airspeed = cas.exp(log_airspeed)
+
 flight_path_angle = 1e0 * opti.variable(n_timesteps)
 opti.set_initial(flight_path_angle,
                  0
@@ -88,7 +92,7 @@ opti.subject_to([
 
 thrust_force = 1e2 * opti.variable(n_timesteps)
 opti.set_initial(thrust_force,
-                 60 if optimistic else 120
+                 100 if optimistic else 150
                  )
 opti.subject_to([
     thrust_force > 0
@@ -114,24 +118,22 @@ time = time_nondim * days_to_simulate * seconds_per_day
 # region Design Optimization Variables
 ##### Initialize design optimization variables (all units in base SI or derived units)
 if propulsion_type == "solar":
-    mass_total = 3e2 * opti.variable()
+    log_mass_total = opti.variable()
+    opti.set_initial(log_mass_total, cas.log(300) if optimistic else cas.log(700))
+    mass_total = cas.exp(log_mass_total)
     max_mass_total = mass_total
 elif propulsion_type == "gas":
-    mass_total = 3e2 * opti.variable(n_timesteps)
-    max_mass_total = 3e2 * opti.variable()
-    opti.set_initial(max_mass_total, 300 if optimistic else 800)
+    log_mass_total = opti.variable(n_timesteps)
+    opti.set_initial(log_mass_total, cas.log(300) if optimistic else cas.log(700))
+    mass_total = cas.exp(log_mass_total)
+    log_max_mass_total = opti.variable()
+    opti.set_initial(log_max_mass_total, cas.log(300) if optimistic else cas.log(700))
+    max_mass_total = cas.exp(log_max_mass_total)
     opti.subject_to([
-        mass_total < max_mass_total
+        log_mass_total < log_max_mass_total
     ])
 else:
     raise ValueError("Bad value of propulsion_type!")
-opti.set_initial(mass_total,
-                 300 if optimistic else 800
-                 )
-opti.subject_to([
-    mass_total > min_mass
-])
-mass_total_eff = cas.fmax(mass_total, min_mass)
 
 # Initialize any variables
 wing_span = 80 * opti.variable()
@@ -598,14 +600,14 @@ if propulsion_type == "solar":
                      )
     opti.subject_to([
         solar_area_fraction > 0,
-        solar_area_fraction < 1,
+        solar_area_fraction < 0.80, # TODO check
     ])
 
     area_solar = wing.area() * solar_area_fraction
     power_in = solar_power_flux * area_solar
 
     # Solar cell weight
-    rho_solar_cells = 0.27 if optimistic else 0.32  # kg/m^2, solar cell area density.
+    rho_solar_cells = 0.32  # kg/m^2, solar cell area density.
     # The solar_simple_demo model gives this as 0.27. Burton's model gives this as 0.30.
     # This paper (https://core.ac.uk/download/pdf/159146935.pdf) gives it as 0.42.
     # This paper (https://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=4144&context=facpub) effectively gives it as 0.3143.
@@ -613,7 +615,7 @@ if propulsion_type == "solar":
 
     ### Battery calculations
     battery_specific_energy_Wh_kg = opti.parameter()
-    opti.set_value(battery_specific_energy_Wh_kg, 550 if optimistic else 265)
+    opti.set_value(battery_specific_energy_Wh_kg, 550 if optimistic else 300)
     # Burton's solar model uses 350, and public specs from Amprius seem to indicate that's possible.
     # Jim Anderson believes 550 Wh/kg is possible.
     # Odysseus had cells that were 265 Wh/kg.
@@ -628,8 +630,14 @@ if propulsion_type == "solar":
         battery_pack_cell_fraction=battery_pack_cell_percentage
     )
 
-    mass_wires = 0.015 * (wing.span() / 2) * (
-            (battery_capacity / 86400 * 2) / 3000)  # a guess from 10 AWG aluminum wire
+    battery_voltage = 3.7 * 20
+
+    mass_wires = lib_prop_elec.mass_wires(
+        wire_length = wing.span()/2,
+        max_current = power_out_max / battery_voltage,
+        allowable_voltage_drop= battery_voltage * 0.0225,
+        material="aluminum"
+    )
 
     # Total system mass
     mass_power_systems = mass_solar_cells + mass_battery_pack + mass_wires
@@ -765,8 +773,8 @@ net_force_perpendicular_calc = (
 )
 
 opti.subject_to([
-    net_accel_parallel / 1e-2 == net_force_parallel_calc / mass_total_eff / 1e-2,
-    net_accel_perpendicular / 1e-2 == net_force_perpendicular_calc / mass_total_eff / 1e-2,
+    net_accel_parallel / 1e-2 == net_force_parallel_calc / mass_total / 1e-2,
+    net_accel_perpendicular / 1e-2 == net_force_perpendicular_calc / mass_total / 1e-2,
 ])
 
 speeddot = net_accel_parallel
