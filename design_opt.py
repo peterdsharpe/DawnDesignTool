@@ -31,6 +31,8 @@ minimize = "TOGW"  # "span" or "TOGW" or "endurance"
 mass_payload = opti.parameter()
 opti.set_value(mass_payload, 30)
 wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
+battery_specific_energy_Wh_kg = opti.parameter()
+opti.set_value(battery_specific_energy_Wh_kg, 300)
 
 ##### Simulation Parameters
 n_timesteps = 200  # Only relevant if allow_trajectory_optimization is True.
@@ -614,8 +616,8 @@ if propulsion_type == "solar":
     mass_solar_cells = rho_solar_cells * area_solar
 
     ### Battery calculations
-    battery_specific_energy_Wh_kg = opti.parameter()
-    opti.set_value(battery_specific_energy_Wh_kg, 550 if optimistic else 300)
+    # battery_specific_energy_Wh_kg = opti.parameter()
+    # opti.set_value(battery_specific_energy_Wh_kg, 550 if optimistic else 300)
     # Burton's solar model uses 350, and public specs from Amprius seem to indicate that's possible.
     # Jim Anderson believes 550 Wh/kg is possible.
     # Odysseus had cells that were 265 Wh/kg.
