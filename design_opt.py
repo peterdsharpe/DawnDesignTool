@@ -24,10 +24,11 @@ days_to_simulate = opti.parameter()
 opti.set_value(days_to_simulate, 1)
 propulsion_type = "solar"  # "solar" or "gas"
 enforce_periodicity = True  # Tip: turn this off when looking at gas models or models w/o trajectory opt. enabled.
-wing_type = "multi-wire"
+n_booms = 3  # 1, 2, or 3
+structural_load_factor = 2
 optimistic = False  # Are you optimistic (as opposed to conservative)? Replaces a variety of constants...
 allow_trajectory_optimization = True
-minimize = "TOGW"  # "span" or "TOGW" or "endurance"
+minimize = "span"  # "span" or "TOGW" or "endurance"
 mass_payload = opti.parameter()
 opti.set_value(mass_payload, 30)
 wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
@@ -121,15 +122,15 @@ time = time_nondim * days_to_simulate * seconds_per_day
 ##### Initialize design optimization variables (all units in base SI or derived units)
 if propulsion_type == "solar":
     log_mass_total = opti.variable()
-    opti.set_initial(log_mass_total, cas.log(300) if optimistic else cas.log(700))
+    opti.set_initial(log_mass_total, cas.log(300) if optimistic else cas.log(800))
     mass_total = cas.exp(log_mass_total)
     max_mass_total = mass_total
 elif propulsion_type == "gas":
     log_mass_total = opti.variable(n_timesteps)
-    opti.set_initial(log_mass_total, cas.log(300) if optimistic else cas.log(700))
+    opti.set_initial(log_mass_total, cas.log(300) if optimistic else cas.log(800))
     mass_total = cas.exp(log_mass_total)
     log_max_mass_total = opti.variable()
-    opti.set_initial(log_max_mass_total, cas.log(300) if optimistic else cas.log(700))
+    opti.set_initial(log_max_mass_total, cas.log(300) if optimistic else cas.log(800))
     max_mass_total = cas.exp(log_max_mass_total)
     opti.subject_to([
         log_mass_total < log_max_mass_total
@@ -138,9 +139,9 @@ else:
     raise ValueError("Bad value of propulsion_type!")
 
 # Initialize any variables
-wing_span = 80 * opti.variable()
+wing_span = 60 * opti.variable()
 opti.set_initial(wing_span,
-                 50
+                 80
                  )
 opti.subject_to([
     wing_span > 1,
@@ -377,25 +378,25 @@ if aerodynamics_type == "buildup":
 
     drag_vstab = drag_vstab_profile
 
-    # lift wires
-    if wing_type == "cantilevered":
-        n_lift_wires = 0
-    elif wing_type == "one-wire":
-        n_lift_wires = 1
-    elif wing_type == "multi-wire":
-        n_lift_wires = 2
-    else:
-        raise ValueError("Bad value of wing_type!")
-
-    lift_wire_diameter = 1.8034e-3  # 0.071" dia. lift wire (from Daedalus)
-    lift_wire_Re = rho / mu * airspeed * lift_wire_diameter
-    lift_wire_Cd = aero.Cd_cylinder(lift_wire_Re)
-
-    drag_lift_wires = n_lift_wires * lift_wire_Cd * q * wing.span() / 2 * lift_wire_diameter
+    # # lift wires
+    # if wing_type == "cantilevered":
+    #     n_lift_wires = 0
+    # elif wing_type == "one-wire":
+    #     n_lift_wires = 1
+    # elif wing_type == "multi-wire":
+    #     n_lift_wires = 2
+    # else:
+    #     raise ValueError("Bad value of wing_type!")
+    #
+    # lift_wire_diameter = 1.8034e-3  # 0.071" dia. lift wire (from Daedalus)
+    # lift_wire_Re = rho / mu * airspeed * lift_wire_diameter
+    # lift_wire_Cd = aero.Cd_cylinder(lift_wire_Re)
+    #
+    # drag_lift_wires = n_lift_wires * lift_wire_Cd * q * wing.span() / 2 * lift_wire_diameter
 
     # Force totals
     lift_force = lift_fuse + lift_wing + lift_hstab
-    drag_force = drag_fuse + drag_wing + drag_hstab + drag_vstab + drag_lift_wires
+    drag_force = drag_fuse + drag_wing + drag_hstab + drag_vstab  # + drag_lift_wires
 
     # Moment totals
     m = (
@@ -602,7 +603,7 @@ if propulsion_type == "solar":
                      )
     opti.subject_to([
         solar_area_fraction > 0,
-        solar_area_fraction < 0.80, # TODO check
+        solar_area_fraction < 0.80,  # TODO check
     ])
 
     area_solar = wing.area() * solar_area_fraction
@@ -635,9 +636,9 @@ if propulsion_type == "solar":
     battery_voltage = 3.7 * 20
 
     mass_wires = lib_prop_elec.mass_wires(
-        wire_length = wing.span()/2,
-        max_current = power_out_max / battery_voltage,
-        allowable_voltage_drop= battery_voltage * 0.0225,
+        wire_length=wing.span() / 2,
+        max_current=power_out_max / battery_voltage,
+        allowable_voltage_drop=battery_voltage * 0.0225,
         material="aluminum"
     )
 
@@ -691,21 +692,51 @@ else:
 # mass_payload = # defined above
 
 # Structural mass
+
 n_ribs_wing = 100 * opti.variable()
 opti.set_initial(n_ribs_wing, 100)
 opti.subject_to([
     n_ribs_wing > 0,
 ])
-mass_wing = lib_mass_struct.mass_hpa_wing(
+# mass_wing_secondary = lib_mass_struct.mass_hpa_wing(
+#     span=wing.span(),
+#     chord=wing.mean_geometric_chord(),
+#     vehicle_mass=max_mass_total,
+#     n_ribs=n_ribs_wing,
+#     n_wing_sections=1,
+#     ultimate_load_factor=structural_load_factor,
+#     type=wing_type,
+#     t_over_c=0.10,
+#     include_spar=False,
+# )
+# from spar_mass import solar1_spar_mass_single_boom
+#
+# mass_wing_primary = solar1_spar_mass_single_boom(
+#     opti,
+#     wing_span,
+#     mass_total,
+# ) / 5
+# mass_wing = mass_wing_primary + mass_wing_secondary
+
+mass_wing_primary = lib_mass_struct.mass_wing_spar(
+    span=wing.span(),
+    mass_supported=max_mass_total, # technically the spar doesn't really have to support its own weight (since it's roughly spanloaded), so this is conservative
+    ultimate_load_factor=structural_load_factor,
+    n_booms=n_booms
+)
+
+mass_wing_secondary = lib_mass_struct.mass_hpa_wing(
     span=wing.span(),
     chord=wing.mean_geometric_chord(),
     vehicle_mass=max_mass_total,
     n_ribs=n_ribs_wing,
     n_wing_sections=1,
-    ultimate_load_factor=1.75,
-    type=wing_type,
-    t_over_c=0.10
+    ultimate_load_factor=structural_load_factor,
+    t_over_c=0.10,
+    include_spar=False,
 )
+
+mass_wing = mass_wing_primary + mass_wing_secondary
 
 q_maneuver = 1 / 2 * atmo.get_density_at_altitude(min_altitude) * 15 ** 2  # TODO make this more accurate
 
@@ -998,8 +1029,8 @@ if __name__ == "__main__":
     import plotly.graph_objects as go
     import dash
     import seaborn as sns
-    sns.set(font_scale=1)
 
+    sns.set(font_scale=1)
 
     pie_labels = [
         "Payload",
