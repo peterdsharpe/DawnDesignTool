@@ -25,7 +25,7 @@ opti.set_value(days_to_simulate, 1)
 propulsion_type = "solar"  # "solar" or "gas"
 enforce_periodicity = True  # Tip: turn this off when looking at gas models or models w/o trajectory opt. enabled.
 n_booms = 3  # 1, 2, or 3
-structural_load_factor = 2
+structural_load_factor = 3
 optimistic = False  # Are you optimistic (as opposed to conservative)? Replaces a variety of constants...
 allow_trajectory_optimization = True
 minimize = "span"  # "span" or "TOGW" or "endurance"
@@ -33,7 +33,7 @@ mass_payload = opti.parameter()
 opti.set_value(mass_payload, 30)
 wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
 battery_specific_energy_Wh_kg = opti.parameter()
-opti.set_value(battery_specific_energy_Wh_kg, 300)
+opti.set_value(battery_specific_energy_Wh_kg, 450)
 
 ##### Simulation Parameters
 n_timesteps = 200  # Only relevant if allow_trajectory_optimization is True.
@@ -122,7 +122,7 @@ time = time_nondim * days_to_simulate * seconds_per_day
 ##### Initialize design optimization variables (all units in base SI or derived units)
 if propulsion_type == "solar":
     log_mass_total = opti.variable()
-    opti.set_initial(log_mass_total, cas.log(300) if optimistic else cas.log(800))
+    opti.set_initial(log_mass_total, cas.log(400))
     mass_total = cas.exp(log_mass_total)
     max_mass_total = mass_total
 elif propulsion_type == "gas":
@@ -138,38 +138,45 @@ elif propulsion_type == "gas":
 else:
     raise ValueError("Bad value of propulsion_type!")
 
-# Initialize any variables
+### Initialize geometric variables
+# wing
 wing_span = 60 * opti.variable()
-opti.set_initial(wing_span,
-                 80
-                 )
-opti.subject_to([
-    wing_span > 1,
-    # wing_span < 100,  # TODO edit or delete this
-])
+opti.set_initial(wing_span, 50)
+opti.subject_to([wing_span > 1])
 
 wing_root_chord = 4 * opti.variable()
-opti.set_initial(wing_root_chord,
-                 4
-                 )
-opti.subject_to([
-    wing_root_chord > 0.1,
-    # wing_root_chord < 10,  # TODO edit or delete this
-])
+opti.set_initial(wing_root_chord, 4)
+opti.subject_to([wing_root_chord > 0.1])
+
+# hstab
+hstab_span = 15 * opti.variable()
+opti.set_initial(hstab_span, 14)
+opti.subject_to(hstab_span > 0.1)
+
+hstab_chord = 2 * opti.variable()
+opti.set_initial(hstab_chord, 2)
+opti.subject_to([hstab_chord > 0.1])
 
 hstab_twist_angle = 2 * opti.variable(n_timesteps)
-opti.set_initial(hstab_twist_angle,
-                 -2
-                 )
+opti.set_initial(hstab_twist_angle, -2)
+
+# vstab
+vstab_span = 8 * opti.variable()
+opti.set_initial(vstab_span, 8)
+opti.subject_to(vstab_span > 0.1)
+
+vstab_chord = 2 * opti.variable()
+opti.set_initial(vstab_chord, 2)
+opti.subject_to([vstab_chord > 0.1])
+
+# fuselage
+nose_length = 5
 
 boom_length = opti.variable()
 opti.set_initial(boom_length, 26)
 opti.subject_to([
-    boom_length > 23  # you can relax this, but you need to change the fuselage shape first
+    boom_length > wing_root_chord  # you can relax this, but you need to change the fuselage shape first
 ])
-
-hstab_chord = 2
-vstab_chord = 2
 
 wing = asb.Wing(
     name="Main Wing",
@@ -219,7 +226,7 @@ hstab = asb.Wing(
         ),
         asb.WingXSec(  # Tip
             x_le=0,
-            y_le=7,
+            y_le=hstab_span / 2,
             z_le=0,
             chord=hstab_chord,
             twist=-3,  # TODO fix
@@ -231,7 +238,7 @@ vstab = asb.Wing(
     name="Vertical Stabilizer",
     x_le=boom_length - vstab_chord,  # Coordinates of the wing's leading edge
     y_le=0,  # Coordinates of the wing's leading edge
-    z_le=-4,  # Coordinates of the wing's leading edge
+    z_le=-vstab_span / 2,  # Coordinates of the wing's leading edge
     symmetric=False,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
@@ -248,7 +255,7 @@ vstab = asb.Wing(
         asb.WingXSec(  # Tip
             x_le=0,
             y_le=0,
-            z_le=8,
+            z_le=vstab_span,
             chord=vstab_chord,
             twist=0,
             airfoil=generic_airfoil,
@@ -261,33 +268,34 @@ fuse = asb.Fuselage(
     y_le=0,
     z_le=-1,
     xsecs=[
-        asb.FuselageXSec(x_c=-5, radius=0),
-        asb.FuselageXSec(x_c=-4.5, radius=0.4),
-        asb.FuselageXSec(x_c=-4, radius=0.6),
-        asb.FuselageXSec(x_c=-3, radius=0.9),
-        asb.FuselageXSec(x_c=-2, radius=1),
-        asb.FuselageXSec(x_c=-1, radius=1),
+        asb.FuselageXSec(x_c=-1.0 * nose_length, radius=0),
+        asb.FuselageXSec(x_c=-0.95 * nose_length, radius=0.31),
+        asb.FuselageXSec(x_c=-0.90 * nose_length, radius=0.44),
+        asb.FuselageXSec(x_c=-0.825 * nose_length, radius=0.565),
+        asb.FuselageXSec(x_c=-0.75 * nose_length, radius=0.66),
+        asb.FuselageXSec(x_c=-0.5 * nose_length, radius=0.86),
+        asb.FuselageXSec(x_c=-0.25 * nose_length, radius=0.97),
         asb.FuselageXSec(x_c=0, radius=1),
-        asb.FuselageXSec(x_c=1, radius=1),
-        asb.FuselageXSec(x_c=2, radius=1),
-        asb.FuselageXSec(x_c=3, radius=1),
-        asb.FuselageXSec(x_c=4, radius=1),
-        asb.FuselageXSec(x_c=5, radius=0.95),
-        asb.FuselageXSec(x_c=6, radius=0.9),
-        asb.FuselageXSec(x_c=7, radius=0.8),
-        asb.FuselageXSec(x_c=8, radius=0.7),
-        asb.FuselageXSec(x_c=9, radius=0.6),
-        asb.FuselageXSec(x_c=10, radius=0.5),
-        asb.FuselageXSec(x_c=11, radius=0.4),
-        asb.FuselageXSec(x_c=12, radius=0.3),
-        asb.FuselageXSec(x_c=13, radius=0.25),
-        asb.FuselageXSec(x_c=17, radius=0.25),
-        asb.FuselageXSec(x_c=boom_length - 6, radius=0.25),
-        asb.FuselageXSec(x_c=boom_length - 4, radius=0.25),
-        asb.FuselageXSec(x_c=boom_length - 3, radius=0.25),
-        asb.FuselageXSec(x_c=boom_length - 2, radius=0.2),
-        asb.FuselageXSec(x_c=boom_length - 1, radius=0.1),
-        asb.FuselageXSec(x_c=boom_length, radius=0),
+        asb.FuselageXSec(x_c=0.05 * boom_length, radius=1),
+        asb.FuselageXSec(x_c=0.10 * boom_length, radius=1),
+        asb.FuselageXSec(x_c=0.15 * boom_length, radius=1),
+        asb.FuselageXSec(x_c=0.20 * boom_length, radius=1),
+        asb.FuselageXSec(x_c=0.25 * boom_length, radius=0.95),
+        asb.FuselageXSec(x_c=0.30 * boom_length, radius=0.9),
+        asb.FuselageXSec(x_c=0.35 * boom_length, radius=0.8),
+        asb.FuselageXSec(x_c=0.40 * boom_length, radius=0.7),
+        asb.FuselageXSec(x_c=0.45 * boom_length, radius=0.6),
+        asb.FuselageXSec(x_c=0.50 * boom_length, radius=0.5),
+        asb.FuselageXSec(x_c=0.55 * boom_length, radius=0.4),
+        asb.FuselageXSec(x_c=0.60 * boom_length, radius=0.3),
+        asb.FuselageXSec(x_c=0.65 * boom_length, radius=0.25),
+        asb.FuselageXSec(x_c=0.70 * boom_length, radius=0.25),
+        asb.FuselageXSec(x_c=0.75 * boom_length, radius=0.25),
+        asb.FuselageXSec(x_c=0.80 * boom_length, radius=0.25),
+        asb.FuselageXSec(x_c=0.85 * boom_length, radius=0.25),
+        asb.FuselageXSec(x_c=0.9 * boom_length, radius=0.2),
+        asb.FuselageXSec(x_c=0.95 * boom_length, radius=0.1),
+        asb.FuselageXSec(x_c=1.0 * boom_length, radius=0),
     ]
 )
 
@@ -478,6 +486,24 @@ elif aerodynamics_type == "aerosandbox-full":
 else:
     raise ValueError("Bad value of 'aerodynamics_type'!")
 
+    # endregion
+
+# region Stability
+### Size the tails off of tail volume coefficients
+Vh = hstab.area() * (boom_length - hstab_chord / 2) / (wing.area() * wing.mean_geometric_chord())
+Vv = vstab.area() * (boom_length - vstab_chord / 2) / (wing.area() * wing.span())
+
+hstab_effectiveness_factor = (hstab.aspect_ratio() / (hstab.aspect_ratio() + 2)) / (
+        wing.aspect_ratio() / (wing.aspect_ratio() + 2))
+vstab_effectiveness_factor = (vstab.aspect_ratio() / (vstab.aspect_ratio() + 2)) / (
+        wing.aspect_ratio() / (wing.aspect_ratio() + 2))
+opti.subject_to([
+    Vh * hstab_effectiveness_factor > 0.3,
+    Vh * hstab_effectiveness_factor < 0.6,
+    Vv * vstab_effectiveness_factor > 0.02,
+    Vv * vstab_effectiveness_factor < 0.05,
+])
+
 # endregion
 
 # region Propulsion
@@ -499,7 +525,7 @@ opti.set_initial(n_propellers,
                  )
 opti.subject_to([
     n_propellers > 2,
-    n_propellers < 6
+    n_propellers < 6,
 ])
 
 area_propulsive = cas.pi / 4 * propeller_diameter ** 2 * n_propellers
@@ -720,7 +746,8 @@ opti.subject_to([
 
 mass_wing_primary = lib_mass_struct.mass_wing_spar(
     span=wing.span(),
-    mass_supported=max_mass_total, # technically the spar doesn't really have to support its own weight (since it's roughly spanloaded), so this is conservative
+    mass_supported=max_mass_total,
+    # technically the spar doesn't really have to support its own weight (since it's roughly spanloaded), so this is conservative
     ultimate_load_factor=structural_load_factor,
     n_booms=n_booms
 )
@@ -769,7 +796,7 @@ mass_vstab = lib_mass_struct.mass_hpa_stabilizer(
 mass_tail_boom = lib_mass_struct.mass_hpa_tail_boom(
     length_tail_boom=boom_length,
     dynamic_pressure_at_manuever_speed=q_maneuver,
-    mean_tail_surface_area=hstab.area()
+    mean_tail_surface_area=hstab.area()+vstab.area()
 )
 
 mass_structural = mass_wing + mass_hstab + mass_vstab + mass_tail_boom
@@ -951,7 +978,7 @@ s_opts["mu_strategy"] = "adaptive"
 # s_opts["alpha_for_y"] = "primal-and-full"
 s_opts["watchdog_shortened_iter_trigger"] = 1
 # s_opts["expect_infeasible_problem"]="yes"
-s_opts["start_with_resto"] = "yes"
+# s_opts["start_with_resto"] = "yes"
 s_opts["required_infeasibility_reduction"] = 0.001
 # s_opts["evaluate_orig_obj_at_resto_trial"] = "yes"
 opti.solver('ipopt', p_opts, s_opts)
