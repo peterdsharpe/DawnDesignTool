@@ -765,10 +765,10 @@ mass_wing_secondary = lib_mass_struct.mass_hpa_wing(
 
 mass_wing = mass_wing_primary + mass_wing_secondary
 
-q_maneuver = 1 / 2 * atmo.get_density_at_altitude(min_altitude) * 15 ** 2  # TODO make this more accurate
+q_maneuver = 40 #1 / 2 * atmo.get_density_at_altitude(min_altitude) * 15 ** 2  # TODO make this more accurate
 
 n_ribs_hstab = 30 * opti.variable()
-opti.set_initial(n_ribs_hstab, 30)
+opti.set_initial(n_ribs_hstab, 40)
 opti.subject_to([
     n_ribs_hstab > 0
 ])
@@ -781,7 +781,7 @@ mass_hstab = lib_mass_struct.mass_hpa_stabilizer(
 )
 
 n_ribs_vstab = 20 * opti.variable()
-opti.set_initial(n_ribs_vstab, 20)
+opti.set_initial(n_ribs_vstab, 35)
 opti.subject_to([
     n_ribs_vstab > 0
 ])
