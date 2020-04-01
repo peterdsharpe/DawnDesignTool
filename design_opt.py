@@ -42,6 +42,16 @@ n_timesteps = 200  # Only relevant if allow_trajectory_optimization is True.
 ##### Optimization bounds
 min_speed = 1  # Specify a minimum speed - keeps the speed-gamma velocity parameterization from NaNing
 
+##### Climb Optimization
+climb_opt = False #are we optimizing for the climb as well
+seconds_per_day = 86400
+if climb_opt:
+    simulation_days = 1.5 #must be greater than 1
+    opti.set_value(days_to_simulate, simulation_days)
+    enforce_periodicity = False #Leave False
+    time_shift = -6.5*60*60 #60*((seconds_per_day*2)/(n_timesteps))
+    timesteps_of_last_day = int((1-(1/simulation_days))*n_timesteps)
+
 # endregion
 
 # region Trajectory Optimization Variables
@@ -53,15 +63,26 @@ opti.set_initial(x,
                  # cas.linspace(0, required_headway_per_day, n_timesteps)
                  )
 
-y = 2e4 * opti.variable(n_timesteps)
-opti.set_initial(y,
-                 20000,
-                 # 20000 + 2000 * cas.sin(cas.linspace(0, 2 * cas.pi, n_timesteps))
-                 )
-opti.subject_to([
-    y > min_altitude,
-    y < 40000,  # models break down
-])
+if not climb_opt:
+    
+    y = 2e4 * opti.variable(n_timesteps)
+    opti.set_initial(y,
+                     20000,
+                     # 20000 + 2000 * cas.sin(cas.linspace(0, 2 * cas.pi, n_timesteps))
+                     )
+    opti.subject_to([
+        y > min_altitude,
+        y < 40000,  # models break down
+    ])
+else:
+    y = 2e4 * opti.variable(n_timesteps)
+    opti.set_initial(y,
+                     20000,
+                     # 20000 + 2000 * cas.sin(cas.linspace(0, 2 * cas.pi, n_timesteps))
+                     )
+    opti.subject_to([y[timesteps_of_last_day:-1] > min_altitude, y < 40000])
+    
+    
 
 airspeed = 2e1 * opti.variable(n_timesteps)
 opti.set_initial(airspeed,
@@ -928,6 +949,19 @@ if not allow_trajectory_optimization:
     ])
 
 # constraints_jacobian = cas.jacobian(opti.g, opti.x)
+
+###### Climb Optimization Constraints
+if climb_opt:
+    opti.subject_to([y[0] == 0])
+    opti.subject_to([
+        x[-1] / 1e5 > (x[timesteps_of_last_day] + days_to_simulate * required_headway_per_day) / 1e5,
+        y[-1] / 1e4 > y[timesteps_of_last_day] / 1e4,
+        airspeed[-1] / 2e1 > airspeed[timesteps_of_last_day] / 2e1,
+        flight_path_angle[-1] == flight_path_angle[timesteps_of_last_day],
+        alpha[-1] == alpha[timesteps_of_last_day],
+        thrust_force[-1] / 1e2 == thrust_force[timesteps_of_last_day] / 1e2,
+    ])
+    opti.subject_to([battery_stored_energy_nondim[0] == allowable_battery_depth_of_discharge])
 
 ##### Add objective
 if minimize == "TOGW":
