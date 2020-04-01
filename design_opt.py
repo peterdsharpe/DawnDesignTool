@@ -42,6 +42,17 @@ n_timesteps = 200  # Only relevant if allow_trajectory_optimization is True.
 ##### Optimization bounds
 min_speed = 1  # Specify a minimum speed - keeps the speed-gamma velocity parameterization from NaNing
 
+##### Climb Optimization
+climb_opt = True #are we optimizing for the climb as well
+seconds_per_day = 86400
+if climb_opt:
+    simulation_days = 1.5 #must be greater than 1
+    opti.set_value(days_to_simulate, simulation_days)
+    enforce_periodicity = False #Leave False
+    start_time = 0 #time in a number from 1 to n_timesteps
+    time_shift = -5.5*60*60 #60*((seconds_per_day*2)/(n_timesteps))
+    timesteps_of_last_day = int((1-(1/simulation_days))*n_timesteps)
+
 # endregion
 
 # region Trajectory Optimization Variables
