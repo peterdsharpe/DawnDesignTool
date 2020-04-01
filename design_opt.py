@@ -24,11 +24,11 @@ days_to_simulate = opti.parameter()
 opti.set_value(days_to_simulate, 1)
 propulsion_type = "solar"  # "solar" or "gas"
 enforce_periodicity = True  # Tip: turn this off when looking at gas models or models w/o trajectory opt. enabled.
-n_booms = 3  # 1, 2, or 3
+n_booms = 1  # 1, 2, or 3
 structural_load_factor = 3
 optimistic = False  # Are you optimistic (as opposed to conservative)? Replaces a variety of constants...
 allow_trajectory_optimization = True
-minimize = "span"  # "span" or "TOGW" or "endurance"
+minimize = "TOGW"  # "span" or "TOGW" or "endurance"
 mass_payload = opti.parameter()
 opti.set_value(mass_payload, 30)
 wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
@@ -36,7 +36,7 @@ battery_specific_energy_Wh_kg = opti.parameter()
 opti.set_value(battery_specific_energy_Wh_kg, 450)
 
 ##### Simulation Parameters
-n_timesteps = 200  # Only relevant if allow_trajectory_optimization is True.
+n_timesteps = 100  # Only relevant if allow_trajectory_optimization is True.
 # Quick convergence testing indicates you can get bad analyses below 150 or so...
 
 ##### Optimization bounds
@@ -1010,10 +1010,10 @@ s_opts["mu_strategy"] = "adaptive"
 # s_opts["fixed_mu_oracle"] = "quality-function"
 # s_opts["alpha_for_y"] = "min"
 # s_opts["alpha_for_y"] = "primal-and-full"
-s_opts["watchdog_shortened_iter_trigger"] = 1
+# s_opts["watchdog_shortened_iter_trigger"] = 1
 # s_opts["expect_infeasible_problem"]="yes"
 # s_opts["start_with_resto"] = "yes"
-s_opts["required_infeasibility_reduction"] = 0.001
+# s_opts["required_infeasibility_reduction"] = 0.001
 # s_opts["evaluate_orig_obj_at_resto_trial"] = "yes"
 opti.solver('ipopt', p_opts, s_opts)
 
