@@ -134,7 +134,7 @@ opti.set_initial(net_accel_perpendicular,
 time_nondim = cas.linspace(0, 1, n_timesteps)
 seconds_per_day = 86400
 time = time_nondim * days_to_simulate * seconds_per_day
-hour = time/3600
+hour = time / 3600
 
 # endregion
 
@@ -190,7 +190,7 @@ opti.set_initial(vstab_chord, 2)
 opti.subject_to([vstab_chord > 0.1])
 
 # fuselage
-nose_length = 5
+nose_length = 4
 
 boom_length = opti.variable()
 opti.set_initial(boom_length, 23)
@@ -199,9 +199,12 @@ opti.subject_to([
     # you can relax this, but you need to change the fuselage shape first
 ])
 
+fuse_diameter = 1.2
+boom_diameter = 0.25
+
 wing = asb.Wing(
     name="Main Wing",
-    x_le=(0.25 - 0.1) * wing_root_chord,  # Coordinates of the wing's leading edge # TODO make this a free parameter?
+    x_le=0.05 * wing_root_chord,  # Coordinates of the wing's leading edge # TODO make this a free parameter?
     y_le=0,  # Coordinates of the wing's leading edge
     z_le=0,  # Coordinates of the wing's leading edge
     symmetric=True,
@@ -231,7 +234,7 @@ hstab = asb.Wing(
     name="Horizontal Stabilizer",
     x_le=boom_length - vstab_chord - hstab_chord,  # Coordinates of the wing's leading edge
     y_le=0,  # Coordinates of the wing's leading edge
-    z_le=-1,  # Coordinates of the wing's leading edge
+    z_le=0.1,  # Coordinates of the wing's leading edge
     symmetric=True,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
@@ -259,7 +262,7 @@ vstab = asb.Wing(
     name="Vertical Stabilizer",
     x_le=boom_length - vstab_chord,  # Coordinates of the wing's leading edge
     y_le=0,  # Coordinates of the wing's leading edge
-    z_le=-vstab_span / 2,  # Coordinates of the wing's leading edge
+    z_le=-vstab_span / 2 + vstab_span * 0.15,  # Coordinates of the wing's leading edge
     symmetric=False,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
@@ -283,41 +286,66 @@ vstab = asb.Wing(
         ),
     ]
 )
+### Build the fuselage geometry
+blend = lambda x: (1 - np.cos(np.pi * x)) / 2
+fuse_x_c = []
+fuse_z_c = []
+fuse_radius = []
+fuse_resolution = 10
+# Nose geometry
+fuse_nose_theta = np.linspace(0, np.pi / 2, fuse_resolution)
+fuse_x_c.extend([
+    -nose_length * np.cos(theta) for theta in fuse_nose_theta
+])
+fuse_z_c.extend([-fuse_diameter / 2] * fuse_resolution)
+fuse_radius.extend([
+    fuse_diameter / 2 * np.sin(theta) for theta in fuse_nose_theta
+])
+# Straight section geometry
+# fuse_straight_resolution = 4
+# fuse_x_c.extend([
+#     0.1 * boom_length * x_nd for x_nd in np.linspace(0, 1, fuse_straight_resolution)[1:]
+# ])
+# fuse_z_c.extend(
+#     [-fuse_diameter / 2] * (fuse_straight_resolution - 1)
+# )
+# fuse_radius.extend([
+#     [fuse_diameter / 2] * (fuse_straight_resolution - 1)
+# ])
+# Taper
+fuse_taper_x_nondim = np.linspace(0, 1, fuse_resolution)
+fuse_x_c.extend([
+    0.1 * boom_length + (0.7 - 0.1) * boom_length * x_nd for x_nd in fuse_taper_x_nondim
+])
+fuse_z_c.extend([
+    -fuse_diameter / 2 * blend(1 - x_nd) - boom_diameter / 2 * blend(x_nd) for x_nd in fuse_taper_x_nondim
+])
+fuse_radius.extend([
+    fuse_diameter / 2 * blend(1 - x_nd) + boom_diameter / 2 * blend(x_nd) for x_nd in fuse_taper_x_nondim
+])
+# Tail
+fuse_tail_x_nondim = np.linspace(0, 1, fuse_resolution)[1:]
+fuse_x_c.extend([
+    0.7 * boom_length + (1 - 0.7) * boom_length * x_nd for x_nd in fuse_taper_x_nondim
+])
+fuse_z_c.extend([
+    -boom_diameter / 2 * blend(1 - x_nd) for x_nd in fuse_taper_x_nondim
+])
+fuse_radius.extend([
+    boom_diameter / 2 * blend(1 - x_nd) for x_nd in fuse_taper_x_nondim
+])
+
 fuse = asb.Fuselage(
     name="Fuselage",
     x_le=0,
     y_le=0,
-    z_le=-1,
+    z_le=0,
     xsecs=[
-        asb.FuselageXSec(x_c=-1.0 * nose_length, radius=0),
-        asb.FuselageXSec(x_c=-0.975 * nose_length, radius=0.22),
-        asb.FuselageXSec(x_c=-0.95 * nose_length, radius=0.31),
-        asb.FuselageXSec(x_c=-0.90 * nose_length, radius=0.44),
-        asb.FuselageXSec(x_c=-0.825 * nose_length, radius=0.565),
-        asb.FuselageXSec(x_c=-0.75 * nose_length, radius=0.66),
-        asb.FuselageXSec(x_c=-0.5 * nose_length, radius=0.86),
-        asb.FuselageXSec(x_c=-0.25 * nose_length, radius=0.97),
-        asb.FuselageXSec(x_c=0, radius=1),
-        asb.FuselageXSec(x_c=0.05 * boom_length, radius=1),
-        asb.FuselageXSec(x_c=0.10 * boom_length, radius=1),
-        asb.FuselageXSec(x_c=0.15 * boom_length, radius=1),
-        asb.FuselageXSec(x_c=0.20 * boom_length, radius=1),
-        asb.FuselageXSec(x_c=0.25 * boom_length, radius=0.95),
-        asb.FuselageXSec(x_c=0.30 * boom_length, radius=0.9),
-        asb.FuselageXSec(x_c=0.35 * boom_length, radius=0.8),
-        asb.FuselageXSec(x_c=0.40 * boom_length, radius=0.7),
-        asb.FuselageXSec(x_c=0.45 * boom_length, radius=0.6),
-        asb.FuselageXSec(x_c=0.50 * boom_length, radius=0.5),
-        asb.FuselageXSec(x_c=0.55 * boom_length, radius=0.4),
-        asb.FuselageXSec(x_c=0.60 * boom_length, radius=0.3),
-        asb.FuselageXSec(x_c=0.65 * boom_length, radius=0.25),
-        asb.FuselageXSec(x_c=0.70 * boom_length, radius=0.25),
-        asb.FuselageXSec(x_c=0.75 * boom_length, radius=0.25),
-        asb.FuselageXSec(x_c=0.80 * boom_length, radius=0.25),
-        asb.FuselageXSec(x_c=0.85 * boom_length, radius=0.25),
-        asb.FuselageXSec(x_c=0.9 * boom_length, radius=0.2),
-        asb.FuselageXSec(x_c=0.95 * boom_length, radius=0.1),
-        asb.FuselageXSec(x_c=1.0 * boom_length, radius=0),
+        asb.FuselageXSec(
+            x_c=fuse_x_c[i],
+            z_c=fuse_z_c[i],
+            radius=fuse_radius[i]
+        ) for i in range(len(fuse_x_c))
     ]
 )
 
@@ -515,6 +543,7 @@ x_ac = (
        ) / (
                wing.area() + hstab.area()
        )
+static_margin_fraction = (x_ac - airplane.xyz_ref[0]) / wing.mean_geometric_chord()
 # opti.subject_to([
 #     x_ac - 0 == wing.mean_geometric_chord() * 0.1
 # ]) # TODO
@@ -704,7 +733,7 @@ if propulsion_type == "solar":
         battery_pack_cell_fraction=battery_pack_cell_percentage
     )
 
-    battery_voltage = 240 # From Olek Peraire 4/2, propulsion slack
+    battery_voltage = 240  # From Olek Peraire 4/2, propulsion slack
 
     mass_wires = lib_prop_elec.mass_wires(
         wire_length=wing.span() / 2,
