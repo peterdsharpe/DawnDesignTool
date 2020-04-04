@@ -478,12 +478,6 @@ drag_vstab = drag_vstab_profile
 lift_force = lift_fuse + lift_wing + lift_hstab
 drag_force = drag_fuse + drag_wing + drag_hstab + drag_vstab  # + drag_lift_wires
 
-# Moment totals
-net_pitching_moment = (
-        -wing.approximate_center_of_pressure()[0] * lift_wing + moment_wing
-        - hstab.approximate_center_of_pressure()[0] * lift_hstab
-)
-
 # endregion
 
 # region Stability
