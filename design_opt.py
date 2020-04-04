@@ -16,7 +16,7 @@ from aerosandbox.library.airfoils import *
 opti = cas.Opti()
 
 ##### Operating Parameters
-latitude = 26  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
+latitude = 49  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
 day_of_year = 244  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 min_altitude = 19812  # meters. 19812 m = 65000 ft.
 required_headway_per_day = 0  # 10e3  # meters
@@ -113,7 +113,7 @@ opti.subject_to([
 
 thrust_force = 2e2 * opti.variable(n_timesteps)
 opti.set_initial(thrust_force,
-                  150
+                 150
                  )
 opti.subject_to([
     thrust_force > 0
@@ -140,13 +140,17 @@ hour = time / 3600
 # region Design Optimization Variables
 ##### Initialize design optimization variables (all units in base SI or derived units)
 if propulsion_type == "solar":
-    log_mass_total = opti.variable()
-    opti.set_initial(log_mass_total, cas.log(600))
-    mass_total = cas.exp(log_mass_total)
+    mass_total = 600 * opti.variable()
+    opti.set_initial(mass_total, 600)
     max_mass_total = mass_total
+
+    # log_mass_total = opti.variable()
+    # opti.set_initial(log_mass_total, cas.log(600))
+    # mass_total = cas.exp(log_mass_total)
+    # max_mass_total = mass_total
 elif propulsion_type == "gas":
     log_mass_total = opti.variable(n_timesteps)
-    opti.set_initial(log_mass_total,  cas.log(800))
+    opti.set_initial(log_mass_total, cas.log(800))
     mass_total = cas.exp(log_mass_total)
     log_max_mass_total = opti.variable()
     opti.set_initial(log_max_mass_total, cas.log(800))
@@ -397,162 +401,88 @@ solar_flux_on_horizontal = lib_solar.solar_flux_on_horizontal(latitude, day_of_y
 
 # region Aerodynamics
 ##### Aerodynamics
-aerodynamics_type = "buildup"  # "buildup", "aerosandbox-point", "aerosandbox-full"
 
-if aerodynamics_type == "buildup":
+# Fuselage
+fuse_Re = rho / mu * airspeed * fuse.length()
+CLA_fuse = 0
+CDA_fuse = aero.Cf_flat_plate(fuse_Re) * fuse.area_wetted()
 
-    # Fuselage
-    fuse_Re = rho / mu * airspeed * fuse.length()
-    CLA_fuse = 0
-    CDA_fuse = aero.Cf_flat_plate(fuse_Re) * fuse.area_wetted()
+lift_fuse = CLA_fuse * q
+drag_fuse = CDA_fuse * q
 
-    lift_fuse = CLA_fuse * q
-    drag_fuse = CDA_fuse * q
+# wing
+wing_Re = rho / mu * airspeed * wing.mean_geometric_chord()
+wing_airfoil = wing.xsecs[0].airfoil  # type: asb.Airfoil
+wing_Cl_inc = wing_airfoil.CL_function(alpha + wing.mean_twist_angle(), wing_Re, 0,
+                                       0)  # Incompressible 2D lift coefficient
+wing_CL = wing_Cl_inc * aero.CL_over_Cl(wing.aspect_ratio(), mach=mach,
+                                        sweep=wing.mean_sweep_angle())  # Compressible 3D lift coefficient
+lift_wing = wing_CL * q * wing.area()
 
-    # wing
-    wing_Re = rho / mu * airspeed * wing.mean_geometric_chord()
-    wing_airfoil = wing.xsecs[0].airfoil  # type: asb.Airfoil
-    wing_Cl_inc = wing_airfoil.CL_function(alpha + wing.mean_twist_angle(), wing_Re, 0,
-                                           0)  # Incompressible 2D lift coefficient
-    wing_CL = wing_Cl_inc * aero.CL_over_Cl(wing.aspect_ratio(), mach=mach,
-                                            sweep=wing.mean_sweep_angle())  # Compressible 3D lift coefficient
-    lift_wing = wing_CL * q * wing.area()
+wing_Cd_profile = wing_airfoil.CDp_function(alpha + wing.mean_twist_angle(), wing_Re, mach, 0)
+drag_wing_profile = wing_Cd_profile * q * wing.area()
 
-    wing_Cd_profile = wing_airfoil.CDp_function(alpha + wing.mean_twist_angle(), wing_Re, mach, 0)
-    drag_wing_profile = wing_Cd_profile * q * wing.area()
+wing_oswalds_efficiency = 0.95  # TODO make this a function of taper ratio
+drag_wing_induced = lift_wing ** 2 / (q * np.pi * wing.span() ** 2 * wing_oswalds_efficiency)
 
-    wing_oswalds_efficiency = 0.95  # TODO make this a function of taper ratio
-    drag_wing_induced = lift_wing ** 2 / (q * np.pi * wing.span() ** 2 * wing_oswalds_efficiency)
+drag_wing = drag_wing_profile + drag_wing_induced
 
-    drag_wing = drag_wing_profile + drag_wing_induced
+wing_Cm_inc = wing_airfoil.Cm_function(alpha + wing.mean_twist_angle(), wing_Re, 0,
+                                       0)  # Incompressible 2D moment coefficient
+wing_CM = wing_Cm_inc * aero.CL_over_Cl(wing.aspect_ratio(), mach=mach,
+                                        sweep=wing.mean_sweep_angle())  # Compressible 3D moment coefficient
+moment_wing = wing_CM * q * wing.area() * wing.mean_geometric_chord()
 
-    wing_Cm_inc = wing_airfoil.Cm_function(alpha + wing.mean_twist_angle(), wing_Re, 0,
-                                           0)  # Incompressible 2D moment coefficient
-    wing_CM = wing_Cm_inc * aero.CL_over_Cl(wing.aspect_ratio(), mach=mach,
-                                            sweep=wing.mean_sweep_angle())  # Compressible 3D moment coefficient
-    moment_wing = wing_CM * q * wing.area() * wing.mean_geometric_chord()
+# hstab
+hstab_Re = rho / mu * airspeed * hstab.mean_geometric_chord()
+hstab_airfoil = hstab.xsecs[0].airfoil  # type: asb.Airfoil
+hstab_Cl_inc = hstab_airfoil.CL_function(alpha + hstab_twist_angle, hstab_Re, 0,
+                                         0)  # Incompressible 2D lift coefficient
+hstab_CL = hstab_Cl_inc * aero.CL_over_Cl(hstab.aspect_ratio(), mach=mach,
+                                          sweep=hstab.mean_sweep_angle())  # Compressible 3D lift coefficient
+lift_hstab = hstab_CL * q * hstab.area()
 
-    # hstab
-    hstab_Re = rho / mu * airspeed * hstab.mean_geometric_chord()
-    hstab_airfoil = hstab.xsecs[0].airfoil  # type: asb.Airfoil
-    hstab_Cl_inc = hstab_airfoil.CL_function(alpha + hstab_twist_angle, hstab_Re, 0,
-                                             0)  # Incompressible 2D lift coefficient
-    hstab_CL = hstab_Cl_inc * aero.CL_over_Cl(hstab.aspect_ratio(), mach=mach,
-                                              sweep=hstab.mean_sweep_angle())  # Compressible 3D lift coefficient
-    lift_hstab = hstab_CL * q * hstab.area()
+hstab_Cd_profile = hstab_airfoil.CDp_function(alpha + hstab_twist_angle, hstab_Re, mach, 0)
+drag_hstab_profile = hstab_Cd_profile * q * hstab.area()
 
-    hstab_Cd_profile = hstab_airfoil.CDp_function(alpha + hstab_twist_angle, hstab_Re, mach, 0)
-    drag_hstab_profile = hstab_Cd_profile * q * hstab.area()
+hstab_oswalds_efficiency = 0.95  # TODO make this a function of taper ratio
+drag_hstab_induced = lift_hstab ** 2 / (q * np.pi * hstab.span() ** 2 * hstab_oswalds_efficiency)
 
-    hstab_oswalds_efficiency = 0.95  # TODO make this a function of taper ratio
-    drag_hstab_induced = lift_hstab ** 2 / (q * np.pi * hstab.span() ** 2 * hstab_oswalds_efficiency)
+drag_hstab = drag_hstab_profile + drag_hstab_induced
 
-    drag_hstab = drag_hstab_profile + drag_hstab_induced
+# vstab
+vstab_Re = rho / mu * airspeed * vstab.mean_geometric_chord()
+vstab_airfoil = vstab.xsecs[0].airfoil  # type: asb.Airfoil
+vstab_Cd_profile = vstab_airfoil.CDp_function(0, vstab_Re, mach, 0)
+drag_vstab_profile = vstab_Cd_profile * q * vstab.area()
 
-    # vstab
-    vstab_Re = rho / mu * airspeed * vstab.mean_geometric_chord()
-    vstab_airfoil = vstab.xsecs[0].airfoil  # type: asb.Airfoil
-    vstab_Cd_profile = vstab_airfoil.CDp_function(0, vstab_Re, mach, 0)
-    drag_vstab_profile = vstab_Cd_profile * q * vstab.area()
+drag_vstab = drag_vstab_profile
 
-    drag_vstab = drag_vstab_profile
-
-    # # lift wires
-    # if wing_type == "cantilevered":
-    #     n_lift_wires = 0
-    # elif wing_type == "one-wire":
-    #     n_lift_wires = 1
-    # elif wing_type == "multi-wire":
-    #     n_lift_wires = 2
-    # else:
-    #     raise ValueError("Bad value of wing_type!")
-    #
-    # lift_wire_diameter = 1.8034e-3  # 0.071" dia. lift wire (from Daedalus)
-    # lift_wire_Re = rho / mu * airspeed * lift_wire_diameter
-    # lift_wire_Cd = aero.Cd_cylinder(lift_wire_Re)
-    #
-    # drag_lift_wires = n_lift_wires * lift_wire_Cd * q * wing.span() / 2 * lift_wire_diameter
-
-    # Force totals
-    lift_force = lift_fuse + lift_wing + lift_hstab
-    drag_force = drag_fuse + drag_wing + drag_hstab + drag_vstab  # + drag_lift_wires
-
-    # Moment totals
-    net_pitching_moment = (
-            -wing.approximate_center_of_pressure()[0] * lift_wing + moment_wing
-            - hstab.approximate_center_of_pressure()[0] * lift_hstab
-    )
-
-# elif aerodynamics_type == "aerosandbox-point":
+# # lift wires
+# if wing_type == "cantilevered":
+#     n_lift_wires = 0
+# elif wing_type == "one-wire":
+#     n_lift_wires = 1
+# elif wing_type == "multi-wire":
+#     n_lift_wires = 2
+# else:
+#     raise ValueError("Bad value of wing_type!")
 #
-#     airplane.fuselages = []
+# lift_wire_diameter = 1.8034e-3  # 0.071" dia. lift wire (from Daedalus)
+# lift_wire_Re = rho / mu * airspeed * lift_wire_diameter
+# lift_wire_Cd = aero.Cd_cylinder(lift_wire_Re)
 #
-#     airplane.set_spanwise_paneling_everywhere(8)  # Set the resolution of the analysis
-#     ap = asb.Casll1(
-#         airplane=airplane,
-#         op_point=asb.OperatingPoint(
-#             density=rho[0],
-#             viscosity=mu[0],
-#             velocity=airspeed[0],
-#             mach=0,
-#             alpha=alpha[0],
-#             beta=0,
-#             p=0,
-#             q=0,
-#             r=0,
-#         ),
-#         opti=opti
-#     )
-#
-#     lift_force = -ap.force_total_wind[2]
-#     drag_force = -ap.force_total_wind[0]
-#
-#     # Tack on fuselage drag:
-#     fuse_Re = rho / mu * airspeed * fuse.length()
-#     drag_fuse = aero.Cf_flat_plate(fuse_Re) * fuse.area_wetted() * q
-#     drag_force += drag_fuse
-#
-# elif aerodynamics_type == "aerosandbox-full":
-#     lift_force = []
-#     drag_force = []
-#
-#     airplane.wings = [wing]  # just look at the one wing
-#     airplane.fuselages = []  # ignore the fuselage
-#
-#     airplane.set_spanwise_paneling_everywhere(6)  # Set the resolution of the analysis
-#
-#     aps = [
-#         asb.Casll1(
-#             airplane=airplane,
-#             op_point=asb.OperatingPoint(
-#                 density=rho[i],
-#                 viscosity=mu[i],
-#                 velocity=airspeed[i],
-#                 mach=0,
-#                 alpha=alpha[i],
-#                 beta=0,
-#                 p=0,
-#                 q=0,
-#                 r=0,
-#             ),
-#             opti=opti
-#         )
-#         for i in range(n_timesteps)
-#     ]
-#
-#     lift_force = cas.vertcat(*[-ap.force_total_wind[2] for ap in aps])
-#     drag_force = cas.vertcat(*[-ap.force_total_wind[0] for ap in aps])
-#
-#     # Multiply drag force to roughly account for tail
-#     drag_force *= 1.1
-#
-#     # Tack on fuselage drag:
-#     fuse_Re = rho / mu * airspeed * fuse.length()
-#     drag_fuse = aero.Cf_flat_plate(fuse_Re) * fuse.area_wetted() * q
-#     drag_force += drag_fuse
+# drag_lift_wires = n_lift_wires * lift_wire_Cd * q * wing.span() / 2 * lift_wire_diameter
 
-else:
-    raise ValueError("Bad value of 'aerodynamics_type'!")
+# Force totals
+lift_force = lift_fuse + lift_wing + lift_hstab
+drag_force = drag_fuse + drag_wing + drag_hstab + drag_vstab  # + drag_lift_wires
+
+# Moment totals
+net_pitching_moment = (
+        -wing.approximate_center_of_pressure()[0] * lift_wing + moment_wing
+        - hstab.approximate_center_of_pressure()[0] * lift_hstab
+)
 
 # endregion
 
@@ -570,6 +500,10 @@ static_margin_fraction = (x_ac - airplane.xyz_ref[0]) / wing.mean_geometric_chor
 # ]) # TODO
 
 ### Trim
+net_pitching_moment = (
+        -wing.approximate_center_of_pressure()[0] * lift_wing + moment_wing
+        - hstab.approximate_center_of_pressure()[0] * lift_hstab
+)
 opti.subject_to([
     net_pitching_moment == 0  # Trim condition
 ])
@@ -593,12 +527,12 @@ opti.subject_to([
     # Vv * vstab_effectiveness_factor > 0.02,
     # Vv * vstab_effectiveness_factor < 0.05,
     # Vv * vstab_effectiveness_factor == 0.035,
-    # Vh > 0.3,
-    # Vh < 0.6,
-    Vh == 0.45,
-    # Vv > 0.02,
-    # Vv < 0.05,
-    Vv == 0.035,
+    Vh > 0.3,
+    Vh < 0.6,
+    # Vh == 0.45,
+    Vv > 0.02,
+    Vv < 0.05,
+    # Vv == 0.035,
 ])
 # opti.subject_to([
 #     hstab_Cl_inc > -0.1
@@ -609,23 +543,24 @@ opti.subject_to([
 # region Propulsion
 ### Propeller calculations
 # propeller_diameter = 3.0
-# propeller_diameter = opti.variable()
-# opti.set_initial(propeller_diameter,
-#                  5
-#                  )
-# opti.subject_to([
-#     propeller_diameter > 1,
-#     propeller_diameter < 10
-# ])
-log_propeller_diameter = opti.variable()
-opti.set_initial(log_propeller_diameter,
-                 cas.log(5)
+propeller_diameter = opti.variable()
+opti.set_initial(propeller_diameter,
+                 5
                  )
 opti.subject_to([
-    log_propeller_diameter > cas.log(1),
-    log_propeller_diameter < cas.log(10),
+    propeller_diameter > 1,
+    propeller_diameter < 10
 ])
-propeller_diameter = cas.exp(log_propeller_diameter)
+
+# log_propeller_diameter = opti.variable()
+# opti.set_initial(log_propeller_diameter,
+#                  cas.log(5)
+#                  )
+# opti.subject_to([
+#     log_propeller_diameter > cas.log(1),
+#     log_propeller_diameter < cas.log(10),
+# ])
+# propeller_diameter = cas.exp(log_propeller_diameter)
 
 
 n_propellers = 2 * n_booms
@@ -639,7 +574,7 @@ n_propellers = 2 * n_booms
 # ])
 
 area_propulsive = cas.pi / 4 * propeller_diameter ** 2 * n_propellers
-propeller_efficiency =  0.8  # a total WAG
+propeller_efficiency = 0.8  # a total WAG
 motor_efficiency = 0.856 / (0.856 + 0.026 + 0.018 + 0.004)  # back-calculated from motor efficiency
 
 power_out_propulsion_shaft = lib_prop_prop.propeller_shaft_power_from_thrust(
@@ -712,7 +647,7 @@ if propulsion_type == "solar":
 
     battery_capacity = 3600 * 40000 * opti.variable()  # Joules, not watt-hours!
     opti.set_initial(battery_capacity,
-                      3600 * 20000
+                     3600 * 20000
                      )
     opti.subject_to([
         battery_capacity > 0
@@ -815,7 +750,7 @@ elif propulsion_type == "gas":
 
     # How much fuel do you burn?
     fuel_specific_energy = 43.02e6  # J/kg, for Jet A. Source: https://en.wikipedia.org/wiki/Jet_fuel#Jet_A
-    gas_engine_efficiency =  0.15  # Fuel-to-alternator efficiency.
+    gas_engine_efficiency = 0.15  # Fuel-to-alternator efficiency.
     # Taken from 3/5/20 propulsion team WAG in MIT 16.82. Numbers given: 24%/19%/15% for opti./med./consv. assumptions.
 
     fuel_burn_rate = power_in / fuel_specific_energy / gas_engine_efficiency  # kg/s
@@ -1073,9 +1008,9 @@ if climb_opt:
 
 ##### Add objective
 if minimize == "TOGW":
-    objective = max_mass_total / 3e2
+    objective = max_mass_total / 300
 elif minimize == "span":
-    objective = wing_span / 1e2
+    objective = wing_span / 50
 elif minimize == "endurance":
     objective = -days_to_simulate / 1
 else:
@@ -1100,8 +1035,8 @@ things_to_slightly_minimize = (
 penalty = 0
 penalty_denominator = n_timesteps
 penalty += cas.sum1(cas.diff(thrust_force / 100) ** 2) / penalty_denominator
-penalty += cas.sum1(cas.diff(net_accel_parallel / 1) ** 2) / penalty_denominator
-penalty += cas.sum1(cas.diff(net_accel_perpendicular / 1) ** 2) / penalty_denominator
+penalty += cas.sum1(cas.diff(net_accel_parallel / 1e-1) ** 2) / penalty_denominator
+penalty += cas.sum1(cas.diff(net_accel_perpendicular / 1e-1) ** 2) / penalty_denominator
 penalty += cas.sum1(cas.diff(airspeed / 30) ** 2) / penalty_denominator
 penalty += cas.sum1(cas.diff(flight_path_angle / 10) ** 2) / penalty_denominator
 penalty += cas.sum1(cas.diff(alpha / 5) ** 2) / penalty_denominator
@@ -1140,17 +1075,6 @@ if __name__ == "__main__":
 
     if np.abs(sol.value(penalty / objective)) > 0.01:
         print("\nWARNING: high penalty term! P/O = %.3f\n" % sol.value(penalty / objective))
-
-    if aerodynamics_type == "aerosandbox-point":
-        import copy
-
-        ap_sol = copy.deepcopy(ap)
-        ap_sol.substitute_solution(sol)
-    if aerodynamics_type == "aerosandbox-full":
-        import copy
-
-        ap_sols = [copy.deepcopy(ap) for ap in aps]
-        ap_sols = [ap_sol.substitute_solution(sol) for ap_sol in ap_sols]
 
     # Find dusk and dawn
     try:
