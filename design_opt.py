@@ -16,7 +16,7 @@ from aerosandbox.library.airfoils import *
 opti = cas.Opti()
 
 ##### Operating Parameters
-latitude = 26  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
+latitude = 49  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
 day_of_year = 244  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 min_altitude = 19812  # meters. 19812 m = 65000 ft.
 required_headway_per_day = 0  # 10e3  # meters
@@ -26,7 +26,6 @@ propulsion_type = "solar"  # "solar" or "gas"
 enforce_periodicity = True  # Tip: turn this off when looking at gas models or models w/o trajectory opt. enabled.
 n_booms = 1  # 1, 2, or 3
 structural_load_factor = 3
-optimistic = False  # Are you optimistic (as opposed to conservative)? Replaces a variety of constants...
 allow_trajectory_optimization = True
 minimize = "span"  # "span" or "TOGW" or "endurance"
 mass_payload = opti.parameter()
@@ -112,9 +111,9 @@ opti.subject_to([
     alpha < 12
 ])
 
-thrust_force = 1e2 * opti.variable(n_timesteps)
+thrust_force = 2e2 * opti.variable(n_timesteps)
 opti.set_initial(thrust_force,
-                 100 if optimistic else 150
+                  150
                  )
 opti.subject_to([
     thrust_force > 0
@@ -147,10 +146,10 @@ if propulsion_type == "solar":
     max_mass_total = mass_total
 elif propulsion_type == "gas":
     log_mass_total = opti.variable(n_timesteps)
-    opti.set_initial(log_mass_total, cas.log(300) if optimistic else cas.log(800))
+    opti.set_initial(log_mass_total,  cas.log(800))
     mass_total = cas.exp(log_mass_total)
     log_max_mass_total = opti.variable()
-    opti.set_initial(log_max_mass_total, cas.log(300) if optimistic else cas.log(800))
+    opti.set_initial(log_max_mass_total, cas.log(800))
     max_mass_total = cas.exp(log_max_mass_total)
     opti.subject_to([
         log_mass_total < log_max_mass_total
@@ -580,27 +579,37 @@ opti.subject_to([
 # region Propulsion
 ### Propeller calculations
 # propeller_diameter = 3.0
-propeller_diameter = opti.variable()
-opti.set_initial(propeller_diameter,
-                 3 if optimistic else 5
+# propeller_diameter = opti.variable()
+# opti.set_initial(propeller_diameter,
+#                  5
+#                  )
+# opti.subject_to([
+#     propeller_diameter > 1,
+#     propeller_diameter < 10
+# ])
+log_propeller_diameter = opti.variable()
+opti.set_initial(log_propeller_diameter,
+                 cas.log(5)
                  )
 opti.subject_to([
-    propeller_diameter > 1,
-    propeller_diameter < 10
+    log_propeller_diameter > cas.log(1),
+    log_propeller_diameter < cas.log(10),
 ])
+propeller_diameter = cas.exp(log_propeller_diameter)
 
-# n_propellers = 2
-n_propellers = opti.variable()
-opti.set_initial(n_propellers,
-                 2 if optimistic else 2
-                 )
-opti.subject_to([
-    n_propellers > 2,
-    n_propellers < 6,
-])
+
+n_propellers = 2 * n_booms
+# n_propellers = opti.variable()
+# opti.set_initial(n_propellers,
+#                  2 if optimistic else 2
+#                  )
+# opti.subject_to([
+#     n_propellers > 2,
+#     n_propellers < 6,
+# ])
 
 area_propulsive = cas.pi / 4 * propeller_diameter ** 2 * n_propellers
-propeller_efficiency = 0.85 if optimistic else 0.8  # a total WAG
+propeller_efficiency =  0.8  # a total WAG
 motor_efficiency = 0.856 / (0.856 + 0.026 + 0.018 + 0.004)  # back-calculated from motor efficiency
 
 power_out_propulsion_shaft = lib_prop_prop.propeller_shaft_power_from_thrust(
@@ -673,7 +682,7 @@ if propulsion_type == "solar":
 
     battery_capacity = 3600 * 40000 * opti.variable()  # Joules, not watt-hours!
     opti.set_initial(battery_capacity,
-                     3600 * 10000 if optimistic else 3600 * 20000
+                      3600 * 20000
                      )
     opti.subject_to([
         battery_capacity > 0
@@ -776,7 +785,7 @@ elif propulsion_type == "gas":
 
     # How much fuel do you burn?
     fuel_specific_energy = 43.02e6  # J/kg, for Jet A. Source: https://en.wikipedia.org/wiki/Jet_fuel#Jet_A
-    gas_engine_efficiency = 0.24 if optimistic else 0.15  # Fuel-to-alternator efficiency.
+    gas_engine_efficiency =  0.15  # Fuel-to-alternator efficiency.
     # Taken from 3/5/20 propulsion team WAG in MIT 16.82. Numbers given: 24%/19%/15% for opti./med./consv. assumptions.
 
     fuel_burn_rate = power_in / fuel_specific_energy / gas_engine_efficiency  # kg/s
@@ -928,7 +937,7 @@ opti.subject_to([
 ])
 
 speeddot = net_accel_parallel
-gammadot = (net_accel_perpendicular * 1 / cas.fmax(min_speed, airspeed)) * 180 / np.pi
+gammadot = (net_accel_perpendicular / airspeed) * 180 / np.pi
 
 trapz = lambda x: (x[1:] + x[:-1]) / 2
 
