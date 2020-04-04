@@ -187,15 +187,15 @@ opti.set_initial(hstab_chord, 3)
 opti.subject_to([hstab_chord > 0.1])
 
 hstab_twist_angle = 2 * opti.variable(n_timesteps)
-opti.set_initial(hstab_twist_angle, -2)
+opti.set_initial(hstab_twist_angle, -7)
 
 # vstab
 vstab_span = 8 * opti.variable()
-opti.set_initial(vstab_span, 8)
+opti.set_initial(vstab_span, 7)
 opti.subject_to(vstab_span > 0.1)
 
 vstab_chord = 2 * opti.variable()
-opti.set_initial(vstab_chord, 2)
+opti.set_initial(vstab_chord, 2.5)
 opti.subject_to([vstab_chord > 0.1])
 
 # fuselage
@@ -213,7 +213,7 @@ boom_diameter = 0.25
 
 wing = asb.Wing(
     name="Main Wing",
-    x_le=0.02 * wing_root_chord,  # Coordinates of the wing's leading edge # TODO make this a free parameter?
+    x_le=0.05 * wing_root_chord,  # Coordinates of the wing's leading edge # TODO make this a free parameter?
     y_le=0,  # Coordinates of the wing's leading edge
     z_le=0,  # Coordinates of the wing's leading edge
     symmetric=True,
@@ -515,14 +515,14 @@ hstab_effectiveness_factor = (hstab.aspect_ratio() / (hstab.aspect_ratio() + 2))
 vstab_effectiveness_factor = (vstab.aspect_ratio() / (vstab.aspect_ratio() + 2)) / (
         wing.aspect_ratio() / (wing.aspect_ratio() + 2))
 opti.subject_to([
-    # Vh * hstab_effectiveness_factor > 0.3,
-    # Vh * hstab_effectiveness_factor < 0.6,
+    Vh * hstab_effectiveness_factor > 0.3,
+    Vh * hstab_effectiveness_factor < 0.6,
     # Vh * hstab_effectiveness_factor == 0.45,
     Vv * vstab_effectiveness_factor > 0.02,
     Vv * vstab_effectiveness_factor < 0.05,
     # Vv * vstab_effectiveness_factor == 0.035,
-    Vh > 0.3,
-    Vh < 0.6,
+    # Vh > 0.3,
+    # Vh < 0.6,
     # Vh == 0.45,
     # Vv > 0.02,
     # Vv < 0.05,
@@ -824,7 +824,7 @@ opti.subject_to([
 mass_hstab_primary = lib_mass_struct.mass_wing_spar(
     span=hstab.span(),
     mass_supported=q_maneuver * 1.5 * hstab.area() / 9.81,
-    ultimate_load_factor=3
+    ultimate_load_factor=structural_load_factor
 )
 
 mass_hstab_secondary = lib_mass_struct.mass_hpa_stabilizer(
@@ -832,7 +832,7 @@ mass_hstab_secondary = lib_mass_struct.mass_hpa_stabilizer(
     chord=hstab.mean_geometric_chord(),
     dynamic_pressure_at_manuever_speed=q_maneuver,
     n_ribs=n_ribs_hstab,
-    t_over_c=0.10,
+    t_over_c=0.08,
     include_spar=False
 )
 
@@ -843,13 +843,19 @@ opti.set_initial(n_ribs_vstab, 35)
 opti.subject_to([
     n_ribs_vstab > 0
 ])
-mass_vstab = lib_mass_struct.mass_hpa_stabilizer(
+mass_vstab_primary = lib_mass_struct.mass_wing_spar(
+    span=vstab.span(),
+    mass_supported=q_maneuver * 1.5 * vstab.area() / 9.81,
+    ultimate_load_factor=structural_load_factor
+) * 1.2 # due to asymmetry, a guess
+mass_vstab_secondary = lib_mass_struct.mass_hpa_stabilizer(
     span=vstab.span(),
     chord=vstab.mean_geometric_chord(),
     dynamic_pressure_at_manuever_speed=q_maneuver,
     n_ribs=n_ribs_vstab,
-    t_over_c=0.10
+    t_over_c=0.08
 )
+mass_vstab = mass_vstab_primary + mass_vstab_secondary
 
 mass_boom = lib_mass_struct.mass_hpa_tail_boom(
     length_tail_boom=boom_length,
