@@ -9,7 +9,7 @@ from aerosandbox.library import power_solar as lib_solar
 from aerosandbox.library import propulsion_electric as lib_prop_elec
 from aerosandbox.library import propulsion_propeller as lib_prop_prop
 from aerosandbox.library import winds as lib_winds
-from aerosandbox.library.airfoils import e216, generic_airfoil
+from aerosandbox.library.airfoils import *
 
 # region Setup
 ##### Initialize Optimization
@@ -28,7 +28,7 @@ n_booms = 1  # 1, 2, or 3
 structural_load_factor = 3
 optimistic = False  # Are you optimistic (as opposed to conservative)? Replaces a variety of constants...
 allow_trajectory_optimization = True
-minimize = "TOGW"  # "span" or "TOGW" or "endurance"
+minimize = "span"  # "span" or "TOGW" or "endurance"
 mass_payload = opti.parameter()
 opti.set_value(mass_payload, 30)
 wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
@@ -36,21 +36,21 @@ battery_specific_energy_Wh_kg = opti.parameter()
 opti.set_value(battery_specific_energy_Wh_kg, 450)
 
 ##### Simulation Parameters
-n_timesteps = 100  # Only relevant if allow_trajectory_optimization is True.
+n_timesteps = 200  # Only relevant if allow_trajectory_optimization is True.
 # Quick convergence testing indicates you can get bad analyses below 150 or so...
 
 ##### Optimization bounds
 min_speed = 1  # Specify a minimum speed - keeps the speed-gamma velocity parameterization from NaNing
 
 ##### Climb Optimization
-climb_opt = False #are we optimizing for the climb as well
+climb_opt = False  # are we optimizing for the climb as well
 seconds_per_day = 86400
 if climb_opt:
-    simulation_days = 1.5 #must be greater than 1
+    simulation_days = 1.5  # must be greater than 1
     opti.set_value(days_to_simulate, simulation_days)
-    enforce_periodicity = False #Leave False
-    time_shift = -6.5*60*60 #60*((seconds_per_day*2)/(n_timesteps))
-    timesteps_of_last_day = int((1-(1/simulation_days))*n_timesteps)
+    enforce_periodicity = False  # Leave False
+    time_shift = -6.5 * 60 * 60  # 60*((seconds_per_day*2)/(n_timesteps))
+    timesteps_of_last_day = int((1 - (1 / simulation_days)) * n_timesteps)
 
 # endregion
 
@@ -64,7 +64,7 @@ opti.set_initial(x,
                  )
 
 if not climb_opt:
-    
+
     y = 2e4 * opti.variable(n_timesteps)
     opti.set_initial(y,
                      20000,
@@ -81,8 +81,6 @@ else:
                      # 20000 + 2000 * cas.sin(cas.linspace(0, 2 * cas.pi, n_timesteps))
                      )
     opti.subject_to([y[timesteps_of_last_day:-1] > min_altitude, y < 40000])
-    
-    
 
 airspeed = 2e1 * opti.variable(n_timesteps)
 opti.set_initial(airspeed,
@@ -136,6 +134,7 @@ opti.set_initial(net_accel_perpendicular,
 time_nondim = cas.linspace(0, 1, n_timesteps)
 seconds_per_day = 86400
 time = time_nondim * days_to_simulate * seconds_per_day
+hour = time/3600
 
 # endregion
 
@@ -143,7 +142,7 @@ time = time_nondim * days_to_simulate * seconds_per_day
 ##### Initialize design optimization variables (all units in base SI or derived units)
 if propulsion_type == "solar":
     log_mass_total = opti.variable()
-    opti.set_initial(log_mass_total, cas.log(400))
+    opti.set_initial(log_mass_total, cas.log(600))
     mass_total = cas.exp(log_mass_total)
     max_mass_total = mass_total
 elif propulsion_type == "gas":
@@ -162,20 +161,20 @@ else:
 ### Initialize geometric variables
 # wing
 wing_span = 60 * opti.variable()
-opti.set_initial(wing_span, 50)
+opti.set_initial(wing_span, 60)
 opti.subject_to([wing_span > 1])
 
 wing_root_chord = 4 * opti.variable()
-opti.set_initial(wing_root_chord, 4)
+opti.set_initial(wing_root_chord, 3)
 opti.subject_to([wing_root_chord > 0.1])
 
 # hstab
 hstab_span = 15 * opti.variable()
-opti.set_initial(hstab_span, 14)
+opti.set_initial(hstab_span, 12)
 opti.subject_to(hstab_span > 0.1)
 
 hstab_chord = 2 * opti.variable()
-opti.set_initial(hstab_chord, 2)
+opti.set_initial(hstab_chord, 3)
 opti.subject_to([hstab_chord > 0.1])
 
 hstab_twist_angle = 2 * opti.variable(n_timesteps)
@@ -194,9 +193,10 @@ opti.subject_to([vstab_chord > 0.1])
 nose_length = 5
 
 boom_length = opti.variable()
-opti.set_initial(boom_length, 26)
+opti.set_initial(boom_length, 23)
 opti.subject_to([
-    boom_length > wing_root_chord  # you can relax this, but you need to change the fuselage shape first
+    boom_length - vstab_chord - hstab_chord > wing_root_chord
+    # you can relax this, but you need to change the fuselage shape first
 ])
 
 wing = asb.Wing(
@@ -290,6 +290,7 @@ fuse = asb.Fuselage(
     z_le=-1,
     xsecs=[
         asb.FuselageXSec(x_c=-1.0 * nose_length, radius=0),
+        asb.FuselageXSec(x_c=-0.975 * nose_length, radius=0.22),
         asb.FuselageXSec(x_c=-0.95 * nose_length, radius=0.31),
         asb.FuselageXSec(x_c=-0.90 * nose_length, radius=0.44),
         asb.FuselageXSec(x_c=-0.825 * nose_length, radius=0.565),
@@ -428,102 +429,122 @@ if aerodynamics_type == "buildup":
     drag_force = drag_fuse + drag_wing + drag_hstab + drag_vstab  # + drag_lift_wires
 
     # Moment totals
-    m = (
+    net_pitching_moment = (
             -wing.approximate_center_of_pressure()[0] * lift_wing
             - hstab.approximate_center_of_pressure()[0] * lift_hstab
     )
-    opti.subject_to([
-        m == 0  # Trim condition
-    ])
 
-elif aerodynamics_type == "aerosandbox-point":
-
-    airplane.fuselages = []
-
-    airplane.set_spanwise_paneling_everywhere(8)  # Set the resolution of the analysis
-    ap = asb.Casll1(
-        airplane=airplane,
-        op_point=asb.OperatingPoint(
-            density=rho[0],
-            viscosity=mu[0],
-            velocity=airspeed[0],
-            mach=0,
-            alpha=alpha[0],
-            beta=0,
-            p=0,
-            q=0,
-            r=0,
-        ),
-        opti=opti
-    )
-
-    lift_force = -ap.force_total_wind[2]
-    drag_force = -ap.force_total_wind[0]
-
-    # Tack on fuselage drag:
-    fuse_Re = rho / mu * airspeed * fuse.length()
-    drag_fuse = aero.Cf_flat_plate(fuse_Re) * fuse.area_wetted() * q
-    drag_force += drag_fuse
-
-elif aerodynamics_type == "aerosandbox-full":
-    lift_force = []
-    drag_force = []
-
-    airplane.wings = [wing]  # just look at the one wing
-    airplane.fuselages = []  # ignore the fuselage
-
-    airplane.set_spanwise_paneling_everywhere(6)  # Set the resolution of the analysis
-
-    aps = [
-        asb.Casll1(
-            airplane=airplane,
-            op_point=asb.OperatingPoint(
-                density=rho[i],
-                viscosity=mu[i],
-                velocity=airspeed[i],
-                mach=0,
-                alpha=alpha[i],
-                beta=0,
-                p=0,
-                q=0,
-                r=0,
-            ),
-            opti=opti
-        )
-        for i in range(n_timesteps)
-    ]
-
-    lift_force = cas.vertcat(*[-ap.force_total_wind[2] for ap in aps])
-    drag_force = cas.vertcat(*[-ap.force_total_wind[0] for ap in aps])
-
-    # Multiply drag force to roughly account for tail
-    drag_force *= 1.1
-
-    # Tack on fuselage drag:
-    fuse_Re = rho / mu * airspeed * fuse.length()
-    drag_fuse = aero.Cf_flat_plate(fuse_Re) * fuse.area_wetted() * q
-    drag_force += drag_fuse
+# elif aerodynamics_type == "aerosandbox-point":
+#
+#     airplane.fuselages = []
+#
+#     airplane.set_spanwise_paneling_everywhere(8)  # Set the resolution of the analysis
+#     ap = asb.Casll1(
+#         airplane=airplane,
+#         op_point=asb.OperatingPoint(
+#             density=rho[0],
+#             viscosity=mu[0],
+#             velocity=airspeed[0],
+#             mach=0,
+#             alpha=alpha[0],
+#             beta=0,
+#             p=0,
+#             q=0,
+#             r=0,
+#         ),
+#         opti=opti
+#     )
+#
+#     lift_force = -ap.force_total_wind[2]
+#     drag_force = -ap.force_total_wind[0]
+#
+#     # Tack on fuselage drag:
+#     fuse_Re = rho / mu * airspeed * fuse.length()
+#     drag_fuse = aero.Cf_flat_plate(fuse_Re) * fuse.area_wetted() * q
+#     drag_force += drag_fuse
+#
+# elif aerodynamics_type == "aerosandbox-full":
+#     lift_force = []
+#     drag_force = []
+#
+#     airplane.wings = [wing]  # just look at the one wing
+#     airplane.fuselages = []  # ignore the fuselage
+#
+#     airplane.set_spanwise_paneling_everywhere(6)  # Set the resolution of the analysis
+#
+#     aps = [
+#         asb.Casll1(
+#             airplane=airplane,
+#             op_point=asb.OperatingPoint(
+#                 density=rho[i],
+#                 viscosity=mu[i],
+#                 velocity=airspeed[i],
+#                 mach=0,
+#                 alpha=alpha[i],
+#                 beta=0,
+#                 p=0,
+#                 q=0,
+#                 r=0,
+#             ),
+#             opti=opti
+#         )
+#         for i in range(n_timesteps)
+#     ]
+#
+#     lift_force = cas.vertcat(*[-ap.force_total_wind[2] for ap in aps])
+#     drag_force = cas.vertcat(*[-ap.force_total_wind[0] for ap in aps])
+#
+#     # Multiply drag force to roughly account for tail
+#     drag_force *= 1.1
+#
+#     # Tack on fuselage drag:
+#     fuse_Re = rho / mu * airspeed * fuse.length()
+#     drag_fuse = aero.Cf_flat_plate(fuse_Re) * fuse.area_wetted() * q
+#     drag_force += drag_fuse
 
 else:
     raise ValueError("Bad value of 'aerodynamics_type'!")
 
-    # endregion
+# endregion
 
 # region Stability
+### Estimate aerodynamic center
+x_ac = (
+               wing.approximate_center_of_pressure()[0] * wing.area() +
+               hstab.approximate_center_of_pressure()[0] * hstab.area()
+       ) / (
+               wing.area() + hstab.area()
+       )
+# opti.subject_to([
+#     x_ac - 0 == wing.mean_geometric_chord() * 0.1
+# ]) # TODO
+
+### Trim
+opti.subject_to([
+    net_pitching_moment == 0  # Trim condition
+])
+
 ### Size the tails off of tail volume coefficients
-Vh = hstab.area() * (boom_length - hstab_chord / 2) / (wing.area() * wing.mean_geometric_chord())
-Vv = vstab.area() * (boom_length - vstab_chord / 2) / (wing.area() * wing.span())
+Vh = hstab.area() * (boom_length) / (wing.area() * wing.mean_geometric_chord())
+Vv = vstab.area() * (boom_length) / (wing.area() * wing.span())
 
 hstab_effectiveness_factor = (hstab.aspect_ratio() / (hstab.aspect_ratio() + 2)) / (
         wing.aspect_ratio() / (wing.aspect_ratio() + 2))
 vstab_effectiveness_factor = (vstab.aspect_ratio() / (vstab.aspect_ratio() + 2)) / (
         wing.aspect_ratio() / (wing.aspect_ratio() + 2))
 opti.subject_to([
-    Vh * hstab_effectiveness_factor > 0.3,
-    Vh * hstab_effectiveness_factor < 0.6,
-    Vv * vstab_effectiveness_factor > 0.02,
-    Vv * vstab_effectiveness_factor < 0.05,
+    # Vh * hstab_effectiveness_factor > 0.3,
+    # Vh * hstab_effectiveness_factor < 0.6,
+    # Vh * hstab_effectiveness_factor == 0.45,
+    Vh == 0.45,
+    # Vv * vstab_effectiveness_factor > 0.02,
+    # Vv * vstab_effectiveness_factor < 0.05,
+    # Vv * vstab_effectiveness_factor == 0.035,
+    Vv == 0.035,
 ])
+# opti.subject_to([
+#     hstab_Cl_inc > -0.1
+# ])
 
 # endregion
 
@@ -633,10 +654,12 @@ if propulsion_type == "solar":
 
     ### Solar calculations
 
-    realizable_solar_cell_efficiency = 0.205 if optimistic else 0.19  # This figure should take into account all temperature factors, MPPT losses,
+    realizable_solar_cell_efficiency = 0.31
+    # This figure should take into account all temperature factors, MPPT losses,
     # spectral losses (different spectrum at altitude), multi-junction effects, etc.
     # Kevin Uleck gives this figure as 0.205.
     # This paper (https://core.ac.uk/download/pdf/159146935.pdf) gives it as 0.19.
+    # According to Bjarni, MicroLink Devices has flexible triple-junction cells at 31% and 37.75% efficiency.
 
     # Total cell power flux
     solar_power_flux = (
@@ -646,7 +669,7 @@ if propulsion_type == "solar":
 
     solar_area_fraction = opti.variable()
     opti.set_initial(solar_area_fraction,
-                     0.25
+                     0.5
                      )
     opti.subject_to([
         solar_area_fraction > 0,
@@ -657,10 +680,11 @@ if propulsion_type == "solar":
     power_in = solar_power_flux * area_solar
 
     # Solar cell weight
-    rho_solar_cells = 0.32  # kg/m^2, solar cell area density.
+    rho_solar_cells = 0.25  # kg/m^2, solar cell area density.
     # The solar_simple_demo model gives this as 0.27. Burton's model gives this as 0.30.
     # This paper (https://core.ac.uk/download/pdf/159146935.pdf) gives it as 0.42.
     # This paper (https://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=4144&context=facpub) effectively gives it as 0.3143.
+    # According to Bjarni, MicroLink Devices has cells on the order of 250 g/m^2.
     mass_solar_cells = rho_solar_cells * area_solar
 
     ### Battery calculations
@@ -680,7 +704,7 @@ if propulsion_type == "solar":
         battery_pack_cell_fraction=battery_pack_cell_percentage
     )
 
-    battery_voltage = 3.7 * 20
+    battery_voltage = 240 # From Olek Peraire 4/2, propulsion slack
 
     mass_wires = lib_prop_elec.mass_wires(
         wire_length=wing.span() / 2,
@@ -786,20 +810,36 @@ mass_wing_secondary = lib_mass_struct.mass_hpa_wing(
 
 mass_wing = mass_wing_primary + mass_wing_secondary
 
-q_maneuver = 40 #1 / 2 * atmo.get_density_at_altitude(min_altitude) * 15 ** 2  # TODO make this more accurate
+q_maneuver = 50  # TODO make this more accurate
 
 n_ribs_hstab = 30 * opti.variable()
 opti.set_initial(n_ribs_hstab, 40)
 opti.subject_to([
     n_ribs_hstab > 0
 ])
-mass_hstab = lib_mass_struct.mass_hpa_stabilizer(
+# mass_hstab = lib_mass_struct.mass_hpa_stabilizer(
+#     span=hstab.span(),
+#     chord=hstab.mean_geometric_chord(),
+#     dynamic_pressure_at_manuever_speed=q_maneuver,
+#     n_ribs=n_ribs_hstab,
+#     t_over_c=0.10,
+# )
+mass_hstab_primary = lib_mass_struct.mass_wing_spar(
+    span=hstab.span(),
+    mass_supported=q_maneuver * 1.5 * hstab.area() / 9.81,
+    ultimate_load_factor=3
+)
+
+mass_hstab_secondary = lib_mass_struct.mass_hpa_stabilizer(
     span=hstab.span(),
     chord=hstab.mean_geometric_chord(),
     dynamic_pressure_at_manuever_speed=q_maneuver,
     n_ribs=n_ribs_hstab,
-    t_over_c=0.10
+    t_over_c=0.10,
+    include_spar=False
 )
+
+mass_hstab = mass_hstab_primary + mass_hstab_secondary
 
 n_ribs_vstab = 20 * opti.variable()
 opti.set_initial(n_ribs_vstab, 35)
@@ -817,7 +857,7 @@ mass_vstab = lib_mass_struct.mass_hpa_stabilizer(
 mass_tail_boom = lib_mass_struct.mass_hpa_tail_boom(
     length_tail_boom=boom_length,
     dynamic_pressure_at_manuever_speed=q_maneuver,
-    mean_tail_surface_area=hstab.area()+vstab.area()
+    mean_tail_surface_area=hstab.area() + vstab.area()
 )
 
 mass_structural = mass_wing + mass_hstab + mass_vstab + mass_tail_boom
@@ -972,6 +1012,11 @@ elif minimize == "endurance":
     objective = -days_to_simulate / 1
 else:
     raise ValueError("Bad value of minimize!")
+
+##### Extra constraints
+# opti.subject_to([
+#     hstab.aspect_ratio() < 8
+# ])
 
 ##### Add tippers
 things_to_slightly_minimize = (
