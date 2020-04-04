@@ -524,14 +524,14 @@ opti.subject_to([
     # Vh * hstab_effectiveness_factor > 0.3,
     # Vh * hstab_effectiveness_factor < 0.6,
     # Vh * hstab_effectiveness_factor == 0.45,
-    # Vv * vstab_effectiveness_factor > 0.02,
-    # Vv * vstab_effectiveness_factor < 0.05,
+    Vv * vstab_effectiveness_factor > 0.02,
+    Vv * vstab_effectiveness_factor < 0.05,
     # Vv * vstab_effectiveness_factor == 0.035,
     Vh > 0.3,
     Vh < 0.6,
     # Vh == 0.45,
-    Vv > 0.02,
-    Vv < 0.05,
+    # Vv > 0.02,
+    # Vv < 0.05,
     # Vv == 0.035,
 ])
 # opti.subject_to([
@@ -857,13 +857,13 @@ mass_vstab = lib_mass_struct.mass_hpa_stabilizer(
     t_over_c=0.10
 )
 
-mass_tail_boom = lib_mass_struct.mass_hpa_tail_boom(
+mass_boom = lib_mass_struct.mass_hpa_tail_boom(
     length_tail_boom=boom_length,
     dynamic_pressure_at_manuever_speed=q_maneuver,
     mean_tail_surface_area=hstab.area() + vstab.area()
 )
 
-mass_structural = mass_wing + mass_hstab + mass_vstab + mass_tail_boom
+mass_structural = mass_wing + mass_hstab + mass_vstab + mass_boom
 # mass_structural = mass_total * 0.31
 
 ### Avionics
