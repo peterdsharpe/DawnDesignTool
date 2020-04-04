@@ -213,7 +213,7 @@ boom_diameter = 0.25
 
 wing = asb.Wing(
     name="Main Wing",
-    x_le=0.05 * wing_root_chord,  # Coordinates of the wing's leading edge # TODO make this a free parameter?
+    x_le=0.02 * wing_root_chord,  # Coordinates of the wing's leading edge # TODO make this a free parameter?
     y_le=0,  # Coordinates of the wing's leading edge
     z_le=0,  # Coordinates of the wing's leading edge
     symmetric=True,
@@ -505,7 +505,7 @@ net_pitching_moment = (
         - hstab.approximate_center_of_pressure()[0] * lift_hstab
 )
 opti.subject_to([
-    net_pitching_moment == 0  # Trim condition
+    net_pitching_moment / 1e3 == 0  # Trim condition
 ])
 
 ### Size the tails off of tail volume coefficients
