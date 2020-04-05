@@ -206,7 +206,8 @@ opti.subject_to([
     # you can relax this, but you need to change the fuselage shape first
 ])
 
-nose_length = boom_length * 0.3
+# nose_length = boom_length * 0.3
+nose_length = wing_root_chord * 1.2
 
 fuse_diameter = 1
 boom_diameter = 0.25
