@@ -26,7 +26,7 @@ opti.set_value(days_to_simulate, 1)
 propulsion_type = "solar"  # "solar" or "gas"
 enforce_periodicity = True  # Tip: turn this off when looking at gas models or models w/o trajectory opt. enabled.
 n_booms = 1  # 1, 2, or 3
-structural_load_factor = 3
+structural_load_factor = 3 # over static
 allow_trajectory_optimization = True
 minimize = "span"  # "span" or "TOGW" or "endurance"
 mass_payload = opti.parameter()
@@ -174,7 +174,7 @@ opti.subject_to([wing_root_chord > 0.1])
 
 wing_x_le = 0.01 * opti.variable()
 opti.set_initial(wing_x_le, 0)
-opti.subject_to([wing_x_le == -0.05 * wing_root_chord])
+# opti.subject_to([wing_x_le == -0.06 * wing_root_chord])
 
 # hstab
 hstab_span = 15 * opti.variable()
@@ -208,7 +208,7 @@ opti.subject_to([
 
 nose_length = boom_length * 0.3
 
-fuse_diameter = 1.2
+fuse_diameter = 1
 boom_diameter = 0.25
 
 wing = asb.Wing(
@@ -523,9 +523,9 @@ x_ac = (
                wing.area() + hstab.area() * n_booms
        )
 static_margin_fraction = (x_ac - airplane.xyz_ref[0]) / wing.mean_geometric_chord()
-# opti.subject_to([
-#     static_margin_fraction == 0.2
-# ]) # TODO work this in
+opti.subject_to([
+    static_margin_fraction == 0.1
+]) # TODO work this in
 
 ### Trim
 net_pitching_moment = (
@@ -554,7 +554,7 @@ opti.subject_to([
     # Vv * vstab_effectiveness_factor > 0.02,
     # Vv * vstab_effectiveness_factor < 0.05,
     # Vv * vstab_effectiveness_factor == 0.035,
-    Vh > 0.3,
+    # Vh > 0.3,
     # Vh < 0.6,
     # Vh == 0.45,
     Vv > 0.02,
@@ -884,7 +884,7 @@ mass_vstab_secondary = lib_mass_struct.mass_hpa_stabilizer(
 mass_vstab = mass_vstab_primary + mass_vstab_secondary  # per vstab
 
 mass_boom = lib_mass_struct.mass_hpa_tail_boom(
-    length_tail_boom=boom_length,
+    length_tail_boom=boom_length-wing_x_le,
     dynamic_pressure_at_manuever_speed=q_maneuver,
     mean_tail_surface_area=hstab.area() + vstab.area()
 )  # per boom
