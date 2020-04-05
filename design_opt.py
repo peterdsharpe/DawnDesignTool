@@ -28,7 +28,7 @@ enforce_periodicity = True  # Tip: turn this off when looking at gas models or m
 n_booms = 1  # 1, 2, or 3
 structural_load_factor = 3
 allow_trajectory_optimization = True
-minimize = "TOGW"  # "span" or "TOGW" or "endurance"
+minimize = "span"  # "span" or "TOGW" or "endurance"
 mass_payload = opti.parameter()
 opti.set_value(mass_payload, 30)
 wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
