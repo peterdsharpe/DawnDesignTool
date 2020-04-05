@@ -686,12 +686,13 @@ if propulsion_type == "solar":
 
     ### Solar calculations
 
-    realizable_solar_cell_efficiency = 0.31
+    realizable_solar_cell_efficiency = 0.25
     # This figure should take into account all temperature factors, MPPT losses,
     # spectral losses (different spectrum at altitude), multi-junction effects, etc.
     # Kevin Uleck gives this figure as 0.205.
     # This paper (https://core.ac.uk/download/pdf/159146935.pdf) gives it as 0.19.
     # According to Bjarni, MicroLink Devices has flexible triple-junction cells at 31% and 37.75% efficiency.
+    # Bjarni, 4/5/20: "I'd make the approximation that we can get at least 25% (after accounting for MPPT, mismatch; before thermal effects)."
 
     # Total cell power flux
     solar_power_flux = (
@@ -712,11 +713,13 @@ if propulsion_type == "solar":
     power_in = solar_power_flux * area_solar
 
     # Solar cell weight
-    rho_solar_cells = 0.25  # kg/m^2, solar cell area density.
+    rho_solar_cells = 0.4  # kg/m^2, solar cell area density.
     # The solar_simple_demo model gives this as 0.27. Burton's model gives this as 0.30.
     # This paper (https://core.ac.uk/download/pdf/159146935.pdf) gives it as 0.42.
     # This paper (https://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=4144&context=facpub) effectively gives it as 0.3143.
-    # According to Bjarni, MicroLink Devices has cells on the order of 250 g/m^2.
+    # According to Bjarni, MicroLink Devices has cells on the order of 250 g/m^2 - but they're prohibitively expensive.
+    # Bjarni, 4/5/20: "400 g/m^2"
+
     mass_solar_cells = rho_solar_cells * area_solar
 
     ### Battery calculations
