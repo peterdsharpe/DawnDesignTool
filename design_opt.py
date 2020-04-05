@@ -10,6 +10,7 @@ from aerosandbox.library import propulsion_electric as lib_prop_elec
 from aerosandbox.library import propulsion_propeller as lib_prop_prop
 from aerosandbox.library import winds as lib_winds
 from aerosandbox.library.airfoils import *
+import copy
 
 # region Setup
 ##### Initialize Optimization
@@ -24,7 +25,7 @@ days_to_simulate = opti.parameter()
 opti.set_value(days_to_simulate, 1)
 propulsion_type = "solar"  # "solar" or "gas"
 enforce_periodicity = True  # Tip: turn this off when looking at gas models or models w/o trajectory opt. enabled.
-n_booms = 1  # 1, 2, or 3
+n_booms = 3  # 1, 2, or 3
 structural_load_factor = 3
 allow_trajectory_optimization = True
 minimize = "span"  # "span" or "TOGW" or "endurance"
@@ -368,21 +369,70 @@ fuse = asb.Fuselage(
     ]
 )
 
+# Assemble the airplane
+fuses = []
+hstabs = []
+vstabs = []
+if n_booms == 1:
+    fuses.append(fuse)
+    hstabs.append(hstab)
+    vstabs.append(vstab)
+elif n_booms == 2:
+    boom_location = 0.40 # as a fraction of the half-span
+
+    left_fuse = copy.deepcopy(fuse)
+    right_fuse = copy.deepcopy(fuse)
+    left_fuse.xyz_le += cas.vertcat(0, -wing_span / 2 * boom_location,0)
+    right_fuse.xyz_le += cas.vertcat(0, wing_span / 2 * boom_location,0)
+    fuses.extend([left_fuse, right_fuse])
+
+    left_hstab = copy.deepcopy(hstab)
+    right_hstab = copy.deepcopy(hstab)
+    left_hstab.xyz_le += cas.vertcat(0, -wing_span / 2 *boom_location, 0)
+    right_hstab.xyz_le += cas.vertcat(0, wing_span / 2 *boom_location, 0)
+    hstabs.extend([left_hstab, right_hstab])
+
+    left_vstab = copy.deepcopy(vstab)
+    right_vstab = copy.deepcopy(vstab)
+    left_vstab.xyz_le += cas.vertcat(0, -wing_span / 2 *boom_location, 0)
+    right_vstab.xyz_le += cas.vertcat(0, wing_span / 2 *boom_location, 0)
+    vstabs.extend([left_vstab, right_vstab])
+
+elif n_booms == 3:
+    boom_location = 0.57 # as a fraction of the half-span
+
+    left_fuse = copy.deepcopy(fuse)
+    center_fuse = copy.deepcopy(fuse)
+    right_fuse = copy.deepcopy(fuse)
+    left_fuse.xyz_le += cas.vertcat(0, -wing_span / 2 * boom_location, 0)
+    right_fuse.xyz_le += cas.vertcat(0, wing_span / 2 * boom_location, 0)
+    fuses.extend([left_fuse, center_fuse, right_fuse])
+
+    left_hstab = copy.deepcopy(hstab)
+    center_hstab = copy.deepcopy(hstab)
+    right_hstab = copy.deepcopy(hstab)
+    left_hstab.xyz_le += cas.vertcat(0, -wing_span / 2 * boom_location, 0)
+    right_hstab.xyz_le += cas.vertcat(0, wing_span / 2 * boom_location, 0)
+    hstabs.extend([left_hstab, center_hstab, right_hstab])
+
+    left_vstab = copy.deepcopy(vstab)
+    center_vstab = copy.deepcopy(vstab)
+    right_vstab = copy.deepcopy(vstab)
+    left_vstab.xyz_le += cas.vertcat(0, -wing_span / 2 * boom_location, 0)
+    right_vstab.xyz_le += cas.vertcat(0, wing_span / 2 * boom_location, 0)
+    vstabs.extend([left_vstab, center_vstab, right_vstab])
+
+else:
+    raise ValueError("Bad value of n_booms!")
+
 airplane = asb.Airplane(
     name="Solar1",
     x_ref=0,
     y_ref=0,
     z_ref=0,
-    wings=[
-        wing,
-        hstab,
-        vstab,
-    ],
-    fuselages=[
-        fuse
-    ],
+    wings=[wing] + hstabs + vstabs,
+    fuselages=fuses,
 )
-# airplane.draw()
 
 # endregion
 
@@ -847,7 +897,7 @@ mass_vstab_primary = lib_mass_struct.mass_wing_spar(
     span=vstab.span(),
     mass_supported=q_maneuver * 1.5 * vstab.area() / 9.81,
     ultimate_load_factor=structural_load_factor
-) * 1.2 # due to asymmetry, a guess
+) * 1.2  # due to asymmetry, a guess
 mass_vstab_secondary = lib_mass_struct.mass_hpa_stabilizer(
     span=vstab.span(),
     chord=vstab.mean_geometric_chord(),
@@ -1118,6 +1168,20 @@ if __name__ == "__main__":
         fig.show()
 
 
+    def qp3(x_name, y_name, z_name):
+        # QuickPlot two variables.
+        fig = px.scatter_3d(
+            x=sol.value(eval(x_name)),
+            y=sol.value(eval(y_name)),
+            z=sol.value(eval(z_name)),
+            title="%s vs. %s" % (x_name, y_name),
+            labels={'x': x_name, 'y': y_name},
+            size_max=18
+        )
+        fig.data[0].update(mode='markers+lines')
+        fig.show()
+
+
     s = lambda x: sol.value(x)
 
     draw = lambda: airplane.substitute_solution(sol).draw()
@@ -1148,8 +1212,6 @@ if __name__ == "__main__":
         sol.value(cas.mmax(mass_power_systems)),
         sol.value(mass_avionics),
     ]
-    # colors = plt.cm.rainbow(np.linspace(0,1,5))
-    # colors = plt.cm.tab20c(np.linspace(0,1,5))
     colors = plt.cm.Set2(np.arange(5))
     plt.pie(pie_values, labels=pie_labels, autopct='%1.1f%%', colors=colors)
     plt.title("Mass Breakdown at Takeoff")
