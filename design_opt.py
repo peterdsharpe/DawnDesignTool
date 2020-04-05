@@ -172,11 +172,9 @@ wing_root_chord = 4 * opti.variable()
 opti.set_initial(wing_root_chord, 3)
 opti.subject_to([wing_root_chord > 0.1])
 
-wing_x_le = 0.1 * opti.variable()
-opti.set_initial(wing_x_le, 0.05 * 3)
-opti.subject_to([
-    wing_x_le == 0.05 * wing_root_chord
-])
+wing_x_le = 0.01 * opti.variable()
+opti.set_initial(wing_x_le, 0)
+opti.subject_to([wing_x_le == -0.05 * wing_root_chord])
 
 # hstab
 hstab_span = 15 * opti.variable()
@@ -204,7 +202,7 @@ opti.subject_to([vstab_chord > 0.1])
 boom_length = opti.variable()
 opti.set_initial(boom_length, 23)
 opti.subject_to([
-    boom_length - vstab_chord - hstab_chord > wing_root_chord
+    boom_length - vstab_chord - hstab_chord > wing_x_le + wing_root_chord
     # you can relax this, but you need to change the fuselage shape first
 ])
 
@@ -215,7 +213,8 @@ boom_diameter = 0.25
 
 wing = asb.Wing(
     name="Main Wing",
-    x_le=0.05 * wing_root_chord,  # Coordinates of the wing's leading edge # TODO make this a free parameter?
+    # x_le=-0.05 * wing_root_chord,  # Coordinates of the wing's leading edge # TODO make this a free parameter?
+    x_le=wing_x_le,  # Coordinates of the wing's leading edge # TODO make this a free parameter?
     y_le=0,  # Coordinates of the wing's leading edge
     z_le=0,  # Coordinates of the wing's leading edge
     symmetric=True,
@@ -243,7 +242,7 @@ wing = asb.Wing(
 )
 hstab = asb.Wing(
     name="Horizontal Stabilizer",
-    x_le=boom_length - vstab_chord * 0.35 - hstab_chord,  # Coordinates of the wing's leading edge
+    x_le=boom_length - vstab_chord * 0.75 - hstab_chord,  # Coordinates of the wing's leading edge
     y_le=0,  # Coordinates of the wing's leading edge
     z_le=0.1,  # Coordinates of the wing's leading edge
     symmetric=True,
@@ -271,7 +270,7 @@ hstab = asb.Wing(
 )
 vstab = asb.Wing(
     name="Vertical Stabilizer",
-    x_le=boom_length - vstab_chord * 0.35,  # Coordinates of the wing's leading edge
+    x_le=boom_length - vstab_chord * 0.75,  # Coordinates of the wing's leading edge
     y_le=0,  # Coordinates of the wing's leading edge
     z_le=-vstab_span / 2 + vstab_span * 0.15,  # Coordinates of the wing's leading edge
     symmetric=False,
@@ -497,8 +496,7 @@ hstab_Cd_profile = hstab_airfoil.CDp_function(alpha + hstab_twist_angle, hstab_R
 drag_hstab_profile = hstab_Cd_profile * q * hstab.area()
 
 hstab_oswalds_efficiency = 0.95  # TODO make this a function of taper ratio
-hstab_induced_drag_factor = 0.5 # due to being in the wing's downwash; # TODO find a more sophisticated way to implement this effect
-drag_hstab_induced = lift_hstab ** 2 / (q * np.pi * hstab.span() ** 2 * hstab_oswalds_efficiency) * hstab_induced_drag_factor
+drag_hstab_induced = lift_hstab ** 2 / (q * np.pi * hstab.span() ** 2 * hstab_oswalds_efficiency)
 
 drag_hstab = drag_hstab_profile + drag_hstab_induced  # per hstab
 
@@ -526,8 +524,8 @@ x_ac = (
        )
 static_margin_fraction = (x_ac - airplane.xyz_ref[0]) / wing.mean_geometric_chord()
 # opti.subject_to([
-#     x_ac - 0 == wing.mean_geometric_chord() * 0.1
-# ]) # TODO
+#     static_margin_fraction == 0.2
+# ]) # TODO work this in
 
 ### Trim
 net_pitching_moment = (
@@ -557,10 +555,10 @@ opti.subject_to([
     # Vv * vstab_effectiveness_factor < 0.05,
     # Vv * vstab_effectiveness_factor == 0.035,
     Vh > 0.3,
-    Vh < 0.6,
+    # Vh < 0.6,
     # Vh == 0.45,
     Vv > 0.02,
-    Vv < 0.05,
+    # Vv < 0.05,
     # Vv == 0.035,
 ])
 # opti.subject_to([
