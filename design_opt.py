@@ -25,7 +25,7 @@ days_to_simulate = opti.parameter()
 opti.set_value(days_to_simulate, 1)
 propulsion_type = "solar"  # "solar" or "gas"
 enforce_periodicity = True  # Tip: turn this off when looking at gas models or models w/o trajectory opt. enabled.
-n_booms = 3  # 1, 2, or 3
+n_booms = 1  # 1, 2, or 3
 structural_load_factor = 3
 allow_trajectory_optimization = True
 minimize = "span"  # "span" or "TOGW" or "endurance"
@@ -36,7 +36,7 @@ battery_specific_energy_Wh_kg = opti.parameter()
 opti.set_value(battery_specific_energy_Wh_kg, 450)
 
 ##### Simulation Parameters
-n_timesteps = 200  # Only relevant if allow_trajectory_optimization is True.
+n_timesteps = 100  # Only relevant if allow_trajectory_optimization is True.
 # Quick convergence testing indicates you can get bad analyses below 150 or so...
 
 ##### Optimization bounds
@@ -457,8 +457,8 @@ fuse_Re = rho / mu * airspeed * fuse.length()
 CLA_fuse = 0
 CDA_fuse = aero.Cf_flat_plate(fuse_Re) * fuse.area_wetted()
 
-lift_fuse = CLA_fuse * q
-drag_fuse = CDA_fuse * q
+lift_fuse = CLA_fuse * q # per fuse
+drag_fuse = CDA_fuse * q # per fuse
 
 # wing
 wing_Re = rho / mu * airspeed * wing.mean_geometric_chord()
@@ -490,7 +490,7 @@ hstab_Cl_inc = hstab_airfoil.CL_function(alpha + hstab_twist_angle, hstab_Re, 0,
                                          0)  # Incompressible 2D lift coefficient
 hstab_CL = hstab_Cl_inc * aero.CL_over_Cl(hstab.aspect_ratio(), mach=mach,
                                           sweep=hstab.mean_sweep_angle())  # Compressible 3D lift coefficient
-lift_hstab = hstab_CL * q * hstab.area()
+lift_hstab = hstab_CL * q * hstab.area() # per hstab
 
 hstab_Cd_profile = hstab_airfoil.CDp_function(alpha + hstab_twist_angle, hstab_Re, mach, 0)
 drag_hstab_profile = hstab_Cd_profile * q * hstab.area()
@@ -498,7 +498,7 @@ drag_hstab_profile = hstab_Cd_profile * q * hstab.area()
 hstab_oswalds_efficiency = 0.95  # TODO make this a function of taper ratio
 drag_hstab_induced = lift_hstab ** 2 / (q * np.pi * hstab.span() ** 2 * hstab_oswalds_efficiency)
 
-drag_hstab = drag_hstab_profile + drag_hstab_induced
+drag_hstab = drag_hstab_profile + drag_hstab_induced # per hstab
 
 # vstab
 vstab_Re = rho / mu * airspeed * vstab.mean_geometric_chord()
@@ -506,27 +506,11 @@ vstab_airfoil = vstab.xsecs[0].airfoil  # type: asb.Airfoil
 vstab_Cd_profile = vstab_airfoil.CDp_function(0, vstab_Re, mach, 0)
 drag_vstab_profile = vstab_Cd_profile * q * vstab.area()
 
-drag_vstab = drag_vstab_profile
-
-# # lift wires
-# if wing_type == "cantilevered":
-#     n_lift_wires = 0
-# elif wing_type == "one-wire":
-#     n_lift_wires = 1
-# elif wing_type == "multi-wire":
-#     n_lift_wires = 2
-# else:
-#     raise ValueError("Bad value of wing_type!")
-#
-# lift_wire_diameter = 1.8034e-3  # 0.071" dia. lift wire (from Daedalus)
-# lift_wire_Re = rho / mu * airspeed * lift_wire_diameter
-# lift_wire_Cd = aero.Cd_cylinder(lift_wire_Re)
-#
-# drag_lift_wires = n_lift_wires * lift_wire_Cd * q * wing.span() / 2 * lift_wire_diameter
+drag_vstab = drag_vstab_profile # per vstab
 
 # Force totals
-lift_force = lift_fuse + lift_wing + lift_hstab
-drag_force = drag_fuse + drag_wing + drag_hstab + drag_vstab  # + drag_lift_wires
+lift_force = lift_wing + n_booms * (lift_fuse + lift_hstab)
+drag_force = drag_wing + n_booms * (drag_fuse + drag_hstab + drag_vstab)  # + drag_lift_wires
 
 # endregion
 
@@ -534,9 +518,9 @@ drag_force = drag_fuse + drag_wing + drag_hstab + drag_vstab  # + drag_lift_wire
 ### Estimate aerodynamic center
 x_ac = (
                wing.approximate_center_of_pressure()[0] * wing.area() +
-               hstab.approximate_center_of_pressure()[0] * hstab.area()
+               hstab.approximate_center_of_pressure()[0] * hstab.area() * n_booms
        ) / (
-               wing.area() + hstab.area()
+               wing.area() + hstab.area() * n_booms
        )
 static_margin_fraction = (x_ac - airplane.xyz_ref[0]) / wing.mean_geometric_chord()
 # opti.subject_to([
@@ -546,17 +530,17 @@ static_margin_fraction = (x_ac - airplane.xyz_ref[0]) / wing.mean_geometric_chor
 ### Trim
 net_pitching_moment = (
         -wing.approximate_center_of_pressure()[0] * lift_wing + moment_wing
-        - hstab.approximate_center_of_pressure()[0] * lift_hstab
+        - hstab.approximate_center_of_pressure()[0] * lift_hstab * n_booms
 )
 opti.subject_to([
     net_pitching_moment / 1e3 == 0  # Trim condition
 ])
 
 ### Size the tails off of tail volume coefficients
-Vh = hstab.area() * (
+Vh = hstab.area() * n_booms * (
         hstab.approximate_center_of_pressure()[0] - wing.approximate_center_of_pressure()[0]
 ) / (wing.area() * wing.mean_geometric_chord())
-Vv = vstab.area() * (
+Vv = vstab.area() * n_booms * (
         vstab.approximate_center_of_pressure()[0] - wing.approximate_center_of_pressure()[0]
 ) / (wing.area() * wing.span())
 
@@ -565,17 +549,17 @@ hstab_effectiveness_factor = (hstab.aspect_ratio() / (hstab.aspect_ratio() + 2))
 vstab_effectiveness_factor = (vstab.aspect_ratio() / (vstab.aspect_ratio() + 2)) / (
         wing.aspect_ratio() / (wing.aspect_ratio() + 2))
 opti.subject_to([
-    Vh * hstab_effectiveness_factor > 0.3,
-    Vh * hstab_effectiveness_factor < 0.6,
+    # Vh * hstab_effectiveness_factor > 0.3,
+    # Vh * hstab_effectiveness_factor < 0.6,
     # Vh * hstab_effectiveness_factor == 0.45,
-    Vv * vstab_effectiveness_factor > 0.02,
-    Vv * vstab_effectiveness_factor < 0.05,
+    # Vv * vstab_effectiveness_factor > 0.02,
+    # Vv * vstab_effectiveness_factor < 0.05,
     # Vv * vstab_effectiveness_factor == 0.035,
-    # Vh > 0.3,
-    # Vh < 0.6,
+    Vh > 0.3,
+    Vh < 0.6,
     # Vh == 0.45,
-    # Vv > 0.02,
-    # Vv < 0.05,
+    Vv > 0.02,
+    Vv < 0.05,
     # Vv == 0.035,
 ])
 # opti.subject_to([
@@ -638,7 +622,7 @@ opti.subject_to([
     power_out_max > 0
 ])
 
-mass_motor_raw = lib_prop_elec.mass_motor_electric(max_power=power_out_max)
+mass_motor_raw = lib_prop_elec.mass_motor_electric(max_power=power_out_max/n_propellers) * n_propellers
 mass_motor_mounted = 2 * mass_motor_raw  # similar to a quote from Raymer, modified to make sensible units, prop weight roughly subtracted
 
 mass_propellers = n_propellers * lib_prop_prop.mass_hpa_propeller(
@@ -886,7 +870,7 @@ mass_hstab_secondary = lib_mass_struct.mass_hpa_stabilizer(
     include_spar=False
 )
 
-mass_hstab = mass_hstab_primary + mass_hstab_secondary
+mass_hstab = mass_hstab_primary + mass_hstab_secondary # per hstab
 
 n_ribs_vstab = 20 * opti.variable()
 opti.set_initial(n_ribs_vstab, 35)
@@ -905,15 +889,15 @@ mass_vstab_secondary = lib_mass_struct.mass_hpa_stabilizer(
     n_ribs=n_ribs_vstab,
     t_over_c=0.08
 )
-mass_vstab = mass_vstab_primary + mass_vstab_secondary
+mass_vstab = mass_vstab_primary + mass_vstab_secondary # per vstab
 
 mass_boom = lib_mass_struct.mass_hpa_tail_boom(
     length_tail_boom=boom_length,
     dynamic_pressure_at_manuever_speed=q_maneuver,
     mean_tail_surface_area=hstab.area() + vstab.area()
-)
+) # per boom
 
-mass_structural = mass_wing + mass_hstab + mass_vstab + mass_boom
+mass_structural = mass_wing + n_booms * (mass_hstab + mass_vstab + mass_boom)
 # mass_structural = mass_total * 0.31
 
 ### Avionics
