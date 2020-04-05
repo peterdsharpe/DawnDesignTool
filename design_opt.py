@@ -841,7 +841,7 @@ mass_wing_secondary = lib_mass_struct.mass_hpa_wing(
 
 mass_wing = mass_wing_primary + mass_wing_secondary
 
-q_maneuver = 50  # TODO make this more accurate
+q_maneuver = 80  # TODO make this more accurate
 
 n_ribs_hstab = 30 * opti.variable()
 opti.set_initial(n_ribs_hstab, 40)
@@ -900,7 +900,8 @@ mass_structural = mass_wing + n_booms * (mass_hstab + mass_vstab + mass_boom)
 # mass_servos = 6 * 0.100  # a total guess
 #
 # mass_avionics = mass_flight_computer + mass_sensors + mass_communications + mass_servos
-mass_avionics = 3.7 / 3.8 * 25  # back-calculated from Kevin Uleck's figures in MIT 16.82 presentation
+# mass_avionics = 3.7 / 3.8 * 25  # back-calculated from Kevin Uleck's figures in MIT 16.82 presentation
+mass_avionics = 5  # Avionics team is currently estimating 2.86 kg as of 4/5/20, leaving them 5 for headroom.
 
 opti.subject_to([
     mass_total == mass_payload + mass_structural + mass_propulsion + mass_power_systems + mass_avionics,
