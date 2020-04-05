@@ -28,7 +28,7 @@ enforce_periodicity = True  # Tip: turn this off when looking at gas models or m
 n_booms = 1  # 1, 2, or 3
 structural_load_factor = 3
 allow_trajectory_optimization = True
-minimize = "span"  # "span" or "TOGW" or "endurance"
+minimize = "TOGW"  # "span" or "TOGW" or "endurance"
 mass_payload = opti.parameter()
 opti.set_value(mass_payload, 30)
 wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
@@ -200,7 +200,6 @@ opti.set_initial(vstab_chord, 2.5)
 opti.subject_to([vstab_chord > 0.1])
 
 # fuselage
-nose_length = 4
 
 boom_length = opti.variable()
 opti.set_initial(boom_length, 23)
@@ -208,6 +207,8 @@ opti.subject_to([
     boom_length - vstab_chord - hstab_chord > wing_root_chord
     # you can relax this, but you need to change the fuselage shape first
 ])
+
+nose_length = boom_length * 0.3
 
 fuse_diameter = 1.2
 boom_diameter = 0.25
@@ -378,28 +379,28 @@ if n_booms == 1:
     hstabs.append(hstab)
     vstabs.append(vstab)
 elif n_booms == 2:
-    boom_location = 0.40 # as a fraction of the half-span
+    boom_location = 0.40  # as a fraction of the half-span
 
     left_fuse = copy.deepcopy(fuse)
     right_fuse = copy.deepcopy(fuse)
-    left_fuse.xyz_le += cas.vertcat(0, -wing_span / 2 * boom_location,0)
-    right_fuse.xyz_le += cas.vertcat(0, wing_span / 2 * boom_location,0)
+    left_fuse.xyz_le += cas.vertcat(0, -wing_span / 2 * boom_location, 0)
+    right_fuse.xyz_le += cas.vertcat(0, wing_span / 2 * boom_location, 0)
     fuses.extend([left_fuse, right_fuse])
 
     left_hstab = copy.deepcopy(hstab)
     right_hstab = copy.deepcopy(hstab)
-    left_hstab.xyz_le += cas.vertcat(0, -wing_span / 2 *boom_location, 0)
-    right_hstab.xyz_le += cas.vertcat(0, wing_span / 2 *boom_location, 0)
+    left_hstab.xyz_le += cas.vertcat(0, -wing_span / 2 * boom_location, 0)
+    right_hstab.xyz_le += cas.vertcat(0, wing_span / 2 * boom_location, 0)
     hstabs.extend([left_hstab, right_hstab])
 
     left_vstab = copy.deepcopy(vstab)
     right_vstab = copy.deepcopy(vstab)
-    left_vstab.xyz_le += cas.vertcat(0, -wing_span / 2 *boom_location, 0)
-    right_vstab.xyz_le += cas.vertcat(0, wing_span / 2 *boom_location, 0)
+    left_vstab.xyz_le += cas.vertcat(0, -wing_span / 2 * boom_location, 0)
+    right_vstab.xyz_le += cas.vertcat(0, wing_span / 2 * boom_location, 0)
     vstabs.extend([left_vstab, right_vstab])
 
 elif n_booms == 3:
-    boom_location = 0.57 # as a fraction of the half-span
+    boom_location = 0.57  # as a fraction of the half-span
 
     left_fuse = copy.deepcopy(fuse)
     center_fuse = copy.deepcopy(fuse)
@@ -457,8 +458,8 @@ fuse_Re = rho / mu * airspeed * fuse.length()
 CLA_fuse = 0
 CDA_fuse = aero.Cf_flat_plate(fuse_Re) * fuse.area_wetted()
 
-lift_fuse = CLA_fuse * q # per fuse
-drag_fuse = CDA_fuse * q # per fuse
+lift_fuse = CLA_fuse * q  # per fuse
+drag_fuse = CDA_fuse * q  # per fuse
 
 # wing
 wing_Re = rho / mu * airspeed * wing.mean_geometric_chord()
@@ -490,15 +491,16 @@ hstab_Cl_inc = hstab_airfoil.CL_function(alpha + hstab_twist_angle, hstab_Re, 0,
                                          0)  # Incompressible 2D lift coefficient
 hstab_CL = hstab_Cl_inc * aero.CL_over_Cl(hstab.aspect_ratio(), mach=mach,
                                           sweep=hstab.mean_sweep_angle())  # Compressible 3D lift coefficient
-lift_hstab = hstab_CL * q * hstab.area() # per hstab
+lift_hstab = hstab_CL * q * hstab.area()  # per hstab
 
 hstab_Cd_profile = hstab_airfoil.CDp_function(alpha + hstab_twist_angle, hstab_Re, mach, 0)
 drag_hstab_profile = hstab_Cd_profile * q * hstab.area()
 
 hstab_oswalds_efficiency = 0.95  # TODO make this a function of taper ratio
-drag_hstab_induced = lift_hstab ** 2 / (q * np.pi * hstab.span() ** 2 * hstab_oswalds_efficiency)
+hstab_induced_drag_factor = 0.5 # due to being in the wing's downwash; # TODO find a more sophisticated way to implement this effect
+drag_hstab_induced = lift_hstab ** 2 / (q * np.pi * hstab.span() ** 2 * hstab_oswalds_efficiency) * hstab_induced_drag_factor
 
-drag_hstab = drag_hstab_profile + drag_hstab_induced # per hstab
+drag_hstab = drag_hstab_profile + drag_hstab_induced  # per hstab
 
 # vstab
 vstab_Re = rho / mu * airspeed * vstab.mean_geometric_chord()
@@ -506,7 +508,7 @@ vstab_airfoil = vstab.xsecs[0].airfoil  # type: asb.Airfoil
 vstab_Cd_profile = vstab_airfoil.CDp_function(0, vstab_Re, mach, 0)
 drag_vstab_profile = vstab_Cd_profile * q * vstab.area()
 
-drag_vstab = drag_vstab_profile # per vstab
+drag_vstab = drag_vstab_profile  # per vstab
 
 # Force totals
 lift_force = lift_wing + n_booms * (lift_fuse + lift_hstab)
@@ -544,10 +546,9 @@ Vv = vstab.area() * n_booms * (
         vstab.approximate_center_of_pressure()[0] - wing.approximate_center_of_pressure()[0]
 ) / (wing.area() * wing.span())
 
-hstab_effectiveness_factor = (hstab.aspect_ratio() / (hstab.aspect_ratio() + 2)) / (
-        wing.aspect_ratio() / (wing.aspect_ratio() + 2))
-vstab_effectiveness_factor = (vstab.aspect_ratio() / (vstab.aspect_ratio() + 2)) / (
-        wing.aspect_ratio() / (wing.aspect_ratio() + 2))
+hstab_effectiveness_factor = aero.CL_over_Cl(hstab.aspect_ratio()) / aero.CL_over_Cl(wing.aspect_ratio())
+vstab_effectiveness_factor = aero.CL_over_Cl(vstab.aspect_ratio()) / aero.CL_over_Cl(wing.aspect_ratio())
+
 opti.subject_to([
     # Vh * hstab_effectiveness_factor > 0.3,
     # Vh * hstab_effectiveness_factor < 0.6,
@@ -622,7 +623,7 @@ opti.subject_to([
     power_out_max > 0
 ])
 
-mass_motor_raw = lib_prop_elec.mass_motor_electric(max_power=power_out_max/n_propellers) * n_propellers
+mass_motor_raw = lib_prop_elec.mass_motor_electric(max_power=power_out_max / n_propellers) * n_propellers
 mass_motor_mounted = 2 * mass_motor_raw  # similar to a quote from Raymer, modified to make sensible units, prop weight roughly subtracted
 
 mass_propellers = n_propellers * lib_prop_prop.mass_hpa_propeller(
@@ -848,13 +849,6 @@ opti.set_initial(n_ribs_hstab, 40)
 opti.subject_to([
     n_ribs_hstab > 0
 ])
-# mass_hstab = lib_mass_struct.mass_hpa_stabilizer(
-#     span=hstab.span(),
-#     chord=hstab.mean_geometric_chord(),
-#     dynamic_pressure_at_manuever_speed=q_maneuver,
-#     n_ribs=n_ribs_hstab,
-#     t_over_c=0.10,
-# )
 mass_hstab_primary = lib_mass_struct.mass_wing_spar(
     span=hstab.span(),
     mass_supported=q_maneuver * 1.5 * hstab.area() / 9.81,
@@ -870,7 +864,7 @@ mass_hstab_secondary = lib_mass_struct.mass_hpa_stabilizer(
     include_spar=False
 )
 
-mass_hstab = mass_hstab_primary + mass_hstab_secondary # per hstab
+mass_hstab = mass_hstab_primary + mass_hstab_secondary  # per hstab
 
 n_ribs_vstab = 20 * opti.variable()
 opti.set_initial(n_ribs_vstab, 35)
@@ -889,13 +883,13 @@ mass_vstab_secondary = lib_mass_struct.mass_hpa_stabilizer(
     n_ribs=n_ribs_vstab,
     t_over_c=0.08
 )
-mass_vstab = mass_vstab_primary + mass_vstab_secondary # per vstab
+mass_vstab = mass_vstab_primary + mass_vstab_secondary  # per vstab
 
 mass_boom = lib_mass_struct.mass_hpa_tail_boom(
     length_tail_boom=boom_length,
     dynamic_pressure_at_manuever_speed=q_maneuver,
     mean_tail_surface_area=hstab.area() + vstab.area()
-) # per boom
+)  # per boom
 
 mass_structural = mass_wing + n_booms * (mass_hstab + mass_vstab + mass_boom)
 # mass_structural = mass_total * 0.31
