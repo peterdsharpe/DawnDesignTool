@@ -17,7 +17,7 @@ import copy
 opti = cas.Opti()
 
 ##### Operating Parameters
-latitude = 26  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
+latitude = 49  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
 day_of_year = 244  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 min_altitude = 19812  # meters. 19812 m = 65000 ft.
 required_headway_per_day = 0  # 10e3  # meters
