@@ -26,7 +26,7 @@ opti.set_value(days_to_simulate, 1)
 propulsion_type = "solar"  # "solar" or "gas"
 enforce_periodicity = True  # Tip: turn this off when looking at gas models or models w/o trajectory opt. enabled.
 n_booms = 1  # 1, 2, or 3
-structural_load_factor = 3 # over static
+structural_load_factor = 3  # over static
 allow_trajectory_optimization = True
 minimize = "span"  # "span" or "TOGW" or "endurance"
 mass_payload = opti.parameter()
@@ -448,7 +448,9 @@ a = atmo.get_speed_of_sound_from_temperature(T)
 mach = airspeed / a
 g = 9.81  # gravitational acceleration, m/s^2
 q = 1 / 2 * rho * airspeed ** 2  # Solar calculations
-solar_flux_on_horizontal = lib_solar.solar_flux_on_horizontal(latitude, day_of_year, time, scattering=True)
+solar_flux_on_horizontal = lib_solar.solar_flux_on_horizontal(
+    latitude, day_of_year, time, scattering=True
+)
 # endregion
 
 # region Aerodynamics
@@ -595,7 +597,7 @@ opti.subject_to([
 n_propellers = 2 * n_booms
 # n_propellers = opti.variable()
 # opti.set_initial(n_propellers,
-#                  2 if optimistic else 2
+#                  2
 #                  )
 # opti.subject_to([
 #     n_propellers > 2,
@@ -604,7 +606,7 @@ n_propellers = 2 * n_booms
 
 area_propulsive = cas.pi / 4 * propeller_diameter ** 2 * n_propellers
 propeller_efficiency = 0.8  # a total WAG
-motor_efficiency = 0.856 / (0.856 + 0.026 + 0.018 + 0.004)  # back-calculated from motor efficiency
+motor_efficiency = 0.856 / (0.856 + 0.026 + 0.018 + 0.004)  # back-calculated from Odysseus data
 
 power_out_propulsion_shaft = lib_prop_prop.propeller_shaft_power_from_thrust(
     thrust_force=thrust_force,
