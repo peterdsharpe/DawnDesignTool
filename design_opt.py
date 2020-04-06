@@ -457,7 +457,7 @@ solar_flux_on_horizontal = lib_solar.solar_flux_on_horizontal(latitude, day_of_y
 # Fuselage
 fuse_Re = rho / mu * airspeed * fuse.length()
 CLA_fuse = 0
-CDA_fuse = aero.Cf_flat_plate(fuse_Re) * fuse.area_wetted()
+CDA_fuse = aero.Cf_flat_plate(fuse_Re) * fuse.area_wetted() * 1.2 # wetted area with form factor
 
 lift_fuse = CLA_fuse * q  # per fuse
 drag_fuse = CDA_fuse * q  # per fuse
@@ -891,8 +891,8 @@ mass_structural = mass_wing + n_booms * (mass_hstab + mass_vstab + mass_fuse)
 # mass_servos = 6 * 0.100  # a total guess
 #
 # mass_avionics = mass_flight_computer + mass_sensors + mass_communications + mass_servos
-# mass_avionics = 3.7 / 3.8 * 25  # back-calculated from Kevin Uleck's figures in MIT 16.82 presentation
-mass_avionics = 5  # Avionics team is currently estimating 2.86 kg as of 4/5/20, leaving them 5 for headroom.
+mass_avionics = 3.7 / 3.8 * 25  # back-calculated from Kevin Uleck's figures in MIT 16.82 presentation
+# mass_avionics = 5  # Avionics team is currently estimating 2.86 kg as of 4/5/20, leaving them 5 for headroom.
 
 opti.subject_to([
     mass_total == mass_payload + mass_structural + mass_propulsion + mass_power_systems + mass_avionics,
