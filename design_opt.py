@@ -327,7 +327,7 @@ fuse_radius.extend([
 # Taper
 fuse_taper_x_nondim = np.linspace(0, 1, fuse_resolution)
 fuse_x_c.extend([
-    0.1 * boom_length + (0.6 - 0.1) * boom_length * x_nd for x_nd in fuse_taper_x_nondim
+    0.0 * boom_length + (0.6 - 0.0) * boom_length * x_nd for x_nd in fuse_taper_x_nondim
 ])
 fuse_z_c.extend([
     -fuse_diameter / 2 * blend(1 - x_nd) - boom_diameter / 2 * blend(x_nd) for x_nd in fuse_taper_x_nondim
