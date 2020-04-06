@@ -172,8 +172,8 @@ wing_root_chord = 4 * opti.variable()
 opti.set_initial(wing_root_chord, 3)
 opti.subject_to([wing_root_chord > 0.1])
 
-wing_x_le = 0.01 * opti.variable()
-opti.set_initial(wing_x_le, 0)
+wing_x_quarter_chord = 0.01 * opti.variable()
+opti.set_initial(wing_x_quarter_chord, 0)
 # opti.subject_to([wing_x_le == -0.06 * wing_root_chord])
 
 # hstab
@@ -202,7 +202,7 @@ opti.subject_to([vstab_chord > 0.1])
 boom_length = opti.variable()
 opti.set_initial(boom_length, 23)
 opti.subject_to([
-    boom_length - vstab_chord - hstab_chord > wing_x_le + wing_root_chord
+    boom_length - vstab_chord - hstab_chord > wing_x_quarter_chord + wing_root_chord * 3/4
     # you can relax this, but you need to change the fuselage shape first
 ])
 
@@ -216,7 +216,7 @@ boom_diameter = 0.25
 wing = asb.Wing(
     name="Main Wing",
     # x_le=-0.05 * wing_root_chord,  # Coordinates of the wing's leading edge # TODO make this a free parameter?
-    x_le=wing_x_le,  # Coordinates of the wing's leading edge # TODO make this a free parameter?
+    x_le=wing_x_quarter_chord,  # Coordinates of the wing's leading edge # TODO make this a free parameter?
     y_le=0,  # Coordinates of the wing's leading edge
     z_le=0,  # Coordinates of the wing's leading edge
     symmetric=True,
@@ -307,7 +307,7 @@ fuse_resolution = 10
 # Nose geometry
 fuse_nose_theta = np.linspace(0, np.pi / 2, fuse_resolution)
 fuse_x_c.extend([
-    (wing_x_le - wing_root_chord / 4) -nose_length * np.cos(theta) for theta in fuse_nose_theta
+    (wing_x_quarter_chord - wing_root_chord / 4) - nose_length * np.cos(theta) for theta in fuse_nose_theta
 ])
 fuse_z_c.extend([-fuse_diameter / 2] * fuse_resolution)
 fuse_radius.extend([
@@ -457,7 +457,7 @@ solar_flux_on_horizontal = lib_solar.solar_flux_on_horizontal(latitude, day_of_y
 # Fuselage
 fuse_Re = rho / mu * airspeed * fuse.length()
 CLA_fuse = 0
-CDA_fuse = aero.Cf_flat_plate(fuse_Re) * fuse.area_wetted() * 1.2 # wetted area with form factor
+CDA_fuse = aero.Cf_flat_plate(fuse_Re) * fuse.area_wetted() * 1.2  # wetted area with form factor
 
 lift_fuse = CLA_fuse * q  # per fuse
 drag_fuse = CDA_fuse * q  # per fuse
@@ -870,7 +870,7 @@ mass_vstab = mass_vstab_primary + mass_vstab_secondary  # per vstab
 
 # Fuselage & Boom
 mass_boom = lib_mass_struct.mass_hpa_tail_boom(
-    length_tail_boom=boom_length-wing_x_le,
+    length_tail_boom=boom_length - wing_x_quarter_chord, # support up to the quarter-chord
     dynamic_pressure_at_manuever_speed=q_maneuver,
     mean_tail_surface_area=hstab.area() + vstab.area()
 )  # per boom
@@ -879,7 +879,7 @@ mass_boom = lib_mass_struct.mass_hpa_tail_boom(
 mass_fairings = 2.067
 mass_landing_gear = 0.728
 
-mass_fuse = mass_boom + mass_fairings + mass_landing_gear # per fuselage
+mass_fuse = mass_boom + mass_fairings + mass_landing_gear  # per fuselage
 
 mass_structural = mass_wing + n_booms * (mass_hstab + mass_vstab + mass_fuse)
 # mass_structural = mass_total * 0.31
