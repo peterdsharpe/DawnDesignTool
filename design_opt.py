@@ -25,7 +25,7 @@ days_to_simulate = opti.parameter()
 opti.set_value(days_to_simulate, 1)
 propulsion_type = "solar"  # "solar" or "gas"
 enforce_periodicity = True  # Tip: turn this off when looking at gas models or models w/o trajectory opt. enabled.
-n_booms = 1  # 1, 2, or 3
+n_booms = 2  # 1, 2, or 3
 structural_load_factor = 3  # over static
 allow_trajectory_optimization = True
 minimize = "span"  # "span" or "TOGW" or "endurance"
