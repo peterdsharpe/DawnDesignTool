@@ -90,10 +90,6 @@ opti.subject_to([
     airspeed > min_speed
 ])
 
-# log_airspeed = opti.variable(n_timesteps) # Log-transformed airspeed
-# opti.set_initial(log_airspeed, cas.log(20))
-# airspeed = cas.exp(log_airspeed)
-
 flight_path_angle = 1e0 * opti.variable(n_timesteps)
 opti.set_initial(flight_path_angle,
                  0
@@ -144,11 +140,6 @@ if propulsion_type == "solar":
     mass_total = 600 * opti.variable()
     opti.set_initial(mass_total, 600)
     max_mass_total = mass_total
-
-    # log_mass_total = opti.variable()
-    # opti.set_initial(log_mass_total, cas.log(600))
-    # mass_total = cas.exp(log_mass_total)
-    # max_mass_total = mass_total
 elif propulsion_type == "gas":
     log_mass_total = opti.variable(n_timesteps)
     opti.set_initial(log_mass_total, cas.log(800))
@@ -174,7 +165,6 @@ opti.subject_to([wing_root_chord > 0.1])
 
 wing_x_quarter_chord = 0.01 * opti.variable()
 opti.set_initial(wing_x_quarter_chord, 0)
-# opti.subject_to([wing_x_le == -0.06 * wing_root_chord])
 
 # hstab
 hstab_span = 15 * opti.variable()
@@ -206,8 +196,6 @@ opti.subject_to([
     # you can relax this, but you need to change the fuselage shape first
 ])
 
-# nose_length = boom_length * 0.3
-# nose_length = wing_root_chord * 1.2
 nose_length = 1.5
 
 fuse_diameter = 1
@@ -313,17 +301,6 @@ fuse_z_c.extend([-fuse_diameter / 2] * fuse_resolution)
 fuse_radius.extend([
     fuse_diameter / 2 * np.sin(theta) for theta in fuse_nose_theta
 ])
-# Straight section geometry
-# fuse_straight_resolution = 4
-# fuse_x_c.extend([
-#     0.1 * boom_length * x_nd for x_nd in np.linspace(0, 1, fuse_straight_resolution)[1:]
-# ])
-# fuse_z_c.extend(
-#     [-fuse_diameter / 2] * (fuse_straight_resolution - 1)
-# )
-# fuse_radius.extend(
-#     [fuse_diameter / 2] * (fuse_straight_resolution - 1)
-# )
 # Taper
 fuse_taper_x_nondim = np.linspace(0, 1, fuse_resolution)
 fuse_x_c.extend([
@@ -565,15 +542,11 @@ opti.subject_to([
     # Vv < 0.05,
     # Vv == 0.035,
 ])
-# opti.subject_to([
-#     hstab_Cl_inc > -0.1
-# ])
 
 # endregion
 
 # region Propulsion
 ### Propeller calculations
-# propeller_diameter = 3.0
 propeller_diameter = opti.variable()
 opti.set_initial(propeller_diameter,
                  5
@@ -582,17 +555,6 @@ opti.subject_to([
     propeller_diameter > 1,
     propeller_diameter < 10
 ])
-
-# log_propeller_diameter = opti.variable()
-# opti.set_initial(log_propeller_diameter,
-#                  cas.log(5)
-#                  )
-# opti.subject_to([
-#     log_propeller_diameter > cas.log(1),
-#     log_propeller_diameter < cas.log(10),
-# ])
-# propeller_diameter = cas.exp(log_propeller_diameter)
-
 
 n_propellers = 2 * n_booms
 # n_propellers = opti.variable()
@@ -646,7 +608,6 @@ power_out_payload = cas.if_else(
 )
 
 # Account for avionics power
-# power_out_avionics = 50 # a total guess
 power_out_avionics = 250 * ((0.4 + 2.0) / 4.1)  # back-calculated from Kevin Uleck's figures in MIT 16.82 presentation
 
 ### Power accounting
@@ -662,13 +623,11 @@ if propulsion_type == "solar":
     net_power = 1000 * opti.variable(n_timesteps)
     opti.set_initial(net_power,
                      0,
-                     # 1000 * cas.cos(cas.linspace(0, 2 * cas.pi, n_timesteps))
                      )
 
     battery_stored_energy_nondim = 1 * opti.variable(n_timesteps)
     opti.set_initial(battery_stored_energy_nondim,
                      0.5,
-                     # 0.5 + 0.5 * cas.sin(cas.linspace(0, 2 * cas.pi, n_timesteps)),
                      )
     allowable_battery_depth_of_discharge = 0.9  # How much of the battery can you actually use?
     opti.subject_to([
@@ -884,7 +843,6 @@ mass_landing_gear = 0.728
 mass_fuse = mass_boom + mass_fairings + mass_landing_gear  # per fuselage
 
 mass_structural = mass_wing + n_booms * (mass_hstab + mass_vstab + mass_fuse)
-# mass_structural = mass_total * 0.31
 
 ### Avionics
 # mass_flight_computer = 0.038  # a total guess - Pixhawks are 38 grams?
@@ -1166,9 +1124,7 @@ if __name__ == "__main__":
     import plotly.graph_objects as go
     import dash
     import seaborn as sns
-
     sns.set(font_scale=1)
-
     pie_labels = [
         "Payload",
         "Structural",
@@ -1187,3 +1143,12 @@ if __name__ == "__main__":
     plt.pie(pie_values, labels=pie_labels, autopct='%1.1f%%', colors=colors)
     plt.title("Mass Breakdown at Takeoff")
     plt.show()
+
+    # Write a mass budget
+    with open("mass_budget.csv","w+") as f:
+        from types import ModuleType
+        var_names = dir()
+        f.write("Object or Collection of Objects, Mass [kg],\n")
+        for var_name in var_names:
+            if "mass" in var_name and not type(eval(var_name))==ModuleType:
+                f.write("%s, %f,\n" % (var_name, s(eval(var_name))))
