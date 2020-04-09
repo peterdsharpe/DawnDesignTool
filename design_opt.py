@@ -1,7 +1,5 @@
 # TODO wing loading checks
 # TODO implement dongjoon prop model
-# TODO implement 
-
 
 # Grab AeroSandbox
 import aerosandbox as asb
@@ -22,18 +20,20 @@ import copy
 opti = cas.Opti()
 
 ##### Operating Parameters
-latitude = 26  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
+latitude = 49  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
 day_of_year = 244  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 min_altitude = 19812  # meters. 19812 m = 65000 ft.
-required_headway_per_day = 0  # 10e3  # meters
+required_headway_per_day = 10e3  # meters
 days_to_simulate = opti.parameter()
 opti.set_value(days_to_simulate, 1)
 propulsion_type = "solar"  # "solar" or "gas"
 enforce_periodicity = True  # Tip: turn this off when looking at gas models or models w/o trajectory opt. enabled.
-n_booms = 1  # 1, 2, or 3
-structural_load_factor = 3  # over static
 allow_trajectory_optimization = True
-minimize = "TOGW"  # "span" or "TOGW" or "endurance"
+n_booms = 2  # 1, 2, or 3
+structural_load_factor = 3  # over static
+mass_margin_multiplier = opti.parameter()  # Mass margin (implemented as a multiplier on total mass)
+opti.set_value(mass_margin_multiplier, 1.25)
+minimize = "span"  # "span" or "TOGW"
 mass_payload = opti.parameter()
 opti.set_value(mass_payload, 30)
 wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
@@ -41,7 +41,7 @@ battery_specific_energy_Wh_kg = opti.parameter()
 opti.set_value(battery_specific_energy_Wh_kg, 450)
 
 ##### Simulation Parameters
-n_timesteps = 125  # Only relevant if allow_trajectory_optimization is True.
+n_timesteps = 150  # Only relevant if allow_trajectory_optimization is True.
 # Quick convergence testing indicates you can get bad analyses below 150 or so...
 
 ##### Optimization bounds
@@ -503,6 +503,10 @@ drag_vstab = drag_vstab_profile  # per vstab
 lift_force = lift_wing + n_booms * (lift_fuse + lift_hstab)
 drag_force = drag_wing + n_booms * (drag_fuse + drag_hstab + drag_vstab)  # + drag_lift_wires
 
+# Useful metrics
+wing_loading = 9.81 * max_mass_total / wing.area()
+wing_loading_psf = wing_loading / 47.880258888889
+
 # endregion
 
 # region Stability
@@ -524,7 +528,7 @@ net_pitching_moment = (
         - hstab.approximate_center_of_pressure()[0] * lift_hstab * n_booms
 )
 opti.subject_to([
-    net_pitching_moment / 1e3 == 0  # Trim condition
+    net_pitching_moment / 1e4 == 0  # Trim condition
 ])
 
 ### Size the tails off of tail volume coefficients
@@ -876,7 +880,12 @@ mass_avionics = 3.7 / 3.8 * 25  # back-calculated from Kevin Uleck's figures in 
 # mass_avionics = 5  # Avionics team is currently estimating 2.86 kg as of 4/5/20, leaving them 5 for headroom.
 
 opti.subject_to([
-    mass_total == mass_payload + mass_structural + mass_propulsion + mass_power_systems + mass_avionics,
+    # mass_total == (
+    #     mass_payload + mass_structural + mass_propulsion + mass_power_systems + mass_avionics
+    # ) * mass_margin_multiplier
+    1 == (
+        mass_payload + mass_structural + mass_propulsion + mass_power_systems + mass_avionics
+    ) * mass_margin_multiplier / mass_total
 ])
 
 gravity_force = g * mass_total
@@ -1009,8 +1018,6 @@ if minimize == "TOGW":
     objective = max_mass_total / 300
 elif minimize == "span":
     objective = wing_span / 50
-elif minimize == "endurance":
-    objective = -days_to_simulate / 1
 else:
     raise ValueError("Bad value of minimize!")
 
@@ -1136,42 +1143,52 @@ if __name__ == "__main__":
 
     draw = lambda: airplane.substitute_solution(sol).draw()
 
+
     # endregion
 
     # Draw mass breakdown
-    import matplotlib.pyplot as plt
-    import matplotlib.style as style
-    import plotly.express as px
-    import plotly.graph_objects as go
-    import dash
-    import seaborn as sns
+    def draw_pie():
+        import matplotlib.pyplot as plt
+        import matplotlib.style as style
+        import plotly.express as px
+        import plotly.graph_objects as go
+        import dash
+        import seaborn as sns
 
-    sns.set(font_scale=1)
-    pie_labels = [
-        "Payload",
-        "Structural",
-        "Propulsion",
-        "Power Systems",
-        "Avionics"
-    ]
-    pie_values = [
-        sol.value(mass_payload),
-        sol.value(mass_structural),
-        sol.value(mass_propulsion),
-        sol.value(cas.mmax(mass_power_systems)),
-        sol.value(mass_avionics),
-    ]
-    colors = plt.cm.Set2(np.arange(5))
-    plt.pie(pie_values, labels=pie_labels, autopct='%1.1f%%', colors=colors)
-    plt.title("Mass Breakdown at Takeoff")
-    plt.show()
+        sns.set(font_scale=1)
+        pie_labels = [
+            "Payload",
+            "Structural",
+            "Propulsion",
+            "Power Systems",
+            "Avionics"
+        ]
+        pie_values = [
+            sol.value(mass_payload),
+            sol.value(mass_structural),
+            sol.value(mass_propulsion),
+            sol.value(cas.mmax(mass_power_systems)),
+            sol.value(mass_avionics),
+        ]
+        colors = plt.cm.Set2(np.arange(5))
+        plt.pie(pie_values, labels=pie_labels, autopct='%1.1f%%', colors=colors)
+        plt.title("Mass Breakdown at Takeoff")
+        plt.show()
+
+
+    draw_pie()
+
 
     # Write a mass budget
-    with open("mass_budget.csv", "w+") as f:
-        from types import ModuleType
+    def write_mass_budget():
+        with open("mass_budget.csv", "w+") as f:
+            from types import ModuleType
 
-        var_names = dir()
-        f.write("Object or Collection of Objects, Mass [kg],\n")
-        for var_name in var_names:
-            if "mass" in var_name and not type(eval(var_name)) == ModuleType:
-                f.write("%s, %f,\n" % (var_name, s(eval(var_name))))
+            var_names = dir()
+            f.write("Object or Collection of Objects, Mass [kg],\n")
+            for var_name in var_names:
+                if "mass" in var_name and not type(eval(var_name)) == ModuleType:
+                    f.write("%s, %f,\n" % (var_name, s(eval(var_name))))
+
+
+    write_mass_budget()
