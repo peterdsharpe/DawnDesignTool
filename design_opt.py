@@ -1,3 +1,8 @@
+# TODO wing loading checks
+# TODO implement dongjoon prop model
+# TODO implement 
+
+
 # Grab AeroSandbox
 import aerosandbox as asb
 import aerosandbox.library.aerodynamics as aero
@@ -831,7 +836,7 @@ mass_vstab = mass_vstab_primary + mass_vstab_secondary  # per vstab
 
 # Fuselage & Boom
 mass_boom = lib_mass_struct.mass_hpa_tail_boom(
-    length_tail_boom=boom_length - wing_x_quarter_chord, # support up to the quarter-chord
+    length_tail_boom=boom_length - wing_x_quarter_chord,  # support up to the quarter-chord
     dynamic_pressure_at_manuever_speed=q_maneuver,
     mean_tail_surface_area=hstab.area() + vstab.area()
 )  # per boom
@@ -970,8 +975,6 @@ if not allow_trajectory_optimization:
         airspeed > wind_speed
     ])
 
-# constraints_jacobian = cas.jacobian(opti.g, opti.x)
-
 ###### Climb Optimization Constraints
 if climb_opt:
     opti.subject_to([y[0] == 0])
@@ -996,9 +999,7 @@ else:
     raise ValueError("Bad value of minimize!")
 
 ##### Extra constraints
-# opti.subject_to([
-#     hstab.aspect_ratio() < 8
-# ])
+
 
 ##### Add tippers
 things_to_slightly_minimize = (
@@ -1020,7 +1021,11 @@ penalty += cas.sum1(cas.diff(airspeed / 30) ** 2) / penalty_denominator
 penalty += cas.sum1(cas.diff(flight_path_angle / 10) ** 2) / penalty_denominator
 penalty += cas.sum1(cas.diff(alpha / 5) ** 2) / penalty_denominator
 
-opti.minimize(objective + penalty + 1e-6 * things_to_slightly_minimize)
+opti.minimize(
+    objective
+    + penalty
+    + 1e-6 * things_to_slightly_minimize
+)
 # endregion
 
 # region Solve
@@ -1124,6 +1129,7 @@ if __name__ == "__main__":
     import plotly.graph_objects as go
     import dash
     import seaborn as sns
+
     sns.set(font_scale=1)
     pie_labels = [
         "Payload",
@@ -1145,10 +1151,11 @@ if __name__ == "__main__":
     plt.show()
 
     # Write a mass budget
-    with open("mass_budget.csv","w+") as f:
+    with open("mass_budget.csv", "w+") as f:
         from types import ModuleType
+
         var_names = dir()
         f.write("Object or Collection of Objects, Mass [kg],\n")
         for var_name in var_names:
-            if "mass" in var_name and not type(eval(var_name))==ModuleType:
+            if "mass" in var_name and not type(eval(var_name)) == ModuleType:
                 f.write("%s, %f,\n" % (var_name, s(eval(var_name))))
