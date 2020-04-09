@@ -13,7 +13,7 @@ if __name__ == "__main__":
     # param_range = np.linspace(0, 30, 31)
     # param_range = np.linspace(250, 600, 30)
     # param_range = np.linspace(1, 10, 10)
-    param_range = np.linspace(1, 1.3, 10)
+    param_range = np.linspace(1, 1.3, 30)
     outputs = []
 
     for param in param_range:
@@ -23,7 +23,7 @@ if __name__ == "__main__":
         try:
             sol = opti.solve()
             opti.set_initial(sol.value_variables())
-            outputs.append(sol.value(max_mass_total))
+            outputs.append(sol.value(wing_span))
         except:
             outputs.append(None)
 
@@ -42,14 +42,14 @@ import plotly.graph_objects as go
 import dash
 import seaborn as sns
 sns.set(font_scale=1)
-fig, ax = plt.subplots(1, 1, figsize=(4.8, 4.8), dpi=200)
-plt.plot(param_range, outputs/outputs[0], '.-')
-plt.axis("equal")
+fig, ax = plt.subplots(1, 1, figsize=(3.5,6), dpi=200)
+plt.plot(param_range, outputs, '.-')
+# plt.axis("equal")
 plt.xlabel("Mass Margin Multiplier")
-plt.ylabel("Mass / Mass with no margin")
+plt.ylabel("Span [m]")
 plt.title("Solar Airplane: Mass Margin Superlinearity")
 plt.tight_layout()
 plt.legend()
-plt.savefig("C:/Users/User/Downloads/solarsuperlinearity.svg")
-plt.savefig("C:/Users/User/Downloads/solarsuperlinearity.png")
+plt.savefig("C:/Users/User/Downloads/solarsuperlinearityspan.svg")
+plt.savefig("C:/Users/User/Downloads/solarsuperlinearityspan.png")
 plt.show()

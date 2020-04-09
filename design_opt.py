@@ -29,10 +29,10 @@ opti.set_value(days_to_simulate, 1)
 propulsion_type = "solar"  # "solar" or "gas"
 enforce_periodicity = True  # Tip: turn this off when looking at gas models or models w/o trajectory opt. enabled.
 allow_trajectory_optimization = True
-n_booms = 2  # 1, 2, or 3
+n_booms = 3  # 1, 2, or 3
 structural_load_factor = 3  # over static
 mass_margin_multiplier = opti.parameter()  # Mass margin (implemented as a multiplier on total mass)
-opti.set_value(mass_margin_multiplier, 1.25)
+opti.set_value(mass_margin_multiplier, 1.20)
 minimize = "span"  # "span" or "TOGW"
 mass_payload = opti.parameter()
 opti.set_value(mass_payload, 30)
@@ -844,7 +844,7 @@ mass_vstab_primary = lib_mass_struct.mass_wing_spar(
     span=vstab.span(),
     mass_supported=q_maneuver * 1.5 * vstab.area() / 9.81,
     ultimate_load_factor=structural_load_factor
-) * 1.2  # due to asymmetry, a guess
+) * 1.2  # TODO due to asymmetry, a guess
 mass_vstab_secondary = lib_mass_struct.mass_hpa_stabilizer(
     span=vstab.span(),
     chord=vstab.mean_geometric_chord(),
