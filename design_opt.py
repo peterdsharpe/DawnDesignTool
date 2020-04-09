@@ -22,7 +22,7 @@ import copy
 opti = cas.Opti()
 
 ##### Operating Parameters
-latitude = 49  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
+latitude = 26  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
 day_of_year = 244  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 min_altitude = 19812  # meters. 19812 m = 65000 ft.
 required_headway_per_day = 0  # 10e3  # meters
@@ -30,10 +30,10 @@ days_to_simulate = opti.parameter()
 opti.set_value(days_to_simulate, 1)
 propulsion_type = "solar"  # "solar" or "gas"
 enforce_periodicity = True  # Tip: turn this off when looking at gas models or models w/o trajectory opt. enabled.
-n_booms = 2  # 1, 2, or 3
+n_booms = 1  # 1, 2, or 3
 structural_load_factor = 3  # over static
 allow_trajectory_optimization = True
-minimize = "span"  # "span" or "TOGW" or "endurance"
+minimize = "TOGW"  # "span" or "TOGW" or "endurance"
 mass_payload = opti.parameter()
 opti.set_value(mass_payload, 30)
 wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
@@ -41,7 +41,7 @@ battery_specific_energy_Wh_kg = opti.parameter()
 opti.set_value(battery_specific_energy_Wh_kg, 450)
 
 ##### Simulation Parameters
-n_timesteps = 100  # Only relevant if allow_trajectory_optimization is True.
+n_timesteps = 125  # Only relevant if allow_trajectory_optimization is True.
 # Quick convergence testing indicates you can get bad analyses below 150 or so...
 
 ##### Optimization bounds
@@ -76,8 +76,8 @@ if not climb_opt:
                      # 20000 + 2000 * cas.sin(cas.linspace(0, 2 * cas.pi, n_timesteps))
                      )
     opti.subject_to([
-        y > min_altitude,
-        y < 40000,  # models break down
+        y / min_altitude > 1,
+        y / 40000 < 1,  # models break down
     ])
 else:
     y = 2e4 * opti.variable(n_timesteps)
@@ -92,16 +92,16 @@ opti.set_initial(airspeed,
                  20
                  )
 opti.subject_to([
-    airspeed > min_speed
+    airspeed / min_speed > 1
 ])
 
-flight_path_angle = 1e0 * opti.variable(n_timesteps)
+flight_path_angle = 1e-1 * opti.variable(n_timesteps)
 opti.set_initial(flight_path_angle,
                  0
                  )
 opti.subject_to([
-    flight_path_angle < 90,
-    flight_path_angle > -90,
+    flight_path_angle / 90 < 1,
+    flight_path_angle / 90 > -1,
 ])
 
 alpha = 4 * opti.variable(n_timesteps)
@@ -142,8 +142,13 @@ hour = time / 3600
 # region Design Optimization Variables
 ##### Initialize design optimization variables (all units in base SI or derived units)
 if propulsion_type == "solar":
+    # log_mass_total = opti.variable()
+    # opti.set_initial(log_mass_total, cas.log(600))
+    # mass_total = cas.exp(log_mass_total)
+
     mass_total = 600 * opti.variable()
     opti.set_initial(mass_total, 600)
+
     max_mass_total = mass_total
 elif propulsion_type == "gas":
     log_mass_total = opti.variable(n_timesteps)
@@ -197,14 +202,14 @@ opti.subject_to([vstab_chord > 0.1])
 boom_length = opti.variable()
 opti.set_initial(boom_length, 23)
 opti.subject_to([
-    boom_length - vstab_chord - hstab_chord > wing_x_quarter_chord + wing_root_chord * 3/4
+    boom_length - vstab_chord - hstab_chord > wing_x_quarter_chord + wing_root_chord * 3 / 4
     # you can relax this, but you need to change the fuselage shape first
 ])
 
 nose_length = 1.5
 
-fuse_diameter = 1
-boom_diameter = 0.25
+fuse_diameter = 0.6
+boom_diameter = 0.2
 
 wing = asb.Wing(
     name="Main Wing",
@@ -766,8 +771,8 @@ else:
 ### Structural mass
 
 # Wing
-n_ribs_wing = 100 * opti.variable()
-opti.set_initial(n_ribs_wing, 100)
+n_ribs_wing = 200 * opti.variable()
+opti.set_initial(n_ribs_wing, 200)
 opti.subject_to([
     n_ribs_wing > 0,
 ])
@@ -785,10 +790,21 @@ mass_wing_secondary = lib_mass_struct.mass_hpa_wing(
     n_ribs=n_ribs_wing,
     n_wing_sections=1,
     ultimate_load_factor=structural_load_factor,
-    t_over_c=0.10,
+    t_over_c=0.14,
     include_spar=False,
 )
 mass_wing = mass_wing_primary + mass_wing_secondary
+
+# mass_wing = lib_mass_struct.mass_hpa_wing(
+#     span=wing.span(),
+#     chord=wing.mean_geometric_chord(),
+#     vehicle_mass=max_mass_total,
+#     n_ribs=n_ribs_wing,
+#     n_wing_sections=1,
+#     ultimate_load_factor=structural_load_factor,
+#     t_over_c=0.12,
+#     include_spar=True,
+# )
 
 # Stabilizers
 q_maneuver = 80  # TODO make this more accurate
@@ -882,7 +898,7 @@ net_force_perpendicular_calc = (
 
 opti.subject_to([
     net_accel_parallel / 1e-2 == net_force_parallel_calc / mass_total / 1e-2,
-    net_accel_perpendicular / 1e-2 == net_force_perpendicular_calc / mass_total / 1e-2,
+    net_accel_perpendicular / 1e-1 == net_force_perpendicular_calc / mass_total / 1e-1,
 ])
 
 speeddot = net_accel_parallel
@@ -923,7 +939,7 @@ if propulsion_type == "solar":
 
     dbattery_stored_energy_nondim = cas.diff(battery_stored_energy_nondim)
     opti.subject_to([
-        dbattery_stored_energy_nondim / 1e-2 == (net_power_trapz / battery_capacity) * dt / 1e-2,
+        dbattery_stored_energy_nondim / 1e-2 < (net_power_trapz / battery_capacity) * dt / 1e-2,
     ])
     opti.subject_to([
         battery_stored_energy_nondim[-1] > battery_stored_energy_nondim[0],
@@ -947,9 +963,9 @@ if enforce_periodicity:
         x[-1] / 1e5 > (x[0] + days_to_simulate * required_headway_per_day) / 1e5,
         y[-1] / 1e4 > y[0] / 1e4,
         airspeed[-1] / 2e1 > airspeed[0] / 2e1,
-        flight_path_angle[-1] == flight_path_angle[0],
-        alpha[-1] == alpha[0],
-        thrust_force[-1] / 1e2 == thrust_force[0] / 1e2,
+        # flight_path_angle[-1] == flight_path_angle[0],
+        # alpha[-1] == alpha[0],
+        # thrust_force[-1] / 1e2 == thrust_force[0] / 1e2,
     ])
 
 ##### Add initial state constraints
@@ -972,7 +988,7 @@ if not allow_trajectory_optimization:
     # Prevent groundspeed loss
     opti.subject_to([
         # x > 0
-        airspeed > wind_speed
+        airspeed / wind_speed > 1
     ])
 
 ###### Climb Optimization Constraints
@@ -1007,8 +1023,8 @@ things_to_slightly_minimize = (
         - x[-1] / 1e6
         + n_propellers / 1
         + propeller_diameter / 2
-    # + battery_capacity_watt_hours / 30000
-    # + solar_area_fraction / 0.5
+        + battery_capacity_watt_hours / 30000
+        + solar_area_fraction / 0.5
 )
 
 # Dewiggle
