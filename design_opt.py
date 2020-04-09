@@ -1180,15 +1180,13 @@ if __name__ == "__main__":
 
 
     # Write a mass budget
-    def write_mass_budget():
-        with open("mass_budget.csv", "w+") as f:
-            from types import ModuleType
+    with open("mass_budget.csv", "w+") as f:
+        from types import ModuleType
 
-            var_names = dir()
-            f.write("Object or Collection of Objects, Mass [kg],\n")
-            for var_name in var_names:
-                if "mass" in var_name and not type(eval(var_name)) == ModuleType:
-                    f.write("%s, %f,\n" % (var_name, s(eval(var_name))))
+        var_names = dir()
+        f.write("Object or Collection of Objects, Mass [kg],\n")
+        for var_name in var_names:
+            if "mass" in var_name and not type(eval(var_name)) == ModuleType:
+                f.write("%s, %f,\n" % (var_name, s(eval(var_name))))
 
 
-    write_mass_budget()
