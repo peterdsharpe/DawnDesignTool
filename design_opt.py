@@ -63,73 +63,52 @@ if climb_opt:
 ##### Initialize trajectory optimization variables
 
 x = 1e5 * opti.variable(n_timesteps)
-opti.set_initial(x,
-                 0,
-                 # cas.linspace(0, required_headway_per_day, n_timesteps)
-                 )
+opti.set_initial(x, 0)
 
 if not climb_opt:
 
     y = 2e4 * opti.variable(n_timesteps)
-    opti.set_initial(y,
-                     20000,
-                     # 20000 + 2000 * cas.sin(cas.linspace(0, 2 * cas.pi, n_timesteps))
-                     )
+    opti.set_initial(y, 20000, )
     opti.subject_to([
         y / min_altitude > 1,
         y / 40000 < 1,  # models break down
     ])
 else:
     y = 2e4 * opti.variable(n_timesteps)
-    opti.set_initial(y,
-                     20000,
-                     # 20000 + 2000 * cas.sin(cas.linspace(0, 2 * cas.pi, n_timesteps))
-                     )
+    opti.set_initial(y, 20000)
     opti.subject_to([y[timesteps_of_last_day:-1] > min_altitude, y < 40000])
 
 airspeed = 2e1 * opti.variable(n_timesteps)
-opti.set_initial(airspeed,
-                 20
-                 )
+opti.set_initial(airspeed, 20)
 opti.subject_to([
     airspeed / min_speed > 1
 ])
 
 flight_path_angle = 1e-1 * opti.variable(n_timesteps)
-opti.set_initial(flight_path_angle,
-                 0
-                 )
+opti.set_initial(flight_path_angle, 0)
 opti.subject_to([
     flight_path_angle / 90 < 1,
     flight_path_angle / 90 > -1,
 ])
 
 alpha = 4 * opti.variable(n_timesteps)
-opti.set_initial(alpha,
-                 3
-                 )
+opti.set_initial(alpha, 3)
 opti.subject_to([
     alpha > -8,
     alpha < 12
 ])
 
 thrust_force = 2e2 * opti.variable(n_timesteps)
-opti.set_initial(thrust_force,
-                 150
-                 )
+opti.set_initial(thrust_force, 150)
 opti.subject_to([
     thrust_force > 0
 ])
 
 net_accel_parallel = 1e-2 * opti.variable(n_timesteps)
-opti.set_initial(net_accel_parallel,
-                 0
-                 )
+opti.set_initial(net_accel_parallel, 0)
 
 net_accel_perpendicular = 1e-1 * opti.variable(n_timesteps)
-opti.set_initial(net_accel_perpendicular,
-                 0
-                 )
+opti.set_initial(net_accel_perpendicular, 0)
 
 ##### Set up time
 time_nondim = cas.linspace(0, 1, n_timesteps)
@@ -622,7 +601,7 @@ power_out_payload = cas.if_else(
 )
 
 # Account for avionics power
-power_out_avionics = 112 # Pulled from Avionics spreadsheet on 4/10
+power_out_avionics = 112  # Pulled from Avionics spreadsheet on 4/10
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
 ### Power accounting
@@ -724,13 +703,13 @@ if propulsion_type == "solar":
     #     allowable_voltage_drop=battery_voltage * 0.0225,
     #     material="aluminum"
     # ) # buildup model
-    mass_wires = 0.868 # Taken from Avionics spreadsheet on 4/10/20
+    mass_wires = 0.868  # Taken from Avionics spreadsheet on 4/10/20
     # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
-    mass_MPPT = 5.7 # Model taken from Avionics spreadsheet on 4/10/20
+    mass_MPPT = 5.7  # Model taken from Avionics spreadsheet on 4/10/20
     # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
-    mass_power_systems_misc = 0.314 # Taken from Avionics spreadsheet on 4/10/20, includes HV-LV convs. and fault isolation mechs
+    mass_power_systems_misc = 0.314  # Taken from Avionics spreadsheet on 4/10/20, includes HV-LV convs. and fault isolation mechs
     # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
     # Total system mass
@@ -880,12 +859,6 @@ mass_fuse = mass_boom + mass_fairings + mass_landing_gear  # per fuselage
 mass_structural = mass_wing + n_booms * (mass_hstab + mass_vstab + mass_fuse)
 
 ### Avionics
-# mass_flight_computer = 0.038  # a total guess - Pixhawks are 38 grams?
-# mass_sensors = 0.120  # GPS receiver, pitot probe, IMU, etc.
-# mass_communications = 0.75  # a total guess
-# mass_servos = 6 * 0.100  # a total guess
-#
-# mass_avionics = mass_flight_computer + mass_sensors + mass_communications + mass_servos
 # mass_avionics = 3.7 / 3.8 * 25  # back-calculated from Kevin Uleck's figures in MIT 16.82 presentation
 mass_avionics = 3.179  # Pulled from Avionics team spreadsheet on 4/10
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
@@ -895,7 +868,7 @@ opti.subject_to([
     #     mass_payload + mass_structural + mass_propulsion + mass_power_systems + mass_avionics
     # ) * mass_margin_multiplier
     1 == (
-        mass_payload + mass_structural + mass_propulsion + mass_power_systems + mass_avionics
+            mass_payload + mass_structural + mass_propulsion + mass_power_systems + mass_avionics
     ) * mass_margin_multiplier / mass_total
 ])
 
@@ -944,10 +917,10 @@ wind_speed_midpoints = wind_speed_func(trapz(y))
 
 # Total
 opti.subject_to([
-    dx / 1e3 == (xdot_trapz - wind_speed_midpoints) * dt / 1e3,
+    dx / 1e4 == (xdot_trapz - wind_speed_midpoints) * dt / 1e4,
     dy / 1e2 == ydot_trapz * dt / 1e2,
-    dspeed / 1e0 == speeddot_trapz * dt / 1e0,
-    dgamma / 1e-1 == gammadot_trapz * dt / 1e-1,
+    dspeed / 1e-1 == speeddot_trapz * dt / 1e-1,
+    dgamma / 1e-2 == gammadot_trapz * dt / 1e-2,
 ])
 
 # Powertrain-specific
@@ -1007,8 +980,7 @@ if not allow_trajectory_optimization:
     ])
     # Prevent groundspeed loss
     opti.subject_to([
-        # x > 0
-        airspeed / wind_speed > 1
+        airspeed / 20 > wind_speed / 20
     ])
 
 ###### Climb Optimization Constraints
@@ -1038,7 +1010,6 @@ else:
 ##### Add tippers
 things_to_slightly_minimize = (
         wing_span / 80
-        - x[-1] / 1e6
         + n_propellers / 1
         + propeller_diameter / 2
         + battery_capacity_watt_hours / 30000
@@ -1189,7 +1160,6 @@ if __name__ == "__main__":
 
     draw_pie()
 
-
     # Write a mass budget
     with open("mass_budget.csv", "w+") as f:
         from types import ModuleType
@@ -1199,5 +1169,3 @@ if __name__ == "__main__":
         for var_name in var_names:
             if "mass" in var_name and not type(eval(var_name)) == ModuleType:
                 f.write("%s, %f,\n" % (var_name, s(eval(var_name))))
-
-
