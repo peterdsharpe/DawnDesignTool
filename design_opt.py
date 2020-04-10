@@ -29,7 +29,7 @@ opti.set_value(days_to_simulate, 1)
 propulsion_type = "solar"  # "solar" or "gas"
 enforce_periodicity = True  # Tip: turn this off when looking at gas models or models w/o trajectory opt. enabled.
 allow_trajectory_optimization = True
-n_booms = 3  # 1, 2, or 3
+n_booms = 1  # 1, 2, or 3
 structural_load_factor = 3  # over static
 mass_margin_multiplier = opti.parameter()  # Mass margin (implemented as a multiplier on total mass)
 opti.set_value(mass_margin_multiplier, 1.20)
@@ -622,7 +622,8 @@ power_out_payload = cas.if_else(
 )
 
 # Account for avionics power
-power_out_avionics = 250 * ((0.4 + 2.0) / 4.1)  # back-calculated from Kevin Uleck's figures in MIT 16.82 presentation
+power_out_avionics = 112 # Pulled from Avionics spreadsheet on 4/10
+# https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
 ### Power accounting
 power_out = power_out_propulsion + power_out_payload + power_out_avionics
@@ -688,12 +689,13 @@ if propulsion_type == "solar":
     power_in = solar_power_flux * area_solar
 
     # Solar cell weight
-    rho_solar_cells = 0.4  # kg/m^2, solar cell area density.
+    rho_solar_cells = 0.35  # kg/m^2, solar cell area density.
     # The solar_simple_demo model gives this as 0.27. Burton's model gives this as 0.30.
     # This paper (https://core.ac.uk/download/pdf/159146935.pdf) gives it as 0.42.
     # This paper (https://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=4144&context=facpub) effectively gives it as 0.3143.
     # According to Bjarni, MicroLink Devices has cells on the order of 250 g/m^2 - but they're prohibitively expensive.
     # Bjarni, 4/5/20: "400 g/m^2"
+    # 4/10/20: 0.35 kg/m^2 taken from avionics spreadsheet: https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
     mass_solar_cells = rho_solar_cells * area_solar
 
@@ -716,15 +718,23 @@ if propulsion_type == "solar":
 
     battery_voltage = 240  # From Olek Peraire 4/2, propulsion slack
 
-    mass_wires = lib_prop_elec.mass_wires(
-        wire_length=wing.span() / 2,
-        max_current=power_out_max / battery_voltage,
-        allowable_voltage_drop=battery_voltage * 0.0225,
-        material="aluminum"
-    )
+    # mass_wires = lib_prop_elec.mass_wires(
+    #     wire_length=wing.span() / 2,
+    #     max_current=power_out_max / battery_voltage,
+    #     allowable_voltage_drop=battery_voltage * 0.0225,
+    #     material="aluminum"
+    # ) # buildup model
+    mass_wires = 0.868 # Taken from Avionics spreadsheet on 4/10/20
+    # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
+
+    mass_MPPT = 5.7 # Model taken from Avionics spreadsheet on 4/10/20
+    # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
+
+    mass_power_systems_misc = 0.314 # Taken from Avionics spreadsheet on 4/10/20, includes HV-LV convs. and fault isolation mechs
+    # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
     # Total system mass
-    mass_power_systems = mass_solar_cells + mass_battery_pack + mass_wires
+    mass_power_systems = mass_solar_cells + mass_battery_pack + mass_wires + mass_MPPT + mass_power_systems_misc
 
     # endregion
 elif propulsion_type == "gas":
@@ -876,8 +886,9 @@ mass_structural = mass_wing + n_booms * (mass_hstab + mass_vstab + mass_fuse)
 # mass_servos = 6 * 0.100  # a total guess
 #
 # mass_avionics = mass_flight_computer + mass_sensors + mass_communications + mass_servos
-mass_avionics = 3.7 / 3.8 * 25  # back-calculated from Kevin Uleck's figures in MIT 16.82 presentation
-# mass_avionics = 5  # Avionics team is currently estimating 2.86 kg as of 4/5/20, leaving them 5 for headroom.
+# mass_avionics = 3.7 / 3.8 * 25  # back-calculated from Kevin Uleck's figures in MIT 16.82 presentation
+mass_avionics = 3.179  # Pulled from Avionics team spreadsheet on 4/10
+# https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
 opti.subject_to([
     # mass_total == (
