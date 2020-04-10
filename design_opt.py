@@ -29,7 +29,7 @@ opti.set_value(days_to_simulate, 1)
 propulsion_type = "solar"  # "solar" or "gas"
 enforce_periodicity = True  # Tip: turn this off when looking at gas models or models w/o trajectory opt. enabled.
 allow_trajectory_optimization = True
-n_booms = 1  # 1, 2, or 3
+n_booms = 3  # 1, 2, or 3
 structural_load_factor = 3  # over static
 mass_margin_multiplier = opti.parameter()  # Mass margin (implemented as a multiplier on total mass)
 opti.set_value(mass_margin_multiplier, 1.20)
