@@ -92,7 +92,7 @@ opti.subject_to([
 ])
 
 alpha = 4 * opti.variable(n_timesteps)
-opti.set_initial(alpha, 3)
+opti.set_initial(alpha, 5)
 opti.subject_to([
     alpha > -8,
     alpha < 12
