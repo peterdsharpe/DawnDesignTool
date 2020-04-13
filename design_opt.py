@@ -597,7 +597,7 @@ power_out_payload = cas.if_else(
 )
 
 # Account for avionics power
-power_out_avionics = 112  # Pulled from Avionics spreadsheet on 4/10
+power_out_avionics = 235.4  # Pulled from Avionics spreadsheet on 4/13/20
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
 ### Power accounting
@@ -637,13 +637,14 @@ if propulsion_type == "solar":
 
     ### Solar calculations
 
-    realizable_solar_cell_efficiency = 0.25
+    realizable_solar_cell_efficiency = 0.25 * 0.95
     # This figure should take into account all temperature factors, MPPT losses,
     # spectral losses (different spectrum at altitude), multi-junction effects, etc.
     # Kevin Uleck gives this figure as 0.205.
     # This paper (https://core.ac.uk/download/pdf/159146935.pdf) gives it as 0.19.
     # According to Bjarni, MicroLink Devices has flexible triple-junction cells at 31% and 37.75% efficiency.
     # Bjarni, 4/5/20: "I'd make the approximation that we can get at least 25% (after accounting for MPPT, mismatch; before thermal effects)."
+    # Bjarni, 4/13/20: "Knock down by 5% since we need to account for things like wing curvature, avionics power, etc."
 
     # Total cell power flux
     solar_power_flux = (
