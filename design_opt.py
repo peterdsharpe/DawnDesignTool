@@ -30,9 +30,9 @@ propulsion_type = "solar"  # "solar" or "gas"
 enforce_periodicity = True  # Tip: turn this off when looking at gas models or models w/o trajectory opt. enabled.
 allow_trajectory_optimization = True
 n_booms = 3  # 1, 2, or 3
-structural_load_factor = 3  # over static
+structural_load_factor = 2  # over static
 structural_mass_margin_multiplier = opti.parameter()  # Mass margin (implemented as a multiplier on total mass)
-opti.set_value(structural_mass_margin_multiplier, 1.50)
+opti.set_value(structural_mass_margin_multiplier, 1.4)
 minimize = "span"  # "span" or "TOGW"
 mass_payload = opti.parameter()
 opti.set_value(mass_payload, 30)
@@ -145,7 +145,7 @@ else:
 ### Initialize geometric variables
 # wing
 wing_span = 60 * opti.variable()
-opti.set_initial(wing_span, 60)
+opti.set_initial(wing_span, 40)
 opti.subject_to([wing_span > 1])
 
 wing_root_chord = 4 * opti.variable()
@@ -481,10 +481,6 @@ drag_vstab = drag_vstab_profile  # per vstab
 # Force totals
 lift_force = lift_wing + n_booms * (lift_fuse + lift_hstab)
 drag_force = drag_wing + n_booms * (drag_fuse + drag_hstab + drag_vstab)  # + drag_lift_wires
-
-# Useful metrics
-wing_loading = 9.81 * max_mass_total / wing.area()
-wing_loading_psf = wing_loading / 47.880258888889
 
 # endregion
 
@@ -868,12 +864,6 @@ opti.subject_to([
     mass_total / 500 == (
         mass_payload + mass_structural + mass_propulsion + mass_power_systems + mass_avionics
     ) / 500
-    # 1 == (
-    #         mass_payload + mass_structural + mass_propulsion + mass_power_systems + mass_avionics
-    # ) * structural_mass_margin_multiplier / mass_total
-    # 1 == (
-    #         mass_payload + mass_structural + mass_propulsion + mass_power_systems + mass_avionics
-    # ) / mass_total
 ])
 
 gravity_force = g * mass_total
@@ -1010,6 +1000,12 @@ else:
 
 ##### Extra constraints
 
+
+##### Useful metrics
+wing_loading = 9.81 * max_mass_total / wing.area()
+wing_loading_psf = wing_loading / 47.880258888889
+empty_wing_loading = 9.81 * mass_structural / wing.area()
+empty_wing_loading_psf = empty_wing_loading / 47.880258888889
 
 ##### Add tippers
 things_to_slightly_minimize = (
