@@ -31,8 +31,8 @@ enforce_periodicity = True  # Tip: turn this off when looking at gas models or m
 allow_trajectory_optimization = True
 n_booms = 3  # 1, 2, or 3
 structural_load_factor = 3  # over static
-mass_margin_multiplier = opti.parameter()  # Mass margin (implemented as a multiplier on total mass)
-opti.set_value(mass_margin_multiplier, 1.20)
+structural_mass_margin_multiplier = opti.parameter()  # Mass margin (implemented as a multiplier on total mass)
+opti.set_value(structural_mass_margin_multiplier, 1.50)
 minimize = "span"  # "span" or "TOGW"
 mass_payload = opti.parameter()
 opti.set_value(mass_payload, 30)
@@ -857,6 +857,7 @@ mass_landing_gear = 0.728
 mass_fuse = mass_boom + mass_fairings + mass_landing_gear  # per fuselage
 
 mass_structural = mass_wing + n_booms * (mass_hstab + mass_vstab + mass_fuse)
+mass_structural *= structural_mass_margin_multiplier
 
 ### Avionics
 # mass_avionics = 3.7 / 3.8 * 25  # back-calculated from Kevin Uleck's figures in MIT 16.82 presentation
@@ -864,12 +865,15 @@ mass_avionics = 3.179  # Pulled from Avionics team spreadsheet on 4/10
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
 opti.subject_to([
-    # mass_total == (
-    #     mass_payload + mass_structural + mass_propulsion + mass_power_systems + mass_avionics
-    # ) * mass_margin_multiplier
-    1 == (
-            mass_payload + mass_structural + mass_propulsion + mass_power_systems + mass_avionics
-    ) * mass_margin_multiplier / mass_total
+    mass_total / 500 == (
+        mass_payload + mass_structural + mass_propulsion + mass_power_systems + mass_avionics
+    ) / 500
+    # 1 == (
+    #         mass_payload + mass_structural + mass_propulsion + mass_power_systems + mass_avionics
+    # ) * structural_mass_margin_multiplier / mass_total
+    # 1 == (
+    #         mass_payload + mass_structural + mass_propulsion + mass_power_systems + mass_avionics
+    # ) / mass_total
 ])
 
 gravity_force = g * mass_total

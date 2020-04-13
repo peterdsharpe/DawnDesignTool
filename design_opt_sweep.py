@@ -19,7 +19,7 @@ if __name__ == "__main__":
     for param in param_range:
         # opti.set_value(mass_payload, param)
         # opti.set_value(days_to_simulate, param)
-        opti.set_value(mass_margin_multiplier, param)
+        opti.set_value(structural_mass_margin_multiplier, param)
         try:
             sol = opti.solve()
             opti.set_initial(sol.value_variables())
