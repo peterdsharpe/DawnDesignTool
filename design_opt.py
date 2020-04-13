@@ -155,6 +155,8 @@ opti.subject_to([wing_root_chord > 0.1])
 wing_x_quarter_chord = 0.01 * opti.variable()
 opti.set_initial(wing_x_quarter_chord, 0)
 
+wing_taper_ratio = 0.5
+
 # hstab
 hstab_span = 15 * opti.variable()
 opti.set_initial(hstab_span, 12)
@@ -210,10 +212,10 @@ wing = asb.Wing(
             control_surface_deflection=0,  # degrees
         ),
         asb.WingXSec(  # Tip
-            x_le=-wing_root_chord * 0.5 / 4,
+            x_le=-wing_root_chord * wing_taper_ratio / 4,
             y_le=wing_span / 2,
             z_le=0,  # wing_span / 2 * cas.pi / 180 * 5,
-            chord=wing_root_chord * 0.5,
+            chord=wing_root_chord * wing_taper_ratio,
             twist=0,
             airfoil=e216,
         ),
@@ -232,7 +234,7 @@ hstab = asb.Wing(
             z_le=0,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
             chord=hstab_chord,
             twist=-3,  # degrees # TODO fix
-            airfoil=generic_airfoil,  # Airfoils are blended between a given XSec and the next one.
+            airfoil=naca0008,  # Airfoils are blended between a given XSec and the next one.
             control_surface_type='symmetric',
             # Flap # Control surfaces are applied between a given XSec and the next one.
             control_surface_deflection=0,  # degrees
@@ -243,7 +245,7 @@ hstab = asb.Wing(
             z_le=0,
             chord=hstab_chord,
             twist=-3,  # TODO fix
-            airfoil=generic_airfoil,
+            airfoil=naca0008,
         ),
     ]
 )
@@ -260,7 +262,7 @@ vstab = asb.Wing(
             z_le=0,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
             chord=vstab_chord,
             twist=0,  # degrees
-            airfoil=generic_airfoil,  # Airfoils are blended between a given XSec and the next one.
+            airfoil=naca0008,  # Airfoils are blended between a given XSec and the next one.
             control_surface_type='symmetric',
             # Flap # Control surfaces are applied between a given XSec and the next one.
             control_surface_deflection=0,  # degrees
@@ -271,7 +273,7 @@ vstab = asb.Wing(
             z_le=vstab_span,
             chord=vstab_chord,
             twist=0,
-            airfoil=generic_airfoil,
+            airfoil=naca0008,
         ),
     ]
 )
@@ -1170,3 +1172,45 @@ if __name__ == "__main__":
         for var_name in var_names:
             if "mass" in var_name and not type(eval(var_name)) == ModuleType:
                 f.write("%s, %f,\n" % (var_name, s(eval(var_name))))
+
+    # Write a geometry spreadsheet
+    with open("geometry_spreadsheet.csv", "w+") as f:
+        from types import ModuleType
+
+        f.write("Design Variable, Value (all in base SI units or derived units thereof),\n")
+        geometry_vars = [
+            'wing.span()',
+            'wing_root_chord',
+            'wing_taper_ratio',
+            'wing.xsecs[0].airfoil.name',
+            '',
+            'hstab.span()',
+            'hstab.mean_geometric_chord()',
+            'hstab.xsecs[0].airfoil.name',
+            '',
+            'vstab.span()',
+            'vstab.mean_geometric_chord()',
+            'vstab.xsecs[0].airfoil.name',
+            '',
+            'max_mass_total',
+            '',
+            'solar_area_fraction',
+            'battery_capacity_watt_hours',
+            'n_propellers',
+            'propeller_diameter',
+            '',
+            'boom_length'
+        ]
+        for var_name in geometry_vars:
+            print(var_name)
+            if var_name == '':
+                f.write(",,\n")
+                continue
+            try:
+                value = s(eval(var_name))
+            except:
+                value = eval(var_name)
+            try:
+                f.write("%s, %f,\n" % (var_name, value))
+            except:
+                f.write("%s, %s,\n" % (var_name, value))
