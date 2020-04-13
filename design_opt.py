@@ -14,6 +14,11 @@ from aerosandbox.library import propulsion_propeller as lib_prop_prop
 from aerosandbox.library import winds as lib_winds
 from aerosandbox.library.airfoils import *
 import copy
+import matplotlib.pyplot as plt
+import matplotlib.style as style
+import seaborn as sns
+
+sns.set(font_scale=1)
 
 # region Setup
 ##### Initialize Optimization
@@ -1128,43 +1133,88 @@ if __name__ == "__main__":
 
     draw = lambda: airplane.substitute_solution(sol).draw()
 
-
     # endregion
 
+    # Draw plots
+    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
+    plt.plot(sol.value(hour), sol.value(y), ".-")
+    plt.xlabel("Time after Solar Noon [hours]")
+    plt.ylabel("Altitude [m]")
+    plt.title("Altitude over a Day")
+    plt.tight_layout()
+    plt.savefig("outputs/altitude.png")
+    plt.show()
+
+    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
+    plt.plot(sol.value(hour), sol.value(airspeed), ".-")
+    plt.xlabel("Time after Solar Noon [hours]")
+    plt.ylabel("Airspeed [m/s]")
+    plt.title("Airspeed over a Day")
+    plt.tight_layout()
+    plt.savefig("outputs/airspeed.png")
+    plt.show()
+
+    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
+    plt.plot(sol.value(hour), sol.value(q), ".-")
+    plt.xlabel("Time after Solar Noon [hours]")
+    plt.ylabel("Dynamic Pressure [Pa]")
+    plt.title("Dynamic Pressure over a Day")
+    plt.tight_layout()
+    plt.savefig("outputs/q.png")
+    plt.show()
+
+    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
+    plt.plot(sol.value(hour), sol.value(net_power), ".-")
+    plt.xlabel("Time after Solar Noon [hours]")
+    plt.ylabel("Net Power [W] (positive is charging)")
+    plt.title("Net Power over a Day")
+    plt.tight_layout()
+    plt.savefig("outputs/net_power.png")
+    plt.show()
+
+    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
+    plt.plot(sol.value(hour), 100 * sol.value(battery_stored_energy_nondim), ".-")
+    plt.xlabel("Time after Solar Noon [hours]")
+    plt.ylabel("Battery Charge %")
+    plt.title("Battery Charge over a Day")
+    plt.tight_layout()
+    plt.savefig("outputs/battery_charge.png")
+    plt.show()
+
+    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
+    plt.plot(sol.value(hour), sol.value(wing_Re), ".-")
+    plt.xlabel("Time after Solar Noon [hours]")
+    plt.ylabel("Wing Reynolds Number")
+    plt.title("Wing Reynolds Number over a Day")
+    plt.tight_layout()
+    plt.savefig("outputs/wing_Re.png")
+    plt.show()
+
     # Draw mass breakdown
-    def draw_pie():
-        import matplotlib.pyplot as plt
-        import matplotlib.style as style
-        import plotly.express as px
-        import plotly.graph_objects as go
-        import dash
-        import seaborn as sns
-
-        sns.set(font_scale=1)
-        pie_labels = [
-            "Payload",
-            "Structural",
-            "Propulsion",
-            "Power Systems",
-            "Avionics"
-        ]
-        pie_values = [
-            sol.value(mass_payload),
-            sol.value(mass_structural),
-            sol.value(mass_propulsion),
-            sol.value(cas.mmax(mass_power_systems)),
-            sol.value(mass_avionics),
-        ]
-        colors = plt.cm.Set2(np.arange(5))
-        plt.pie(pie_values, labels=pie_labels, autopct='%1.1f%%', colors=colors)
-        plt.title("Mass Breakdown at Takeoff")
-        plt.show()
-
-
-    draw_pie()
+    pie_labels = [
+        "Payload",
+        "Structural",
+        "Propulsion",
+        "Power Systems",
+        "Avionics"
+    ]
+    pie_values = [
+        sol.value(mass_payload),
+        sol.value(mass_structural),
+        sol.value(mass_propulsion),
+        sol.value(cas.mmax(mass_power_systems)),
+        sol.value(mass_avionics),
+    ]
+    colors = plt.cm.Set2(np.arange(5))
+    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
+    plt.pie(pie_values, labels=pie_labels, autopct='%1.1f%%', colors=colors)
+    plt.title("Mass Breakdown at Takeoff")
+    plt.tight_layout()
+    plt.savefig("outputs/mass_pie_chart.png")
+    plt.show()
 
     # Write a mass budget
-    with open("mass_budget.csv", "w+") as f:
+    with open("outputs/mass_budget.csv", "w+") as f:
         from types import ModuleType
 
         var_names = dir()
@@ -1174,7 +1224,7 @@ if __name__ == "__main__":
                 f.write("%s, %f,\n" % (var_name, s(eval(var_name))))
 
     # Write a geometry spreadsheet
-    with open("geometry_spreadsheet.csv", "w+") as f:
+    with open("outputs/geometry.csv", "w+") as f:
         from types import ModuleType
 
         f.write("Design Variable, Value (all in base SI units or derived units thereof),\n")
@@ -1202,7 +1252,6 @@ if __name__ == "__main__":
             'boom_length'
         ]
         for var_name in geometry_vars:
-            print(var_name)
             if var_name == '':
                 f.write(",,\n")
                 continue
