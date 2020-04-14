@@ -1135,11 +1135,21 @@ if __name__ == "__main__":
 
     draw = lambda: airplane.substitute_solution(sol).draw()
 
+
     # endregion
 
     # Draw plots
+    def plot(x, y):
+        # plt.plot(s(hour), s(y), ".-")
+        plt.plot(s(x)[:dusk], s(y)[:dusk], '.-', color=(103 / 255, 155 / 255, 240 / 255), label="Day")
+        plt.plot(s(x)[dawn:], s(y)[dawn:], '.-', color=(103 / 255, 155 / 255, 240 / 255))
+        plt.plot(s(x)[dusk - 1:dawn + 1], s(y)[dusk - 1:dawn + 1], '.-', color=(7 / 255, 36 / 255, 84 / 255),
+                 label="Night")
+        plt.legend()
+
+
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
-    plt.plot(sol.value(hour), sol.value(y), ".-")
+    plot(hour, y)
     plt.xlabel("Time after Solar Noon [hours]")
     plt.ylabel("Altitude [m]")
     plt.title("Altitude over a Day")
@@ -1148,7 +1158,7 @@ if __name__ == "__main__":
     plt.show()
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
-    plt.plot(sol.value(hour), sol.value(airspeed), ".-")
+    plot(hour, airspeed)
     plt.xlabel("Time after Solar Noon [hours]")
     plt.ylabel("Airspeed [m/s]")
     plt.title("Airspeed over a Day")
@@ -1157,7 +1167,7 @@ if __name__ == "__main__":
     plt.show()
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
-    plt.plot(sol.value(hour), sol.value(q), ".-")
+    plot(hour, q)
     plt.xlabel("Time after Solar Noon [hours]")
     plt.ylabel("Dynamic Pressure [Pa]")
     plt.title("Dynamic Pressure over a Day")
@@ -1166,7 +1176,7 @@ if __name__ == "__main__":
     plt.show()
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
-    plt.plot(sol.value(hour), sol.value(net_power), ".-")
+    plot(hour, net_power)
     plt.xlabel("Time after Solar Noon [hours]")
     plt.ylabel("Net Power [W] (positive is charging)")
     plt.title("Net Power over a Day")
@@ -1175,7 +1185,7 @@ if __name__ == "__main__":
     plt.show()
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
-    plt.plot(sol.value(hour), 100 * sol.value(battery_stored_energy_nondim), ".-")
+    plot(hour, 100 * battery_stored_energy_nondim)
     plt.xlabel("Time after Solar Noon [hours]")
     plt.ylabel("Battery Charge %")
     plt.title("Battery Charge over a Day")
@@ -1184,12 +1194,21 @@ if __name__ == "__main__":
     plt.show()
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
-    plt.plot(sol.value(hour), sol.value(wing_Re), ".-")
+    plot(hour, wing_Re)
     plt.xlabel("Time after Solar Noon [hours]")
     plt.ylabel("Wing Reynolds Number")
     plt.title("Wing Reynolds Number over a Day")
     plt.tight_layout()
     plt.savefig("outputs/wing_Re.png")
+    plt.show()
+
+    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
+    plot(x / 1000, y / 1000)
+    plt.xlabel("Downrange Distance [km]")
+    plt.ylabel("Altitude [km]")
+    plt.title("Optimal Trajectory")
+    plt.tight_layout()
+    plt.savefig("outputs/trajectory.png")
     plt.show()
 
     # Draw mass breakdown
@@ -1212,12 +1231,12 @@ if __name__ == "__main__":
         s(mass_avionics),
     ]
     colors = plt.cm.Set2(np.arange(5))
-    pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (x*s(max_mass_total)/100, x)
+    pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (x * s(max_mass_total) / 100, x)
     ax_main.pie(
         pie_values,
         labels=pie_labels,
         autopct=pie_format,
-        pctdistance = 0.7,
+        pctdistance=0.7,
         colors=colors,
         startangle=120
     )
@@ -1238,12 +1257,12 @@ if __name__ == "__main__":
     ]
     colors = plt.cm.Set2(np.arange(5))
     colors = np.clip(
-        colors[1,:3] + np.expand_dims(
-        np.linspace(-0.1, 0.2, len(pie_labels)),
-        1),
+        colors[1, :3] + np.expand_dims(
+            np.linspace(-0.1, 0.2, len(pie_labels)),
+            1),
         0, 1
     )
-    pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (x*s(mass_structural)/100, x*s(mass_structural/max_mass_total))
+    pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (x * s(mass_structural) / 100, x * s(mass_structural / max_mass_total))
     ax_structural.pie(
         pie_values,
         labels=pie_labels,
@@ -1267,12 +1286,13 @@ if __name__ == "__main__":
     ]
     colors = plt.cm.Set2(np.arange(5))
     colors = np.clip(
-        colors[3,:3] + np.expand_dims(
-        np.linspace(-0.1, 0.2, len(pie_labels)),
-        1),
+        colors[3, :3] + np.expand_dims(
+            np.linspace(-0.1, 0.2, len(pie_labels)),
+            1),
         0, 1
     )[::-1]
-    pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (x*s(mass_power_systems)/100, x*s(mass_power_systems/max_mass_total))
+    pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (
+        x * s(mass_power_systems) / 100, x * s(mass_power_systems / max_mass_total))
     ax_power_systems.pie(
         pie_values,
         labels=pie_labels,
@@ -1282,8 +1302,6 @@ if __name__ == "__main__":
         startangle=15,
     )
     plt.title("Power Systems Mass")
-
-
 
     plt.tight_layout()
     plt.savefig("outputs/mass_pie_chart.png")
