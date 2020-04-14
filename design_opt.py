@@ -1212,6 +1212,24 @@ if __name__ == "__main__":
     plt.savefig("outputs/trajectory.png")
     plt.show() if show_plots else plt.close(fig)
 
+    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
+    plot(hour, power_in)
+    plt.xlabel("Time after Solar Noon [hours]")
+    plt.ylabel("Power Generated [W]")
+    plt.title("Power Generated over a Day")
+    plt.tight_layout()
+    plt.savefig("outputs/power_in.png")
+    plt.show() if show_plots else plt.close(fig)
+
+    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
+    plot(hour, power_out)
+    plt.xlabel("Time after Solar Noon [hours]")
+    plt.ylabel("Power Consumed [W]")
+    plt.title("Power Consumed over a Day")
+    plt.tight_layout()
+    plt.savefig("outputs/power_out.png")
+    plt.show() if show_plots else plt.close(fig)
+
     # Draw mass breakdown
     fig = plt.figure(figsize=(10, 8), dpi=200)
     plt.suptitle("Mass Budget")
