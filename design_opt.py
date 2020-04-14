@@ -36,6 +36,7 @@ enforce_periodicity = True  # Tip: turn this off when looking at gas models or m
 allow_trajectory_optimization = True
 n_booms = 3  # 1, 2, or 3
 structural_load_factor = 3  # over static
+show_plots = True
 structural_mass_margin_multiplier = opti.parameter()
 opti.set_value(structural_mass_margin_multiplier, 1.5)
 minimize = "span"  # "span" or "TOGW"
@@ -1155,7 +1156,7 @@ if __name__ == "__main__":
     plt.title("Altitude over a Day")
     plt.tight_layout()
     plt.savefig("outputs/altitude.png")
-    plt.show()
+    plt.show() if show_plots else plt.close(fig)
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
     plot(hour, airspeed)
@@ -1164,7 +1165,7 @@ if __name__ == "__main__":
     plt.title("Airspeed over a Day")
     plt.tight_layout()
     plt.savefig("outputs/airspeed.png")
-    plt.show()
+    plt.show() if show_plots else plt.close(fig)
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
     plot(hour, q)
@@ -1173,7 +1174,7 @@ if __name__ == "__main__":
     plt.title("Dynamic Pressure over a Day")
     plt.tight_layout()
     plt.savefig("outputs/q.png")
-    plt.show()
+    plt.show() if show_plots else plt.close(fig)
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
     plot(hour, net_power)
@@ -1182,7 +1183,7 @@ if __name__ == "__main__":
     plt.title("Net Power over a Day")
     plt.tight_layout()
     plt.savefig("outputs/net_power.png")
-    plt.show()
+    plt.show() if show_plots else plt.close(fig)
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
     plot(hour, 100 * battery_stored_energy_nondim)
@@ -1191,7 +1192,7 @@ if __name__ == "__main__":
     plt.title("Battery Charge over a Day")
     plt.tight_layout()
     plt.savefig("outputs/battery_charge.png")
-    plt.show()
+    plt.show() if show_plots else plt.close(fig)
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
     plot(hour, wing_Re)
@@ -1200,7 +1201,7 @@ if __name__ == "__main__":
     plt.title("Wing Reynolds Number over a Day")
     plt.tight_layout()
     plt.savefig("outputs/wing_Re.png")
-    plt.show()
+    plt.show() if show_plots else plt.close(fig)
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
     plot(x / 1000, y / 1000)
@@ -1209,7 +1210,7 @@ if __name__ == "__main__":
     plt.title("Optimal Trajectory")
     plt.tight_layout()
     plt.savefig("outputs/trajectory.png")
-    plt.show()
+    plt.show() if show_plots else plt.close(fig)
 
     # Draw mass breakdown
     fig = plt.figure(figsize=(10, 8), dpi=200)
@@ -1305,7 +1306,7 @@ if __name__ == "__main__":
 
     plt.tight_layout()
     plt.savefig("outputs/mass_pie_chart.png")
-    plt.show()
+    plt.show() if show_plots else plt.close(fig)
 
     # Write a mass budget
     with open("outputs/mass_budget.csv", "w+") as f:
