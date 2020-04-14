@@ -61,6 +61,8 @@ if climb_opt:
     enforce_periodicity = False  # Leave False
     time_shift = -6.5 * 60 * 60  # 60*((seconds_per_day*2)/(n_timesteps))
     timesteps_of_last_day = int((1 - (1 / simulation_days)) * n_timesteps)
+else:
+    time_shift = 0
 
 # endregion
 
@@ -422,7 +424,7 @@ mach = airspeed / a
 g = 9.81  # gravitational acceleration, m/s^2
 q = 1 / 2 * rho * airspeed ** 2  # Solar calculations
 solar_flux_on_horizontal = lib_solar.solar_flux_on_horizontal(
-    latitude, day_of_year, time, scattering=True
+    latitude, day_of_year, time + time_shift, scattering=True
 )
 # endregion
 
@@ -958,9 +960,9 @@ if enforce_periodicity:
         x[-1] / 1e5 > (x[0] + days_to_simulate * required_headway_per_day) / 1e5,
         y[-1] / 1e4 > y[0] / 1e4,
         airspeed[-1] / 2e1 > airspeed[0] / 2e1,
-        # flight_path_angle[-1] == flight_path_angle[0],
-        # alpha[-1] == alpha[0],
-        # thrust_force[-1] / 1e2 == thrust_force[0] / 1e2,
+        flight_path_angle[-1] == flight_path_angle[0],
+        alpha[-1] == alpha[0],
+        thrust_force[-1] / 1e2 == thrust_force[0] / 1e2,
     ])
 
 ##### Add initial state constraints
@@ -1191,6 +1193,10 @@ if __name__ == "__main__":
     plt.show()
 
     # Draw mass breakdown
+    fig = plt.figure(figsize=(10, 8), dpi=200)
+    plt.suptitle("Mass Budget")
+
+    ax_main = fig.add_axes([0.2, 0.3, 0.6, 0.6], aspect=1)
     pie_labels = [
         "Payload",
         "Structural",
@@ -1199,16 +1205,86 @@ if __name__ == "__main__":
         "Avionics"
     ]
     pie_values = [
-        sol.value(mass_payload),
-        sol.value(mass_structural),
-        sol.value(mass_propulsion),
-        sol.value(cas.mmax(mass_power_systems)),
-        sol.value(mass_avionics),
+        s(mass_payload),
+        s(mass_structural),
+        s(mass_propulsion),
+        s(cas.mmax(mass_power_systems)),
+        s(mass_avionics),
     ]
     colors = plt.cm.Set2(np.arange(5))
-    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
-    plt.pie(pie_values, labels=pie_labels, autopct='%1.1f%%', colors=colors)
-    plt.title("Mass Breakdown at Takeoff")
+    pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (x*s(max_mass_total)/100, x)
+    ax_main.pie(
+        pie_values,
+        labels=pie_labels,
+        autopct=pie_format,
+        pctdistance = 0.7,
+        colors=colors,
+        startangle=120
+    )
+    plt.title("Overall Mass")
+
+    ax_structural = fig.add_axes([0.05, 0.05, 0.3, 0.3], aspect=1)
+    pie_labels = [
+        "Wing",
+        "Stabilizers",
+        "Fuses & Booms",
+        "Misc. & Margin"
+    ]
+    pie_values = [
+        s(mass_wing),
+        s(mass_hstab * n_booms + mass_vstab * n_booms),
+        s(mass_fuse * n_booms),
+        s(mass_structural - (mass_wing + n_booms * (mass_hstab + mass_vstab + mass_fuse))),
+    ]
+    colors = plt.cm.Set2(np.arange(5))
+    colors = np.clip(
+        colors[1,:3] + np.expand_dims(
+        np.linspace(-0.1, 0.2, len(pie_labels)),
+        1),
+        0, 1
+    )
+    pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (x*s(mass_structural)/100, x*s(mass_structural/max_mass_total))
+    ax_structural.pie(
+        pie_values,
+        labels=pie_labels,
+        autopct=pie_format,
+        pctdistance=0.7,
+        colors=colors,
+        startangle=60,
+    )
+    plt.title("Structural Mass")
+
+    ax_power_systems = fig.add_axes([0.65, 0.05, 0.3, 0.3], aspect=1)
+    pie_labels = [
+        "Battery Packs",
+        "Solar Cells",
+        "Misc. & Wires"
+    ]
+    pie_values = [
+        s(mass_battery_pack),
+        s(mass_solar_cells),
+        s(mass_power_systems - mass_battery_pack - mass_solar_cells),
+    ]
+    colors = plt.cm.Set2(np.arange(5))
+    colors = np.clip(
+        colors[3,:3] + np.expand_dims(
+        np.linspace(-0.1, 0.2, len(pie_labels)),
+        1),
+        0, 1
+    )[::-1]
+    pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (x*s(mass_power_systems)/100, x*s(mass_power_systems/max_mass_total))
+    ax_power_systems.pie(
+        pie_values,
+        labels=pie_labels,
+        autopct=pie_format,
+        pctdistance=0.7,
+        colors=colors,
+        startangle=15,
+    )
+    plt.title("Power Systems Mass")
+
+
+
     plt.tight_layout()
     plt.savefig("outputs/mass_pie_chart.png")
     plt.show()
