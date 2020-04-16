@@ -26,23 +26,37 @@ opti = cas.Opti()
 
 ##### Operating Parameters
 latitude = 49  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
+
 day_of_year = 244  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
+
 min_altitude = 19812  # meters. 19812 m = 65000 ft.
+
 required_headway_per_day = 10e3  # meters
+
 days_to_simulate = opti.parameter()
 opti.set_value(days_to_simulate, 1)
+
 propulsion_type = "solar"  # "solar" or "gas"
+
 enforce_periodicity = True  # Tip: turn this off when looking at gas models or models w/o trajectory opt. enabled.
 allow_trajectory_optimization = True
+
 n_booms = 3  # 1, 2, or 3
+
 structural_load_factor = 3  # over static
+
 show_plots = True
+
 structural_mass_margin_multiplier = opti.parameter()
 opti.set_value(structural_mass_margin_multiplier, 1.5)
+
 minimize = "span"  # "span" or "TOGW"
+
 mass_payload = opti.parameter()
 opti.set_value(mass_payload, 30)
+
 wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
+
 battery_specific_energy_Wh_kg = opti.parameter()
 opti.set_value(battery_specific_energy_Wh_kg, 450)
 
@@ -195,7 +209,7 @@ opti.subject_to([
     # you can relax this, but you need to change the fuselage shape first
 ])
 
-nose_length = 1.5
+nose_length = 4.3 # Calculated in Slack DMs with Olek Peraire on 4/15/2020
 
 fuse_diameter = 0.6
 boom_diameter = 0.2
@@ -567,7 +581,7 @@ n_propellers = 2 * n_booms
 
 area_propulsive = cas.pi / 4 * propeller_diameter ** 2 * n_propellers
 propeller_efficiency = 0.8  # a total WAG
-motor_efficiency = 0.856 / (0.856 + 0.026 + 0.018 + 0.004)  # back-calculated from Odysseus data
+motor_efficiency = 0.856 / (0.856 + 0.026 + 0.018 + 0.004)  # back-calculated from Odysseus data (94.7%)
 
 power_out_propulsion_shaft = lib_prop_prop.propeller_shaft_power_from_thrust(
     thrust_force=thrust_force,
@@ -607,7 +621,7 @@ power_out_payload = cas.if_else(
 )
 
 # Account for avionics power
-power_out_avionics = 235.4  # Pulled from Avionics spreadsheet on 4/13/20
+power_out_avionics = 241.4  # Pulled from Avionics spreadsheet on 4/14/20
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
 ### Power accounting
@@ -868,7 +882,7 @@ mass_structural *= structural_mass_margin_multiplier
 
 ### Avionics
 # mass_avionics = 3.7 / 3.8 * 25  # back-calculated from Kevin Uleck's figures in MIT 16.82 presentation
-mass_avionics = 3.179  # Pulled from Avionics team spreadsheet on 4/10
+mass_avionics = 10.118  # Pulled from Avionics team spreadsheet on 4/14
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
 opti.subject_to([
@@ -1076,6 +1090,12 @@ if __name__ == "__main__":
     if np.abs(sol.value(penalty / objective)) > 0.01:
         print("\nWARNING: high penalty term! P/O = %.3f\n" % sol.value(penalty / objective))
 
+    save_sol_to_file(sol,
+                     save_primal=True,
+                     save_dual=False,
+                     primal_location="last_solution.sol"
+                     )
+
     # Find dusk and dawn
     try:
         si = sol.value(solar_flux_on_horizontal)
@@ -1150,10 +1170,10 @@ if __name__ == "__main__":
 
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
-    plot(hour, y)
+    plot(hour, y / 1000)
     plt.xlabel("Time after Solar Noon [hours]")
-    plt.ylabel("Altitude [m]")
-    plt.title("Altitude over a Day")
+    plt.ylabel("Altitude [km]")
+    plt.title("Altitude over a Day (Aug. 31)")
     plt.tight_layout()
     plt.savefig("outputs/altitude.png")
     plt.show() if show_plots else plt.close(fig)
@@ -1161,26 +1181,26 @@ if __name__ == "__main__":
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
     plot(hour, airspeed)
     plt.xlabel("Time after Solar Noon [hours]")
-    plt.ylabel("Airspeed [m/s]")
-    plt.title("Airspeed over a Day")
+    plt.ylabel("True Airspeed [m/s]")
+    plt.title("True Airspeed over a Day (Aug. 31)")
     plt.tight_layout()
     plt.savefig("outputs/airspeed.png")
     plt.show() if show_plots else plt.close(fig)
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
-    plot(hour, q)
+    plot(hour, wing_CL)
     plt.xlabel("Time after Solar Noon [hours]")
-    plt.ylabel("Dynamic Pressure [Pa]")
-    plt.title("Dynamic Pressure over a Day")
+    plt.ylabel("Lift Coefficient")
+    plt.title("Lift Coefficient over a Day (Aug. 31)")
     plt.tight_layout()
-    plt.savefig("outputs/q.png")
+    plt.savefig("outputs/CL.png")
     plt.show() if show_plots else plt.close(fig)
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
     plot(hour, net_power)
     plt.xlabel("Time after Solar Noon [hours]")
     plt.ylabel("Net Power [W] (positive is charging)")
-    plt.title("Net Power over a Day")
+    plt.title("Net Power over a Day (Aug. 31)")
     plt.tight_layout()
     plt.savefig("outputs/net_power.png")
     plt.show() if show_plots else plt.close(fig)
@@ -1198,7 +1218,7 @@ if __name__ == "__main__":
     plot(hour, wing_Re)
     plt.xlabel("Time after Solar Noon [hours]")
     plt.ylabel("Wing Reynolds Number")
-    plt.title("Wing Reynolds Number over a Day")
+    plt.title("Wing Reynolds Number over a Day (Aug. 31)")
     plt.tight_layout()
     plt.savefig("outputs/wing_Re.png")
     plt.show() if show_plots else plt.close(fig)
@@ -1207,7 +1227,7 @@ if __name__ == "__main__":
     plot(x / 1000, y / 1000)
     plt.xlabel("Downrange Distance [km]")
     plt.ylabel("Altitude [km]")
-    plt.title("Optimal Trajectory")
+    plt.title("Optimal Trajectory (Aug. 31)")
     plt.tight_layout()
     plt.savefig("outputs/trajectory.png")
     plt.show() if show_plots else plt.close(fig)
@@ -1216,7 +1236,7 @@ if __name__ == "__main__":
     plot(hour, power_in)
     plt.xlabel("Time after Solar Noon [hours]")
     plt.ylabel("Power Generated [W]")
-    plt.title("Power Generated over a Day")
+    plt.title("Power Generated over a Day (Aug. 31)")
     plt.tight_layout()
     plt.savefig("outputs/power_in.png")
     plt.show() if show_plots else plt.close(fig)
@@ -1225,7 +1245,7 @@ if __name__ == "__main__":
     plot(hour, power_out)
     plt.xlabel("Time after Solar Noon [hours]")
     plt.ylabel("Power Consumed [W]")
-    plt.title("Power Consumed over a Day")
+    plt.title("Power Consumed over a Day (Aug. 31)")
     plt.tight_layout()
     plt.savefig("outputs/power_out.png")
     plt.show() if show_plots else plt.close(fig)
@@ -1266,7 +1286,7 @@ if __name__ == "__main__":
         "Wing",
         "Stabilizers",
         "Fuses & Booms",
-        "Misc. & Margin"
+        "Margin"
     ]
     pie_values = [
         s(mass_wing),
