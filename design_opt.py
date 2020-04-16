@@ -209,7 +209,8 @@ opti.subject_to([
     # you can relax this, but you need to change the fuselage shape first
 ])
 
-nose_length = 4.3 # Calculated in Slack DMs with Olek Peraire on 4/15/2020
+nose_length = 1.80 # Calculated on 4/15/20 with Trevor and Olek
+# https://docs.google.com/spreadsheets/d/1BnTweK-B4Hmmk9piJn8os-LNPiJH-3rJJemYkrKjARA/edit#gid=0
 
 fuse_diameter = 0.6
 boom_diameter = 0.2
@@ -1310,7 +1311,7 @@ if __name__ == "__main__":
         colors=colors,
         startangle=60,
     )
-    plt.title("Structural Mass")
+    plt.title("Structural Mass*")
 
     ax_power_systems = fig.add_axes([0.65, 0.05, 0.3, 0.3], aspect=1)
     pie_labels = [
@@ -1340,7 +1341,21 @@ if __name__ == "__main__":
         colors=colors,
         startangle=15,
     )
-    plt.title("Power Systems Mass")
+    plt.title("Power Systems Mass*")
+
+    plt.annotate(
+        s="* percentages referenced to total aircraft mass",
+        xy=(0.01, 0.01),
+        # xytext=(0.03, 0.03),
+        xycoords="figure fraction",
+        # arrowprops={
+        #     "color"     : "k",
+        #     "width"     : 0.25,
+        #     "headwidth" : 4,
+        #     "headlength": 6,
+        # }
+    )
+
 
     plt.tight_layout()
     plt.savefig("outputs/mass_pie_chart.png")
