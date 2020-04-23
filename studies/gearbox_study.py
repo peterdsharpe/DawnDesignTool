@@ -125,7 +125,7 @@ plt.plot(TG_x, TG_y, "x", color="indianred")
 plt.annotate(
     s="TG LSI-152\n(750 W)",
     xy=(TG_x, TG_y),
-    xytext=(4, 0.2),
+    xytext=(1.5, 1),
     xycoords="data",
     arrowprops={
         "color"     : "gray",
@@ -197,9 +197,9 @@ plt.annotate(
 
 TG_x = 1
 TG_y = 4
-plt.plot(TG_x, TG_y, "x", color="blue", zorder=25)
+plt.plot(TG_x, TG_y, "x", color="indianred", zorder=25)
 plt.annotate(
-    s="TG Custom\n(1200 W)",
+    s="TG Custom\n(1200 W?)",
     xy=(TG_x, TG_y),
     xytext=(2, 3.75),
     xycoords="data",
@@ -218,9 +218,9 @@ TG_x = 160 / 4
 TG_y = 0.329
 plt.plot(TG_x, TG_y, "x", color="indianred")
 
-GB_x = 6
-GB_y = 0.078
-plt.plot(GB_x, GB_y, "x", color="goldenrod")
+# GB_x = 6
+# GB_y = 0.078
+# plt.plot(GB_x, GB_y, "x", color="goldenrod")
 
 plt.annotate("""Models assume:
 - Power = 1200 W
