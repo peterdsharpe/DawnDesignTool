@@ -53,11 +53,7 @@ All of the other files in this repository are one-off experiments that I ran at 
     
 ## Troubleshooting
 Follow this decision tree:
-* I can't get AeroSandbox to install correctly!
-    * Notify Peter. Include your OS and the error message.
-* `Design_Opt_HALE` was once working, but I pulled from the `Design_Opt_HALE` repository and all of a sudden it's not working!
-    * Most likely a new model was added to `AeroSandbox` that you don't have yet! Try running this in your command line: `pip install --upgrade aerosandbox` and see if that fixes it. If not, notify Peter.
-    * Side note: you can always revert to a previous commit using Git! That way, you can always have a working copy while we figure things out if the latest commit broke your stuff.
+* Before doing anything, try updating AeroSandbox by running this in your command line: `pip install --upgrade aerosandbox`
 * For all other problems, notify Peter.
     
 ## Contact Info
