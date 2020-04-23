@@ -47,8 +47,8 @@ opti.set_value(battery_specific_energy_Wh_kg, 450)
 structural_mass_margin_multiplier = opti.parameter()
 opti.set_value(structural_mass_margin_multiplier, 1.5)
 energy_generation_margin = opti.parameter()
-opti.set_value(energy_generation_margin, 1.05)
-allowable_battery_depth_of_discharge = 0.9  # How much of the battery can you actually use?
+opti.set_value(energy_generation_margin, 1.15)
+allowable_battery_depth_of_discharge = 0.85  # How much of the battery can you actually use?
 
 ##### Simulation Parameters
 n_timesteps = 150  # Only relevant if allow_trajectory_optimization is True.
@@ -601,7 +601,14 @@ opti.subject_to([
     power_out_max > 0
 ])
 
-mass_motor_raw = lib_prop_elec.mass_motor_electric(max_power=power_out_max / n_propellers) * n_propellers
+battery_voltage = 240  # From Olek Peraire 4/2, propulsion slack
+
+# mass_motor_raw = lib_prop_elec.mass_motor_electric(max_power=power_out_max / n_propellers) * n_propellers
+mass_motor_raw = lib_prop_elec.mass_motor_electric(
+    max_power=power_out_max / n_propellers,
+    kv_rpm_volt=5,
+    voltage=battery_voltage
+) * n_propellers
 mass_motor_mounted = 2 * mass_motor_raw  # similar to a quote from Raymer, modified to make sensible units, prop weight roughly subtracted
 
 mass_propellers = n_propellers * lib_prop_prop.mass_hpa_propeller(
@@ -661,7 +668,8 @@ if propulsion_type == "solar":
 
     ### Solar calculations
 
-    solar_cell_efficiency = 0.223
+    solar_cell_efficiency = 0.186
+    # solar_cell_efficiency = 0.25
     # This figure should take into account all temperature factors,
     # spectral losses (different spectrum at altitude), multi-junction effects, etc.
     # Should not take into account MPPT losses.
@@ -671,9 +679,11 @@ if propulsion_type == "solar":
     # Bjarni, 4/5/20: "I'd make the approximation that we can get at least 25% (after accounting for MPPT, mismatch; before thermal effects)."
     # Bjarni, 4/13/20: "Knock down by 5% since we need to account for things like wing curvature, avionics power, etc."
     # 4/17/20: Using SunPower Gen2: 0.223 from from https://us.sunpower.com/sites/default/files/sp-gen2-solar-cell-ds-en-a4-160-506760e.pdf
+    # 4/21/20: Bjarni, Knock down SunPower Gen2 numbers to 18.6% due to mismatch, gaps, fingers & edges, covering, spectrum losses, temperature corrections.
 
     # Solar cell weight
     rho_solar_cells = 0.425  # kg/m^2, solar cell area density.
+    # rho_solar_cells = 0.350  # kg/m^2, solar cell area density.
     # The solar_simple_demo model gives this as 0.27. Burton's model gives this as 0.30.
     # This paper (https://core.ac.uk/download/pdf/159146935.pdf) gives it as 0.42.
     # This paper (https://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=4144&context=facpub) effectively gives it as 0.3143.
@@ -682,8 +692,7 @@ if propulsion_type == "solar":
     # 4/10/20: 0.35 kg/m^2 taken from avionics spreadsheet: https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
     # 4/17/20: Using SunPower Gen2: 0.425 from https://us.sunpower.com/sites/default/files/sp-gen2-solar-cell-ds-en-a4-160-506760e.pdf
 
-
-    MPPT_efficiency = 1/1.04
+    MPPT_efficiency = 1 / 1.04
     # Bjarni, 4/17/20 in #powermanagement Slack.
 
     solar_area_fraction = opti.variable()
@@ -725,7 +734,6 @@ if propulsion_type == "solar":
         battery_pack_cell_fraction=battery_pack_cell_percentage
     )
 
-    battery_voltage = 240  # From Olek Peraire 4/2, propulsion slack
 
     # mass_wires = lib_prop_elec.mass_wires(
     #     wire_length=wing.span() / 2,
@@ -960,9 +968,9 @@ if propulsion_type == "solar":
     # Do the math for battery charging/discharging efficiency
     tanh_sigmoid = lambda x: 0.5 + 0.5 * cas.tanh(x)
     net_power_to_battery = net_power * (
-        1 / battery_discharge_efficiency * (1 - tanh_sigmoid(net_power/10)) +
-        battery_charge_efficiency * tanh_sigmoid(net_power/10)
-    ) # tanh blending to avoid optimizer stalling on nonsmooth integrator
+            1 / battery_discharge_efficiency * (1 - tanh_sigmoid(net_power / 10)) +
+            battery_charge_efficiency * tanh_sigmoid(net_power / 10)
+    )  # tanh blending to avoid optimizer stalling on nonsmooth integrator
 
     # Do the integration
     net_power_to_battery_trapz = trapz(net_power_to_battery)
