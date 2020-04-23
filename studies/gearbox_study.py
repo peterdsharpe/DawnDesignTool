@@ -82,7 +82,9 @@ rpm_des = kv_des * voltage  # rpm
 power = 1200  # W
 torque_des = power / (rpm_des * np.pi / 30)  # Nm
 
-plt.plot(1, mass_motor_electric(power, kv_des, voltage), ".", color="blue", zorder=5, label="No Gearbox: Total")
+fig, ax = plt.subplots(1, 1, figsize=(8, 6), dpi=200)
+plt.plot(1, mass_motor_electric(power, kv_des, voltage), ".", color="blue", zorder=15,
+         label="Model: No Gearbox (Total)")
 
 gear_ratios = np.logspace(0, 2, 50)
 motor_masses = np.array([
@@ -90,18 +92,146 @@ motor_masses = np.array([
     for gear_ratio in gear_ratios
 ])
 gearbox_masses = np.array([
-    2 * mass_gearbox(power, rpm_des * gear_ratio, rpm_des)
-    # the 2 is to roughly calibrate it to data that I found through quick google searches - again, super preliminary haha
+    mass_gearbox(power, rpm_des * gear_ratio, rpm_des)
     for gear_ratio in gear_ratios
 ])
 system_masses = motor_masses + gearbox_masses
-plt.semilogx(gear_ratios, system_masses, "-", color="green", label="With Gearbox: Total")
-plt.plot(gear_ratios, motor_masses, ":", color="green", label="With Gearbox: Motor")
-plt.plot(gear_ratios, gearbox_masses, "--", color="green", label="With Gearbox: Gearbox")
+plt.semilogx(gear_ratios, system_masses, "-", color="orangered", label="Model: With Gearbox (Total)", zorder=14)
+plt.plot(gear_ratios, motor_masses, ":", color="indianred", label="Model: With Gearbox (Motor)", zorder=13)
+plt.plot(gear_ratios, gearbox_masses, "--", color="goldenrod", label="Model: With Gearbox (Gearbox)", zorder=12)
+
+TG_x = 1000 / 124.785 / 4
+TG_y = 2.047
+plt.plot(TG_x, TG_y, "x", color="indianred")
+plt.annotate(
+    s="TG LSI-267\n(2000 W)",
+    xy=(TG_x, TG_y),
+    xytext=(3, 2.5),
+    xycoords="data",
+    arrowprops={
+        "color"     : "gray",
+        "width"     : 0.25,
+        "headwidth" : 4,
+        "headlength": 6,
+        "shrink"    : 0.1
+    },
+    color="gray",
+    zorder=25
+)
+
+TG_x = 1000 / 70.663 / 4
+TG_y = 0.725
+plt.plot(TG_x, TG_y, "x", color="indianred")
+plt.annotate(
+    s="TG LSI-152\n(750 W)",
+    xy=(TG_x, TG_y),
+    xytext=(4, 0.2),
+    xycoords="data",
+    arrowprops={
+        "color"     : "gray",
+        "width"     : 0.25,
+        "headwidth" : 4,
+        "headlength": 6,
+        "shrink"    : 0.1
+    },
+    color="gray",
+    zorder=25
+)
+
+TG_x = 1000 / 5.888 / 4
+TG_y = 0.343
+plt.plot(TG_x, TG_y, "x", color="indianred")
+plt.annotate(
+    s="TG TGO-110\n(413 W)",
+    xy=(TG_x, TG_y),
+    xytext=(65, 0.5),
+    xycoords="data",
+    arrowprops={
+        "color"     : "gray",
+        "width"     : 0.25,
+        "headwidth" : 4,
+        "headlength": 6,
+        "shrink"    : 0.1
+    },
+    color="gray",
+    zorder=25
+)
+
+TG_x = 149 / 4
+TG_y = 0.840
+plt.plot(TG_x, TG_y, "x", color="indianred")
+plt.annotate(
+    s="SK3-6374\n(2250 W)",
+    xy=(TG_x, TG_y),
+    xytext=(60, 0.9),
+    xycoords="data",
+    arrowprops={
+        "color"     : "gray",
+        "width"     : 0.25,
+        "headwidth" : 4,
+        "headlength": 6,
+        "shrink"    : 0.1
+    },
+    color="gray",
+    zorder=25
+)
+
+TG_x = 90 / 4
+TG_y = 0.401
+plt.plot(TG_x, TG_y, "x", color="indianred")
+plt.annotate(
+    s="Multistar 9225\n(1200 W)",
+    xy=(TG_x, TG_y),
+    xytext=(8, 0.1),
+    xycoords="data",
+    arrowprops={
+        "color"     : "gray",
+        "width"     : 0.25,
+        "headwidth" : 4,
+        "headlength": 6,
+        "shrink"    : 0.1
+    },
+    color="gray",
+    zorder=25
+)
+
+TG_x = 1
+TG_y = 4
+plt.plot(TG_x, TG_y, "x", color="blue", zorder=25)
+plt.annotate(
+    s="TG Custom\n(1200 W)",
+    xy=(TG_x, TG_y),
+    xytext=(2, 3.75),
+    xycoords="data",
+    arrowprops={
+        "color"     : "gray",
+        "width"     : 0.25,
+        "headwidth" : 4,
+        "headlength": 6,
+        "shrink"    : 0.1
+    },
+    color="gray",
+    zorder=25
+)
+
+TG_x = 160 / 4
+TG_y = 0.329
+plt.plot(TG_x, TG_y, "x", color="indianred")
+
+GB_x = 6
+GB_y = 0.078
+plt.plot(GB_x, GB_y, "x", color="goldenrod")
+
+plt.annotate("""Models assume:
+- Power = 1200 W
+- RPM (@ prop) = 960
+- Voltage (@ motor) = 240""",
+             (12, 2.3))
+plt.plot(0, 0, "x", color="gray", label="Data (colored by type)")
 plt.grid(True, which="both")
 plt.xlabel(r"Gear Ratio")
 plt.ylabel(r"Total Motor System Mass (per motor) [kg]")
-plt.ylim(0, 4)
+plt.ylim(0, 4.25)
 plt.title("Is Gearing Worth It?\n(Brief study, needs more validation)")
 plt.tight_layout()
 plt.legend()
