@@ -207,6 +207,9 @@ nose_length = 1.80  # Calculated on 4/15/20 with Trevor and Olek
 fuse_diameter = 0.6
 boom_diameter = 0.2
 
+wing_airfoil = e216
+tails_airfoil = naca0008
+
 wing = asb.Wing(
     name="Main Wing",
     # x_le=-0.05 * wing_root_chord,  # Coordinates of the wing's leading edge # TODO make this a free parameter?
@@ -221,7 +224,7 @@ wing = asb.Wing(
             z_le=0,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
             chord=wing_root_chord,
             twist=0,  # degrees
-            airfoil=e216,  # Airfoils are blended between a given XSec and the next one.
+            airfoil=wing_airfoil,  # Airfoils are blended between a given XSec and the next one.
             control_surface_type='symmetric',
             # Flap # Control surfaces are applied between a given XSec and the next one.
             control_surface_deflection=0,  # degrees
@@ -232,7 +235,7 @@ wing = asb.Wing(
             z_le=0,  # wing_span / 2 * cas.pi / 180 * 5,
             chord=wing_root_chord,
             twist=0,
-            airfoil=e216,
+            airfoil=wing_airfoil,
         ),
         asb.WingXSec(  # Tip
             x_le=-wing_root_chord * wing_taper_ratio / 4,
@@ -240,7 +243,7 @@ wing = asb.Wing(
             z_le=0,  # wing_span / 2 * cas.pi / 180 * 5,
             chord=wing_root_chord * wing_taper_ratio,
             twist=0,
-            airfoil=e216,
+            airfoil=wing_airfoil,
         ),
     ]
 )
@@ -257,7 +260,7 @@ hstab = asb.Wing(
             z_le=0,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
             chord=hstab_chord,
             twist=-3,  # degrees # TODO fix
-            airfoil=naca0008,  # Airfoils are blended between a given XSec and the next one.
+            airfoil=tails_airfoil,  # Airfoils are blended between a given XSec and the next one.
             control_surface_type='symmetric',
             # Flap # Control surfaces are applied between a given XSec and the next one.
             control_surface_deflection=0,  # degrees
@@ -268,7 +271,7 @@ hstab = asb.Wing(
             z_le=0,
             chord=hstab_chord,
             twist=-3,  # TODO fix
-            airfoil=naca0008,
+            airfoil=tails_airfoil,
         ),
     ]
 )
@@ -285,7 +288,7 @@ vstab = asb.Wing(
             z_le=0,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
             chord=vstab_chord,
             twist=0,  # degrees
-            airfoil=naca0008,  # Airfoils are blended between a given XSec and the next one.
+            airfoil=tails_airfoil,  # Airfoils are blended between a given XSec and the next one.
             control_surface_type='symmetric',
             # Flap # Control surfaces are applied between a given XSec and the next one.
             control_surface_deflection=0,  # degrees
@@ -296,7 +299,7 @@ vstab = asb.Wing(
             z_le=vstab_span,
             chord=vstab_chord,
             twist=0,
-            airfoil=naca0008,
+            airfoil=tails_airfoil,
         ),
     ]
 )
@@ -572,16 +575,14 @@ opti.subject_to([
 
 n_propellers = 2 * n_booms
 # n_propellers = opti.variable()
-# opti.set_initial(n_propellers,
-#                  2
-#                  )
+# opti.set_initial(n_propellers, 2)
 # opti.subject_to([
 #     n_propellers > 2,
 #     n_propellers < 6,
 # ])
 
 area_propulsive = cas.pi / 4 * propeller_diameter ** 2 * n_propellers
-propeller_coefficient_of_performance = 0.9  # a total WAG
+propeller_coefficient_of_performance = 0.90  # a total WAG
 motor_efficiency = 0.856 / (0.856 + 0.026 + 0.018 + 0.004)  # back-calculated from Odysseus data (94.7%)
 
 power_out_propulsion_shaft = lib_prop_prop.propeller_shaft_power_from_thrust(
@@ -603,12 +604,14 @@ opti.subject_to([
 
 battery_voltage = 240  # From Olek Peraire 4/2, propulsion slack
 
-# mass_motor_raw = lib_prop_elec.mass_motor_electric(max_power=power_out_max / n_propellers) * n_propellers
 mass_motor_raw = lib_prop_elec.mass_motor_electric(
     max_power=power_out_max / n_propellers,
-    kv_rpm_volt=5,
+    kv_rpm_volt=4,
     voltage=battery_voltage
-) * n_propellers
+) * n_propellers  # TODO update with real torque data
+# mass_motor_raw = lib_prop_elec.mass_motor_electric(max_power=power_out_max / n_propellers) * n_propellers # TODO old model
+
+
 mass_motor_mounted = 2 * mass_motor_raw  # similar to a quote from Raymer, modified to make sensible units, prop weight roughly subtracted
 
 mass_propellers = n_propellers * lib_prop_prop.mass_hpa_propeller(
@@ -629,7 +632,7 @@ power_out_payload = cas.if_else(
 )
 
 # Account for avionics power
-power_out_avionics = 276  # Pulled from Avionics spreadsheet on 4/16/20
+power_out_avionics = 276  # Pulled from Avionics spreadsheet on 4/23/20
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
 ### Power accounting
@@ -668,8 +671,8 @@ if propulsion_type == "solar":
 
     ### Solar calculations
 
-    solar_cell_efficiency = 0.186
-    # solar_cell_efficiency = 0.25
+    # solar_cell_efficiency = 0.186
+    solar_cell_efficiency = 0.25
     # This figure should take into account all temperature factors,
     # spectral losses (different spectrum at altitude), multi-junction effects, etc.
     # Should not take into account MPPT losses.
@@ -682,8 +685,8 @@ if propulsion_type == "solar":
     # 4/21/20: Bjarni, Knock down SunPower Gen2 numbers to 18.6% due to mismatch, gaps, fingers & edges, covering, spectrum losses, temperature corrections.
 
     # Solar cell weight
-    rho_solar_cells = 0.425  # kg/m^2, solar cell area density.
-    # rho_solar_cells = 0.350  # kg/m^2, solar cell area density.
+    # rho_solar_cells = 0.425  # kg/m^2, solar cell area density.
+    rho_solar_cells = 0.350  # kg/m^2, solar cell area density.
     # The solar_simple_demo model gives this as 0.27. Burton's model gives this as 0.30.
     # This paper (https://core.ac.uk/download/pdf/159146935.pdf) gives it as 0.42.
     # This paper (https://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=4144&context=facpub) effectively gives it as 0.3143.
@@ -734,14 +737,13 @@ if propulsion_type == "solar":
         battery_pack_cell_fraction=battery_pack_cell_percentage
     )
 
-
-    # mass_wires = lib_prop_elec.mass_wires(
-    #     wire_length=wing.span() / 2,
-    #     max_current=power_out_max / battery_voltage,
-    #     allowable_voltage_drop=battery_voltage * 0.0225,
-    #     material="aluminum"
-    # ) # buildup model
-    mass_wires = 0.868  # Taken from Avionics spreadsheet on 4/10/20
+    mass_wires = lib_prop_elec.mass_wires(
+        wire_length=wing.span() / 2,
+        max_current=power_out_max / battery_voltage,
+        allowable_voltage_drop=battery_voltage * 0.01,
+        material="aluminum"
+    ) # buildup model
+    # mass_wires = 0.868  # Taken from Avionics spreadsheet on 4/10/20
     # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
     mass_MPPT = 5.7  # Model taken from Avionics spreadsheet on 4/10/20
@@ -899,13 +901,13 @@ mass_structural *= structural_mass_margin_multiplier
 
 ### Avionics
 # mass_avionics = 3.7 / 3.8 * 25  # back-calculated from Kevin Uleck's figures in MIT 16.82 presentation
-mass_avionics = 10.743  # Pulled from Avionics team spreadsheet on 4/16
+mass_avionics = 7.048  # Pulled from Avionics team spreadsheet on 4/23
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
 opti.subject_to([
-    mass_total / 500 == (
+    mass_total / 250 == (
             mass_payload + mass_structural + mass_propulsion + mass_power_systems + mass_avionics
-    ) / 500
+    ) / 250
 ])
 
 gravity_force = g * mass_total
@@ -1220,7 +1222,7 @@ if __name__ == "__main__":
     plt.title("Lift Coefficient over a Day (Aug. 31)")
     plt.tight_layout()
     plt.savefig("outputs/CL.png")
-    plt.show() if show_plots else plt.close(fig)
+    # plt.show() if show_plots else plt.close(fig)
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
     plot(hour, net_power)
@@ -1238,7 +1240,7 @@ if __name__ == "__main__":
     plt.title("Battery Charge State over a Day")
     plt.tight_layout()
     plt.savefig("outputs/battery_charge.png")
-    plt.show() if show_plots else plt.close(fig)
+    # plt.show() if show_plots else plt.close(fig)
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
     plot(hour, wing_Re)
@@ -1247,7 +1249,7 @@ if __name__ == "__main__":
     plt.title("Wing Reynolds Number over a Day (Aug. 31)")
     plt.tight_layout()
     plt.savefig("outputs/wing_Re.png")
-    plt.show() if show_plots else plt.close(fig)
+    # plt.show() if show_plots else plt.close(fig)
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
     plot(x / 1000, y / 1000)
@@ -1265,7 +1267,7 @@ if __name__ == "__main__":
     plt.title("Power Generated over a Day (Aug. 31)")
     plt.tight_layout()
     plt.savefig("outputs/power_in.png")
-    plt.show() if show_plots else plt.close(fig)
+    # plt.show() if show_plots else plt.close(fig)
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
     plot(hour, power_out)
@@ -1274,7 +1276,7 @@ if __name__ == "__main__":
     plt.title("Power Consumed over a Day (Aug. 31)")
     plt.tight_layout()
     plt.savefig("outputs/power_out.png")
-    plt.show() if show_plots else plt.close(fig)
+    # plt.show() if show_plots else plt.close(fig)
 
     # Draw mass breakdown
     fig = plt.figure(figsize=(10, 8), dpi=200)
@@ -1371,6 +1373,21 @@ if __name__ == "__main__":
     plt.annotate(
         s="* percentages referenced to total aircraft mass",
         xy=(0.01, 0.01),
+        # xytext=(0.03, 0.03),
+        xycoords="figure fraction",
+        # arrowprops={
+        #     "color"     : "k",
+        #     "width"     : 0.25,
+        #     "headwidth" : 4,
+        #     "headlength": 6,
+        # }
+    )
+    plt.annotate(
+        s="""
+        Total mass: %.1f kg
+        Wing span: %.2f m
+        """ % (s(max_mass_total), s(wing.span())),
+        xy=(0.03, 0.70),
         # xytext=(0.03, 0.03),
         xycoords="figure fraction",
         # arrowprops={

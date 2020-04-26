@@ -92,7 +92,8 @@ motor_masses = np.array([
     for gear_ratio in gear_ratios
 ])
 gearbox_masses = np.array([
-    mass_gearbox(power, rpm_des * gear_ratio, rpm_des)
+    2 * mass_gearbox(power, rpm_des * gear_ratio, rpm_des)
+    # multiplying by 2 to roughly match things I found on Google; again, SUPER quick study
     for gear_ratio in gear_ratios
 ])
 system_masses = motor_masses + gearbox_masses
