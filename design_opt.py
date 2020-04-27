@@ -207,12 +207,28 @@ nose_length = 1.80  # Calculated on 4/15/20 with Trevor and Olek
 fuse_diameter = 0.6
 boom_diameter = 0.2
 
-wing_airfoil = e216
-tails_airfoil = naca0008
+import dill as pickle
+try:
+    with open("wing_airfoil.cache", "rb") as f:
+        wing_airfoil = pickle.load(f)
+    with open("tail_airfoil.cache", "rb") as f:
+        tail_airfoil = pickle.load(f)
+except:
+    wing_airfoil = Airfoil(name="HALE_03", coordinates=r"C:\Projects\GitHub\Airfoils\HALE_03.dat")
+    wing_airfoil.populate_sectional_functions_from_xfoil_fits(parallel=False)
+    with open("wing_airfoil.cache", "wb+") as f:
+        pickle.dump(wing_airfoil, f)
+    tail_airfoil = Airfoil("naca0008")
+    tail_airfoil.populate_sectional_functions_from_xfoil_fits(parallel=False)
+    with open("tail_airfoil.cache", "wb+") as f:
+        pickle.dump(tail_airfoil, f)
+
+tail_airfoil = naca0008 # TODO remove this and use fits?
+
+# if __name__ == '__main__':
 
 wing = asb.Wing(
     name="Main Wing",
-    # x_le=-0.05 * wing_root_chord,  # Coordinates of the wing's leading edge # TODO make this a free parameter?
     x_le=wing_x_quarter_chord,  # Coordinates of the wing's leading edge # TODO make this a free parameter?
     y_le=0,  # Coordinates of the wing's leading edge
     z_le=0,  # Coordinates of the wing's leading edge
@@ -259,8 +275,8 @@ hstab = asb.Wing(
             y_le=0,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
             z_le=0,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
             chord=hstab_chord,
-            twist=-3,  # degrees # TODO fix
-            airfoil=tails_airfoil,  # Airfoils are blended between a given XSec and the next one.
+            twist=-3,  # degrees
+            airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
             control_surface_type='symmetric',
             # Flap # Control surfaces are applied between a given XSec and the next one.
             control_surface_deflection=0,  # degrees
@@ -270,8 +286,8 @@ hstab = asb.Wing(
             y_le=hstab_span / 2,
             z_le=0,
             chord=hstab_chord,
-            twist=-3,  # TODO fix
-            airfoil=tails_airfoil,
+            twist=-3,
+            airfoil=tail_airfoil,
         ),
     ]
 )
@@ -288,7 +304,7 @@ vstab = asb.Wing(
             z_le=0,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
             chord=vstab_chord,
             twist=0,  # degrees
-            airfoil=tails_airfoil,  # Airfoils are blended between a given XSec and the next one.
+            airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
             control_surface_type='symmetric',
             # Flap # Control surfaces are applied between a given XSec and the next one.
             control_surface_deflection=0,  # degrees
@@ -299,7 +315,7 @@ vstab = asb.Wing(
             z_le=vstab_span,
             chord=vstab_chord,
             twist=0,
-            airfoil=tails_airfoil,
+            airfoil=tail_airfoil,
         ),
     ]
 )
@@ -563,6 +579,8 @@ opti.subject_to([
 # endregion
 
 # region Propulsion
+propeller_tip_mach = 0.40 # From Dongjoon, 4/26/20
+
 ### Propeller calculations
 propeller_diameter = opti.variable()
 opti.set_initial(propeller_diameter,
@@ -573,13 +591,18 @@ opti.subject_to([
     propeller_diameter / 10 < 1
 ])
 
-n_propellers = 2 * n_booms
-# n_propellers = opti.variable()
-# opti.set_initial(n_propellers, 2)
-# opti.subject_to([
-#     n_propellers > 2,
-#     n_propellers < 6,
-# ])
+# n_propellers = 2  # 2 * n_booms
+n_propellers = opti.variable()
+opti.set_initial(n_propellers, 6)
+opti.subject_to([
+    n_propellers > 2,
+    n_propellers < 6,
+])
+
+propeller_rads_per_sec = propeller_tip_mach * atmo.get_speed_of_sound_from_temperature(
+    atmo.get_temperature_at_altitude(20000)
+) / (propeller_diameter / 2)
+propeller_rpm = propeller_rads_per_sec * 30 / cas.pi
 
 area_propulsive = cas.pi / 4 * propeller_diameter ** 2 * n_propellers
 propeller_coefficient_of_performance = 0.90  # a total WAG
@@ -602,14 +625,22 @@ opti.subject_to([
     power_out_max > 0
 ])
 
-battery_voltage = 240  # From Olek Peraire 4/2, propulsion slack
+# battery_voltage = 240  # From Olek Peraire 4/2, propulsion slack
+battery_voltage = opti.variable()  # From Olek Peraire 4/2, propulsion slack
+opti.set_initial(battery_voltage, 240)
+opti.subject_to([
+    battery_voltage > 0,
+    battery_voltage < 2000
+])
+
+motor_kv = propeller_rpm / battery_voltage
 
 mass_motor_raw = lib_prop_elec.mass_motor_electric(
     max_power=power_out_max / n_propellers,
-    kv_rpm_volt=4,
+    kv_rpm_volt=motor_kv,
     voltage=battery_voltage
-) * n_propellers  # TODO update with real torque data
-# mass_motor_raw = lib_prop_elec.mass_motor_electric(max_power=power_out_max / n_propellers) * n_propellers # TODO old model
+) * n_propellers
+# mass_motor_raw = lib_prop_elec.mass_motor_electric(max_power=power_out_max / n_propellers) * n_propellers # old model
 
 
 mass_motor_mounted = 2 * mass_motor_raw  # similar to a quote from Raymer, modified to make sensible units, prop weight roughly subtracted
@@ -742,7 +773,7 @@ if propulsion_type == "solar":
         max_current=power_out_max / battery_voltage,
         allowable_voltage_drop=battery_voltage * 0.01,
         material="aluminum"
-    ) # buildup model
+    )  # buildup model
     # mass_wires = 0.868  # Taken from Avionics spreadsheet on 4/10/20
     # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
@@ -779,7 +810,7 @@ elif propulsion_type == "gas":
 
     # Gas engine
     mass_gas_engine = lib_gas.mass_gas_engine(power_out_max)
-    mass_alternator = 0  # for now! TODO fix this!
+    mass_alternator = 0  # for now!
 
     # Assume you're always providing power, with no battery storage.
     power_in = power_out
@@ -1222,7 +1253,7 @@ if __name__ == "__main__":
     plt.title("Lift Coefficient over a Day (Aug. 31)")
     plt.tight_layout()
     plt.savefig("outputs/CL.png")
-    # plt.show() if show_plots else plt.close(fig)
+    plt.close(fig)
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
     plot(hour, net_power)
@@ -1240,7 +1271,7 @@ if __name__ == "__main__":
     plt.title("Battery Charge State over a Day")
     plt.tight_layout()
     plt.savefig("outputs/battery_charge.png")
-    # plt.show() if show_plots else plt.close(fig)
+    plt.close(fig)
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
     plot(hour, wing_Re)
@@ -1249,7 +1280,7 @@ if __name__ == "__main__":
     plt.title("Wing Reynolds Number over a Day (Aug. 31)")
     plt.tight_layout()
     plt.savefig("outputs/wing_Re.png")
-    # plt.show() if show_plots else plt.close(fig)
+    plt.close(fig)
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
     plot(x / 1000, y / 1000)
@@ -1258,7 +1289,7 @@ if __name__ == "__main__":
     plt.title("Optimal Trajectory (Aug. 31)")
     plt.tight_layout()
     plt.savefig("outputs/trajectory.png")
-    plt.show() if show_plots else plt.close(fig)
+    plt.close(fig)
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
     plot(hour, power_in)
@@ -1267,7 +1298,7 @@ if __name__ == "__main__":
     plt.title("Power Generated over a Day (Aug. 31)")
     plt.tight_layout()
     plt.savefig("outputs/power_in.png")
-    # plt.show() if show_plots else plt.close(fig)
+    plt.close(fig)
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
     plot(hour, power_out)
@@ -1276,7 +1307,7 @@ if __name__ == "__main__":
     plt.title("Power Consumed over a Day (Aug. 31)")
     plt.tight_layout()
     plt.savefig("outputs/power_out.png")
-    # plt.show() if show_plots else plt.close(fig)
+    plt.close(fig)
 
     # Draw mass breakdown
     fig = plt.figure(figsize=(10, 8), dpi=200)
