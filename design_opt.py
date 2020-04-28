@@ -26,16 +26,17 @@ opti = cas.Opti()
 des_vars = {}
 
 ##### Caching
+# Uncomment these lines to do ANALYSIS and OPTIMIZATION.
 file_to_load_from = None
 file_to_save_to = "des_vars.json"
-#
-file_to_load_from = "des_vars.json"
-file_to_save_to = None
 
-# minimize = "wing.span() / 50" # any "eval-able" expression
+# Uncomment these lines to do ANALYSIS on a FROZEN DESIGN.
+# file_to_load_from = "des_vars.json"
+# file_to_save_to = None
+
+minimize = "wing.span() / 50" # any "eval-able" expression
 # minimize = "max_mass_total / 300" # any "eval-able" expression
 # minimize = "cas.sum1(airspeed/20)"
-minimize = "-cas.sum1(y/10000)"
 
 def des_var(  # design variable
         name,
