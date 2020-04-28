@@ -22,6 +22,24 @@ sns.set(font_scale=1)
 # region Setup
 ##### Initialize Optimization
 opti = cas.Opti()
+def des_var( # design variable
+        name,
+        initial_guess,
+        scale_factor,
+        n_variables=1
+):
+    var = scale_factor * opti.variable(n_variables)
+    opti.set_initial(var, initial_guess)
+    return var
+
+def ops_var( # operational variable
+        initial_guess,
+        scale_factor,
+        n_variables=1
+):
+    var = scale_factor * opti.variable(n_variables)
+    opti.set_initial(var, initial_guess)
+    return var
 
 ##### Operating Parameters
 latitude = 49  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
@@ -30,7 +48,6 @@ min_altitude = 19812  # meters. 19812 m = 65000 ft.
 required_headway_per_day = 10e3  # meters
 days_to_simulate = opti.parameter()
 opti.set_value(days_to_simulate, 1)
-propulsion_type = "solar"  # "solar" or "gas"
 enforce_periodicity = True  # Tip: turn this off when looking at gas models or models w/o trajectory opt. enabled.
 allow_trajectory_optimization = True
 n_booms = 3  # 1, 2, or 3
@@ -74,53 +91,43 @@ else:
 # region Trajectory Optimization Variables
 ##### Initialize trajectory optimization variables
 
-x = 1e5 * opti.variable(n_timesteps)
-opti.set_initial(x, 0)
+x = ops_var(initial_guess=0, scale_factor=1e5, n_variables=n_timesteps)
+
+y = ops_var(initial_guess=20000, scale_factor=1e4, n_variables=n_timesteps)
 
 if not climb_opt:
-
-    y = 2e4 * opti.variable(n_timesteps)
-    opti.set_initial(y, 20000, )
     opti.subject_to([
         y / min_altitude > 1,
         y / 40000 < 1,  # models break down
     ])
 else:
-    y = 2e4 * opti.variable(n_timesteps)
     opti.set_initial(y, 20000)
     opti.subject_to([y[timesteps_of_last_day:-1] > min_altitude, y < 40000])
 
-airspeed = 2e1 * opti.variable(n_timesteps)
-opti.set_initial(airspeed, 20)
+airspeed =ops_var(initial_guess=20, scale_factor=20, n_variables=n_timesteps)
 opti.subject_to([
     airspeed / min_speed > 1
 ])
 
-flight_path_angle = 1e-1 * opti.variable(n_timesteps)
-opti.set_initial(flight_path_angle, 0)
+flight_path_angle = ops_var(initial_guess=0, scale_factor=0.1, n_variables=n_timesteps)
 opti.subject_to([
     flight_path_angle / 90 < 1,
     flight_path_angle / 90 > -1,
 ])
 
-alpha = 4 * opti.variable(n_timesteps)
-opti.set_initial(alpha, 5)
+alpha = ops_var(initial_guess=5, scale_factor=4, n_variables=n_timesteps)
 opti.subject_to([
     alpha > -8,
     alpha < 12
 ])
 
-thrust_force = 2e2 * opti.variable(n_timesteps)
-opti.set_initial(thrust_force, 150)
+thrust_force = ops_var(initial_guess=150, scale_factor=200, n_variables=n_timesteps)
 opti.subject_to([
     thrust_force > 0
 ])
 
-net_accel_parallel = 1e-2 * opti.variable(n_timesteps)
-opti.set_initial(net_accel_parallel, 0)
-
-net_accel_perpendicular = 1e-1 * opti.variable(n_timesteps)
-opti.set_initial(net_accel_perpendicular, 0)
+net_accel_parallel=ops_var(initial_guess=0, scale_factor=1e-2, n_variables=n_timesteps)
+net_accel_perpendicular=ops_var(initial_guess=0, scale_factor=1e-1, n_variables=n_timesteps)
 
 ##### Set up time
 time_nondim = cas.linspace(0, 1, n_timesteps)
@@ -132,73 +139,49 @@ hour = time / 3600
 
 # region Design Optimization Variables
 ##### Initialize design optimization variables (all units in base SI or derived units)
-if propulsion_type == "solar":
-    # log_mass_total = opti.variable()
-    # opti.set_initial(log_mass_total, cas.log(600))
-    # mass_total = cas.exp(log_mass_total)
 
-    mass_total = 600 * opti.variable()
-    opti.set_initial(mass_total, 600)
+# log_mass_total = opti.variable()
+# opti.set_initial(log_mass_total, cas.log(600))
+# mass_total = cas.exp(log_mass_total)
 
-    max_mass_total = mass_total
-elif propulsion_type == "gas":
-    log_mass_total = opti.variable(n_timesteps)
-    opti.set_initial(log_mass_total, cas.log(800))
-    mass_total = cas.exp(log_mass_total)
-    log_max_mass_total = opti.variable()
-    opti.set_initial(log_max_mass_total, cas.log(800))
-    max_mass_total = cas.exp(log_max_mass_total)
-    opti.subject_to([
-        log_mass_total < log_max_mass_total
-    ])
-else:
-    raise ValueError("Bad value of propulsion_type!")
+mass_total = des_var(name ="mass_total", initial_guess=600, scale_factor=600)
+
+max_mass_total = mass_total
 
 ### Initialize geometric variables
 # wing
-wing_span = 60 * opti.variable()
-opti.set_initial(wing_span, 40)
+wing_span = des_var(name="wing_span", initial_guess=40, scale_factor=60)
 opti.subject_to([wing_span > 1])
 
-wing_root_chord = 4 * opti.variable()
-opti.set_initial(wing_root_chord, 3)
+wing_root_chord = des_var(name="wing_root_chord", initial_guess=3, scale_factor=4)
 opti.subject_to([wing_root_chord > 0.1])
 
-wing_x_quarter_chord = 0.01 * opti.variable()
-opti.set_initial(wing_x_quarter_chord, 0)
+wing_x_quarter_chord = des_var(name="wing_x_quarter_chord", initial_guess=0, scale_factor=0.01)
 
 wing_y_taper_break = 0.57 * wing_span / 2
 
 wing_taper_ratio = 0.5
 
 # hstab
-hstab_span = 15 * opti.variable()
-opti.set_initial(hstab_span, 12)
+hstab_span=des_var(name="hstab_span", initial_guess=12, scale_factor=15)
 opti.subject_to(hstab_span > 0.1)
 
-hstab_chord = 2 * opti.variable()
-opti.set_initial(hstab_chord, 3)
+hstab_chord = des_var(name="hstab_chord", initial_guess=3, scale_factor=2)
 opti.subject_to([hstab_chord > 0.1])
 
-hstab_twist_angle = 2 * opti.variable(n_timesteps)
-opti.set_initial(hstab_twist_angle, -7)
+hstab_twist_angle = ops_var(initial_guess=-7, scale_factor=2, n_variables=n_timesteps)
 
 # vstab
-vstab_span = 8 * opti.variable()
-opti.set_initial(vstab_span, 7)
+vstab_span=des_var(name="vstab_span", initial_guess=7, scale_factor=8)
 opti.subject_to(vstab_span > 0.1)
 
-vstab_chord = 2 * opti.variable()
-opti.set_initial(vstab_chord, 2.5)
+vstab_chord = des_var(name="vstab_chord", initial_guess=2.5, scale_factor=2)
 opti.subject_to([vstab_chord > 0.1])
 
 # fuselage
-
-boom_length = opti.variable()
-opti.set_initial(boom_length, 23)
+boom_length = des_var(name="boom_length", initial_guess=23, scale_factor=2) # TODO add scale factor
 opti.subject_to([
     boom_length - vstab_chord - hstab_chord > wing_x_quarter_chord + wing_root_chord * 3 / 4
-    # you can relax this, but you need to change the fuselage shape first
 ])
 
 nose_length = 1.80  # Calculated on 4/15/20 with Trevor and Olek
@@ -582,18 +565,14 @@ opti.subject_to([
 propeller_tip_mach = 0.40 # From Dongjoon, 4/26/20
 
 ### Propeller calculations
-propeller_diameter = opti.variable()
-opti.set_initial(propeller_diameter,
-                 5
-                 )
+propeller_diameter=des_var(name="propeller_diameter", initial_guess=5, scale_factor=1) # TODO scale factor
 opti.subject_to([
     propeller_diameter / 1 > 1,
     propeller_diameter / 10 < 1
 ])
 
 # n_propellers = 2  # 2 * n_booms
-n_propellers = opti.variable()
-opti.set_initial(n_propellers, 6)
+n_propellers = des_var(name="n_propellers", initial_guess=6, scale_factor=1) # TODO add scale factor
 opti.subject_to([
     n_propellers > 2,
     n_propellers < 6,
@@ -618,20 +597,19 @@ power_out_propulsion_shaft = lib_prop_prop.propeller_shaft_power_from_thrust(
 
 power_out_propulsion = power_out_propulsion_shaft / motor_efficiency
 
-power_out_max = 5e3 * opti.variable()
-opti.set_initial(power_out_max, 5e3)
+power_out_max = des_var(name="power_out_max", initial_guess=5e3, scale_factor=5e3)
 opti.subject_to([
     power_out_propulsion < power_out_max,
     power_out_max > 0
 ])
 
-# battery_voltage = 240  # From Olek Peraire 4/2, propulsion slack
-battery_voltage = opti.variable()  # From Olek Peraire 4/2, propulsion slack
-opti.set_initial(battery_voltage, 240)
-opti.subject_to([
-    battery_voltage > 0,
-    battery_voltage < 2000
-])
+battery_voltage = 240  # From Olek Peraire 4/2, propulsion slack
+# battery_voltage = opti.variable()  # From Olek Peraire 4/2, propulsion slack
+# opti.set_initial(battery_voltage, 240)
+# opti.subject_to([
+#     battery_voltage > 0,
+#     battery_voltage < 2000
+# ])
 
 motor_kv = propeller_rpm / battery_voltage
 
@@ -672,161 +650,108 @@ power_out = power_out_propulsion + power_out_payload + power_out_avionics
 # endregion
 
 
-if propulsion_type == "solar":
-    # region Solar Power Systems
+# region Solar Power Systems
 
-    # Battery design variables
-    net_power = 1000 * opti.variable(n_timesteps)
-    opti.set_initial(net_power,
-                     0,
-                     )
+# Battery design variables
+net_power = ops_var(initial_guess=0, scale_factor=1000, n_variables=n_timesteps)
 
-    battery_stored_energy_nondim = 1 * opti.variable(n_timesteps)
-    opti.set_initial(battery_stored_energy_nondim,
-                     0.5,
-                     )
-    opti.subject_to([
-        battery_stored_energy_nondim > 0,
-        battery_stored_energy_nondim < allowable_battery_depth_of_discharge,
-    ])
+battery_stored_energy_nondim = ops_var(initial_guess=0.5, scale_factor=1, n_variables=n_timesteps)
+opti.subject_to([
+    battery_stored_energy_nondim > 0,
+    battery_stored_energy_nondim < allowable_battery_depth_of_discharge,
+])
 
-    battery_capacity = 3600 * 40000 * opti.variable()  # Joules, not watt-hours!
-    opti.set_initial(battery_capacity,
-                     3600 * 20000
-                     )
-    opti.subject_to([
-        battery_capacity > 0
-    ])
-    battery_capacity_watt_hours = battery_capacity / 3600
-    battery_stored_energy = battery_stored_energy_nondim * battery_capacity
+battery_capacity=des_var(name="battery_capacity", initial_guess=3600 * 20e3, scale_factor= 3600 * 40e3) # Joules, not watt-hours!
+opti.subject_to([
+    battery_capacity > 0
+])
+battery_capacity_watt_hours = battery_capacity / 3600
+battery_stored_energy = battery_stored_energy_nondim * battery_capacity
 
-    ### Solar calculations
+### Solar calculations
 
-    # solar_cell_efficiency = 0.186
-    solar_cell_efficiency = 0.25
-    # This figure should take into account all temperature factors,
-    # spectral losses (different spectrum at altitude), multi-junction effects, etc.
-    # Should not take into account MPPT losses.
-    # Kevin Uleck gives this figure as 0.205.
-    # This paper (https://core.ac.uk/download/pdf/159146935.pdf) gives it as 0.19.
-    # According to Bjarni, MicroLink Devices has flexible triple-junction cells at 31% and 37.75% efficiency.
-    # Bjarni, 4/5/20: "I'd make the approximation that we can get at least 25% (after accounting for MPPT, mismatch; before thermal effects)."
-    # Bjarni, 4/13/20: "Knock down by 5% since we need to account for things like wing curvature, avionics power, etc."
-    # 4/17/20: Using SunPower Gen2: 0.223 from from https://us.sunpower.com/sites/default/files/sp-gen2-solar-cell-ds-en-a4-160-506760e.pdf
-    # 4/21/20: Bjarni, Knock down SunPower Gen2 numbers to 18.6% due to mismatch, gaps, fingers & edges, covering, spectrum losses, temperature corrections.
+# solar_cell_efficiency = 0.186
+solar_cell_efficiency = 0.25
+# This figure should take into account all temperature factors,
+# spectral losses (different spectrum at altitude), multi-junction effects, etc.
+# Should not take into account MPPT losses.
+# Kevin Uleck gives this figure as 0.205.
+# This paper (https://core.ac.uk/download/pdf/159146935.pdf) gives it as 0.19.
+# According to Bjarni, MicroLink Devices has flexible triple-junction cells at 31% and 37.75% efficiency.
+# Bjarni, 4/5/20: "I'd make the approximation that we can get at least 25% (after accounting for MPPT, mismatch; before thermal effects)."
+# Bjarni, 4/13/20: "Knock down by 5% since we need to account for things like wing curvature, avionics power, etc."
+# 4/17/20: Using SunPower Gen2: 0.223 from from https://us.sunpower.com/sites/default/files/sp-gen2-solar-cell-ds-en-a4-160-506760e.pdf
+# 4/21/20: Bjarni, Knock down SunPower Gen2 numbers to 18.6% due to mismatch, gaps, fingers & edges, covering, spectrum losses, temperature corrections.
 
-    # Solar cell weight
-    # rho_solar_cells = 0.425  # kg/m^2, solar cell area density.
-    rho_solar_cells = 0.350  # kg/m^2, solar cell area density.
-    # The solar_simple_demo model gives this as 0.27. Burton's model gives this as 0.30.
-    # This paper (https://core.ac.uk/download/pdf/159146935.pdf) gives it as 0.42.
-    # This paper (https://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=4144&context=facpub) effectively gives it as 0.3143.
-    # According to Bjarni, MicroLink Devices has cells on the order of 250 g/m^2 - but they're prohibitively expensive.
-    # Bjarni, 4/5/20: "400 g/m^2"
-    # 4/10/20: 0.35 kg/m^2 taken from avionics spreadsheet: https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
-    # 4/17/20: Using SunPower Gen2: 0.425 from https://us.sunpower.com/sites/default/files/sp-gen2-solar-cell-ds-en-a4-160-506760e.pdf
+# Solar cell weight
+# rho_solar_cells = 0.425  # kg/m^2, solar cell area density.
+rho_solar_cells = 0.350  # kg/m^2, solar cell area density.
+# The solar_simple_demo model gives this as 0.27. Burton's model gives this as 0.30.
+# This paper (https://core.ac.uk/download/pdf/159146935.pdf) gives it as 0.42.
+# This paper (https://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=4144&context=facpub) effectively gives it as 0.3143.
+# According to Bjarni, MicroLink Devices has cells on the order of 250 g/m^2 - but they're prohibitively expensive.
+# Bjarni, 4/5/20: "400 g/m^2"
+# 4/10/20: 0.35 kg/m^2 taken from avionics spreadsheet: https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
+# 4/17/20: Using SunPower Gen2: 0.425 from https://us.sunpower.com/sites/default/files/sp-gen2-solar-cell-ds-en-a4-160-506760e.pdf
 
-    MPPT_efficiency = 1 / 1.04
-    # Bjarni, 4/17/20 in #powermanagement Slack.
+MPPT_efficiency = 1 / 1.04
+# Bjarni, 4/17/20 in #powermanagement Slack.
 
-    solar_area_fraction = opti.variable()
-    opti.set_initial(solar_area_fraction,
-                     0.5
-                     )
-    opti.subject_to([
-        solar_area_fraction > 0,
-        solar_area_fraction < 0.80,  # TODO check
-    ])
+solar_area_fraction = des_var(name="solar_area_fraction", initial_guess=0.5, scale_factor=1)
+opti.subject_to([
+    solar_area_fraction > 0,
+    solar_area_fraction < 0.80,  # TODO check
+])
 
-    area_solar = wing.area() * solar_area_fraction
+area_solar = wing.area() * solar_area_fraction
 
-    # Energy generation cascade
-    power_in_from_sun = solar_flux_on_horizontal * area_solar / energy_generation_margin
-    power_in_after_panels = power_in_from_sun * solar_cell_efficiency
-    power_in = power_in_after_panels * MPPT_efficiency
+# Energy generation cascade
+power_in_from_sun = solar_flux_on_horizontal * area_solar / energy_generation_margin
+power_in_after_panels = power_in_from_sun * solar_cell_efficiency
+power_in = power_in_after_panels * MPPT_efficiency
 
-    mass_solar_cells = rho_solar_cells * area_solar
+mass_solar_cells = rho_solar_cells * area_solar
 
-    ### Battery calculations
-    # battery_specific_energy_Wh_kg = opti.parameter()
-    # opti.set_value(battery_specific_energy_Wh_kg, 550 if optimistic else 300)
-    # Burton's solar model uses 350, and public specs from Amprius seem to indicate that's possible.
-    # Jim Anderson believes 550 Wh/kg is possible.
-    # Odysseus had cells that were 265 Wh/kg.
+### Battery calculations
+# battery_specific_energy_Wh_kg = opti.parameter()
+# opti.set_value(battery_specific_energy_Wh_kg, 550 if optimistic else 300)
+# Burton's solar model uses 350, and public specs from Amprius seem to indicate that's possible.
+# Jim Anderson believes 550 Wh/kg is possible.
+# Odysseus had cells that were 265 Wh/kg.
 
-    battery_pack_cell_percentage = 0.70  # What percent of the battery pack consists of the module, by weight?
-    # Accounts for module HW, BMS, pack installation, etc.
-    # Ed Lovelace (in his presentation) gives 70% as a state-of-the-art fraction.
+battery_pack_cell_percentage = 0.70  # What percent of the battery pack consists of the module, by weight?
+# Accounts for module HW, BMS, pack installation, etc.
+# Ed Lovelace (in his presentation) gives 70% as a state-of-the-art fraction.
 
-    battery_charge_efficiency = 0.94
-    battery_discharge_efficiency = 0.94
-    # Taken from Bjarni, 4/17/20 in #powermanagment Slack
+battery_charge_efficiency = 0.94
+battery_discharge_efficiency = 0.94
+# Taken from Bjarni, 4/17/20 in #powermanagment Slack
 
-    mass_battery_pack = lib_prop_elec.mass_battery_pack(
-        battery_capacity_Wh=battery_capacity_watt_hours,
-        battery_cell_specific_energy_Wh_kg=battery_specific_energy_Wh_kg,
-        battery_pack_cell_fraction=battery_pack_cell_percentage
-    )
+mass_battery_pack = lib_prop_elec.mass_battery_pack(
+    battery_capacity_Wh=battery_capacity_watt_hours,
+    battery_cell_specific_energy_Wh_kg=battery_specific_energy_Wh_kg,
+    battery_pack_cell_fraction=battery_pack_cell_percentage
+)
 
-    mass_wires = lib_prop_elec.mass_wires(
-        wire_length=wing.span() / 2,
-        max_current=power_out_max / battery_voltage,
-        allowable_voltage_drop=battery_voltage * 0.01,
-        material="aluminum"
-    )  # buildup model
-    # mass_wires = 0.868  # Taken from Avionics spreadsheet on 4/10/20
-    # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
+mass_wires = lib_prop_elec.mass_wires(
+    wire_length=wing.span() / 2,
+    max_current=power_out_max / battery_voltage,
+    allowable_voltage_drop=battery_voltage * 0.01,
+    material="aluminum"
+)  # buildup model
+# mass_wires = 0.868  # Taken from Avionics spreadsheet on 4/10/20
+# https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
-    mass_MPPT = 5.7  # Model taken from Avionics spreadsheet on 4/10/20
-    # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
+mass_MPPT = 5.7  # Model taken from Avionics spreadsheet on 4/10/20
+# https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
-    mass_power_systems_misc = 0.314  # Taken from Avionics spreadsheet on 4/10/20, includes HV-LV convs. and fault isolation mechs
-    # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
+mass_power_systems_misc = 0.314  # Taken from Avionics spreadsheet on 4/10/20, includes HV-LV convs. and fault isolation mechs
+# https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
-    # Total system mass
-    mass_power_systems = mass_solar_cells + mass_battery_pack + mass_wires + mass_MPPT + mass_power_systems_misc
+# Total system mass
+mass_power_systems = mass_solar_cells + mass_battery_pack + mass_wires + mass_MPPT + mass_power_systems_misc
 
-    # endregion
-elif propulsion_type == "gas":
-    # region Gas Power Systems
-
-    # Gas design variables
-    mass_fuel_nondim = 1 * opti.variable(n_timesteps)  # What fraction of the fuel tank is filled at timestep i?
-    opti.set_initial(mass_fuel_nondim,
-                     cas.linspace(1, 0, n_timesteps)
-                     )
-    opti.subject_to([
-        mass_fuel_nondim > 0,
-        mass_fuel_nondim < 1,
-    ])
-    mass_fuel_max = 100 * opti.variable()  # How many kilograms of fuel in a full tank?
-    opti.set_initial(mass_fuel_max,
-                     100
-                     )
-    opti.subject_to([
-        mass_fuel_max > 0
-    ])
-    mass_fuel = mass_fuel_nondim * mass_fuel_max
-
-    # Gas engine
-    mass_gas_engine = lib_gas.mass_gas_engine(power_out_max)
-    mass_alternator = 0  # for now!
-
-    # Assume you're always providing power, with no battery storage.
-    power_in = power_out
-
-    # How much fuel do you burn?
-    fuel_specific_energy = 43.02e6  # J/kg, for Jet A. Source: https://en.wikipedia.org/wiki/Jet_fuel#Jet_A
-    gas_engine_efficiency = 0.15  # Fuel-to-alternator efficiency.
-    # Taken from 3/5/20 propulsion team WAG in MIT 16.82. Numbers given: 24%/19%/15% for opti./med./consv. assumptions.
-
-    fuel_burn_rate = power_in / fuel_specific_energy / gas_engine_efficiency  # kg/s
-
-    mass_power_systems = mass_gas_engine + mass_alternator + mass_fuel
-
-    # endregion
-else:
-    raise ValueError("Bad value of propulsion_type!")
+# endregion
 
 # region Weights
 # Payload mass
@@ -835,8 +760,7 @@ else:
 ### Structural mass
 
 # Wing
-n_ribs_wing = 200 * opti.variable()
-opti.set_initial(n_ribs_wing, 200)
+n_ribs_wing = des_var(name="n_ribs_wing", initial_guess=200, scale_factor=200)
 opti.subject_to([
     n_ribs_wing > 0,
 ])
@@ -873,8 +797,7 @@ mass_wing = mass_wing_primary + mass_wing_secondary
 # Stabilizers
 q_maneuver = 80  # TODO make this more accurate
 
-n_ribs_hstab = 30 * opti.variable()
-opti.set_initial(n_ribs_hstab, 40)
+n_ribs_hstab = des_var(name="n_ribs_hstab", initial_guess=40, scale_factor=30)
 opti.subject_to([
     n_ribs_hstab > 0
 ])
@@ -895,8 +818,7 @@ mass_hstab_secondary = lib_mass_struct.mass_hpa_stabilizer(
 
 mass_hstab = mass_hstab_primary + mass_hstab_secondary  # per hstab
 
-n_ribs_vstab = 20 * opti.variable()
-opti.set_initial(n_ribs_vstab, 35)
+n_ribs_vstab = des_var(name="n_ribs_vstab", initial_guess=35, scale_factor=20)
 opti.subject_to([
     n_ribs_vstab > 0
 ])
@@ -993,38 +915,27 @@ opti.subject_to([
 ])
 
 # Powertrain-specific
-if propulsion_type == "solar":
-    opti.subject_to([
-        net_power / 5e3 < (power_in - power_out) / 5e3,
-    ])
+opti.subject_to([
+    net_power / 5e3 < (power_in - power_out) / 5e3,
+])
 
-    # Do the math for battery charging/discharging efficiency
-    tanh_sigmoid = lambda x: 0.5 + 0.5 * cas.tanh(x)
-    net_power_to_battery = net_power * (
-            1 / battery_discharge_efficiency * (1 - tanh_sigmoid(net_power / 10)) +
-            battery_charge_efficiency * tanh_sigmoid(net_power / 10)
-    )  # tanh blending to avoid optimizer stalling on nonsmooth integrator
+# Do the math for battery charging/discharging efficiency
+tanh_sigmoid = lambda x: 0.5 + 0.5 * cas.tanh(x)
+net_power_to_battery = net_power * (
+        1 / battery_discharge_efficiency * (1 - tanh_sigmoid(net_power / 10)) +
+        battery_charge_efficiency * tanh_sigmoid(net_power / 10)
+)  # tanh blending to avoid optimizer stalling on nonsmooth integrator
 
-    # Do the integration
-    net_power_to_battery_trapz = trapz(net_power_to_battery)
+# Do the integration
+net_power_to_battery_trapz = trapz(net_power_to_battery)
 
-    dbattery_stored_energy_nondim = cas.diff(battery_stored_energy_nondim)
-    opti.subject_to([
-        dbattery_stored_energy_nondim / 1e-2 < (net_power_to_battery_trapz / battery_capacity) * dt / 1e-2,
-    ])
-    opti.subject_to([
-        battery_stored_energy_nondim[-1] > battery_stored_energy_nondim[0],
-    ])
-elif propulsion_type == "gas":
-    pass  # TODO finish
-    dmass_fuel_nondim = cas.diff(mass_fuel_nondim)
-    opti.subject_to([
-        # dmass_fuel_nondim / 1e-2 == -(trapz(fuel_burn_rate) / mass_fuel_max) * dt / 1e-2
-        cas.diff(mass_fuel) == -(trapz(fuel_burn_rate)) * dt
-    ])
-else:
-    raise ValueError("Bad value of propulsion_type!")
-
+dbattery_stored_energy_nondim = cas.diff(battery_stored_energy_nondim)
+opti.subject_to([
+    dbattery_stored_energy_nondim / 1e-2 < (net_power_to_battery_trapz / battery_capacity) * dt / 1e-2,
+])
+opti.subject_to([
+    battery_stored_energy_nondim[-1] > battery_stored_energy_nondim[0],
+])
 # endregion
 
 # region Finalize Optimization Problem
