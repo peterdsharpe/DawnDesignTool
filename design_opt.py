@@ -16,13 +16,26 @@ import copy
 import matplotlib.pyplot as plt
 import matplotlib.style as style
 import seaborn as sns
+import json
 
 sns.set(font_scale=1)
 
 # region Setup
 ##### Initialize Optimization
 opti = cas.Opti()
+des_vars = {}
 
+##### Caching
+file_to_load_from = None
+file_to_save_to = "des_vars.json"
+#
+file_to_load_from = "des_vars.json"
+file_to_save_to = None
+
+# minimize = "wing.span() / 50" # any "eval-able" expression
+# minimize = "max_mass_total / 300" # any "eval-able" expression
+# minimize = "cas.sum1(airspeed/20)"
+minimize = "-cas.sum1(y/10000)"
 
 def des_var(  # design variable
         name,
@@ -32,6 +45,14 @@ def des_var(  # design variable
 ):
     var = scale_factor * opti.variable(n_variables)
     opti.set_initial(var, initial_guess)
+    des_vars[name] = var
+
+    if file_to_load_from is not None:
+        with open(file_to_load_from, "r") as f:
+            solved_des_vars = json.load(f)
+        val = solved_des_vars[name]
+        opti.set_initial(var, val)
+        opti.subject_to(var == val)
     return var
 
 
@@ -43,6 +64,7 @@ def ops_var(  # operational variable
     var = scale_factor * opti.variable(n_variables)
     opti.set_initial(var, initial_guess)
     return var
+
 
 
 ##### Operating Parameters
@@ -57,7 +79,6 @@ allow_trajectory_optimization = True
 n_booms = 3  # 1, 2, or 3
 structural_load_factor = 3  # over static
 show_plots = True
-minimize = "span"  # "span" or "TOGW"
 mass_payload = opti.parameter()
 opti.set_value(mass_payload, 30)
 wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
@@ -992,12 +1013,7 @@ if climb_opt:
     opti.subject_to([battery_stored_energy_nondim[0] == allowable_battery_depth_of_discharge])
 
 ##### Add objective
-if minimize == "TOGW":
-    objective = max_mass_total / 300
-elif minimize == "span":
-    objective = wing_span / 50
-else:
-    raise ValueError("Bad value of minimize!")
+objective = eval(minimize)
 
 ##### Extra constraints
 
@@ -1060,17 +1076,23 @@ opti.solver('ipopt', p_opts, s_opts)
 if __name__ == "__main__":
     try:
         sol = opti.solve()
+        # If successful, save a cache of the design variables
+        solved_des_vars = {k: sol.value(des_vars[k]) for k in des_vars}
+        if file_to_save_to is not None:
+            with open(file_to_save_to, "w+") as f:
+                json.dump(solved_des_vars, f)
+
     except:
         sol = opti.debug
 
     if np.abs(sol.value(penalty / objective)) > 0.01:
         print("\nWARNING: high penalty term! P/O = %.3f\n" % sol.value(penalty / objective))
 
-    save_sol_to_file(sol,
-                     save_primal=True,
-                     save_dual=False,
-                     primal_location="last_solution.sol"
-                     )
+    # save_sol_to_file(sol,
+    #                  save_primal=True,
+    #                  save_dual=False,
+    #                  primal_location="last_solution.sol"
+    #                  )
 
     # Find dusk and dawn
     try:
@@ -1147,6 +1169,7 @@ if __name__ == "__main__":
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
     plot(hour, y / 1000)
+    ax.ticklabel_format(useOffset=False)
     plt.xlabel("Hours after Solar Noon")
     plt.ylabel("Altitude [km]")
     plt.title("Altitude over a Day (Aug. 31)")
@@ -1156,6 +1179,7 @@ if __name__ == "__main__":
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
     plot(hour, airspeed)
+    ax.ticklabel_format(useOffset=False)
     plt.xlabel("Hours after Solar Noon")
     plt.ylabel("True Airspeed [m/s]")
     plt.title("True Airspeed over a Day (Aug. 31)")
@@ -1165,6 +1189,7 @@ if __name__ == "__main__":
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
     plot(hour, wing_CL)
+    ax.ticklabel_format(useOffset=False)
     plt.xlabel("Hours after Solar Noon")
     plt.ylabel("Lift Coefficient")
     plt.title("Lift Coefficient over a Day (Aug. 31)")
@@ -1174,6 +1199,7 @@ if __name__ == "__main__":
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
     plot(hour, net_power)
+    ax.ticklabel_format(useOffset=False)
     plt.xlabel("Hours after Solar Noon")
     plt.ylabel("Net Power [W] (positive is charging)")
     plt.title("Net Power over a Day (Aug. 31)")
@@ -1183,6 +1209,7 @@ if __name__ == "__main__":
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
     plot(hour, 100 * (battery_stored_energy_nondim + (1 - allowable_battery_depth_of_discharge)))
+    ax.ticklabel_format(useOffset=False)
     plt.xlabel("Hours after Solar Noon")
     plt.ylabel("State of Charge [%]")
     plt.title("Battery Charge State over a Day")
@@ -1192,6 +1219,7 @@ if __name__ == "__main__":
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
     plot(hour, wing_Re)
+    ax.ticklabel_format(useOffset=False)
     plt.xlabel("Hours after Solar Noon")
     plt.ylabel("Wing Reynolds Number")
     plt.title("Wing Reynolds Number over a Day (Aug. 31)")
@@ -1201,6 +1229,7 @@ if __name__ == "__main__":
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
     plot(x / 1000, y / 1000)
+    ax.ticklabel_format(useOffset=False)
     plt.xlabel("Downrange Distance [km]")
     plt.ylabel("Altitude [km]")
     plt.title("Optimal Trajectory (Aug. 31)")
@@ -1210,6 +1239,7 @@ if __name__ == "__main__":
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
     plot(hour, power_in)
+    ax.ticklabel_format(useOffset=False)
     plt.xlabel("Hours after Solar Noon")
     plt.ylabel("Power Generated [W]")
     plt.title("Power Generated over a Day (Aug. 31)")
@@ -1219,6 +1249,7 @@ if __name__ == "__main__":
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
     plot(hour, power_out)
+    ax.ticklabel_format(useOffset=False)
     plt.xlabel("Hours after Solar Noon")
     plt.ylabel("Power Consumed [W]")
     plt.title("Power Consumed over a Day (Aug. 31)")
@@ -1346,7 +1377,6 @@ if __name__ == "__main__":
         # }
     )
 
-    plt.tight_layout()
     plt.savefig("outputs/mass_pie_chart.png")
     plt.show() if show_plots else plt.close(fig)
 
