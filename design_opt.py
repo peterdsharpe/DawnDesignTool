@@ -22,7 +22,9 @@ sns.set(font_scale=1)
 # region Setup
 ##### Initialize Optimization
 opti = cas.Opti()
-def des_var( # design variable
+
+
+def des_var(  # design variable
         name,
         initial_guess,
         scale_factor,
@@ -32,7 +34,8 @@ def des_var( # design variable
     opti.set_initial(var, initial_guess)
     return var
 
-def ops_var( # operational variable
+
+def ops_var(  # operational variable
         initial_guess,
         scale_factor,
         n_variables=1
@@ -40,6 +43,7 @@ def ops_var( # operational variable
     var = scale_factor * opti.variable(n_variables)
     opti.set_initial(var, initial_guess)
     return var
+
 
 ##### Operating Parameters
 latitude = 49  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
@@ -104,7 +108,7 @@ else:
     opti.set_initial(y, 20000)
     opti.subject_to([y[timesteps_of_last_day:-1] > min_altitude, y < 40000])
 
-airspeed =ops_var(initial_guess=20, scale_factor=20, n_variables=n_timesteps)
+airspeed = ops_var(initial_guess=20, scale_factor=20, n_variables=n_timesteps)
 opti.subject_to([
     airspeed / min_speed > 1
 ])
@@ -126,8 +130,8 @@ opti.subject_to([
     thrust_force > 0
 ])
 
-net_accel_parallel=ops_var(initial_guess=0, scale_factor=1e-2, n_variables=n_timesteps)
-net_accel_perpendicular=ops_var(initial_guess=0, scale_factor=1e-1, n_variables=n_timesteps)
+net_accel_parallel = ops_var(initial_guess=0, scale_factor=1e-2, n_variables=n_timesteps)
+net_accel_perpendicular = ops_var(initial_guess=0, scale_factor=1e-1, n_variables=n_timesteps)
 
 ##### Set up time
 time_nondim = cas.linspace(0, 1, n_timesteps)
@@ -144,7 +148,7 @@ hour = time / 3600
 # opti.set_initial(log_mass_total, cas.log(600))
 # mass_total = cas.exp(log_mass_total)
 
-mass_total = des_var(name ="mass_total", initial_guess=600, scale_factor=600)
+mass_total = des_var(name="mass_total", initial_guess=600, scale_factor=600)
 
 max_mass_total = mass_total
 
@@ -163,7 +167,7 @@ wing_y_taper_break = 0.57 * wing_span / 2
 wing_taper_ratio = 0.5
 
 # hstab
-hstab_span=des_var(name="hstab_span", initial_guess=12, scale_factor=15)
+hstab_span = des_var(name="hstab_span", initial_guess=12, scale_factor=15)
 opti.subject_to(hstab_span > 0.1)
 
 hstab_chord = des_var(name="hstab_chord", initial_guess=3, scale_factor=2)
@@ -172,14 +176,14 @@ opti.subject_to([hstab_chord > 0.1])
 hstab_twist_angle = ops_var(initial_guess=-7, scale_factor=2, n_variables=n_timesteps)
 
 # vstab
-vstab_span=des_var(name="vstab_span", initial_guess=7, scale_factor=8)
+vstab_span = des_var(name="vstab_span", initial_guess=7, scale_factor=8)
 opti.subject_to(vstab_span > 0.1)
 
 vstab_chord = des_var(name="vstab_chord", initial_guess=2.5, scale_factor=2)
 opti.subject_to([vstab_chord > 0.1])
 
 # fuselage
-boom_length = des_var(name="boom_length", initial_guess=23, scale_factor=2) # TODO add scale factor
+boom_length = des_var(name="boom_length", initial_guess=23, scale_factor=2)  # TODO add scale factor
 opti.subject_to([
     boom_length - vstab_chord - hstab_chord > wing_x_quarter_chord + wing_root_chord * 3 / 4
 ])
@@ -191,6 +195,7 @@ fuse_diameter = 0.6
 boom_diameter = 0.2
 
 import dill as pickle
+
 try:
     with open("wing_airfoil.cache", "rb") as f:
         wing_airfoil = pickle.load(f)
@@ -206,7 +211,7 @@ except:
     with open("tail_airfoil.cache", "wb+") as f:
         pickle.dump(tail_airfoil, f)
 
-tail_airfoil = naca0008 # TODO remove this and use fits?
+tail_airfoil = naca0008  # TODO remove this and use fits?
 
 # if __name__ == '__main__':
 
@@ -562,17 +567,17 @@ opti.subject_to([
 # endregion
 
 # region Propulsion
-propeller_tip_mach = 0.40 # From Dongjoon, 4/26/20
+propeller_tip_mach = 0.40  # From Dongjoon, 4/26/20
 
 ### Propeller calculations
-propeller_diameter=des_var(name="propeller_diameter", initial_guess=5, scale_factor=1) # TODO scale factor
+propeller_diameter = des_var(name="propeller_diameter", initial_guess=5, scale_factor=1)  # TODO scale factor
 opti.subject_to([
     propeller_diameter / 1 > 1,
     propeller_diameter / 10 < 1
 ])
 
 # n_propellers = 2  # 2 * n_booms
-n_propellers = des_var(name="n_propellers", initial_guess=6, scale_factor=1) # TODO add scale factor
+n_propellers = des_var(name="n_propellers", initial_guess=6, scale_factor=1)  # TODO add scale factor
 opti.subject_to([
     n_propellers > 2,
     n_propellers < 6,
@@ -661,7 +666,8 @@ opti.subject_to([
     battery_stored_energy_nondim < allowable_battery_depth_of_discharge,
 ])
 
-battery_capacity=des_var(name="battery_capacity", initial_guess=3600 * 20e3, scale_factor= 3600 * 40e3) # Joules, not watt-hours!
+battery_capacity = des_var(name="battery_capacity", initial_guess=3600 * 20e3,
+                           scale_factor=3600 * 40e3)  # Joules, not watt-hours!
 opti.subject_to([
     battery_capacity > 0
 ])
