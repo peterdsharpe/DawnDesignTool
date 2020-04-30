@@ -634,6 +634,8 @@ opti.subject_to([
     power_out_max > 0
 ])
 
+propeller_max_torque = (power_out_max/n_propellers) / propeller_rads_per_sec
+
 battery_voltage = 270  # From Olek Peraire >4/2, propulsion slack
 # battery_voltage = opti.variable()  # From Olek Peraire 4/2, propulsion slack
 # opti.set_initial(battery_voltage, 240)
@@ -767,6 +769,7 @@ mass_battery_pack = lib_prop_elec.mass_battery_pack(
     battery_cell_specific_energy_Wh_kg=battery_specific_energy_Wh_kg,
     battery_pack_cell_fraction=battery_pack_cell_percentage
 )
+mass_battery_cells = mass_battery_pack * battery_pack_cell_percentage
 
 mass_wires = lib_prop_elec.mass_wires(
     wire_length=wing.span() / 2,
@@ -1031,6 +1034,7 @@ wing_loading = 9.81 * max_mass_total / wing.area()
 wing_loading_psf = wing_loading / 47.880258888889
 empty_wing_loading = 9.81 * mass_structural / wing.area()
 empty_wing_loading_psf = empty_wing_loading / 47.880258888889
+propeller_efficiency = thrust_force * airspeed / power_out_propulsion_shaft
 
 ##### Add tippers
 things_to_slightly_minimize = (
@@ -1329,12 +1333,14 @@ if __name__ == "__main__":
 
     ax_power_systems = fig.add_axes([0.65, 0.05, 0.3, 0.3], aspect=1)
     pie_labels = [
-        "Battery Packs",
+        "Batt. Pack (Cells)",
+        "Batt. Pack (Non-cell)",
         "Solar Cells",
         "Misc. & Wires"
     ]
     pie_values = [
-        s(mass_battery_pack),
+        s(mass_battery_cells),
+        s(mass_battery_pack - mass_battery_cells),
         s(mass_solar_cells),
         s(mass_power_systems - mass_battery_pack - mass_solar_cells),
     ]
@@ -1400,7 +1406,6 @@ if __name__ == "__main__":
 
     # Write a geometry spreadsheet
     with open("outputs/geometry.csv", "w+") as f:
-        from types import ModuleType
 
         f.write("Design Variable, Value (all in base SI units or derived units thereof),\n")
         geometry_vars = [
