@@ -92,7 +92,7 @@ opti.set_value(battery_specific_energy_Wh_kg, 450)
 
 ##### Margins
 structural_mass_margin_multiplier = opti.parameter()
-opti.set_value(structural_mass_margin_multiplier, 1.5)
+opti.set_value(structural_mass_margin_multiplier, 1.25)
 energy_generation_margin = opti.parameter()
 opti.set_value(energy_generation_margin, 1.15)
 allowable_battery_depth_of_discharge = 0.85  # How much of the battery can you actually use?
@@ -616,7 +616,8 @@ propeller_rpm = propeller_rads_per_sec * 30 / cas.pi
 
 area_propulsive = cas.pi / 4 * propeller_diameter ** 2 * n_propellers
 propeller_coefficient_of_performance = 0.90  # a total WAG
-motor_efficiency = 0.856 / (0.856 + 0.026 + 0.018 + 0.004)  # back-calculated from Odysseus data (94.7%)
+motor_efficiency = 0.955 # Taken from ThinGap estimates
+# 0.856 / (0.856 + 0.026 + 0.018 + 0.004)  # back-calculated from Odysseus data (94.7%)
 
 power_out_propulsion_shaft = lib_prop_prop.propeller_shaft_power_from_thrust(
     thrust_force=thrust_force,
@@ -760,8 +761,8 @@ battery_pack_cell_percentage = 0.70  # What percent of the battery pack consists
 # Accounts for module HW, BMS, pack installation, etc.
 # Ed Lovelace (in his presentation) gives 70% as a state-of-the-art fraction.
 
-battery_charge_efficiency = 0.94
-battery_discharge_efficiency = 0.94
+battery_charge_efficiency = 0.985
+battery_discharge_efficiency = 0.985
 # Taken from Bjarni, 4/17/20 in #powermanagment Slack
 
 mass_battery_pack = lib_prop_elec.mass_battery_pack(
