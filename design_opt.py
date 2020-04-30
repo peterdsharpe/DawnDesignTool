@@ -44,17 +44,21 @@ def des_var(  # design variable
         scale_factor,
         n_variables=1
 ):
-    var = scale_factor * opti.variable(n_variables)
-    opti.set_initial(var, initial_guess)
-    des_vars[name] = var
-
-    if file_to_load_from is not None:
+    if file_to_load_from is None:
+        var = scale_factor * opti.variable(n_variables)
+        opti.set_initial(var, initial_guess)
+        des_vars[name] = var
+        return var
+    else:
+        var = scale_factor * opti.variable(n_variables)
+        opti.set_initial(var, initial_guess)
+        des_vars[name] = var
         with open(file_to_load_from, "r") as f:
             solved_des_vars = json.load(f)
         val = solved_des_vars[name]
         opti.set_initial(var, val)
         opti.subject_to(var == val)
-    return var
+        return var
 
 
 def ops_var(  # operational variable
@@ -698,18 +702,19 @@ battery_stored_energy = battery_stored_energy_nondim * battery_capacity
 
 ### Solar calculations
 
-# solar_cell_efficiency = 0.186
+# solar_cell_efficiency = 0.21
 solar_cell_efficiency = 0.25
 # This figure should take into account all temperature factors,
 # spectral losses (different spectrum at altitude), multi-junction effects, etc.
 # Should not take into account MPPT losses.
 # Kevin Uleck gives this figure as 0.205.
 # This paper (https://core.ac.uk/download/pdf/159146935.pdf) gives it as 0.19.
-# According to Bjarni, MicroLink Devices has flexible triple-junction cells at 31% and 37.75% efficiency.
-# Bjarni, 4/5/20: "I'd make the approximation that we can get at least 25% (after accounting for MPPT, mismatch; before thermal effects)."
-# Bjarni, 4/13/20: "Knock down by 5% since we need to account for things like wing curvature, avionics power, etc."
-# 4/17/20: Using SunPower Gen2: 0.223 from from https://us.sunpower.com/sites/default/files/sp-gen2-solar-cell-ds-en-a4-160-506760e.pdf
+# 3/28/20: Bjarni, MicroLink Devices has flexible triple-junction cells at 31% and 37.75% efficiency.
+# 4/5/20: Bjarni, "I'd make the approximation that we can get at least 25% (after accounting for MPPT, mismatch; before thermal effects)."
+# 4/13/20: Bjarni "Knock down by 5% since we need to account for things like wing curvature, avionics power, etc."
+# 4/17/20: Bjarni, Using SunPower Gen2: 0.223 from from https://us.sunpower.com/sites/default/files/sp-gen2-solar-cell-ds-en-a4-160-506760e.pdf
 # 4/21/20: Bjarni, Knock down SunPower Gen2 numbers to 18.6% due to mismatch, gaps, fingers & edges, covering, spectrum losses, temperature corrections.
+# 4/29/20: Bjarni, Config slack: SunPower cells can do 21% on a panel level. Area density may change; TBD
 
 # Solar cell weight
 # rho_solar_cells = 0.425  # kg/m^2, solar cell area density.
@@ -884,7 +889,7 @@ mass_structural *= structural_mass_margin_multiplier
 
 ### Avionics
 # mass_avionics = 3.7 / 3.8 * 25  # back-calculated from Kevin Uleck's figures in MIT 16.82 presentation
-mass_avionics = 7.048  # Pulled from Avionics team spreadsheet on 4/23
+mass_avionics = 7.048  # Pulled from Avionics team spreadsheet on 4/30
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
 opti.subject_to([
