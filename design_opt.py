@@ -589,7 +589,7 @@ opti.subject_to([
 # endregion
 
 # region Propulsion
-propeller_tip_mach = 0.40  # From Dongjoon, 4/26/20
+propeller_tip_mach = 0.36  # From Dongjoon, 4/30/20
 
 ### Propeller calculations
 propeller_diameter = des_var(name="propeller_diameter", initial_guess=5, scale_factor=1)  # TODO scale factor
@@ -630,7 +630,7 @@ opti.subject_to([
     power_out_max > 0
 ])
 
-battery_voltage = 240  # From Olek Peraire 4/2, propulsion slack
+battery_voltage = 270  # From Olek Peraire >4/2, propulsion slack
 # battery_voltage = opti.variable()  # From Olek Peraire 4/2, propulsion slack
 # opti.set_initial(battery_voltage, 240)
 # opti.subject_to([
