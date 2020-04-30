@@ -36,7 +36,7 @@ file_to_save_to = "des_vars.json"
 
 minimize = "wing.span() / 50" # any "eval-able" expression
 # minimize = "max_mass_total / 300" # any "eval-able" expression
-# minimize = "cas.sum1(airspeed/20)"
+# minimize = "cas.sum1(airspeed/20)" # any "eval-able" expression
 
 def des_var(  # design variable
         name,
@@ -598,12 +598,12 @@ opti.subject_to([
     propeller_diameter / 10 < 1
 ])
 
-# n_propellers = 2  # 2 * n_booms
-n_propellers = des_var(name="n_propellers", initial_guess=6, scale_factor=1)  # TODO add scale factor
-opti.subject_to([
-    n_propellers > 2,
-    n_propellers < 6,
-])
+n_propellers = 4
+# n_propellers = des_var(name="n_propellers", initial_guess=6, scale_factor=1)  # TODO add scale factor
+# opti.subject_to([
+#     n_propellers > 2,
+#     n_propellers < 6,
+# ])
 
 propeller_rads_per_sec = propeller_tip_mach * atmo.get_speed_of_sound_from_temperature(
     atmo.get_temperature_at_altitude(20000)
@@ -731,7 +731,9 @@ opti.subject_to([
     solar_area_fraction < 0.80,  # TODO check
 ])
 
-area_solar = wing.area() * solar_area_fraction
+area_solar = (
+                 wing.area() + n_booms * (hstab.area())
+             ) * solar_area_fraction
 
 # Energy generation cascade
 power_in_from_sun = solar_flux_on_horizontal * area_solar / energy_generation_margin
