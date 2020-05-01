@@ -76,6 +76,7 @@ def ops_var(  # operational variable
 latitude = 49  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
 day_of_year = 244  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 min_altitude = 19812  # meters. 19812 m = 65000 ft.
+# min_altitude = 18288  # meters. 18288 m = 60000 ft.
 required_headway_per_day = 10e3  # meters
 days_to_simulate = opti.parameter()
 opti.set_value(days_to_simulate, 1)
@@ -810,6 +811,7 @@ mass_wing_primary = lib_mass_struct.mass_wing_spar(
     ultimate_load_factor=structural_load_factor,
     n_booms=n_booms
 )
+mass_wing_primary =
 mass_wing_secondary = lib_mass_struct.mass_hpa_wing(
     span=wing.span(),
     chord=wing.mean_geometric_chord(),

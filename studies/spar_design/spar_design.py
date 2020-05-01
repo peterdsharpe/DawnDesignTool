@@ -48,4 +48,5 @@ sol = opti.solve()
 beam.substitute_solution(sol)
 
 print("Beam mass: %f kg" % beam.mass)
+print("Spar mass: %f kg" % (2 * beam.mass))
 beam.draw_bending()
