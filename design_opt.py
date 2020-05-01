@@ -96,11 +96,11 @@ opti.set_value(battery_specific_energy_Wh_kg, 450)
 structural_mass_margin_multiplier = opti.parameter()
 opti.set_value(structural_mass_margin_multiplier, 1.25)
 energy_generation_margin = opti.parameter()
-opti.set_value(energy_generation_margin, 1.15)
-allowable_battery_depth_of_discharge = 0.85  # How much of the battery can you actually use?
+opti.set_value(energy_generation_margin, 1.05)
+allowable_battery_depth_of_discharge = 0.85  # How much of the battery can you actually use? # Reviewed w/ Annick & Bjarni 4/30/2020
 
 ##### Simulation Parameters
-n_timesteps = 150  # Only relevant if allow_trajectory_optimization is True.
+n_timesteps = 200  # Only relevant if allow_trajectory_optimization is True.
 # Quick convergence testing indicates you can get bad analyses below 150 or so...
 
 ##### Optimization bounds
@@ -759,7 +759,7 @@ mass_solar_cells = rho_solar_cells * area_solar
 # Jim Anderson believes 550 Wh/kg is possible.
 # Odysseus had cells that were 265 Wh/kg.
 
-battery_pack_cell_percentage = 0.70  # What percent of the battery pack consists of the module, by weight?
+battery_pack_cell_percentage = 0.75  # What percent of the battery pack consists of the module, by weight?
 # Accounts for module HW, BMS, pack installation, etc.
 # Ed Lovelace (in his presentation) gives 70% as a state-of-the-art fraction.
 
