@@ -1433,7 +1433,7 @@ if __name__ == "__main__":
         var_names = dir()
         f.write("Object or Collection of Objects, Mass [kg],\n")
         for var_name in var_names:
-            if "mass" in var_name and not type(eval(var_name)) == ModuleType:
+            if "mass" in var_name and not type(eval(var_name)) == ModuleType and not callable(var_name):
                 f.write("%s, %f,\n" % (var_name, s(eval(var_name))))
 
     # Write a geometry spreadsheet
