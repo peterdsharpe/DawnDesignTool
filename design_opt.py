@@ -595,7 +595,6 @@ opti.subject_to([
 # endregion
 
 # region Propulsion
-propeller_tip_mach = 0.36  # From Dongjoon, 4/30/20
 
 ### Propeller calculations
 propeller_diameter = des_var(name="propeller_diameter", initial_guess=5, scale_factor=1)  # TODO scale factor
@@ -611,6 +610,7 @@ n_propellers = 4
 #     n_propellers < 6,
 # ])
 
+propeller_tip_mach = 0.36  # From Dongjoon, 4/30/20
 propeller_rads_per_sec = propeller_tip_mach * atmo.get_speed_of_sound_from_temperature(
     atmo.get_temperature_at_altitude(20000)
 ) / (propeller_diameter / 2)
@@ -851,7 +851,7 @@ mass_wing_secondary = lib_mass_struct.mass_hpa_wing(
     ultimate_load_factor=structural_load_factor,
     t_over_c=0.14,
     include_spar=False,
-) * 1.3 # TODO review this number! Mark says 1.5! 4/30/2020
+) * 1.3  # TODO review this number! Mark says 1.5! 4/30/2020
 mass_wing = mass_wing_primary + mass_wing_secondary
 
 # mass_wing = lib_mass_struct.mass_hpa_wing(
@@ -1062,7 +1062,8 @@ objective = eval(minimize)
 
 ##### Extra constraints
 opti.subject_to([
-    battery_capacity_watt_hours==68256 # Fixing to a discrete option from Annick # 4/30/2020
+    battery_capacity_watt_hours == 68256,  # Fixing to a discrete option from Annick # 4/30/2020
+    propeller_diameter == 2.16,  # Fixing to Dongjoon's design
 ])
 
 ##### Useful metrics
