@@ -677,7 +677,8 @@ power_out_payload = cas.if_else(
 )
 
 # Account for avionics power
-power_out_avionics = 276  # Pulled from Avionics spreadsheet on 4/23/20
+power_out_avionics = 288.94  # Pulled from Avionics spreadsheet on 4/23/20
+# From Michelle on 4/30/20 in DM on Slack
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
 ### Power accounting
@@ -924,7 +925,8 @@ mass_structural *= structural_mass_margin_multiplier
 
 ### Avionics
 # mass_avionics = 3.7 / 3.8 * 25  # back-calculated from Kevin Uleck's figures in MIT 16.82 presentation
-mass_avionics = 7.048  # Pulled from Avionics team spreadsheet on 4/30
+mass_avionics = 7.613  # Pulled from Avionics team spreadsheet on 4/30
+# From Michelle on 4/30/20 in DM on Slack
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
 opti.subject_to([
