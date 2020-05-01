@@ -850,7 +850,7 @@ mass_wing_secondary = lib_mass_struct.mass_hpa_wing(
     ultimate_load_factor=structural_load_factor,
     t_over_c=0.14,
     include_spar=False,
-)
+) * 1.3 # TODO review this number! Mark says 1.5! 4/30/2020
 mass_wing = mass_wing_primary + mass_wing_secondary
 
 # mass_wing = lib_mass_struct.mass_hpa_wing(
@@ -1433,7 +1433,7 @@ if __name__ == "__main__":
         var_names = dir()
         f.write("Object or Collection of Objects, Mass [kg],\n")
         for var_name in var_names:
-            if "mass" in var_name and not type(eval(var_name)) == ModuleType and not callable(var_name):
+            if "mass" in var_name and not type(eval(var_name)) == ModuleType and not callable(eval(var_name)):
                 f.write("%s, %f,\n" % (var_name, s(eval(var_name))))
 
     # Write a geometry spreadsheet
