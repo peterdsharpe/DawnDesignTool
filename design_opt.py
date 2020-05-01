@@ -34,7 +34,9 @@ file_to_save_to = "des_vars.json"
 # file_to_load_from = "des_vars.json"
 # file_to_save_to = None
 
-minimize = "wing.span() / 50" # any "eval-able" expression
+minimize = "wing.span() / 50"  # any "eval-able" expression
+
+
 # minimize = "max_mass_total / 300" # any "eval-able" expression
 # minimize = "cas.sum1(airspeed/20)" # any "eval-able" expression
 
@@ -69,7 +71,6 @@ def ops_var(  # operational variable
     var = scale_factor * opti.variable(n_variables)
     opti.set_initial(var, initial_guess)
     return var
-
 
 
 ##### Operating Parameters
@@ -617,7 +618,7 @@ propeller_rpm = propeller_rads_per_sec * 30 / cas.pi
 
 area_propulsive = cas.pi / 4 * propeller_diameter ** 2 * n_propellers
 propeller_coefficient_of_performance = 0.90  # a total WAG
-motor_efficiency = 0.955 # Taken from ThinGap estimates
+motor_efficiency = 0.955  # Taken from ThinGap estimates
 # 0.856 / (0.856 + 0.026 + 0.018 + 0.004)  # back-calculated from Odysseus data (94.7%)
 
 power_out_propulsion_shaft = lib_prop_prop.propeller_shaft_power_from_thrust(
@@ -636,7 +637,7 @@ opti.subject_to([
     power_out_max > 0
 ])
 
-propeller_max_torque = (power_out_max/n_propellers) / propeller_rads_per_sec
+propeller_max_torque = (power_out_max / n_propellers) / propeller_rads_per_sec
 
 battery_voltage = 270  # From Olek Peraire >4/2, propulsion slack
 # battery_voltage = opti.variable()  # From Olek Peraire 4/2, propulsion slack
@@ -741,7 +742,7 @@ opti.subject_to([
 ])
 
 area_solar = (
-                 wing.area() + n_booms * (hstab.area())
+                     wing.area() + n_booms * (hstab.area())
              ) * solar_area_fraction
 
 # Energy generation cascade
@@ -762,8 +763,8 @@ battery_pack_cell_percentage = 0.70  # What percent of the battery pack consists
 # Accounts for module HW, BMS, pack installation, etc.
 # Ed Lovelace (in his presentation) gives 70% as a state-of-the-art fraction.
 
-battery_charge_efficiency = 0.985
-battery_discharge_efficiency = 0.985
+battery_charge_efficiency = 0.975
+battery_discharge_efficiency = 0.975
 # Taken from Bjarni, 4/17/20 in #powermanagment Slack
 
 mass_battery_pack = lib_prop_elec.mass_battery_pack(
@@ -804,14 +805,42 @@ n_ribs_wing = des_var(name="n_ribs_wing", initial_guess=200, scale_factor=200)
 opti.subject_to([
     n_ribs_wing > 0,
 ])
-mass_wing_primary = lib_mass_struct.mass_wing_spar(
+
+
+def mass_wing_spar(
+        span,
+        mass_supported,
+        ultimate_load_factor=1.75,  # default taken from Daedalus design
+        n_booms=1,
+):
+    """
+    Finds the mass of the spar for a wing on a single- or multi-boom lightweight aircraft. Model originally designed for solar aircraft.
+    Data was fit to the range 30 < wing_span < 90 [m] and 50 < supported_mass < 800 [kg], but validity should extend somewhat beyond that.
+    Extremely accurate fits within this range; R^2 > 0.99 for all fits.
+    Source: AeroSandbox\studies\MultiBoomSparMass
+    Assumptions:
+        * Rectangular lift distribution (close enough, slightly conservative w.r.t. elliptical)
+        * Constraint that local wing dihedral/anhedral angle must not exceed 10 degrees anywhere.
+        * If multi-boom, assumes static-aerostructurally-optimal placement of the outer booms.
+    :param span: Wing span [m]
+    :param mass_supported: Total mass of all fuselages + tails
+    :param ultimate_load_factor: Design load factor. Default taken from Daedalus design.
+    :param n_booms: Number of booms on the design. Can be 1, 2, or 3. Assumes optimal placement of the outer booms.
+    :return:
+    """
+    c = 0.0058387469143534225
+    span_exp = 1.6164203794723102
+    mass_exp = 0.344122282920375
+    return c * (mass_supported * ultimate_load_factor) ** mass_exp * span ** span_exp
+
+
+mass_wing_primary = mass_wing_spar(
     span=wing.span(),
     mass_supported=max_mass_total,
     # technically the spar doesn't really have to support its own weight (since it's roughly spanloaded), so this is conservative
     ultimate_load_factor=structural_load_factor,
     n_booms=n_booms
 )
-mass_wing_primary =
 mass_wing_secondary = lib_mass_struct.mass_hpa_wing(
     span=wing.span(),
     chord=wing.mean_geometric_chord(),
