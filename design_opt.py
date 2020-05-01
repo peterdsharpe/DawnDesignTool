@@ -639,7 +639,7 @@ opti.subject_to([
 
 propeller_max_torque = (power_out_max / n_propellers) / propeller_rads_per_sec
 
-battery_voltage = 270  # From Olek Peraire >4/2, propulsion slack
+battery_voltage = 225  # From Olek Peraire >4/2, propulsion slack
 # battery_voltage = opti.variable()  # From Olek Peraire 4/2, propulsion slack
 # opti.set_initial(battery_voltage, 240)
 # opti.subject_to([
