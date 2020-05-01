@@ -763,8 +763,8 @@ battery_pack_cell_percentage = 0.75  # What percent of the battery pack consists
 # Accounts for module HW, BMS, pack installation, etc.
 # Ed Lovelace (in his presentation) gives 70% as a state-of-the-art fraction.
 
-battery_charge_efficiency = 0.975
-battery_discharge_efficiency = 0.975
+battery_charge_efficiency = 0.985
+battery_discharge_efficiency = 0.985
 # Taken from Bjarni, 4/17/20 in #powermanagment Slack
 
 mass_battery_pack = lib_prop_elec.mass_battery_pack(
@@ -846,7 +846,7 @@ mass_wing_secondary = lib_mass_struct.mass_hpa_wing(
     chord=wing.mean_geometric_chord(),
     vehicle_mass=max_mass_total,
     n_ribs=n_ribs_wing,
-    n_wing_sections=1,
+    n_wing_sections=3,
     ultimate_load_factor=structural_load_factor,
     t_over_c=0.14,
     include_spar=False,
