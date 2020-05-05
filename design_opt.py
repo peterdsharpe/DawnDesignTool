@@ -133,8 +133,7 @@ if not climb_opt:
         y / 40000 < 1,  # models break down
     ])
 else:
-    opti.set_initial(y, 20000)
-    opti.subject_to([y[timesteps_of_last_day:-1] > min_altitude, y < 40000])
+    opti.subject_to([y[timesteps_of_last_day:-1] > min_altitude, y/40000 < 1])
 
 airspeed = ops_var(initial_guess=20, scale_factor=20, n_variables=n_timesteps)
 opti.subject_to([
@@ -1207,6 +1206,7 @@ if __name__ == "__main__":
     # endregion
 
     # Draw plots
+    size = 80
     def plot(x, y):
         # plt.plot(s(hour), s(y), ".-")
         plt.plot(s(x)[:dusk], s(y)[:dusk], '.-', color=(103 / 255, 155 / 255, 240 / 255), label="Day")
@@ -1216,7 +1216,7 @@ if __name__ == "__main__":
         plt.legend()
 
 
-    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
+    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=size)
     plot(hour, y / 1000)
     ax.ticklabel_format(useOffset=False)
     plt.xlabel("Hours after Solar Noon")
@@ -1226,7 +1226,7 @@ if __name__ == "__main__":
     plt.savefig("outputs/altitude.png")
     plt.show() if show_plots else plt.close(fig)
 
-    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
+    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=size)
     plot(hour, airspeed)
     ax.ticklabel_format(useOffset=False)
     plt.xlabel("Hours after Solar Noon")
@@ -1236,7 +1236,7 @@ if __name__ == "__main__":
     plt.savefig("outputs/airspeed.png")
     plt.show() if show_plots else plt.close(fig)
 
-    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
+    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=size)
     plot(hour, wing_CL)
     ax.ticklabel_format(useOffset=False)
     plt.xlabel("Hours after Solar Noon")
@@ -1246,7 +1246,7 @@ if __name__ == "__main__":
     plt.savefig("outputs/CL.png")
     plt.close(fig)
 
-    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
+    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=size)
     plot(hour, net_power)
     ax.ticklabel_format(useOffset=False)
     plt.xlabel("Hours after Solar Noon")
@@ -1256,7 +1256,7 @@ if __name__ == "__main__":
     plt.savefig("outputs/net_power.png")
     plt.show() if show_plots else plt.close(fig)
 
-    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
+    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=size)
     plot(hour, 100 * (battery_stored_energy_nondim + (1 - allowable_battery_depth_of_discharge)))
     ax.ticklabel_format(useOffset=False)
     plt.xlabel("Hours after Solar Noon")
@@ -1266,7 +1266,7 @@ if __name__ == "__main__":
     plt.savefig("outputs/battery_charge.png")
     plt.close(fig)
 
-    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
+    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=size)
     plot(hour, wing_Re)
     ax.ticklabel_format(useOffset=False)
     plt.xlabel("Hours after Solar Noon")
@@ -1276,7 +1276,7 @@ if __name__ == "__main__":
     plt.savefig("outputs/wing_Re.png")
     plt.close(fig)
 
-    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
+    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=size)
     plot(x / 1000, y / 1000)
     ax.ticklabel_format(useOffset=False)
     plt.xlabel("Downrange Distance [km]")
@@ -1286,7 +1286,7 @@ if __name__ == "__main__":
     plt.savefig("outputs/trajectory.png")
     plt.close(fig)
 
-    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
+    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=size)
     plot(hour, power_in)
     ax.ticklabel_format(useOffset=False)
     plt.xlabel("Hours after Solar Noon")
@@ -1296,7 +1296,7 @@ if __name__ == "__main__":
     plt.savefig("outputs/power_in.png")
     plt.close(fig)
 
-    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
+    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=size)
     plot(hour, power_out)
     ax.ticklabel_format(useOffset=False)
     plt.xlabel("Hours after Solar Noon")
@@ -1307,7 +1307,7 @@ if __name__ == "__main__":
     plt.close(fig)
 
     # Draw mass breakdown
-    fig = plt.figure(figsize=(10, 8), dpi=200)
+    fig = plt.figure(figsize=(10, 8), dpi=size)
     plt.suptitle("Mass Budget")
 
     ax_main = fig.add_axes([0.2, 0.3, 0.6, 0.6], aspect=1)
