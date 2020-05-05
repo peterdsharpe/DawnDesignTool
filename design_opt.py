@@ -100,7 +100,7 @@ opti.set_value(energy_generation_margin, 1.05)
 allowable_battery_depth_of_discharge = 0.85  # How much of the battery can you actually use? # Reviewed w/ Annick & Bjarni 4/30/2020
 
 ##### Simulation Parameters
-n_timesteps = 150  # Only relevant if allow_trajectory_optimization is True.
+n_timesteps = 200  # Only relevant if allow_trajectory_optimization is True.
 # Quick convergence testing indicates you can get bad analyses below 150 or so...
 
 ##### Optimization bounds
