@@ -1206,7 +1206,7 @@ if __name__ == "__main__":
     # endregion
 
     # Draw plots
-    plot_dpi = 80
+    plot_dpi = 200
     def plot(x, y):
         # plt.plot(s(hour), s(y), ".-")
         plt.plot(s(x)[:dusk], s(y)[:dusk], '.-', color=(103 / 255, 155 / 255, 240 / 255), label="Day")
