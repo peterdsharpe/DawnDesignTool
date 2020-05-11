@@ -240,8 +240,6 @@ except:
 
 tail_airfoil = naca0008  # TODO remove this and use fits?
 
-# if __name__ == '__main__':
-
 wing = asb.Wing(
     name="Main Wing",
     x_le=wing_x_quarter_chord,  # Coordinates of the wing's leading edge # TODO make this a free parameter?
