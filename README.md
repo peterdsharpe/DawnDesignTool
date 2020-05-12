@@ -9,6 +9,8 @@ Automatic-differentiation-accelerated multidisciplinary design optimization for 
 
 Developed for MIT 16.82 Spring 2020.
 
+For more documentation, see [the memo in this repository](memo.pdf)
+
 ## Installation
 
 There are several easy ways to get started with Design_Opt_HALE! (Assuming you already have Python >=3.7 installed, preferably via the [Anaconda distribution](https://www.anaconda.com/distribution/#download-section) - if not, do this first.)
