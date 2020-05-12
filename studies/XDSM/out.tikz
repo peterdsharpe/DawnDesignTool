@@ -1,0 +1,189 @@
+
+%%% Preamble Requirements %%%
+% \usepackage{geometry}
+% \usepackage{amsfonts}
+% \usepackage{amsmath}
+% \usepackage{amssymb}
+% \usepackage{tikz}
+
+% Optional packages such as sfmath set through python interface
+% \usepackage{sfmath}
+
+% \usetikzlibrary{arrows,chains,positioning,scopes,shapes.geometric,shapes.misc,shadows}
+
+%%% End Preamble Requirements %%%
+
+\input{"C:/ProgramData/Anaconda3/lib/site-packages/pyxdsm/diagram_styles"}
+\begin{tikzpicture}
+
+\matrix[MatrixSetup]{
+%Row 0
+&
+\node [DataIO] (output_opt) {$\begin{array}{c}\text{Parameters}\end{array}$};&
+&
+&
+&
+&
+&
+&
+&
+\\
+%Row 1
+\node [DataIO] (left_output_opt) {$\begin{array}{c}\text{Optimal} \\ \text{A/C \& Traj.}\end{array}$};&
+\node [Optimization] (opt) {$\begin{array}{c}\text{Optimizer:} \\ \text{IPOPT}\end{array}$};&
+\node [DataInter] (opt-atmo) {$\begin{array}{c}\text{Traj.}\end{array}$};&
+\node [DataInter] (opt-aero) {$\begin{array}{c}\text{A/C geom.,} \\ \text{$\alpha, \delta$}\end{array}$};&
+\node [DataInter] (opt-stab) {$\begin{array}{c}\text{A/C geom.}\end{array}$};&
+\node [DataInter] (opt-prop) {$\begin{array}{c}\text{Prop} \\ \text{Sizing}\end{array}$};&
+\node [DataInter] (opt-power) {$\begin{array}{c}\text{Pow. Sys.} \\ \text{Sizing}\end{array}$};&
+\node [DataInter] (opt-struct) {$\begin{array}{c}\text{A/C geom.,} \\ \text{$W_{total}$}\end{array}$};&
+\node [DataInter] (opt-dyn) {$\begin{array}{c}\text{Traj.,} \\ \text{$W_{total}$}\end{array}$};&
+\\
+%Row 2
+&
+&
+\node [Function] (atmo) {$\begin{array}{c}\text{Atmosphere}\end{array}$};&
+\node [DataInter] (atmo-aero) {$\rho, \nu$};&
+&
+\node [DataInter] (atmo-prop) {$\rho, \nu$};&
+&
+&
+\node [DataInter] (atmo-dyn) {$\begin{array}{c}\text{Winds}\end{array}$};&
+\\
+%Row 3
+&
+\node [DataInter] (aero-opt) {$\begin{array}{c}\text{$\mathcal{R}(\Gamma)$} \\ \text{(for implicit} \\ \text{solvers)}\end{array}$};&
+&
+\node [Function] (aero) {$\begin{array}{c}\text{Aerodynamics}\end{array}$};&
+\node [DataInter] (aero-stab) {$M$};&
+&
+&
+\node [DataInter] (aero-struct) {$L_{max}$};&
+\node [DataInter] (aero-dyn) {$L, D$};&
+\\
+%Row 4
+&
+\node [DataInter] (stab-opt) {$\mathcal{R}(q, x_{sm})$};&
+&
+&
+\node [Function] (stab) {$\begin{array}{c}\text{Stability}\end{array}$};&
+&
+&
+&
+&
+\\
+%Row 5
+&
+&
+&
+&
+&
+\node [Function] (prop) {$\begin{array}{c}\text{Propulsion}\end{array}$};&
+\node [DataInter] (prop-power) {$P, P_{max}$};&
+\node [DataInter] (prop-struct) {$W_{prop}$};&
+\node [DataInter] (prop-dyn) {$T$};&
+\\
+%Row 6
+&
+\node [DataInter] (power-opt) {$\mathcal{R}(\int P_{net} dt = E_{batt})$};&
+&
+&
+&
+&
+\node [Function] (power) {$\begin{array}{c}\text{Power} \\ \text{Systems}\end{array}$};&
+\node [DataInter] (power-struct) {$W_{psys}$};&
+\node [DataInter] (power-dyn) {$P_{net}$};&
+\\
+%Row 7
+&
+\node [DataInter] (struct-opt) {$\begin{array}{c}\text{$\mathcal{R}(W_{total} = \sum W_i)$} \\ \text{$\mathcal{R}(\text{Beam Eqns.})$}\end{array}$};&
+&
+&
+&
+&
+&
+\node [Function] (struct) {$\begin{array}{c}\text{Structures} \\ \text{\& Weights}\end{array}$};&
+&
+\\
+%Row 8
+&
+\node [DataInter] (dyn-opt) {$\mathcal{R}(F = ma)$};&
+&
+&
+&
+&
+&
+&
+\node [Function] (dyn) {$\begin{array}{c}\text{Dynamics}\end{array}$};&
+\\
+%Row 9
+&
+&
+&
+&
+&
+&
+&
+&
+&
+\\
+};
+
+% XDSM process chains
+
+
+\begin{pgfonlayer}{data}
+\path
+% Horizontal edges
+(opt) edge [DataLine] (opt-atmo)
+(opt) edge [DataLine] (opt-aero)
+(opt) edge [DataLine] (opt-stab)
+(opt) edge [DataLine] (opt-prop)
+(opt) edge [DataLine] (opt-power)
+(opt) edge [DataLine] (opt-struct)
+(opt) edge [DataLine] (opt-dyn)
+(atmo) edge [DataLine] (atmo-aero)
+(atmo) edge [DataLine] (atmo-prop)
+(atmo) edge [DataLine] (atmo-dyn)
+(aero) edge [DataLine] (aero-stab)
+(aero) edge [DataLine] (aero-struct)
+(aero) edge [DataLine] (aero-dyn)
+(prop) edge [DataLine] (prop-power)
+(prop) edge [DataLine] (prop-dyn)
+(prop) edge [DataLine] (prop-struct)
+(power) edge [DataLine] (power-struct)
+(power) edge [DataLine] (power-dyn)
+(aero) edge [DataLine] (aero-opt)
+(stab) edge [DataLine] (stab-opt)
+(power) edge [DataLine] (power-opt)
+(struct) edge [DataLine] (struct-opt)
+(dyn) edge [DataLine] (dyn-opt)
+(opt) edge [DataLine] (left_output_opt)
+% Vertical edges
+(opt-atmo) edge [DataLine] (atmo)
+(opt-aero) edge [DataLine] (aero)
+(opt-stab) edge [DataLine] (stab)
+(opt-prop) edge [DataLine] (prop)
+(opt-power) edge [DataLine] (power)
+(opt-struct) edge [DataLine] (struct)
+(opt-dyn) edge [DataLine] (dyn)
+(atmo-aero) edge [DataLine] (aero)
+(atmo-prop) edge [DataLine] (prop)
+(atmo-dyn) edge [DataLine] (dyn)
+(aero-stab) edge [DataLine] (stab)
+(aero-struct) edge [DataLine] (struct)
+(aero-dyn) edge [DataLine] (dyn)
+(prop-power) edge [DataLine] (power)
+(prop-dyn) edge [DataLine] (dyn)
+(prop-struct) edge [DataLine] (struct)
+(power-struct) edge [DataLine] (struct)
+(power-dyn) edge [DataLine] (dyn)
+(aero-opt) edge [DataLine] (opt)
+(stab-opt) edge [DataLine] (opt)
+(power-opt) edge [DataLine] (opt)
+(struct-opt) edge [DataLine] (opt)
+(dyn-opt) edge [DataLine] (opt)
+(opt) edge [DataLine] (output_opt);
+\end{pgfonlayer}
+
+\end{tikzpicture}
