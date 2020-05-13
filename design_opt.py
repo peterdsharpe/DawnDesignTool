@@ -674,8 +674,7 @@ power_out_payload = cas.if_else(
 )
 
 # Account for avionics power
-power_out_avionics = 288.94  # Pulled from Avionics spreadsheet on 4/23/20
-# From Michelle on 4/30/20 in DM on Slack
+power_out_avionics = 180  # Pulled from Avionics spreadsheet on 5/13/20
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
 ### Power accounting
@@ -804,41 +803,13 @@ opti.subject_to([
     n_ribs_wing > 0,
 ])
 
-
-def mass_wing_spar(
-        span,
-        mass_supported,
-        ultimate_load_factor=1.75,  # default taken from Daedalus design
-        n_booms=1,
-):
-    """
-    Finds the mass of the spar for a wing on a single- or multi-boom lightweight aircraft. Model originally designed for solar aircraft.
-    Data was fit to the range 30 < wing_span < 90 [m] and 50 < supported_mass < 800 [kg], but validity should extend somewhat beyond that.
-    Extremely accurate fits within this range; R^2 > 0.99 for all fits.
-    Source: AeroSandbox\studies\MultiBoomSparMass
-    Assumptions:
-        * Rectangular lift distribution (close enough, slightly conservative w.r.t. elliptical)
-        * Constraint that local wing dihedral/anhedral angle must not exceed 10 degrees anywhere.
-        * If multi-boom, assumes static-aerostructurally-optimal placement of the outer booms.
-    :param span: Wing span [m]
-    :param mass_supported: Total mass of all fuselages + tails
-    :param ultimate_load_factor: Design load factor. Default taken from Daedalus design.
-    :param n_booms: Number of booms on the design. Can be 1, 2, or 3. Assumes optimal placement of the outer booms.
-    :return:
-    """
-    c = 0.0058387469143534225
-    span_exp = 1.6164203794723102
-    mass_exp = 0.344122282920375
-    return c * (mass_supported * ultimate_load_factor) ** mass_exp * span ** span_exp
-
-
-mass_wing_primary = mass_wing_spar(
+mass_wing_primary = lib_mass_struct.mass_wing_spar(
     span=wing.span(),
     mass_supported=max_mass_total,
     # technically the spar doesn't really have to support its own weight (since it's roughly spanloaded), so this is conservative
     ultimate_load_factor=structural_load_factor,
     n_booms=n_booms
-)
+) * 11.382 / 9.222 # scaling factor taken from Daedalus weights
 mass_wing_secondary = lib_mass_struct.mass_hpa_wing(
     span=wing.span(),
     chord=wing.mean_geometric_chord(),
@@ -922,8 +893,7 @@ mass_structural *= structural_mass_margin_multiplier
 
 ### Avionics
 # mass_avionics = 3.7 / 3.8 * 25  # back-calculated from Kevin Uleck's figures in MIT 16.82 presentation
-mass_avionics = 7.613  # Pulled from Avionics team spreadsheet on 4/30
-# From Michelle on 4/30/20 in DM on Slack
+mass_avionics = 12.153  # Pulled from Avionics team spreadsheet on 5/13
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
 opti.subject_to([
