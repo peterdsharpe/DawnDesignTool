@@ -1028,10 +1028,10 @@ if climb_opt:
 objective = eval(minimize)
 
 ##### Extra constraints
-opti.subject_to([
-    battery_capacity_watt_hours == 68256,  # Fixing to a discrete option from Annick # 4/30/2020
-    propeller_diameter == 2.16,  # Fixing to Dongjoon's design
-])
+# opti.subject_to([
+#     battery_capacity_watt_hours == 68256,  # Fixing to a discrete option from Annick # 4/30/2020
+#     propeller_diameter == 2.16,  # Fixing to Dongjoon's design
+# ])
 
 ##### Useful metrics
 wing_loading = 9.81 * max_mass_total / wing.area()
