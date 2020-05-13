@@ -694,8 +694,8 @@ opti.subject_to([
     battery_stored_energy_nondim < allowable_battery_depth_of_discharge,
 ])
 
-battery_capacity = des_var(name="battery_capacity", initial_guess=3600 * 20e3,
-                           scale_factor=3600 * 40e3)  # Joules, not watt-hours!
+battery_capacity = des_var(name="battery_capacity", initial_guess=3600 * 60e3,
+                           scale_factor=3600 * 60e3)  # Joules, not watt-hours!
 opti.subject_to([
     battery_capacity > 0
 ])
