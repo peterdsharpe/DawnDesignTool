@@ -27,12 +27,12 @@ des_vars = {}
 
 ##### Caching
 # # Uncomment these lines to do ANALYSIS and OPTIMIZATION.
-# file_to_load_from = None
-# file_to_save_to = "des_vars.json"
+file_to_load_from = None
+file_to_save_to = "des_vars.json"
 
 # Uncomment these lines to do ANALYSIS on a FROZEN DESIGN.
-file_to_load_from = "des_vars.json"
-file_to_save_to = None
+# file_to_load_from = "des_vars.json"
+# file_to_save_to = None
 
 minimize = "wing.span() / 50"  # any "eval-able" expression
 
