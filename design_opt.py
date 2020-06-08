@@ -100,7 +100,7 @@ opti.set_value(energy_generation_margin, 1.05)
 allowable_battery_depth_of_discharge = 0.85  # How much of the battery can you actually use? # Reviewed w/ Annick & Bjarni 4/30/2020
 
 ##### Simulation Parameters
-n_timesteps = 200  # Only relevant if allow_trajectory_optimization is True.
+n_timesteps = 150  # Only relevant if allow_trajectory_optimization is True.
 # Quick convergence testing indicates you can get bad analyses below 150 or so...
 
 ##### Optimization bounds
@@ -133,7 +133,7 @@ if not climb_opt:
         y / 40000 < 1,  # models break down
     ])
 else:
-    opti.subject_to([y[timesteps_of_last_day:-1] > min_altitude, y/40000 < 1])
+    opti.subject_to([y[timesteps_of_last_day:-1] > min_altitude, y / 40000 < 1])
 
 airspeed = ops_var(initial_guess=20, scale_factor=20, n_variables=n_timesteps)
 opti.subject_to([
@@ -809,7 +809,7 @@ mass_wing_primary = lib_mass_struct.mass_wing_spar(
     # technically the spar doesn't really have to support its own weight (since it's roughly spanloaded), so this is conservative
     ultimate_load_factor=structural_load_factor,
     n_booms=n_booms
-) * 11.382 / 9.222 # scaling factor taken from Daedalus weights
+) * 11.382 / 9.222  # scaling factor taken from Daedalus weights
 mass_wing_secondary = lib_mass_struct.mass_hpa_wing(
     span=wing.span(),
     chord=wing.mean_geometric_chord(),
@@ -920,8 +920,8 @@ net_force_perpendicular_calc = (
 )
 
 opti.subject_to([
-    net_accel_parallel / 1e-2 == net_force_parallel_calc / mass_total / 1e-2,
-    net_accel_perpendicular / 1e-1 == net_force_perpendicular_calc / mass_total / 1e-1,
+    net_accel_parallel * mass_total / 1e1 == net_force_parallel_calc / 1e1,
+    net_accel_perpendicular * mass_total / 1e2 == net_force_perpendicular_calc / 1e2,
 ])
 
 speeddot = net_accel_parallel
@@ -996,13 +996,6 @@ opti.subject_to([  # Air Launch
 
 ##### Optional constraints
 if not allow_trajectory_optimization:
-    # Prevent altitude cycling
-    #     y_fixed = min_altitude * opti.variable()
-    #     opti.set_initial(y_fixed, min_altitude)
-    #     opti.subject_to([
-    #         y > y_fixed - 100,
-    #         y < y_fixed + 100
-    #     ])
     opti.subject_to([
         flight_path_angle / 100 == 0
     ])
@@ -1170,11 +1163,12 @@ if __name__ == "__main__":
 
     draw = lambda: airplane.substitute_solution(sol).draw()
 
-
     # endregion
 
     # Draw plots
     plot_dpi = 200
+
+
     def plot(x, y):
         # plt.plot(s(hour), s(y), ".-")
         plt.plot(s(x)[:dusk], s(y)[:dusk], '.-', color=(103 / 255, 155 / 255, 240 / 255), label="Day")
