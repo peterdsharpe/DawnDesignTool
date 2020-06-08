@@ -34,10 +34,9 @@ file_to_save_to = "des_vars.json"
 # file_to_load_from = "des_vars.json"
 # file_to_save_to = None
 
-minimize = "wing.span() / 50"  # any "eval-able" expression
-
-
+# minimize = "wing.span() / 50"  # any "eval-able" expression
 # minimize = "max_mass_total / 300" # any "eval-able" expression
+minimize = "wing.span() / 50 * 0.9 + max_mass_total / 300 * 0.1"
 # minimize = "cas.sum1(airspeed/20)" # any "eval-able" expression
 
 def des_var(  # design variable
@@ -97,7 +96,7 @@ structural_mass_margin_multiplier = opti.parameter()
 opti.set_value(structural_mass_margin_multiplier, 1.25)
 energy_generation_margin = opti.parameter()
 opti.set_value(energy_generation_margin, 1.05)
-allowable_battery_depth_of_discharge = 0.85  # How much of the battery can you actually use? # Reviewed w/ Annick & Bjarni 4/30/2020
+allowable_battery_depth_of_discharge = 0.95  # How much of the battery can you actually use? # Reviewed w/ Annick & Bjarni 4/30/2020
 
 ##### Simulation Parameters
 n_timesteps = 150  # Only relevant if allow_trajectory_optimization is True.
@@ -195,7 +194,10 @@ wing_taper_ratio = 0.5
 
 # hstab
 hstab_span = des_var(name="hstab_span", initial_guess=12, scale_factor=15)
-opti.subject_to(hstab_span > 0.1)
+opti.subject_to([
+    hstab_span > 0.1,
+    hstab_span < wing_span / n_booms / 2
+])
 
 hstab_chord = des_var(name="hstab_chord", initial_guess=3, scale_factor=2)
 opti.subject_to([hstab_chord > 0.1])
@@ -756,9 +758,11 @@ mass_solar_cells = rho_solar_cells * area_solar
 # Jim Anderson believes 550 Wh/kg is possible.
 # Odysseus had cells that were 265 Wh/kg.
 
-battery_pack_cell_percentage = 0.75  # What percent of the battery pack consists of the module, by weight?
+battery_pack_cell_percentage = 0.89  # What percent of the battery pack consists of the module, by weight?
 # Accounts for module HW, BMS, pack installation, etc.
 # Ed Lovelace (in his presentation) gives 70% as a state-of-the-art fraction.
+# Used 75% in the 16.82 CDR.
+# According to Kevin Uleck, Odysseus realized an 89% packing factor here.
 
 battery_charge_efficiency = 0.985
 battery_discharge_efficiency = 0.985
