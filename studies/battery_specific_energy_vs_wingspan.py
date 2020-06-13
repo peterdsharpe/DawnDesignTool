@@ -1,3 +1,5 @@
+import os, sys
+sys.path.append(os.path.abspath("."))
 from design_opt import *
 import matplotlib.pyplot as plt
 import matplotlib.style as style

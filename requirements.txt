@@ -12,3 +12,4 @@ casadi
 gunicorn
 tqdm
 scipy
+seaborn

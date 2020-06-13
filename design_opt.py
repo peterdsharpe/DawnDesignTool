@@ -226,18 +226,18 @@ boom_diameter = 0.2
 import dill as pickle
 
 try:
-    with open("wing_airfoil.cache", "rb") as f:
+    with open("cache/wing_airfoil.cache", "rb") as f:
         wing_airfoil = pickle.load(f)
-    with open("tail_airfoil.cache", "rb") as f:
+    with open("cache/tail_airfoil.cache", "rb") as f:
         tail_airfoil = pickle.load(f)
 except:
     wing_airfoil = Airfoil(name="HALE_03", coordinates=r"C:\Projects\GitHub\Airfoils\HALE_03.dat")
     wing_airfoil.populate_sectional_functions_from_xfoil_fits(parallel=False)
-    with open("wing_airfoil.cache", "wb+") as f:
+    with open("cache/wing_airfoil.cache", "wb+") as f:
         pickle.dump(wing_airfoil, f)
     tail_airfoil = Airfoil("naca0008")
     tail_airfoil.populate_sectional_functions_from_xfoil_fits(parallel=False)
-    with open("tail_airfoil.cache", "wb+") as f:
+    with open("cache/tail_airfoil.cache", "wb+") as f:
         pickle.dump(tail_airfoil, f)
 
 tail_airfoil = naca0008  # TODO remove this and use fits?

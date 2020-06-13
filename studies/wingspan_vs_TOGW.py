@@ -35,7 +35,7 @@ import seaborn as sns
 sns.set(font_scale=1)
 
 fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
-plt.plot(objective_1_outputs, objective_2_outputs, ".-")
+plt.plot(objective_1_outputs, objective_2_outputs, "-")
 plt.xlabel(r"Wingspan [m]")
 plt.ylabel(r"TOGW [kg]")
 plt.title(r"Pareto Plot: Wingspan vs. TOGW")
