@@ -239,7 +239,8 @@ except:
     with open("cache/tail_airfoil.cache", "wb+") as f:
         pickle.dump(tail_airfoil, f)
 
-tail_airfoil = naca0008  # TODO remove this and use fits?
+# wing_airfoil = e216
+# tail_airfoil = naca0008  # TODO remove this and use fits?
 
 wing = asb.Wing(
     name="Main Wing",
