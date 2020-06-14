@@ -230,7 +230,7 @@ try:
     with open("cache/tail_airfoil.cache", "rb") as f:
         tail_airfoil = pickle.load(f)
 except:
-    wing_airfoil = Airfoil(name="HALE_03", coordinates=r"C:\Projects\GitHub\Airfoils\HALE_03.dat")
+    wing_airfoil = Airfoil(name="HALE_03", coordinates=r"C:\Users\User\Dropbox (MIT)\Projects\GitHub\Airfoils\HALE_03.dat")
     wing_airfoil.populate_sectional_functions_from_xfoil_fits(parallel=False)
     with open("cache/wing_airfoil.cache", "wb+") as f:
         pickle.dump(wing_airfoil, f)
