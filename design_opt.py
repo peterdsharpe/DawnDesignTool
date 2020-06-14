@@ -1,6 +1,4 @@
-# TODO implement dongjoon prop model
-
-# Grab AeroSandbox
+# Imports
 import aerosandbox as asb
 import aerosandbox.library.aerodynamics as aero
 import aerosandbox.library.atmosphere as atmo
