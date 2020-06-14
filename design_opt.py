@@ -1,6 +1,4 @@
-# TODO implement dongjoon prop model
-
-# Grab AeroSandbox
+# Imports
 import aerosandbox as asb
 import aerosandbox.library.aerodynamics as aero
 import aerosandbox.library.atmosphere as atmo
@@ -17,6 +15,7 @@ import matplotlib.pyplot as plt
 import matplotlib.style as style
 import seaborn as sns
 import json
+import design_opt_utilities as utils
 
 sns.set(font_scale=1)
 
@@ -384,66 +383,11 @@ center_vstab = asb.Wing(
     ]
 )
 
-### Build the fuselage geometry
-blend = lambda x: (1 - np.cos(np.pi * x)) / 2
-fuse_x_c = []
-fuse_z_c = []
-fuse_radius = []
-fuse_resolution = 10
-# Nose geometry
-fuse_nose_theta = np.linspace(0, np.pi / 2, fuse_resolution)
-fuse_x_c.extend([
-    (wing_x_quarter_chord - wing_root_chord / 4) - nose_length * np.cos(theta) for theta in fuse_nose_theta
-])
-fuse_z_c.extend([-fuse_diameter / 2] * fuse_resolution)
-fuse_radius.extend([
-    fuse_diameter / 2 * np.sin(theta) for theta in fuse_nose_theta
-])
-# Taper
-fuse_taper_x_nondim = np.linspace(0, 1, fuse_resolution)
-fuse_x_c.extend([
-    0.0 * boom_length + (0.6 - 0.0) * boom_length * x_nd for x_nd in fuse_taper_x_nondim
-])
-fuse_z_c.extend([
-    -fuse_diameter / 2 * blend(1 - x_nd) - boom_diameter / 2 * blend(x_nd) for x_nd in fuse_taper_x_nondim
-])
-fuse_radius.extend([
-    fuse_diameter / 2 * blend(1 - x_nd) + boom_diameter / 2 * blend(x_nd) for x_nd in fuse_taper_x_nondim
-])
-# Tail
-# fuse_tail_x_nondim = np.linspace(0, 1, fuse_resolution)[1:]
-# fuse_x_c.extend([
-#     0.9 * boom_length + (1 - 0.9) * boom_length * x_nd for x_nd in fuse_taper_x_nondim
-# ])
-# fuse_z_c.extend([
-#     -boom_diameter / 2 * blend(1 - x_nd) for x_nd in fuse_taper_x_nondim
-# ])
-# fuse_radius.extend([
-#     boom_diameter / 2 * blend(1 - x_nd) for x_nd in fuse_taper_x_nondim
-# ])
-fuse_straight_resolution = 4
-fuse_x_c.extend([
-    0.6 * boom_length + (1 - 0.6) * boom_length * x_nd for x_nd in np.linspace(0, 1, fuse_straight_resolution)[1:]
-])
-fuse_z_c.extend(
-    [-boom_diameter / 2] * (fuse_straight_resolution - 1)
-)
-fuse_radius.extend(
-    [boom_diameter / 2] * (fuse_straight_resolution - 1)
-)
-
-fuse = asb.Fuselage(
-    name="Fuselage",
-    x_le=0,
-    y_le=0,
-    z_le=0,
-    xsecs=[
-        asb.FuselageXSec(
-            x_c=fuse_x_c[i],
-            z_c=fuse_z_c[i],
-            radius=fuse_radius[i]
-        ) for i in range(len(fuse_x_c))
-    ]
+fuse = utils.fuselage(
+        boom_length = boom_length,
+        nose_length = nose_length,
+        fuse_diameter = fuse_diameter,
+        boom_diameter = boom_diameter,
 )
 
 # Assemble the airplane
@@ -565,13 +509,13 @@ moment_wing = wing_CM * q * wing.area() * wing.mean_geometric_chord()
 # hstab
 hstab_Re = rho / mu * airspeed * hstab.mean_geometric_chord()
 hstab_airfoil = hstab.xsecs[0].airfoil  # type: asb.Airfoil
-hstab_Cl_inc = hstab_airfoil.CL_function(alpha + center_hstab_twist_angle, hstab_Re, 0,
+hstab_Cl_inc = hstab_airfoil.CL_function(alpha + hstab_twist_angle, hstab_Re, 0,
                                          0)  # Incompressible 2D lift coefficient
 hstab_CL = hstab_Cl_inc * aero.CL_over_Cl(hstab.aspect_ratio(), mach=mach,
                                           sweep=hstab.mean_sweep_angle())  # Compressible 3D lift coefficient
 lift_hstab = hstab_CL * q * hstab.area()  # per hstab
 
-hstab_Cd_profile = hstab_airfoil.CDp_function(alpha + center_hstab_twist_angle, hstab_Re, mach, 0)
+hstab_Cd_profile = hstab_airfoil.CDp_function(alpha + hstab_twist_angle, hstab_Re, mach, 0)
 drag_hstab_profile = hstab_Cd_profile * q * hstab.area()
 
 hstab_oswalds_efficiency = 0.95  # TODO make this a function of taper ratio
@@ -791,7 +735,7 @@ opti.subject_to([
 ])
 
 area_solar = (
-                     wing.area()
+                     wing.area() + n_booms * (hstab.area())
              ) * solar_area_fraction
 
 # Energy generation cascade
