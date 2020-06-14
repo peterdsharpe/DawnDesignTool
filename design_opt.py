@@ -323,7 +323,7 @@ center_hstab = asb.Wing(
         ),
     ]
 )
-outboard_hstab = asb.Wing(
+right_hstab = asb.Wing(
     name="Horizontal Stabilizer",
     x_le=outboard_boom_length - outboard_hstab_chord * 0.75,  # Coordinates of the wing's leading edge
     y_le=wing_y_taper_break,  # Coordinates of the wing's leading edge
@@ -351,8 +351,8 @@ outboard_hstab = asb.Wing(
         ),
     ]
 )
-outboard_hstab_2 = copy.deepcopy(outboard_hstab)
-outboard_hstab_2.xyz_le[1] *= -1
+left_hstab = copy.deepcopy(right_hstab)
+left_hstab.xyz_le[1] *= -1
 
 center_vstab = asb.Wing(
     name="Vertical Stabilizer",
@@ -383,8 +383,8 @@ center_vstab = asb.Wing(
     ]
 )
 
-fuse = utils.fuselage(
-        boom_length = boom_length,
+center_fuse = utils.fuselage(
+        boom_length = center_boom_length,
         nose_length = nose_length,
         fuse_diameter = fuse_diameter,
         boom_diameter = boom_diameter,
