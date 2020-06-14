@@ -81,7 +81,7 @@ days_to_simulate = opti.parameter()
 opti.set_value(days_to_simulate, 1)
 enforce_periodicity = True  # Tip: turn this off when looking at gas models or models w/o trajectory opt. enabled.
 allow_trajectory_optimization = True
-n_booms = 3  # 1, 2, or 3
+n_booms = 3  # 1 or 3
 structural_load_factor = 3  # over static
 show_plots = True
 mass_payload = opti.parameter()
@@ -191,29 +191,47 @@ wing_y_taper_break = 0.57 * wing_span / 2
 
 wing_taper_ratio = 0.5
 
-# hstab
-hstab_span = des_var(name="hstab_span", initial_guess=12, scale_factor=15)
+# center hstab
+center_hstab_span = des_var(name="center_hstab_span", initial_guess=12, scale_factor=15)
 opti.subject_to([
-    hstab_span > 0.1,
-    hstab_span < wing_span / n_booms / 2
+    center_hstab_span > 0.1,
+    center_hstab_span < wing_span / n_booms / 2
 ])
 
-hstab_chord = des_var(name="hstab_chord", initial_guess=3, scale_factor=2)
-opti.subject_to([hstab_chord > 0.1])
+center_hstab_chord = des_var(name="center_hstab_chord", initial_guess=3, scale_factor=2)
+opti.subject_to([center_hstab_chord > 0.1])
 
-hstab_twist_angle = ops_var(initial_guess=-7, scale_factor=2, n_variables=n_timesteps)
+center_hstab_twist_angle = ops_var(initial_guess=-7, scale_factor=2, n_variables=n_timesteps)
 
-# vstab
-vstab_span = des_var(name="vstab_span", initial_guess=7, scale_factor=8)
-opti.subject_to(vstab_span > 0.1)
-
-vstab_chord = des_var(name="vstab_chord", initial_guess=2.5, scale_factor=2)
-opti.subject_to([vstab_chord > 0.1])
-
-# fuselage
-boom_length = des_var(name="boom_length", initial_guess=23, scale_factor=2)  # TODO add scale factor
+# center hstab
+outboard_hstab_span = des_var(name="outboard_hstab_span", initial_guess=12, scale_factor=15)
 opti.subject_to([
-    boom_length - vstab_chord - hstab_chord > wing_x_quarter_chord + wing_root_chord * 3 / 4
+    outboard_hstab_span > 0.1,
+    outboard_hstab_span < wing_span / n_booms / 2
+])
+
+outboard_hstab_chord = des_var(name="outboard_hstab_chord", initial_guess=3, scale_factor=2)
+opti.subject_to([outboard_hstab_chord > 0.1])
+
+outboard_hstab_twist_angle = ops_var(initial_guess=-7, scale_factor=2, n_variables=n_timesteps)
+
+# center_vstab
+center_vstab_span = des_var(name="center_vstab_span", initial_guess=7, scale_factor=8)
+opti.subject_to(center_vstab_span > 0.1)
+
+center_vstab_chord = des_var(name="center_vstab_chord", initial_guess=2.5, scale_factor=2)
+opti.subject_to([center_vstab_chord > 0.1])
+
+# center_fuselage
+center_boom_length = des_var(name="boom_length", initial_guess=23, scale_factor=2)  # TODO add scale factor
+opti.subject_to([
+    center_boom_length - center_vstab_chord - center_hstab_chord > wing_x_quarter_chord + wing_root_chord * 3 / 4
+])
+
+# outboard_fuselage
+outboard_boom_length = des_var(name="boom_length", initial_guess=23, scale_factor=2)  # TODO add scale factor
+opti.subject_to([
+    outboard_boom_length - center_vstab_chord - center_hstab_chord > wing_x_quarter_chord + wing_root_chord * 3 / 4
 ])
 
 nose_length = 1.80  # Calculated on 4/15/20 with Trevor and Olek
@@ -277,9 +295,9 @@ wing = asb.Wing(
         ),
     ]
 )
-hstab = asb.Wing(
+center_hstab = asb.Wing(
     name="Horizontal Stabilizer",
-    x_le=boom_length - vstab_chord * 0.75 - hstab_chord,  # Coordinates of the wing's leading edge
+    x_le=center_boom_length - center_vstab_chord * 0.75 - center_hstab_chord,  # Coordinates of the wing's leading edge
     y_le=0,  # Coordinates of the wing's leading edge
     z_le=0.1,  # Coordinates of the wing's leading edge
     symmetric=True,
@@ -288,7 +306,7 @@ hstab = asb.Wing(
             x_le=0,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
             y_le=0,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
             z_le=0,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
-            chord=hstab_chord,
+            chord=center_hstab_chord,
             twist=-3,  # degrees
             airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
             control_surface_type='symmetric',
@@ -297,26 +315,57 @@ hstab = asb.Wing(
         ),
         asb.WingXSec(  # Tip
             x_le=0,
-            y_le=hstab_span / 2,
+            y_le=center_hstab_span / 2,
             z_le=0,
-            chord=hstab_chord,
+            chord=center_hstab_chord,
             twist=-3,
             airfoil=tail_airfoil,
         ),
     ]
 )
-vstab = asb.Wing(
+outboard_hstab = asb.Wing(
+    name="Horizontal Stabilizer",
+    x_le=outboard_boom_length - outboard_hstab_chord * 0.75,  # Coordinates of the wing's leading edge
+    y_le=wing_y_taper_break,  # Coordinates of the wing's leading edge
+    z_le=0.1,  # Coordinates of the wing's leading edge
+    symmetric=True,
+    xsecs=[  # The wing's cross ("X") sections
+        asb.WingXSec(  # Root
+            x_le=0,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
+            y_le=0,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
+            z_le=0,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
+            chord=outboard_hstab_chord,
+            twist=-3,  # degrees
+            airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
+            control_surface_type='symmetric',
+            # Flap # Control surfaces are applied between a given XSec and the next one.
+            control_surface_deflection=0,  # degrees
+        ),
+        asb.WingXSec(  # Tip
+            x_le=0,
+            y_le=center_hstab_span / 2,
+            z_le=0,
+            chord=center_hstab_chord,
+            twist=-3,
+            airfoil=tail_airfoil,
+        ),
+    ]
+)
+outboard_hstab_2 = copy.deepcopy(outboard_hstab)
+outboard_hstab_2.xyz_le[1] *= -1
+
+center_vstab = asb.Wing(
     name="Vertical Stabilizer",
-    x_le=boom_length - vstab_chord * 0.75,  # Coordinates of the wing's leading edge
+    x_le=center_boom_length - center_vstab_chord * 0.75,  # Coordinates of the wing's leading edge
     y_le=0,  # Coordinates of the wing's leading edge
-    z_le=-vstab_span / 2 + vstab_span * 0.15,  # Coordinates of the wing's leading edge
+    z_le=-center_vstab_span / 2 + center_vstab_span * 0.15,  # Coordinates of the wing's leading edge
     symmetric=False,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
             x_le=0,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
             y_le=0,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
             z_le=0,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
-            chord=vstab_chord,
+            chord=center_vstab_chord,
             twist=0,  # degrees
             airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
             control_surface_type='symmetric',
@@ -326,8 +375,8 @@ vstab = asb.Wing(
         asb.WingXSec(  # Tip
             x_le=0,
             y_le=0,
-            z_le=vstab_span,
-            chord=vstab_chord,
+            z_le=center_vstab_span,
+            chord=center_vstab_chord,
             twist=0,
             airfoil=tail_airfoil,
         ),
