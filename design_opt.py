@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import matplotlib.style as style
 import seaborn as sns
 import json
+import design_opt_utilities as utils
 
 sns.set(font_scale=1)
 
@@ -334,8 +335,6 @@ vstab = asb.Wing(
         ),
     ]
 )
-
-import design_opt_utilities as utils
 
 fuse = utils.fuselage(
         boom_length = boom_length,
