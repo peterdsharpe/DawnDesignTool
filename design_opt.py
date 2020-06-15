@@ -687,7 +687,7 @@ opti.subject_to([
 ])
 
 area_solar = (
-                     wing.area() + n_booms * (hstab.area())
+                     wing.area()
              ) * solar_area_fraction
 
 # Energy generation cascade
