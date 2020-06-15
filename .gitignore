@@ -5,6 +5,7 @@
 ### Project-Specific
 # Add things here!
 outputs/
+des_vars.json
 
 ### IntelliJ project files
 .idea
