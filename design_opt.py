@@ -900,8 +900,9 @@ mass_center_vstab = mass_vstab(center_vstab, n_ribs_vstab)
 mass_center_boom = lib_mass_struct.mass_hpa_tail_boom(
     length_tail_boom=center_boom_length - wing_x_quarter_chord,  # support up to the quarter-chord
     dynamic_pressure_at_manuever_speed=q_maneuver,
-    mean_tail_surface_area=center_hstab.area() + center_vstab.area(),
+    # mean_tail_surface_area=cas.fmax(center_hstab.area(), center_vstab.area()), # most optimistic
     # mean_tail_surface_area=cas.sqrt(center_hstab.area() ** 2 + center_vstab.area() ** 2),
+    mean_tail_surface_area=center_hstab.area() + center_vstab.area(), # most conservative
 )
 mass_right_boom = lib_mass_struct.mass_hpa_tail_boom(
     length_tail_boom=outboard_boom_length - wing_x_quarter_chord,  # support up to the quarter-chord
