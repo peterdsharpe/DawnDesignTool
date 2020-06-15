@@ -1,6 +1,4 @@
-# TODO implement dongjoon prop model
-
-# Grab AeroSandbox
+# Imports
 import aerosandbox as asb
 import aerosandbox.library.aerodynamics as aero
 import aerosandbox.library.atmosphere as atmo
@@ -17,6 +15,7 @@ import matplotlib.pyplot as plt
 import matplotlib.style as style
 import seaborn as sns
 import json
+import design_opt_utilities as utils
 
 sns.set(font_scale=1)
 
@@ -78,11 +77,11 @@ day_of_year = 244  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 min_altitude = 19812  # meters. 19812 m = 65000 ft.
 # min_altitude = 18288  # meters. 18288 m = 60000 ft.
 required_headway_per_day = 10e3  # meters
+n_booms = 3
 days_to_simulate = opti.parameter()
 opti.set_value(days_to_simulate, 1)
 enforce_periodicity = True  # Tip: turn this off when looking at gas models or models w/o trajectory opt. enabled.
 allow_trajectory_optimization = True
-n_booms = 3  # 1 or 3
 structural_load_factor = 3  # over static
 show_plots = True
 mass_payload = opti.parameter()
@@ -296,6 +295,7 @@ wing = asb.Wing(
         ),
     ]
 )
+
 center_hstab = asb.Wing(
     name="Horizontal Stabilizer",
     x_le=center_boom_length - center_vstab_chord * 0.75 - center_hstab_chord,  # Coordinates of the wing's leading edge
@@ -324,7 +324,8 @@ center_hstab = asb.Wing(
         ),
     ]
 )
-outboard_hstab = asb.Wing(
+
+right_hstab = asb.Wing(
     name="Horizontal Stabilizer",
     x_le=outboard_boom_length - outboard_hstab_chord * 0.75,  # Coordinates of the wing's leading edge
     y_le=wing_y_taper_break,  # Coordinates of the wing's leading edge
@@ -352,8 +353,9 @@ outboard_hstab = asb.Wing(
         ),
     ]
 )
-outboard_hstab_2 = copy.deepcopy(outboard_hstab)
-outboard_hstab_2.xyz_le[1] *= -1
+
+left_hstab = copy.deepcopy(right_hstab)
+left_hstab.xyz_le[1] *= -1
 
 center_vstab = asb.Wing(
     name="Vertical Stabilizer",
@@ -384,131 +386,44 @@ center_vstab = asb.Wing(
     ]
 )
 
-### Build the fuselage geometry
-blend = lambda x: (1 - np.cos(np.pi * x)) / 2
-fuse_x_c = []
-fuse_z_c = []
-fuse_radius = []
-fuse_resolution = 10
-# Nose geometry
-fuse_nose_theta = np.linspace(0, np.pi / 2, fuse_resolution)
-fuse_x_c.extend([
-    (wing_x_quarter_chord - wing_root_chord / 4) - nose_length * np.cos(theta) for theta in fuse_nose_theta
-])
-fuse_z_c.extend([-fuse_diameter / 2] * fuse_resolution)
-fuse_radius.extend([
-    fuse_diameter / 2 * np.sin(theta) for theta in fuse_nose_theta
-])
-# Taper
-fuse_taper_x_nondim = np.linspace(0, 1, fuse_resolution)
-fuse_x_c.extend([
-    0.0 * boom_length + (0.6 - 0.0) * boom_length * x_nd for x_nd in fuse_taper_x_nondim
-])
-fuse_z_c.extend([
-    -fuse_diameter / 2 * blend(1 - x_nd) - boom_diameter / 2 * blend(x_nd) for x_nd in fuse_taper_x_nondim
-])
-fuse_radius.extend([
-    fuse_diameter / 2 * blend(1 - x_nd) + boom_diameter / 2 * blend(x_nd) for x_nd in fuse_taper_x_nondim
-])
-# Tail
-# fuse_tail_x_nondim = np.linspace(0, 1, fuse_resolution)[1:]
-# fuse_x_c.extend([
-#     0.9 * boom_length + (1 - 0.9) * boom_length * x_nd for x_nd in fuse_taper_x_nondim
-# ])
-# fuse_z_c.extend([
-#     -boom_diameter / 2 * blend(1 - x_nd) for x_nd in fuse_taper_x_nondim
-# ])
-# fuse_radius.extend([
-#     boom_diameter / 2 * blend(1 - x_nd) for x_nd in fuse_taper_x_nondim
-# ])
-fuse_straight_resolution = 4
-fuse_x_c.extend([
-    0.6 * boom_length + (1 - 0.6) * boom_length * x_nd for x_nd in np.linspace(0, 1, fuse_straight_resolution)[1:]
-])
-fuse_z_c.extend(
-    [-boom_diameter / 2] * (fuse_straight_resolution - 1)
-)
-fuse_radius.extend(
-    [boom_diameter / 2] * (fuse_straight_resolution - 1)
+center_fuse = utils.fuselage(
+    boom_length = center_boom_length,
+    nose_length = nose_length,
+    fuse_diameter = fuse_diameter,
+    boom_diameter = boom_diameter,
 )
 
-fuse = asb.Fuselage(
-    name="Fuselage",
-    x_le=0,
-    y_le=0,
-    z_le=0,
-    xsecs=[
-        asb.FuselageXSec(
-            x_c=fuse_x_c[i],
-            z_c=fuse_z_c[i],
-            radius=fuse_radius[i]
-        ) for i in range(len(fuse_x_c))
-    ]
+right_fuse = utils.fuselage(
+    boom_length=outboard_boom_length,
+    nose_length=nose_length,
+    fuse_diameter=boom_diameter,
+    boom_diameter=boom_diameter,
 )
+
+boom_location = 0.57  # as a fraction of the half-span
+right_fuse.xyz_le[1] = boom_location * wing_span / 2
+
+left_fuse = copy.deepcopy(right_fuse)
+left_fuse.xyz_le[1] *= -1
 
 # Assemble the airplane
-fuses = []
-hstabs = []
-vstabs = []
-if n_booms == 1:
-    fuses.append(fuse)
-    hstabs.append(hstab)
-    vstabs.append(vstab)
-elif n_booms == 2:
-    boom_location = 0.40  # as a fraction of the half-span
-
-    left_fuse = copy.deepcopy(fuse)
-    right_fuse = copy.deepcopy(fuse)
-    left_fuse.xyz_le += cas.vertcat(0, -wing_span / 2 * boom_location, 0)
-    right_fuse.xyz_le += cas.vertcat(0, wing_span / 2 * boom_location, 0)
-    fuses.extend([left_fuse, right_fuse])
-
-    left_hstab = copy.deepcopy(hstab)
-    right_hstab = copy.deepcopy(hstab)
-    left_hstab.xyz_le += cas.vertcat(0, -wing_span / 2 * boom_location, 0)
-    right_hstab.xyz_le += cas.vertcat(0, wing_span / 2 * boom_location, 0)
-    hstabs.extend([left_hstab, right_hstab])
-
-    left_vstab = copy.deepcopy(vstab)
-    right_vstab = copy.deepcopy(vstab)
-    left_vstab.xyz_le += cas.vertcat(0, -wing_span / 2 * boom_location, 0)
-    right_vstab.xyz_le += cas.vertcat(0, wing_span / 2 * boom_location, 0)
-    vstabs.extend([left_vstab, right_vstab])
-
-elif n_booms == 3:
-    boom_location = 0.57  # as a fraction of the half-span
-
-    left_fuse = copy.deepcopy(fuse)
-    center_fuse = copy.deepcopy(fuse)
-    right_fuse = copy.deepcopy(fuse)
-    left_fuse.xyz_le += cas.vertcat(0, -wing_span / 2 * boom_location, 0)
-    right_fuse.xyz_le += cas.vertcat(0, wing_span / 2 * boom_location, 0)
-    fuses.extend([left_fuse, center_fuse, right_fuse])
-
-    left_hstab = copy.deepcopy(hstab)
-    center_hstab = copy.deepcopy(hstab)
-    right_hstab = copy.deepcopy(hstab)
-    left_hstab.xyz_le += cas.vertcat(0, -wing_span / 2 * boom_location, 0)
-    right_hstab.xyz_le += cas.vertcat(0, wing_span / 2 * boom_location, 0)
-    hstabs.extend([left_hstab, center_hstab, right_hstab])
-
-    left_vstab = copy.deepcopy(vstab)
-    center_vstab = copy.deepcopy(vstab)
-    right_vstab = copy.deepcopy(vstab)
-    left_vstab.xyz_le += cas.vertcat(0, -wing_span / 2 * boom_location, 0)
-    right_vstab.xyz_le += cas.vertcat(0, wing_span / 2 * boom_location, 0)
-    vstabs.extend([left_vstab, center_vstab, right_vstab])
-
-else:
-    raise ValueError("Bad value of n_booms!")
-
 airplane = asb.Airplane(
     name="Solar1",
     x_ref=0,
     y_ref=0,
     z_ref=0,
-    wings=[wing] + hstabs + vstabs,
-    fuselages=fuses,
+    wings=[
+        wing,
+        center_hstab,
+        right_hstab,
+        left_hstab,
+        center_vstab,
+    ],
+    fuselages=[
+        center_fuse,
+        right_fuse,
+        left_fuse
+    ],
 )
 
 # endregion
@@ -532,64 +447,83 @@ solar_flux_on_horizontal = lib_solar.solar_flux_on_horizontal(
 ##### Aerodynamics
 
 # Fuselage
-fuse_Re = rho / mu * airspeed * fuse.length()
-CLA_fuse = 0
-CDA_fuse = aero.Cf_flat_plate(fuse_Re) * fuse.area_wetted() * 1.2  # wetted area with form factor
+def fuse_aero(fuse: asb.Fuselage):
+    fuse_Re = rho / mu * airspeed * fuse.length()
+    CLA_fuse = 0
+    CDA_fuse = aero.Cf_flat_plate(fuse_Re) * fuse.area_wetted() * 1.2  # wetted area with form factor
+    
+    lift_fuse = CLA_fuse * q  # per fuse
+    drag_fuse = CDA_fuse * q  # per fuse
+    return lift_fuse, drag_fuse
 
-lift_fuse = CLA_fuse * q  # per fuse
-drag_fuse = CDA_fuse * q  # per fuse
+lift_center_fuse, drag_center_fuse = fuse_aero(center_fuse)
+lift_left_fuse, drag_left_fuse = fuse_aero(left_fuse)
+lift_right_fuse, drag_right_fuse = fuse_aero(right_fuse)
 
-# wing
-wing_Re = rho / mu * airspeed * wing.mean_geometric_chord()
-wing_airfoil = wing.xsecs[0].airfoil  # type: asb.Airfoil
-wing_Cl_inc = wing_airfoil.CL_function(alpha + wing.mean_twist_angle(), wing_Re, 0,
-                                       0)  # Incompressible 2D lift coefficient
-wing_CL = wing_Cl_inc * aero.CL_over_Cl(wing.aspect_ratio(), mach=mach,
-                                        sweep=wing.mean_sweep_angle())  # Compressible 3D lift coefficient
-lift_wing = wing_CL * q * wing.area()
+# Wing
+def wing_aero(wing: asb.Wing):
+    wing_Re = rho / mu * airspeed * wing.mean_geometric_chord()
+    wing_airfoil = wing.xsecs[0].airfoil  # type: asb.Airfoil
+    wing_Cl_inc = wing_airfoil.CL_function(alpha + wing.mean_twist_angle(), wing_Re, 0,
+                                           0)  # Incompressible 2D lift coefficient
+    wing_CL = wing_Cl_inc * aero.CL_over_Cl(wing.aspect_ratio(), mach=mach,
+                                            sweep=wing.mean_sweep_angle())  # Compressible 3D lift coefficient
+    lift_wing = wing_CL * q * wing.area()
+    
+    wing_Cd_profile = wing_airfoil.CDp_function(alpha + wing.mean_twist_angle(), wing_Re, mach, 0)
+    drag_wing_profile = wing_Cd_profile * q * wing.area()
+    
+    wing_oswalds_efficiency = 0.95  # TODO make this a function of taper ratio
+    drag_wing_induced = lift_wing ** 2 / (q * np.pi * wing.span() ** 2 * wing_oswalds_efficiency)
+    
+    drag_wing = drag_wing_profile + drag_wing_induced
+    
+    wing_Cm_inc = wing_airfoil.Cm_function(alpha + wing.mean_twist_angle(), wing_Re, 0,
+                                           0)  # Incompressible 2D moment coefficient
+    wing_CM = wing_Cm_inc * aero.CL_over_Cl(wing.aspect_ratio(), mach=mach,
+                                            sweep=wing.mean_sweep_angle())  # Compressible 3D moment coefficient
+    moment_wing = wing_CM * q * wing.area() * wing.mean_geometric_chord()
+    
+    return lift_wing, drag_wing, moment_wing
 
-wing_Cd_profile = wing_airfoil.CDp_function(alpha + wing.mean_twist_angle(), wing_Re, mach, 0)
-drag_wing_profile = wing_Cd_profile * q * wing.area()
+lift_wing, drag_wing, moment_wing = wing_aero(wing)
+lift_center_hstab, drag_center_hstab, moment_center_hstab = wing_aero(center_hstab)
+lift_right_hstab, drag_right_hstab, moment_right_hstab = wing_aero(right_hstab)
+lift_left_hstab, drag_left_hstab, moment_left_hstab = wing_aero(left_hstab)
 
-wing_oswalds_efficiency = 0.95  # TODO make this a function of taper ratio
-drag_wing_induced = lift_wing ** 2 / (q * np.pi * wing.span() ** 2 * wing_oswalds_efficiency)
+# center_vstab
+center_vstab_Re = rho / mu * airspeed * center_vstab.mean_geometric_chord()
+center_vstab_airfoil = center_vstab.xsecs[0].airfoil  # type: asb.Airfoil
+center_vstab_Cd_profile = center_vstab_airfoil.CDp_function(0, center_vstab_Re, mach, 0)
+drag_center_vstab_profile = center_vstab_Cd_profile * q * center_vstab.area()
 
-drag_wing = drag_wing_profile + drag_wing_induced
-
-wing_Cm_inc = wing_airfoil.Cm_function(alpha + wing.mean_twist_angle(), wing_Re, 0,
-                                       0)  # Incompressible 2D moment coefficient
-wing_CM = wing_Cm_inc * aero.CL_over_Cl(wing.aspect_ratio(), mach=mach,
-                                        sweep=wing.mean_sweep_angle())  # Compressible 3D moment coefficient
-moment_wing = wing_CM * q * wing.area() * wing.mean_geometric_chord()
-
-# hstab
-hstab_Re = rho / mu * airspeed * hstab.mean_geometric_chord()
-hstab_airfoil = hstab.xsecs[0].airfoil  # type: asb.Airfoil
-hstab_Cl_inc = hstab_airfoil.CL_function(alpha + center_hstab_twist_angle, hstab_Re, 0,
-                                         0)  # Incompressible 2D lift coefficient
-hstab_CL = hstab_Cl_inc * aero.CL_over_Cl(hstab.aspect_ratio(), mach=mach,
-                                          sweep=hstab.mean_sweep_angle())  # Compressible 3D lift coefficient
-lift_hstab = hstab_CL * q * hstab.area()  # per hstab
-
-hstab_Cd_profile = hstab_airfoil.CDp_function(alpha + center_hstab_twist_angle, hstab_Re, mach, 0)
-drag_hstab_profile = hstab_Cd_profile * q * hstab.area()
-
-hstab_oswalds_efficiency = 0.95  # TODO make this a function of taper ratio
-drag_hstab_induced = lift_hstab ** 2 / (q * np.pi * hstab.span() ** 2 * hstab_oswalds_efficiency)
-
-drag_hstab = drag_hstab_profile + drag_hstab_induced  # per hstab
-
-# vstab
-vstab_Re = rho / mu * airspeed * vstab.mean_geometric_chord()
-vstab_airfoil = vstab.xsecs[0].airfoil  # type: asb.Airfoil
-vstab_Cd_profile = vstab_airfoil.CDp_function(0, vstab_Re, mach, 0)
-drag_vstab_profile = vstab_Cd_profile * q * vstab.area()
-
-drag_vstab = drag_vstab_profile  # per vstab
+drag_center_vstab = drag_center_vstab_profile  # per center_vstab
 
 # Force totals
-lift_force = lift_wing + n_booms * (lift_fuse + lift_hstab)
-drag_force = drag_wing + n_booms * (drag_fuse + drag_hstab + drag_vstab)  # + drag_lift_wires
+lift_force = (
+    lift_wing +
+    lift_center_hstab +
+    lift_right_hstab +
+    lift_left_hstab +
+    lift_center_fuse +
+    lift_right_fuse +
+    lift_left_fuse
+)
+drag_force = (
+    drag_wing +
+    drag_center_hstab +
+    drag_right_hstab +
+    drag_left_hstab +
+    drag_center_fuse +
+    drag_right_fuse +
+    drag_left_fuse
+) 
+moment = (
+    -wing.approximate_center_of_pressure()[0] * lift_wing + moment_wing +
+    -center_hstab.approximate_center_of_pressure()[0] * lift_center_hstab + moment_center_hstab +
+    -right_hstab.approximate_center_of_pressure()[0] * lift_right_hstab + moment_right_hstab +
+    -left_hstab.approximate_center_of_pressure()[0] * lift_left_hstab + moment_left_hstab
+)
 
 # endregion
 
@@ -597,9 +531,14 @@ drag_force = drag_wing + n_booms * (drag_fuse + drag_hstab + drag_vstab)  # + dr
 ### Estimate aerodynamic center
 x_ac = (
                wing.approximate_center_of_pressure()[0] * wing.area() +
-               hstab.approximate_center_of_pressure()[0] * hstab.area() * n_booms
+               center_hstab.approximate_center_of_pressure()[0] * center_hstab.area() +
+               right_hstab.approximate_center_of_pressure()[0] *right_hstab.area() +
+               left_hstab.approximate_center_of_pressure()[0] *left_hstab.area()
        ) / (
-               wing.area() + hstab.area() * n_booms
+               wing.area() +
+               center_hstab.area() +
+               right_hstab.area() +
+               left_hstab.area()
        )
 static_margin_fraction = (x_ac - airplane.xyz_ref[0]) / wing.mean_geometric_chord()
 opti.subject_to([
@@ -607,24 +546,16 @@ opti.subject_to([
 ])
 
 ### Trim
-net_pitching_moment = (
-        -wing.approximate_center_of_pressure()[0] * lift_wing + moment_wing
-        - hstab.approximate_center_of_pressure()[0] * lift_hstab * n_booms
-)
 opti.subject_to([
-    net_pitching_moment / 1e4 == 0  # Trim condition
+    moment / 1e4 == 0  # Trim condition
 ])
 
 ### Size the tails off of tail volume coefficients
-Vh = hstab.area() * n_booms * (
-        hstab.approximate_center_of_pressure()[0] - wing.approximate_center_of_pressure()[0]
-) / (wing.area() * wing.mean_geometric_chord())
-Vv = vstab.area() * n_booms * (
-        vstab.approximate_center_of_pressure()[0] - wing.approximate_center_of_pressure()[0]
+Vv = center_vstab.area() * (
+        center_vstab.approximate_center_of_pressure()[0] - wing.approximate_center_of_pressure()[0]
 ) / (wing.area() * wing.span())
 
-hstab_effectiveness_factor = aero.CL_over_Cl(hstab.aspect_ratio()) / aero.CL_over_Cl(wing.aspect_ratio())
-vstab_effectiveness_factor = aero.CL_over_Cl(vstab.aspect_ratio()) / aero.CL_over_Cl(wing.aspect_ratio())
+vstab_effectiveness_factor = aero.CL_over_Cl(center_vstab.aspect_ratio()) / aero.CL_over_Cl(wing.aspect_ratio())
 
 opti.subject_to([
     # Vh * hstab_effectiveness_factor > 0.3,
@@ -791,7 +722,7 @@ opti.subject_to([
 ])
 
 area_solar = (
-                     wing.area() + n_booms * (hstab.area())
+                     wing.area()
              ) * solar_area_fraction
 
 # Energy generation cascade
