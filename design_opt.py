@@ -244,19 +244,24 @@ boom_diameter = 0.2
 
 import dill as pickle
 
+import pathlib
+path = str(
+    pathlib.Path(__file__).parent.absolute()
+)
+
 try:
-    with open("cache/wing_airfoil.cache", "rb") as f:
+    with open(path+"/cache/wing_airfoil.cache", "rb") as f:
         wing_airfoil = pickle.load(f)
-    with open("cache/tail_airfoil.cache", "rb") as f:
+    with open(path+"/cache/tail_airfoil.cache", "rb") as f:
         tail_airfoil = pickle.load(f)
-except:
+except FileNotFoundError:
     wing_airfoil = Airfoil(name="HALE_03", coordinates=r"C:\Projects\GitHub\Airfoils\HALE_03.dat")
     wing_airfoil.populate_sectional_functions_from_xfoil_fits(parallel=False)
-    with open("cache/wing_airfoil.cache", "wb+") as f:
+    with open(path+"/cache/wing_airfoil.cache", "wb+") as f:
         pickle.dump(wing_airfoil, f)
     tail_airfoil = Airfoil("naca0008")
     tail_airfoil.populate_sectional_functions_from_xfoil_fits(parallel=False)
-    with open("cache/tail_airfoil.cache", "wb+") as f:
+    with open(path+"/cache/tail_airfoil.cache", "wb+") as f:
         pickle.dump(tail_airfoil, f)
 
 tail_airfoil = naca0008  # TODO remove this and use fits?
@@ -601,12 +606,8 @@ opti.subject_to([
     propeller_diameter / 10 < 1
 ])
 
-n_propellers = 4
-# n_propellers = des_var(name="n_propellers", initial_guess=6, scale_factor=1)  # TODO add scale factor
-# opti.subject_to([
-#     n_propellers > 2,
-#     n_propellers < 6,
-# ])
+n_propellers = opti.parameter()
+opti.set_value(n_propellers, 4)
 
 propeller_tip_mach = 0.36  # From Dongjoon, 4/30/20
 propeller_rads_per_sec = propeller_tip_mach * atmo.get_speed_of_sound_from_temperature(
