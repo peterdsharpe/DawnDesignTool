@@ -1,7 +1,8 @@
 from aerosandbox.structures.beams import TubeBeam1
 import casadi as cas
 
-opti = cas.Opti()
+opti = cas.Opti() # initializes an optimization/design environment
+
 beam = TubeBeam1(
     opti=opti,
     length=49 / 2,
@@ -9,7 +10,7 @@ beam = TubeBeam1(
     diameter_guess=100,
     thickness = 0.70e-3,
     bending=True,
-    torsion=False
+    torsion=False,
 )
 lift_force = 9.81 * 385
 load_location = opti.variable()

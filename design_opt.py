@@ -97,7 +97,7 @@ structural_mass_margin_multiplier = opti.parameter()
 opti.set_value(structural_mass_margin_multiplier, 1.25)
 energy_generation_margin = opti.parameter()
 opti.set_value(energy_generation_margin, 1.05)
-allowable_battery_depth_of_discharge = 0.95  # How much of the battery can you actually use? # Reviewed w/ Annick & Bjarni 4/30/2020
+allowable_battery_depth_of_discharge = 0.85  # How much of the battery can you actually use? # Reviewed w/ Annick & Bjarni 4/30/2020
 
 ##### Simulation Parameters
 n_timesteps = 150  # Only relevant if allow_trajectory_optimization is True.
@@ -902,7 +902,7 @@ mass_center_boom = lib_mass_struct.mass_hpa_tail_boom(
     dynamic_pressure_at_manuever_speed=q_maneuver,
     # mean_tail_surface_area=cas.fmax(center_hstab.area(), center_vstab.area()), # most optimistic
     # mean_tail_surface_area=cas.sqrt(center_hstab.area() ** 2 + center_vstab.area() ** 2),
-    mean_tail_surface_area=center_hstab.area() + center_vstab.area(), # most conservative
+    mean_tail_surface_area=center_hstab.area() + center_vstab.area(),  # most conservative
 )
 mass_right_boom = lib_mass_struct.mass_hpa_tail_boom(
     length_tail_boom=outboard_boom_length - wing_x_quarter_chord,  # support up to the quarter-chord
@@ -1249,16 +1249,6 @@ if __name__ == "__main__":
     plt.show() if show_plots else plt.close(fig)
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
-    plot(hour, wing_CL)
-    ax.ticklabel_format(useOffset=False)
-    plt.xlabel("Hours after Solar Noon")
-    plt.ylabel("Lift Coefficient")
-    plt.title("Lift Coefficient over a Day (Aug. 31)")
-    plt.tight_layout()
-    plt.savefig("outputs/CL.png")
-    plt.close(fig)
-
-    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
     plot(hour, net_power)
     ax.ticklabel_format(useOffset=False)
     plt.xlabel("Hours after Solar Noon")
@@ -1276,16 +1266,6 @@ if __name__ == "__main__":
     plt.title("Battery Charge State over a Day")
     plt.tight_layout()
     plt.savefig("outputs/battery_charge.png")
-    plt.close(fig)
-
-    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
-    plot(hour, wing_Re)
-    ax.ticklabel_format(useOffset=False)
-    plt.xlabel("Hours after Solar Noon")
-    plt.ylabel("Wing Reynolds Number")
-    plt.title("Wing Reynolds Number over a Day (Aug. 31)")
-    plt.tight_layout()
-    plt.savefig("outputs/wing_Re.png")
     plt.close(fig)
 
     fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
@@ -1358,9 +1338,28 @@ if __name__ == "__main__":
     ]
     pie_values = [
         s(mass_wing),
-        s(mass_hstab * n_booms + mass_vstab * n_booms),
-        s(mass_fuse * n_booms),
-        s(mass_structural - (mass_wing + n_booms * (mass_hstab + mass_vstab + mass_fuse))),
+        s(
+            mass_center_hstab +
+            mass_right_hstab +
+            mass_left_hstab +
+            mass_center_vstab
+        ),
+        s(
+            mass_center_fuse +
+            mass_right_fuse +
+            mass_left_fuse
+        ),
+        s(mass_structural - (
+                mass_wing +
+                mass_center_hstab +
+                mass_right_hstab +
+                mass_left_hstab +
+                mass_center_vstab +
+                mass_center_fuse +
+                mass_right_fuse +
+                mass_left_fuse
+        )
+          ),
     ]
     colors = plt.cm.Set2(np.arange(5))
     colors = np.clip(
@@ -1458,18 +1457,18 @@ if __name__ == "__main__":
 
         f.write("Design Variable, Value (all in base SI units or derived units thereof),\n")
         geometry_vars = [
-            'wing.span()',
+            'wing_span',
             'wing_root_chord',
             'wing_taper_ratio',
-            'wing.xsecs[0].airfoil.name',
             '',
-            'hstab.span()',
-            'hstab.mean_geometric_chord()',
-            'hstab.xsecs[0].airfoil.name',
+            'center_hstab_span',
+            'center_hstab_chord',
             '',
-            'vstab.span()',
-            'vstab.mean_geometric_chord()',
-            'vstab.xsecs[0].airfoil.name',
+            'outboard_hstab_span',
+            'outboard_hstab_chord',
+            '',
+            'center_vstab_span',
+            'center_vstab_chord',
             '',
             'max_mass_total',
             '',
@@ -1478,7 +1477,8 @@ if __name__ == "__main__":
             'n_propellers',
             'propeller_diameter',
             '',
-            'boom_length'
+            'center_boom_length',
+            'outboard_boom_length'
         ]
         for var_name in geometry_vars:
             if var_name == '':
