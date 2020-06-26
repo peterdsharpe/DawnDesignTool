@@ -8,7 +8,7 @@ outputs/
 des_vars.json
 
 ### IntelliJ project files
-.idea
+.idea/
 *.iml
 out
 gen
