@@ -752,11 +752,6 @@ power_in = power_in_after_panels * MPPT_efficiency
 mass_solar_cells = rho_solar_cells * area_solar
 
 ### Battery calculations
-# battery_specific_energy_Wh_kg = opti.parameter()
-# opti.set_value(battery_specific_energy_Wh_kg, 550 if optimistic else 300)
-# Burton's solar model uses 350, and public specs from Amprius seem to indicate that's possible.
-# Jim Anderson believes 550 Wh/kg is possible.
-# Odysseus had cells that were 265 Wh/kg.
 
 battery_pack_cell_percentage = 0.89  # What percent of the battery pack consists of the module, by weight?
 # Accounts for module HW, BMS, pack installation, etc.
@@ -784,7 +779,7 @@ mass_wires = lib_prop_elec.mass_wires(
 # mass_wires = 0.868  # Taken from Avionics spreadsheet on 4/10/20
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
-mass_MPPT = 5.7  # Model taken from Avionics spreadsheet on 4/10/20
+mass_MPPT = 3*lib_solar.mass_MPPT(5000)  # Model taken from Avionics spreadsheet on 4/10/20
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
 mass_power_systems_misc = 0.314  # Taken from Avionics spreadsheet on 4/10/20, includes HV-LV convs. and fault isolation mechs
@@ -937,8 +932,8 @@ mass_structural = (
 mass_structural *= structural_mass_margin_multiplier
 
 ### Avionics
-# mass_avionics = 3.7 / 3.8 * 25  # back-calculated from Kevin Uleck's figures in MIT 16.82 presentation
 mass_avionics = 12.153  # Pulled from Avionics team spreadsheet on 5/13
+# Back-calculated from Kevin Uleck's figures in MIT 16.82 presentation: 24.34 kg = 3.7 / 3.8 * 25
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
 opti.subject_to([
