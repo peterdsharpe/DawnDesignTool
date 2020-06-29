@@ -1,3 +1,5 @@
+# TODO un-hard-code the MPPT mass power input
+
 # Imports
 import aerosandbox as asb
 import aerosandbox.library.aerodynamics as aero
