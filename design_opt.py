@@ -177,7 +177,7 @@ hour = time / 3600
 # opti.set_initial(log_mass_total, cas.log(600))
 # mass_total = cas.exp(log_mass_total)
 
-mass_total = des_var(name="mass_total", initial_guess=600, scale_factor=600)
+mass_total = ops_var(initial_guess=600, scale_factor=600)
 
 max_mass_total = mass_total
 
