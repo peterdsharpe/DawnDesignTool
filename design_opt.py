@@ -73,10 +73,12 @@ def ops_var(  # operational variable
 
 
 ##### Operating Parameters
-latitude = 49  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
-day_of_year = 244  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
-min_altitude = 19812  # meters. 19812 m = 65000 ft.
-# min_altitude = 18288  # meters. 18288 m = 60000 ft.
+latitude = opti.parameter()  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
+opti.set_value(latitude, 49)
+day_of_year = opti.parameter()  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
+opti.set_value(day_of_year, 244)
+min_altitude = opti.parameter() # meters. 19812 m = 65000 ft, 18288 m = 60000 ft.
+opti.set_value(min_altitude, 19812)
 required_headway_per_day = 10e3  # meters
 n_booms = 3
 days_to_simulate = opti.parameter()
