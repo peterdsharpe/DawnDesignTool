@@ -35,12 +35,9 @@ file_to_save_to = "des_vars.json"
 # file_to_load_from = "des_vars.json"
 # file_to_save_to = None
 
-# minimize = "wing.span() / 50"  # any "eval-able" expression
+minimize = "wing.span() / 50"  # any "eval-able" expression
 # minimize = "max_mass_total / 300" # any "eval-able" expression
-minimize = "wing.span() / 50 * 0.9 + max_mass_total / 300 * 0.1"
-
-
-# minimize = "cas.sum1(airspeed/20)" # any "eval-able" expression
+# minimize = "wing.span() / 50 * 0.9 + max_mass_total / 300 * 0.1"
 
 def des_var(  # design variable
         name,
@@ -172,10 +169,6 @@ hour = time / 3600
 
 # region Design Optimization Variables
 ##### Initialize design optimization variables (all units in base SI or derived units)
-
-# log_mass_total = opti.variable()
-# opti.set_initial(log_mass_total, cas.log(600))
-# mass_total = cas.exp(log_mass_total)
 
 mass_total = ops_var(initial_guess=600, scale_factor=600)
 
@@ -609,7 +602,7 @@ opti.subject_to([
 ])
 
 n_propellers = opti.parameter()
-opti.set_value(n_propellers, 6)
+opti.set_value(n_propellers, 4)
 
 propeller_tip_mach = 0.36  # From Dongjoon, 4/30/20
 propeller_rads_per_sec = propeller_tip_mach * atmo.get_speed_of_sound_from_temperature(
