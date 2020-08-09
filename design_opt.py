@@ -89,7 +89,7 @@ structural_load_factor = 3  # over static
 show_plots = True
 mass_payload = opti.parameter()
 opti.set_value(mass_payload, 30)
-wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
+wind_speed_func = lambda alt: 0 * lib_winds.wind_speed_conus_summer_99(alt, latitude)
 battery_specific_energy_Wh_kg = opti.parameter()
 opti.set_value(battery_specific_energy_Wh_kg, 450)
 

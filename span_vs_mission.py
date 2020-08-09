@@ -1,12 +1,13 @@
 from design_opt import *
 from aerosandbox.tools.carpet_plot_utils import time_limit
 
-latitudes = np.linspace(-80, 80, 50)
-day_of_years = np.linspace(0, 365, 60)
-
-payloads = np.empty((
-    len(latitudes), len(day_of_years)
+latitudes = np.linspace(-80, 80, 10)
+day_of_years = np.linspace(0, 365, 10)
+spans = np.empty((
+    len(latitudes),
+    len(day_of_years)
 ))
+
 
 for i, lat_val in enumerate(latitudes):
     for j, day_val in enumerate(day_of_years):
@@ -22,14 +23,14 @@ for i, lat_val in enumerate(latitudes):
                 sol = opti.solve()
             opti.set_initial(opti.value_variables())
             opti.set_initial(opti.lam_g, sol.value(opti.lam_g))
-            payload_val = sol.value(mass_payload)
+            span_val = sol.value(wing_span)
         except Exception as e:
             print(e)
-            payload_val = np.NaN
+            span_val = np.NaN
         finally:
-            payloads[i, j] = payload_val
+            spans[i, j] = span_val
 
-payloads = np.array(payloads)
+spans = np.array(spans)
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -39,7 +40,7 @@ fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=200)
 plt.contourf(
     day_of_years,
     latitudes,
-    payloads
+    spans
 )
 plt.xlabel(r"Day of Year")
 plt.ylabel(r"Latitude")
@@ -49,6 +50,6 @@ plt.colorbar()
 # plt.savefig("C:/Users/User/Downloads/temp.svg")
 plt.show()
 
-np.save("lats_no_traj_opt", latitudes)
-np.save("days_no_traj_opt", day_of_years)
-np.save("pays_no_traj_opt", payloads)
+np.save("cache/lats", latitudes)
+np.save("cache/days", day_of_years)
+np.save("cache/spans", spans)
