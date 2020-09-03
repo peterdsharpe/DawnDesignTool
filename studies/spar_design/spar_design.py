@@ -1,7 +1,8 @@
 from aerosandbox.structures.beams import TubeBeam1
 import casadi as cas
 
-opti = cas.Opti()
+opti = cas.Opti() # initializes an optimization/design environment
+
 beam = TubeBeam1(
     opti=opti,
     length=49 / 2,
@@ -9,15 +10,15 @@ beam = TubeBeam1(
     diameter_guess=100,
     thickness = 0.70e-3,
     bending=True,
-    torsion=False
+    torsion=False,
 )
 lift_force = 9.81 * 385
 load_location = opti.variable()
-opti.set_initial(load_location, beam.length * 0.50)
-opti.subject_to([
-    load_location == beam.length * 0.50,
-])
-beam.add_point_load(load_location, -lift_force / 3)
+# opti.set_initial(load_location, beam.length * 0.50)
+# opti.subject_to([
+#     load_location == beam.length * 0.50,
+# ])
+# beam.add_point_load(load_location, -lift_force / 3)
 beam.add_elliptical_load(force=lift_force / 2)
 beam.setup()
 
@@ -27,7 +28,7 @@ opti.subject_to([
     # beam.u[-1] > -2  # tip deflection. Source: http://web.mit.edu/drela/Public/web/hpa/hpa_structure.pdf
     beam.du * 180 / cas.pi < 10, # dihedral constraint
     beam.du * 180 / cas.pi > -10, # anhedral constraint
-    cas.diff(beam.nominal_diameter) < 0, # manufacturability
+    cas.diff(beam.nominal_diameter) < -0.005 * cas.diff(beam.x), # manufacturability
 ])
 
 # # Zero-curvature constraint (restrict to conical tube spars only)
