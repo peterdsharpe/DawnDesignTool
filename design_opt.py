@@ -78,7 +78,7 @@ opti.set_value(latitude, 49)
 day_of_year = opti.parameter()  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 opti.set_value(day_of_year, 244)
 min_altitude = opti.parameter() # meters. 19812 m = 65000 ft, 18288 m = 60000 ft.
-opti.set_value(min_altitude, 19812)
+opti.set_value(min_altitude, 18288)
 required_headway_per_day = 10e3  # meters
 n_booms = 3
 days_to_simulate = opti.parameter()
@@ -86,12 +86,17 @@ opti.set_value(days_to_simulate, 1)
 enforce_periodicity = True  # Tip: turn this off when looking at gas models or models w/o trajectory opt. enabled.
 allow_trajectory_optimization = True
 structural_load_factor = 3  # over static
-show_plots = True
+make_plots = False
 mass_payload = opti.parameter()
 opti.set_value(mass_payload, 30)
 wind_speed_func = lambda alt: 0 * lib_winds.wind_speed_conus_summer_99(alt, latitude)
 battery_specific_energy_Wh_kg = opti.parameter()
 opti.set_value(battery_specific_energy_Wh_kg, 450)
+battery_pack_cell_percentage = 0.89  # What percent of the battery pack consists of the module, by weight?
+# Accounts for module HW, BMS, pack installation, etc.
+# Ed Lovelace (in his presentation) gives 70% as a state-of-the-art fraction.
+# Used 75% in the 16.82 CDR.
+# According to Kevin Uleck, Odysseus realized an 89% packing factor here.
 
 ##### Margins
 structural_mass_margin_multiplier = opti.parameter()
@@ -177,6 +182,11 @@ mass_total = ops_var(initial_guess=600, scale_factor=600)
 max_mass_total = mass_total
 
 ### Initialize geometric variables
+
+# overall layout
+boom_location = 0.80 # as a fraction of the half-span
+break_location = 0.67 # as a fraction of the half-span
+
 # wing
 wing_span = des_var(name="wing_span", initial_guess=40, scale_factor=60)
 opti.subject_to([wing_span > 1])
@@ -186,7 +196,7 @@ opti.subject_to([wing_root_chord > 0.1])
 
 wing_x_quarter_chord = des_var(name="wing_x_quarter_chord", initial_guess=0, scale_factor=0.01)
 
-wing_y_taper_break = 0.57 * wing_span / 2
+wing_y_taper_break = break_location * wing_span / 2
 
 wing_taper_ratio = 0.5
 
@@ -200,19 +210,21 @@ opti.subject_to([
 center_hstab_chord = des_var(name="center_hstab_chord", initial_guess=3, scale_factor=2)
 opti.subject_to([center_hstab_chord > 0.1])
 
-center_hstab_twist_angle = ops_var(initial_guess=-7, scale_factor=2, n_variables=n_timesteps)
+center_hstab_twist_angle = ops_var(initial_guess=-3, scale_factor=2, n_variables=n_timesteps)
 
 # center hstab
 outboard_hstab_span = des_var(name="outboard_hstab_span", initial_guess=12, scale_factor=15)
 opti.subject_to([
-    outboard_hstab_span > 0.1,
-    outboard_hstab_span < wing_span / n_booms / 2
+    outboard_hstab_span > 2, # TODO review this, driven by Trevor's ASWing findings on turn radius sizing, 8/16/20
+    outboard_hstab_span < wing_span / n_booms / 2,
 ])
 
 outboard_hstab_chord = des_var(name="outboard_hstab_chord", initial_guess=3, scale_factor=2)
-opti.subject_to([outboard_hstab_chord > 0.1])
+opti.subject_to([
+    outboard_hstab_chord > 0.8, # TODO review this, driven by Trevor's ASWing findings on turn radius sizing, 8/16/20
+])
 
-outboard_hstab_twist_angle = ops_var(initial_guess=-7, scale_factor=2, n_variables=n_timesteps)
+outboard_hstab_twist_angle = ops_var(initial_guess=-3, scale_factor=2, n_variables=n_timesteps)
 
 # center_vstab
 center_vstab_span = des_var(name="center_vstab_span", initial_guess=7, scale_factor=8)
@@ -222,21 +234,22 @@ center_vstab_chord = des_var(name="center_vstab_chord", initial_guess=2.5, scale
 opti.subject_to([center_vstab_chord > 0.1])
 
 # center_fuselage
-center_boom_length = des_var(name="boom_length", initial_guess=23, scale_factor=2)  # TODO add scale factor
+center_boom_length = des_var(name="center_boom_length", initial_guess=10, scale_factor=2)  # TODO add scale factor
 opti.subject_to([
     center_boom_length - center_vstab_chord - center_hstab_chord > wing_x_quarter_chord + wing_root_chord * 3 / 4
 ])
 
 # outboard_fuselage
-outboard_boom_length = des_var(name="boom_length", initial_guess=23, scale_factor=2)  # TODO add scale factor
+outboard_boom_length = des_var(name="outboard_boom_length", initial_guess=10, scale_factor=2)  # TODO add scale factor
 opti.subject_to([
-    outboard_boom_length - center_vstab_chord - center_hstab_chord > wing_x_quarter_chord + wing_root_chord * 3 / 4
+    outboard_boom_length > wing_root_chord * 3 / 4,
+    # outboard_boom_length < 3.5, # TODO review this, driven by Trevor's ASWing findings on turn radius sizing, 8/16/20
 ])
 
 nose_length = 1.80  # Calculated on 4/15/20 with Trevor and Olek
 # https://docs.google.com/spreadsheets/d/1BnTweK-B4Hmmk9piJn8os-LNPiJH-3rJJemYkrKjARA/edit#gid=0
 
-fuse_diameter = 0.6
+fuse_diameter = 0.24 * 2 # Synced to Jonathan's fuselage CAD as of 8/7/20
 boom_diameter = 0.2
 
 import dill as pickle
@@ -332,7 +345,7 @@ center_hstab = asb.Wing(
 right_hstab = asb.Wing(
     name="Horizontal Stabilizer",
     x_le=outboard_boom_length - outboard_hstab_chord * 0.75,  # Coordinates of the wing's leading edge
-    y_le=wing_y_taper_break,  # Coordinates of the wing's leading edge
+    y_le=boom_location * wing_span / 2,  # Coordinates of the wing's leading edge
     z_le=0.1,  # Coordinates of the wing's leading edge
     symmetric=True,
     xsecs=[  # The wing's cross ("X") sections
@@ -399,12 +412,11 @@ center_fuse = utils.fuselage(
 
 right_fuse = utils.fuselage(
     boom_length=outboard_boom_length,
-    nose_length=nose_length,
+    nose_length=0.5, # Review this for fit
     fuse_diameter=boom_diameter,
     boom_diameter=boom_diameter,
 )
 
-boom_location = 0.57  # as a fraction of the half-span
 right_fuse.xyz_le += cas.vertcat(0, boom_location * wing_span / 2, 0)
 
 left_fuse = copy.deepcopy(right_fuse)
@@ -505,6 +517,13 @@ lift_center_hstab, drag_center_hstab, moment_center_hstab = wing_aero(center_hst
 lift_right_hstab, drag_right_hstab, moment_right_hstab = wing_aero(right_hstab, outboard_hstab_twist_angle)
 lift_left_hstab, drag_left_hstab, moment_left_hstab = wing_aero(left_hstab, outboard_hstab_twist_angle)
 
+# Increase the wing drag due to tripped flow (8/17/20)
+wing_drag_multiplier = opti.parameter()
+opti.set_value(wing_drag_multiplier, 1.12)
+drag_wing *= wing_drag_multiplier
+# drag_right_hstab *= 1.2
+# drag_left_hstab *= 1.2
+# drag_center_hstab *= 1.2
 
 # center_vstab
 def vstab_aero(vstab: asb.Wing):
@@ -517,6 +536,15 @@ def vstab_aero(vstab: asb.Wing):
 
 
 drag_center_vstab = vstab_aero(center_vstab)
+
+# strut drag
+strut_chord = 0.25
+strut_span = 3.5
+strut_Re = rho / mu * airspeed * strut_chord
+strut_airfoil = flat_plate
+strut_Cd_profile = flat_plate.CDp_function(0, strut_Re, mach , 0)
+drag_strut_profile = strut_Cd_profile * q * strut_chord * strut_span
+drag_strut = drag_strut_profile # per strut
 
 # Force totals
 lift_force = (
@@ -536,7 +564,8 @@ drag_force = (
         drag_center_vstab +
         drag_center_fuse +
         drag_right_fuse +
-        drag_left_fuse
+        drag_left_fuse +
+        drag_strut * 2 # 2 struts
 )
 moment = (
         -wing.approximate_center_of_pressure()[0] * lift_wing + moment_wing +
@@ -590,6 +619,7 @@ opti.subject_to([
     Vv > 0.02,
     # Vv < 0.05,
     # Vv == 0.035,
+    center_vstab.aspect_ratio() == 2.5 # TODO review this
 ])
 
 # endregion
@@ -604,7 +634,7 @@ opti.subject_to([
 ])
 
 n_propellers = opti.parameter()
-opti.set_value(n_propellers, 4)
+opti.set_value(n_propellers, 2)
 
 propeller_tip_mach = 0.36  # From Dongjoon, 4/30/20
 propeller_rads_per_sec = propeller_tip_mach * atmo.get_speed_of_sound_from_temperature(
@@ -635,7 +665,7 @@ opti.subject_to([
 
 propeller_max_torque = (power_out_max / n_propellers) / propeller_rads_per_sec
 
-battery_voltage = 225  # From Olek Peraire >4/2, propulsion slack
+battery_voltage = 125  # From Olek Peraire >4/2, propulsion slack
 # battery_voltage = opti.variable()  # From Olek Peraire 4/2, propulsion slack
 # opti.set_initial(battery_voltage, 240)
 # opti.subject_to([
@@ -750,12 +780,6 @@ mass_solar_cells = rho_solar_cells * area_solar
 
 ### Battery calculations
 
-battery_pack_cell_percentage = 0.89  # What percent of the battery pack consists of the module, by weight?
-# Accounts for module HW, BMS, pack installation, etc.
-# Ed Lovelace (in his presentation) gives 70% as a state-of-the-art fraction.
-# Used 75% in the 16.82 CDR.
-# According to Kevin Uleck, Odysseus realized an 89% packing factor here.
-
 battery_charge_efficiency = 0.985
 battery_discharge_efficiency = 0.985
 # Taken from Bjarni, 4/17/20 in #powermanagment Slack
@@ -811,11 +835,18 @@ mass_wing_secondary = lib_mass_struct.mass_hpa_wing(
     chord=wing.mean_geometric_chord(),
     vehicle_mass=max_mass_total,
     n_ribs=n_ribs_wing,
-    n_wing_sections=3,
+    n_wing_sections=5,
     ultimate_load_factor=structural_load_factor,
     t_over_c=0.14,
     include_spar=False,
 ) * 1.3  # TODO review this number! Mark says 1.5! 4/30/2020
+
+# ### Trevor's Buildup
+# opti.subject_to([n_ribs_wing >= wing_span / 0.5])
+# mass_ribs = 0.0605 * wing_root_chord ** 2 * n_ribs_wing
+# mass_skin = (0.0375 + 0.002 + 0.007 + 0.027) * (wing.area() * 2 / (1 * 0.5)) # excluding solar panels
+# mass_wing_secondary = mass_ribs + mass_skin
+
 mass_wing = mass_wing_primary + mass_wing_secondary
 
 # mass_wing = lib_mass_struct.mass_hpa_wing(
@@ -1067,6 +1098,8 @@ opti.subject_to([
     center_hstab_chord == outboard_hstab_chord,
     # center_hstab_twist_angle == outboard_hstab_twist_angle,
     # center_boom_length == outboard_boom_length,
+    center_hstab_twist_angle <= 0, # essentially enforces downforce, prevents hstab from lifting and exploiting config.
+    outboard_hstab_twist_angle <= 0, # essentially enforces downforce, prevents hstab from lifting and exploiting config.
 ])
 
 ##### Useful metrics
@@ -1220,220 +1253,220 @@ if __name__ == "__main__":
                  label="Night")
         plt.legend()
 
+    if make_plots:
+        fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
+        plot(hour, y / 1000)
+        ax.ticklabel_format(useOffset=False)
+        plt.xlabel("Hours after Solar Noon")
+        plt.ylabel("Altitude [km]")
+        plt.title("Altitude over a Day (Aug. 31)")
+        plt.tight_layout()
+        plt.savefig("outputs/altitude.png")
+        plt.show()
 
-    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
-    plot(hour, y / 1000)
-    ax.ticklabel_format(useOffset=False)
-    plt.xlabel("Hours after Solar Noon")
-    plt.ylabel("Altitude [km]")
-    plt.title("Altitude over a Day (Aug. 31)")
-    plt.tight_layout()
-    plt.savefig("outputs/altitude.png")
-    plt.show() if show_plots else plt.close(fig)
+        fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
+        plot(hour, airspeed)
+        ax.ticklabel_format(useOffset=False)
+        plt.xlabel("Hours after Solar Noon")
+        plt.ylabel("True Airspeed [m/s]")
+        plt.title("True Airspeed over a Day (Aug. 31)")
+        plt.tight_layout()
+        plt.savefig("outputs/airspeed.png")
+        plt.show()
 
-    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
-    plot(hour, airspeed)
-    ax.ticklabel_format(useOffset=False)
-    plt.xlabel("Hours after Solar Noon")
-    plt.ylabel("True Airspeed [m/s]")
-    plt.title("True Airspeed over a Day (Aug. 31)")
-    plt.tight_layout()
-    plt.savefig("outputs/airspeed.png")
-    plt.show() if show_plots else plt.close(fig)
+        fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
+        plot(hour, net_power)
+        ax.ticklabel_format(useOffset=False)
+        plt.xlabel("Hours after Solar Noon")
+        plt.ylabel("Net Power [W] (positive is charging)")
+        plt.title("Net Power over a Day (Aug. 31)")
+        plt.tight_layout()
+        plt.savefig("outputs/net_power.png")
+        plt.show()
 
-    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
-    plot(hour, net_power)
-    ax.ticklabel_format(useOffset=False)
-    plt.xlabel("Hours after Solar Noon")
-    plt.ylabel("Net Power [W] (positive is charging)")
-    plt.title("Net Power over a Day (Aug. 31)")
-    plt.tight_layout()
-    plt.savefig("outputs/net_power.png")
-    plt.show() if show_plots else plt.close(fig)
+        fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
+        plot(hour, 100 * (battery_stored_energy_nondim + (1 - allowable_battery_depth_of_discharge)))
+        ax.ticklabel_format(useOffset=False)
+        plt.xlabel("Hours after Solar Noon")
+        plt.ylabel("State of Charge [%]")
+        plt.title("Battery Charge State over a Day")
+        plt.tight_layout()
+        plt.savefig("outputs/battery_charge.png")
+        plt.close(fig)
 
-    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
-    plot(hour, 100 * (battery_stored_energy_nondim + (1 - allowable_battery_depth_of_discharge)))
-    ax.ticklabel_format(useOffset=False)
-    plt.xlabel("Hours after Solar Noon")
-    plt.ylabel("State of Charge [%]")
-    plt.title("Battery Charge State over a Day")
-    plt.tight_layout()
-    plt.savefig("outputs/battery_charge.png")
-    plt.close(fig)
+        fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
+        plot(x / 1000, y / 1000)
+        ax.ticklabel_format(useOffset=False)
+        plt.xlabel("Downrange Distance [km]")
+        plt.ylabel("Altitude [km]")
+        plt.title("Optimal Trajectory (Aug. 31)")
+        plt.tight_layout()
+        plt.savefig("outputs/trajectory.png")
+        plt.close(fig)
 
-    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
-    plot(x / 1000, y / 1000)
-    ax.ticklabel_format(useOffset=False)
-    plt.xlabel("Downrange Distance [km]")
-    plt.ylabel("Altitude [km]")
-    plt.title("Optimal Trajectory (Aug. 31)")
-    plt.tight_layout()
-    plt.savefig("outputs/trajectory.png")
-    plt.close(fig)
+        fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
+        plot(hour, power_in)
+        ax.ticklabel_format(useOffset=False)
+        plt.xlabel("Hours after Solar Noon")
+        plt.ylabel("Power Generated [W]")
+        plt.title("Power Generated over a Day (Aug. 31)")
+        plt.tight_layout()
+        plt.savefig("outputs/power_in.png")
+        plt.close(fig)
 
-    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
-    plot(hour, power_in)
-    ax.ticklabel_format(useOffset=False)
-    plt.xlabel("Hours after Solar Noon")
-    plt.ylabel("Power Generated [W]")
-    plt.title("Power Generated over a Day (Aug. 31)")
-    plt.tight_layout()
-    plt.savefig("outputs/power_in.png")
-    plt.close(fig)
+        fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
+        plot(hour, power_out)
+        ax.ticklabel_format(useOffset=False)
+        plt.xlabel("Hours after Solar Noon")
+        plt.ylabel("Power Consumed [W]")
+        plt.title("Power Consumed over a Day (Aug. 31)")
+        plt.tight_layout()
+        plt.savefig("outputs/power_out.png")
+        plt.close(fig)
 
-    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
-    plot(hour, power_out)
-    ax.ticklabel_format(useOffset=False)
-    plt.xlabel("Hours after Solar Noon")
-    plt.ylabel("Power Consumed [W]")
-    plt.title("Power Consumed over a Day (Aug. 31)")
-    plt.tight_layout()
-    plt.savefig("outputs/power_out.png")
-    plt.close(fig)
+        # Draw mass breakdown
+        fig = plt.figure(figsize=(10, 8), dpi=plot_dpi)
+        plt.suptitle("Mass Budget")
 
-    # Draw mass breakdown
-    fig = plt.figure(figsize=(10, 8), dpi=plot_dpi)
-    plt.suptitle("Mass Budget")
+        ax_main = fig.add_axes([0.2, 0.3, 0.6, 0.6], aspect=1)
+        pie_labels = [
+            "Payload",
+            "Structural",
+            "Propulsion",
+            "Power Systems",
+            "Avionics"
+        ]
+        pie_values = [
+            s(mass_payload),
+            s(mass_structural),
+            s(mass_propulsion),
+            s(cas.mmax(mass_power_systems)),
+            s(mass_avionics),
+        ]
+        colors = plt.cm.Set2(np.arange(5))
+        pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (x * s(max_mass_total) / 100, x)
+        ax_main.pie(
+            pie_values,
+            labels=pie_labels,
+            autopct=pie_format,
+            pctdistance=0.7,
+            colors=colors,
+            startangle=120
+        )
+        plt.title("Overall Mass")
 
-    ax_main = fig.add_axes([0.2, 0.3, 0.6, 0.6], aspect=1)
-    pie_labels = [
-        "Payload",
-        "Structural",
-        "Propulsion",
-        "Power Systems",
-        "Avionics"
-    ]
-    pie_values = [
-        s(mass_payload),
-        s(mass_structural),
-        s(mass_propulsion),
-        s(cas.mmax(mass_power_systems)),
-        s(mass_avionics),
-    ]
-    colors = plt.cm.Set2(np.arange(5))
-    pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (x * s(max_mass_total) / 100, x)
-    ax_main.pie(
-        pie_values,
-        labels=pie_labels,
-        autopct=pie_format,
-        pctdistance=0.7,
-        colors=colors,
-        startangle=120
-    )
-    plt.title("Overall Mass")
-
-    ax_structural = fig.add_axes([0.05, 0.05, 0.3, 0.3], aspect=1)
-    pie_labels = [
-        "Wing",
-        "Stabilizers",
-        "Fuses & Booms",
-        "Margin"
-    ]
-    pie_values = [
-        s(mass_wing),
-        s(
-            mass_center_hstab +
-            mass_right_hstab +
-            mass_left_hstab +
-            mass_center_vstab
-        ),
-        s(
-            mass_center_fuse +
-            mass_right_fuse +
-            mass_left_fuse
-        ),
-        s(mass_structural - (
-                mass_wing +
+        ax_structural = fig.add_axes([0.05, 0.05, 0.3, 0.3], aspect=1)
+        pie_labels = [
+            "Wing",
+            "Stabilizers",
+            "Fuses & Booms",
+            "Margin"
+        ]
+        pie_values = [
+            s(mass_wing),
+            s(
                 mass_center_hstab +
                 mass_right_hstab +
                 mass_left_hstab +
-                mass_center_vstab +
+                mass_center_vstab
+            ),
+            s(
                 mass_center_fuse +
                 mass_right_fuse +
                 mass_left_fuse
+            ),
+            s(mass_structural - (
+                    mass_wing +
+                    mass_center_hstab +
+                    mass_right_hstab +
+                    mass_left_hstab +
+                    mass_center_vstab +
+                    mass_center_fuse +
+                    mass_right_fuse +
+                    mass_left_fuse
+            )
+              ),
+        ]
+        colors = plt.cm.Set2(np.arange(5))
+        colors = np.clip(
+            colors[1, :3] + np.expand_dims(
+                np.linspace(-0.1, 0.2, len(pie_labels)),
+                1),
+            0, 1
         )
-          ),
-    ]
-    colors = plt.cm.Set2(np.arange(5))
-    colors = np.clip(
-        colors[1, :3] + np.expand_dims(
-            np.linspace(-0.1, 0.2, len(pie_labels)),
-            1),
-        0, 1
-    )
-    pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (x * s(mass_structural) / 100, x * s(mass_structural / max_mass_total))
-    ax_structural.pie(
-        pie_values,
-        labels=pie_labels,
-        autopct=pie_format,
-        pctdistance=0.7,
-        colors=colors,
-        startangle=60,
-    )
-    plt.title("Structural Mass*")
+        pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (x * s(mass_structural) / 100, x * s(mass_structural / max_mass_total))
+        ax_structural.pie(
+            pie_values,
+            labels=pie_labels,
+            autopct=pie_format,
+            pctdistance=0.7,
+            colors=colors,
+            startangle=60,
+        )
+        plt.title("Structural Mass*")
 
-    ax_power_systems = fig.add_axes([0.65, 0.05, 0.3, 0.3], aspect=1)
-    pie_labels = [
-        "Batt. Pack (Cells)",
-        "Batt. Pack (Non-cell)",
-        "Solar Cells",
-        "Misc. & Wires"
-    ]
-    pie_values = [
-        s(mass_battery_cells),
-        s(mass_battery_pack - mass_battery_cells),
-        s(mass_solar_cells),
-        s(mass_power_systems - mass_battery_pack - mass_solar_cells),
-    ]
-    colors = plt.cm.Set2(np.arange(5))
-    colors = np.clip(
-        colors[3, :3] + np.expand_dims(
-            np.linspace(-0.1, 0.2, len(pie_labels)),
-            1),
-        0, 1
-    )[::-1]
-    pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (
-        x * s(mass_power_systems) / 100, x * s(mass_power_systems / max_mass_total))
-    ax_power_systems.pie(
-        pie_values,
-        labels=pie_labels,
-        autopct=pie_format,
-        pctdistance=0.7,
-        colors=colors,
-        startangle=15,
-    )
-    plt.title("Power Systems Mass*")
+        ax_power_systems = fig.add_axes([0.65, 0.05, 0.3, 0.3], aspect=1)
+        pie_labels = [
+            "Batt. Pack (Cells)",
+            "Batt. Pack (Non-cell)",
+            "Solar Cells",
+            "Misc. & Wires"
+        ]
+        pie_values = [
+            s(mass_battery_cells),
+            s(mass_battery_pack - mass_battery_cells),
+            s(mass_solar_cells),
+            s(mass_power_systems - mass_battery_pack - mass_solar_cells),
+        ]
+        colors = plt.cm.Set2(np.arange(5))
+        colors = np.clip(
+            colors[3, :3] + np.expand_dims(
+                np.linspace(-0.1, 0.2, len(pie_labels)),
+                1),
+            0, 1
+        )[::-1]
+        pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (
+            x * s(mass_power_systems) / 100, x * s(mass_power_systems / max_mass_total))
+        ax_power_systems.pie(
+            pie_values,
+            labels=pie_labels,
+            autopct=pie_format,
+            pctdistance=0.7,
+            colors=colors,
+            startangle=15,
+        )
+        plt.title("Power Systems Mass*")
 
-    plt.annotate(
-        s="* percentages referenced to total aircraft mass",
-        xy=(0.01, 0.01),
-        # xytext=(0.03, 0.03),
-        xycoords="figure fraction",
-        # arrowprops={
-        #     "color"     : "k",
-        #     "width"     : 0.25,
-        #     "headwidth" : 4,
-        #     "headlength": 6,
-        # }
-    )
-    plt.annotate(
-        s="""
-        Total mass: %.1f kg
-        Wing span: %.2f m
-        """ % (s(max_mass_total), s(wing.span())),
-        xy=(0.03, 0.70),
-        # xytext=(0.03, 0.03),
-        xycoords="figure fraction",
-        # arrowprops={
-        #     "color"     : "k",
-        #     "width"     : 0.25,
-        #     "headwidth" : 4,
-        #     "headlength": 6,
-        # }
-    )
+        plt.annotate(
+            s="* percentages referenced to total aircraft mass",
+            xy=(0.01, 0.01),
+            # xytext=(0.03, 0.03),
+            xycoords="figure fraction",
+            # arrowprops={
+            #     "color"     : "k",
+            #     "width"     : 0.25,
+            #     "headwidth" : 4,
+            #     "headlength": 6,
+            # }
+        )
+        plt.annotate(
+            s="""
+            Total mass: %.1f kg
+            Wing span: %.2f m
+            """ % (s(max_mass_total), s(wing.span())),
+            xy=(0.03, 0.70),
+            # xytext=(0.03, 0.03),
+            xycoords="figure fraction",
+            # arrowprops={
+            #     "color"     : "k",
+            #     "width"     : 0.25,
+            #     "headwidth" : 4,
+            #     "headlength": 6,
+            # }
+        )
 
-    plt.savefig("outputs/mass_pie_chart.png")
-    plt.show() if show_plots else plt.close(fig)
+        plt.savefig("outputs/mass_pie_chart.png")
+        plt.show() if make_plots else plt.close(fig)
 
     # Write a mass budget
     with open("outputs/mass_budget.csv", "w+") as f:
