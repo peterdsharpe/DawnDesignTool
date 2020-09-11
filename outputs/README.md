@@ -1,0 +1,1 @@
+This folder contains outputs from `design_opt.py`, such as plots and mass/power budgets.
