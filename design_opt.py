@@ -1222,7 +1222,7 @@ if __name__ == "__main__":
 
 
     def qp3(x_name, y_name, z_name):
-        # QuickPlot two variables.
+        # QuickPlot three variables.
         fig = px.scatter_3d(
             x=sol.value(eval(x_name)),
             y=sol.value(eval(y_name)),
