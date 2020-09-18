@@ -252,7 +252,7 @@ nose_length = 1.80  # Calculated on 4/15/20 with Trevor and Olek
 fuse_diameter = 0.24 * 2 # Synced to Jonathan's fuselage CAD as of 8/7/20
 boom_diameter = 0.2
 
-import dill as pickle
+import pickle
 
 import pathlib
 path = str(
