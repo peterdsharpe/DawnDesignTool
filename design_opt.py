@@ -264,8 +264,8 @@ try:
         wing_airfoil = pickle.load(f)
     with open(path+"/cache/tail_airfoil.cache", "rb") as f:
         tail_airfoil = pickle.load(f)
-except FileNotFoundError:
-    wing_airfoil = Airfoil(name="HALE_03", coordinates=r"C:\Projects\GitHub\Airfoils\HALE_03.dat")
+except (FileNotFoundError, TypeError):
+    wing_airfoil = Airfoil(name="HALE_03", coordinates=r"studies/airfoil_optimizer/HALE_03.dat")
     wing_airfoil.populate_sectional_functions_from_xfoil_fits(parallel=False)
     with open(path+"/cache/wing_airfoil.cache", "wb+") as f:
         pickle.dump(wing_airfoil, f)
