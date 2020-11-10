@@ -12,8 +12,8 @@ sns.set(font_scale=1)
 
 if __name__ == "__main__":
 
-    param_range = np.linspace(300, 600, 30)
-    outputs = []
+    param_range = np.linspace(600, 250, 60)
+    raw_outputs = []
 
     for param in param_range:
         # opti.set_value(mass_payload, param)
@@ -23,17 +23,12 @@ if __name__ == "__main__":
         try:
             sol = opti.solve()
             opti.set_initial(sol.value_variables())
-            outputs.append(sol.value(wing_span))
+            opti.set_initial(opti.lam_g, sol.value(opti.lam_g))
+            raw_outputs.append(sol.value(wing_span))
         except:
-            outputs.append(None)
+            raw_outputs.append(None)
 
-    outputs = np.array(outputs)
-
-    px.line(
-        x=param_range,
-        y=outputs,
-
-    ).show()
+    outputs = np.array(raw_outputs)
 
 import matplotlib.pyplot as plt
 import matplotlib.style as style
@@ -43,14 +38,16 @@ import dash
 import seaborn as sns
 sns.set(font_scale=1)
 fig, ax = plt.subplots(1, 1, figsize=(6.4,4.8), dpi=200)
-plt.plot(param_range, outputs, '.-')
+goodpoints = np.array([x is not None for x in raw_outputs])
+plt.plot(param_range[goodpoints], outputs[goodpoints], '.-')
 # plt.axis("equal")
-plt.ylim(25, 50)
+plt.xlim(325,625)
+plt.ylim(25, 75)
 plt.xlabel("Battery Specific Energy [Wh/kg]")
 plt.ylabel("Wingspan [m]")
-plt.title("Battery Specific Energy Trade")
+plt.title("Influence of Battery Specific Energy on Wingspan, Baseline Mission")
 plt.tight_layout()
 # plt.legend()
 # plt.savefig("C:/Users/User/Downloads/solarsuperlinearityspan.svg")
-# plt.savefig("C:/Users/User/Downloads/solarsuperlinearityspan.png")
+plt.savefig("C:/Users/User/Downloads/solarsuperlinearityspan.png")
 plt.show()

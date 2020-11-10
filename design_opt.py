@@ -252,7 +252,8 @@ nose_length = 1.80  # Calculated on 4/15/20 with Trevor and Olek
 fuse_diameter = 0.24 * 2 # Synced to Jonathan's fuselage CAD as of 8/7/20
 boom_diameter = 0.2
 
-import pickle
+# import pickle
+import dill as pickle
 
 import pathlib
 path = str(
@@ -1121,12 +1122,12 @@ things_to_slightly_minimize = (
 # Dewiggle
 penalty = 0
 penalty_denominator = n_timesteps
-penalty += cas.sum1(cas.diff(thrust_force / 100) ** 2) / penalty_denominator
+penalty += cas.sum1(cas.diff(thrust_force / 10) ** 2) / penalty_denominator
 penalty += cas.sum1(cas.diff(net_accel_parallel / 1e-1) ** 2) / penalty_denominator
 penalty += cas.sum1(cas.diff(net_accel_perpendicular / 1e-1) ** 2) / penalty_denominator
-penalty += cas.sum1(cas.diff(airspeed / 30) ** 2) / penalty_denominator
-penalty += cas.sum1(cas.diff(flight_path_angle / 10) ** 2) / penalty_denominator
-penalty += cas.sum1(cas.diff(alpha / 5) ** 2) / penalty_denominator
+penalty += cas.sum1(cas.diff(airspeed / 2) ** 2) / penalty_denominator
+penalty += cas.sum1(cas.diff(flight_path_angle / 2) ** 2) / penalty_denominator
+penalty += cas.sum1(cas.diff(alpha / 1) ** 2) / penalty_denominator
 
 opti.minimize(
     objective
@@ -1138,7 +1139,7 @@ opti.minimize(
 # region Solve
 p_opts = {}
 s_opts = {}
-s_opts["max_iter"] = 1e6  # If you need to interrupt, just use ctrl+c
+s_opts["max_iter"] = 1000  # If you need to interrupt, just use ctrl+c
 # s_opts["bound_frac"] = 0.5
 # s_opts["bound_push"] = 0.5
 # s_opts["slack_bound_frac"] = 0.5
