@@ -590,7 +590,7 @@ x_ac = (
                right_hstab.area() +
                left_hstab.area()
        )
-static_margin_fraction = (x_ac - airplane.xyz_ref[0]) / wing.mean_geometric_chord()
+static_margin_fraction = (x_ac - airplane.xyz_ref[0]) / wing.mean_aerodynamic_chord()
 opti.subject_to([
     static_margin_fraction == 0.2
 ])
