@@ -116,7 +116,7 @@ opti.subject_to([
 flight_path_angle = opti.variable(
     n_vars=n_timesteps,
     init_guess=0,
-    scale=0.1,  # TODO increase
+    scale=2,
     category="ops"
 )
 opti.subject_to([
@@ -212,7 +212,8 @@ wing_taper_ratio = 0.5
 # center hstab
 center_hstab_span = opti.variable(
     init_guess=12,
-    scale=15
+    scale=15,
+    category="des"
 )
 opti.subject_to([
     center_hstab_span > 0.1,
@@ -330,7 +331,7 @@ tail_airfoil = naca0008  # TODO remove this and use fits?
 
 wing = asb.Wing(
     name="Main Wing",
-    x_le=wing_x_quarter_chord,  # Coordinates of the wing's leading edge # TODO make this a free parameter?
+    x_le=wing_x_quarter_chord,  # Coordinates of the wing's leading edge
     y_le=0,  # Coordinates of the wing's leading edge
     z_le=0,  # Coordinates of the wing's leading edge
     symmetric=True,
@@ -550,7 +551,11 @@ def wing_aero(
     wing_Cd_profile = wing_airfoil.CDp_function(alpha_eff, wing_Re, mach, 0)
     drag_wing_profile = wing_Cd_profile * q * wing.area()
 
-    wing_oswalds_efficiency = 0.95  # TODO make this a function of taper ratio
+    wing_oswalds_efficiency = aero.oswalds_efficiency(
+        taper_ratio=wing.taper_ratio(),
+        AR = wing.aspect_ratio(),
+        sweep=wing.mean_sweep_angle()
+    )
     drag_wing_induced = lift_wing ** 2 / (q * np.pi * wing.span() ** 2 * wing_oswalds_efficiency)
 
     drag_wing = drag_wing_profile + drag_wing_induced
@@ -718,8 +723,8 @@ power_out_propulsion = power_out_propulsion_shaft / motor_efficiency
 power_out_max = opti.variable(
     init_guess=5e3,
     scale=5e3,
-    category="des"
-) # TODO log-transform?
+    category="des",
+)
 opti.subject_to([
     power_out_propulsion < power_out_max,
     power_out_max > 0
@@ -897,14 +902,12 @@ mass_power_systems = mass_solar_cells + mass_battery_pack + mass_wires + mass_MP
 ### Structural mass
 
 # Wing
-n_ribs_wing = opti.variable( # TODO log-transform?
+n_ribs_wing = opti.variable(
     init_guess=200,
     scale=200,
-    category="des"
+    category="des",
+    log_transform=True,
 )
-opti.subject_to([
-    n_ribs_wing > 0,
-])
 
 mass_wing_primary = lib_mass_struct.mass_wing_spar(
     span=wing.span(),
@@ -972,17 +975,17 @@ def mass_hstab(
 n_ribs_center_hstab = opti.variable(
     init_guess=40,
     scale=40,
-    category="des"
+    category="des",
+    log_transform=True
 )
-opti.subject_to(n_ribs_center_hstab > 0)
 mass_center_hstab = mass_hstab(center_hstab, n_ribs_center_hstab)
 
 n_ribs_outboard_hstab = opti.variable(
     init_guess = 40,
     scale=30,
-    category="des"
+    category="des",
+    log_transform=True,
 )
-opti.subject_to(n_ribs_outboard_hstab > 0)
 mass_right_hstab = mass_hstab(right_hstab, n_ribs_outboard_hstab)
 mass_left_hstab = mass_hstab(left_hstab, n_ribs_outboard_hstab)
 
