@@ -23,75 +23,26 @@ sns.set(font_scale=1)
 
 # region Setup
 ##### Initialize Optimization
-opti = cas.Opti()
-des_vars = {}
-
-##### Caching
-# # Uncomment these lines to do ANALYSIS and OPTIMIZATION.
-file_to_load_from = None
-file_to_save_to = "des_vars.json"
-
-# Uncomment these lines to do ANALYSIS on a FROZEN DESIGN.
-# file_to_load_from = "des_vars.json"
-# file_to_save_to = None
+opti = asb.Opti()
 
 minimize = "wing.span() / 50"  # any "eval-able" expression
 # minimize = "max_mass_total / 300" # any "eval-able" expression
 # minimize = "wing.span() / 50 * 0.9 + max_mass_total / 300 * 0.1"
 
-def des_var(  # design variable
-        name,
-        initial_guess,
-        scale_factor,
-        n_variables=1
-):
-    if file_to_load_from is None:
-        var = scale_factor * opti.variable(n_variables)
-        opti.set_initial(var, initial_guess)
-        des_vars[name] = var
-        return var
-    else:
-        var = scale_factor * opti.variable(n_variables)
-        opti.set_initial(var, initial_guess)
-        des_vars[name] = var
-        with open(file_to_load_from, "r") as f:
-            solved_des_vars = json.load(f)
-        val = solved_des_vars[name]
-        opti.set_initial(var, val)
-        opti.subject_to(var == val)
-        return var
-
-
-def ops_var(  # operational variable
-        initial_guess,
-        scale_factor,
-        n_variables=1
-):
-    var = scale_factor * opti.variable(n_variables)
-    opti.set_initial(var, initial_guess)
-    return var
-
-
 ##### Operating Parameters
-latitude = opti.parameter()  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
-opti.set_value(latitude, 49)
-day_of_year = opti.parameter()  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
-opti.set_value(day_of_year, 244)
-min_altitude = opti.parameter() # meters. 19812 m = 65000 ft, 18288 m = 60000 ft.
-opti.set_value(min_altitude, 18288)
+latitude = opti.parameter(49)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
+day_of_year = opti.parameter(244)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
+min_altitude = opti.parameter(18288)  # meters. 19812 m = 65000 ft, 18288 m = 60000 ft.
 required_headway_per_day = 10e3  # meters
 n_booms = 3
-days_to_simulate = opti.parameter()
-opti.set_value(days_to_simulate, 1)
+days_to_simulate = opti.parameter(1)
 enforce_periodicity = True  # Tip: turn this off when looking at gas models or models w/o trajectory opt. enabled.
 allow_trajectory_optimization = True
 structural_load_factor = 3  # over static
 make_plots = False
-mass_payload = opti.parameter()
-opti.set_value(mass_payload, 30)
+mass_payload = opti.parameter(30)
 wind_speed_func = lambda alt: 0 * lib_winds.wind_speed_conus_summer_99(alt, latitude)
-battery_specific_energy_Wh_kg = opti.parameter()
-opti.set_value(battery_specific_energy_Wh_kg, 450)
+battery_specific_energy_Wh_kg = opti.parameter(450)
 battery_pack_cell_percentage = 0.89  # What percent of the battery pack consists of the module, by weight?
 # Accounts for module HW, BMS, pack installation, etc.
 # Ed Lovelace (in his presentation) gives 70% as a state-of-the-art fraction.
@@ -99,11 +50,10 @@ battery_pack_cell_percentage = 0.89  # What percent of the battery pack consists
 # According to Kevin Uleck, Odysseus realized an 89% packing factor here.
 
 ##### Margins
-structural_mass_margin_multiplier = opti.parameter()
-opti.set_value(structural_mass_margin_multiplier, 1.25)
-energy_generation_margin = opti.parameter()
-opti.set_value(energy_generation_margin, 1.05)
-allowable_battery_depth_of_discharge = 0.85  # How much of the battery can you actually use? # Reviewed w/ Annick & Bjarni 4/30/2020
+structural_mass_margin_multiplier = opti.parameter(1.25)
+energy_generation_margin = opti.parameter(1.05)
+allowable_battery_depth_of_discharge = opti.parameter(
+    0.85)  # How much of the battery can you actually use? # Reviewed w/ Annick & Bjarni 4/30/2020
 
 ##### Simulation Parameters
 n_timesteps = 150  # Only relevant if allow_trajectory_optimization is True.
@@ -129,9 +79,18 @@ else:
 # region Trajectory Optimization Variables
 ##### Initialize trajectory optimization variables
 
-x = ops_var(initial_guess=0, scale_factor=1e5, n_variables=n_timesteps)
-
-y = ops_var(initial_guess=20000, scale_factor=1e4, n_variables=n_timesteps)
+x = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=0,
+    scale=1e5,
+    category="ops"
+)
+y = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=20000,
+    scale=1e4,
+    category="ops"
+)
 
 if not climb_opt:
     opti.subject_to([
@@ -139,32 +98,65 @@ if not climb_opt:
         y / 40000 < 1,  # models break down
     ])
 else:
-    opti.subject_to([y[timesteps_of_last_day:-1] > min_altitude, y / 40000 < 1])
+    opti.subject_to([
+        y[timesteps_of_last_day:-1] > min_altitude,
+        y / 40000 < 1
+    ])
 
-airspeed = ops_var(initial_guess=20, scale_factor=20, n_variables=n_timesteps)
+airspeed = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=20,
+    scale=20,
+    category="ops"
+)
 opti.subject_to([
     airspeed / min_speed > 1
 ])
 
-flight_path_angle = ops_var(initial_guess=0, scale_factor=0.1, n_variables=n_timesteps)
+flight_path_angle = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=0,
+    scale=0.1,  # TODO increase
+    category="ops"
+)
 opti.subject_to([
     flight_path_angle / 90 < 1,
     flight_path_angle / 90 > -1,
 ])
 
-alpha = ops_var(initial_guess=5, scale_factor=4, n_variables=n_timesteps)
+alpha = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=5,
+    scale=4,
+    category="ops"
+)
 opti.subject_to([
     alpha > -8,
     alpha < 12
 ])
 
-thrust_force = ops_var(initial_guess=150, scale_factor=200, n_variables=n_timesteps)
+thrust_force = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=150,
+    scale=200,
+    category="ops"
+)
 opti.subject_to([
     thrust_force > 0
 ])
 
-net_accel_parallel = ops_var(initial_guess=0, scale_factor=1e-2, n_variables=n_timesteps)
-net_accel_perpendicular = ops_var(initial_guess=0, scale_factor=1e-1, n_variables=n_timesteps)
+net_accel_parallel = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=0,
+    scale=1e-2,
+    category="ops"
+)
+net_accel_perpendicular = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=0,
+    scale=1e-1,
+    category="ops"
+)
 
 ##### Set up time
 time_nondim = cas.linspace(0, 1, n_timesteps)
@@ -177,70 +169,128 @@ hour = time / 3600
 # region Design Optimization Variables
 ##### Initialize design optimization variables (all units in base SI or derived units)
 
-mass_total = ops_var(initial_guess=600, scale_factor=600)
+mass_total = opti.variable(
+    init_guess=600,
+    scale=600,
+    category="des"
+)
 
 max_mass_total = mass_total
 
 ### Initialize geometric variables
 
 # overall layout
-boom_location = 0.80 # as a fraction of the half-span
-break_location = 0.67 # as a fraction of the half-span
+boom_location = 0.80  # as a fraction of the half-span
+break_location = 0.67  # as a fraction of the half-span
 
 # wing
-wing_span = des_var(name="wing_span", initial_guess=40, scale_factor=60)
+wing_span = opti.variable(
+    init_guess=40,
+    scale=60,
+    category="des"
+)
+
 opti.subject_to([wing_span > 1])
 
-wing_root_chord = des_var(name="wing_root_chord", initial_guess=3, scale_factor=4)
+wing_root_chord = opti.variable(
+    init_guess=3,
+    scale=4,
+    category="des"
+)
 opti.subject_to([wing_root_chord > 0.1])
 
-wing_x_quarter_chord = des_var(name="wing_x_quarter_chord", initial_guess=0, scale_factor=0.01)
+wing_x_quarter_chord = opti.variable(
+    init_guess=0,
+    scale=0.01,
+    category="des"
+)
 
 wing_y_taper_break = break_location * wing_span / 2
 
 wing_taper_ratio = 0.5
 
 # center hstab
-center_hstab_span = des_var(name="center_hstab_span", initial_guess=12, scale_factor=15)
+center_hstab_span = opti.variable(
+    init_guess=12,
+    scale=15
+)
 opti.subject_to([
     center_hstab_span > 0.1,
     center_hstab_span < wing_span / n_booms / 2
 ])
 
-center_hstab_chord = des_var(name="center_hstab_chord", initial_guess=3, scale_factor=2)
+center_hstab_chord = opti.variable(
+    init_guess=3,
+    scale=2,
+    category="des"
+)
 opti.subject_to([center_hstab_chord > 0.1])
 
-center_hstab_twist_angle = ops_var(initial_guess=-3, scale_factor=2, n_variables=n_timesteps)
+center_hstab_twist_angle = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=-3,
+    scale=2,
+    category="ops"
+)
 
 # center hstab
-outboard_hstab_span = des_var(name="outboard_hstab_span", initial_guess=12, scale_factor=15)
+outboard_hstab_span = opti.variable(
+    init_guess=12,
+    scale=15,
+    category="des"
+)
 opti.subject_to([
-    outboard_hstab_span > 2, # TODO review this, driven by Trevor's ASWing findings on turn radius sizing, 8/16/20
+    outboard_hstab_span > 2,  # TODO review this, driven by Trevor's ASWing findings on turn radius sizing, 8/16/20
     outboard_hstab_span < wing_span / n_booms / 2,
 ])
 
-outboard_hstab_chord = des_var(name="outboard_hstab_chord", initial_guess=3, scale_factor=2)
+outboard_hstab_chord = opti.variable(
+    init_guess=3,
+    scale=2,
+    category="des"
+)
 opti.subject_to([
-    outboard_hstab_chord > 0.8, # TODO review this, driven by Trevor's ASWing findings on turn radius sizing, 8/16/20
+    outboard_hstab_chord > 0.8,  # TODO review this, driven by Trevor's ASWing findings on turn radius sizing, 8/16/20
 ])
 
-outboard_hstab_twist_angle = ops_var(initial_guess=-3, scale_factor=2, n_variables=n_timesteps)
+outboard_hstab_twist_angle = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=-3,
+    scale=2,
+    category="des"
+)
 
 # center_vstab
-center_vstab_span = des_var(name="center_vstab_span", initial_guess=7, scale_factor=8)
+center_vstab_span = opti.variable(
+    init_guess=7,
+    scale=8,
+    category="des"
+)
 opti.subject_to(center_vstab_span > 0.1)
 
-center_vstab_chord = des_var(name="center_vstab_chord", initial_guess=2.5, scale_factor=2)
+center_vstab_chord = opti.variable(
+    init_guess=2.5,
+    scale=2,
+    category="des"
+)
 opti.subject_to([center_vstab_chord > 0.1])
 
 # center_fuselage
-center_boom_length = des_var(name="center_boom_length", initial_guess=10, scale_factor=2)  # TODO add scale factor
+center_boom_length = opti.variable(
+    init_guess=10,
+    scale=2,
+    category="des"
+)
 opti.subject_to([
     center_boom_length - center_vstab_chord - center_hstab_chord > wing_x_quarter_chord + wing_root_chord * 3 / 4
 ])
 
 # outboard_fuselage
-outboard_boom_length = des_var(name="outboard_boom_length", initial_guess=10, scale_factor=2)  # TODO add scale factor
+outboard_boom_length = opti.variable(
+    init_guess=10,
+    scale=2,
+    category="des"
+)
 opti.subject_to([
     outboard_boom_length > wing_root_chord * 3 / 4,
     # outboard_boom_length < 3.5, # TODO review this, driven by Trevor's ASWing findings on turn radius sizing, 8/16/20
@@ -249,30 +299,31 @@ opti.subject_to([
 nose_length = 1.80  # Calculated on 4/15/20 with Trevor and Olek
 # https://docs.google.com/spreadsheets/d/1BnTweK-B4Hmmk9piJn8os-LNPiJH-3rJJemYkrKjARA/edit#gid=0
 
-fuse_diameter = 0.24 * 2 # Synced to Jonathan's fuselage CAD as of 8/7/20
+fuse_diameter = 0.24 * 2  # Synced to Jonathan's fuselage CAD as of 8/7/20
 boom_diameter = 0.2
 
 # import pickle
 import dill as pickle
 
 import pathlib
+
 path = str(
     pathlib.Path(__file__).parent.absolute()
 )
 
 try:
-    with open(path+"/cache/wing_airfoil.cache", "rb") as f:
+    with open(path + "/cache/wing_airfoil.cache", "rb") as f:
         wing_airfoil = pickle.load(f)
-    with open(path+"/cache/tail_airfoil.cache", "rb") as f:
+    with open(path + "/cache/tail_airfoil.cache", "rb") as f:
         tail_airfoil = pickle.load(f)
 except (FileNotFoundError, TypeError):
     wing_airfoil = Airfoil(name="HALE_03", coordinates=r"studies/airfoil_optimizer/HALE_03.dat")
     wing_airfoil.populate_sectional_functions_from_xfoil_fits(parallel=False)
-    with open(path+"/cache/wing_airfoil.cache", "wb+") as f:
+    with open(path + "/cache/wing_airfoil.cache", "wb+") as f:
         pickle.dump(wing_airfoil, f)
     tail_airfoil = Airfoil("naca0008")
     tail_airfoil.populate_sectional_functions_from_xfoil_fits(parallel=False)
-    with open(path+"/cache/tail_airfoil.cache", "wb+") as f:
+    with open(path + "/cache/tail_airfoil.cache", "wb+") as f:
         pickle.dump(tail_airfoil, f)
 
 tail_airfoil = naca0008  # TODO remove this and use fits?
@@ -413,7 +464,7 @@ center_fuse = utils.fuselage(
 
 right_fuse = utils.fuselage(
     boom_length=outboard_boom_length,
-    nose_length=0.5, # Review this for fit
+    nose_length=0.5,  # Review this for fit
     fuse_diameter=boom_diameter,
     boom_diameter=boom_diameter,
 )
@@ -522,6 +573,8 @@ lift_left_hstab, drag_left_hstab, moment_left_hstab = wing_aero(left_hstab, outb
 wing_drag_multiplier = opti.parameter()
 opti.set_value(wing_drag_multiplier, 1.12)
 drag_wing *= wing_drag_multiplier
+
+
 # drag_right_hstab *= 1.2
 # drag_left_hstab *= 1.2
 # drag_center_hstab *= 1.2
@@ -543,9 +596,9 @@ strut_chord = 0.25
 strut_span = 3.5
 strut_Re = rho / mu * airspeed * strut_chord
 strut_airfoil = flat_plate
-strut_Cd_profile = flat_plate.CDp_function(0, strut_Re, mach , 0)
+strut_Cd_profile = flat_plate.CDp_function(0, strut_Re, mach, 0)
 drag_strut_profile = strut_Cd_profile * q * strut_chord * strut_span
-drag_strut = drag_strut_profile # per strut
+drag_strut = drag_strut_profile  # per strut
 
 # Force totals
 lift_force = (
@@ -566,7 +619,7 @@ drag_force = (
         drag_center_fuse +
         drag_right_fuse +
         drag_left_fuse +
-        drag_strut * 2 # 2 struts
+        drag_strut * 2  # 2 struts
 )
 moment = (
         -wing.approximate_center_of_pressure()[0] * lift_wing + moment_wing +
@@ -620,7 +673,7 @@ opti.subject_to([
     Vv > 0.02,
     # Vv < 0.05,
     # Vv == 0.035,
-    center_vstab.aspect_ratio() == 2.5 # TODO review this
+    center_vstab.aspect_ratio() == 2.5  # TODO review this
 ])
 
 # endregion
@@ -628,7 +681,11 @@ opti.subject_to([
 # region Propulsion
 
 ### Propeller calculations
-propeller_diameter = des_var(name="propeller_diameter", initial_guess=5, scale_factor=5)  # TODO scale factor
+propeller_diameter = opti.variable(
+    init_guess=5,
+    scale=5,
+    category="des"
+)
 opti.subject_to([
     propeller_diameter / 1 > 1,
     propeller_diameter / 10 < 1
@@ -658,7 +715,11 @@ power_out_propulsion_shaft = lib_prop_prop.propeller_shaft_power_from_thrust(
 
 power_out_propulsion = power_out_propulsion_shaft / motor_efficiency
 
-power_out_max = des_var(name="power_out_max", initial_guess=5e3, scale_factor=5e3)
+power_out_max = opti.variable(
+    init_guess=5e3,
+    scale=5e3,
+    category="des"
+) # TODO log-transform?
 opti.subject_to([
     power_out_propulsion < power_out_max,
     power_out_max > 0
@@ -716,16 +777,29 @@ power_out = power_out_propulsion + power_out_payload + power_out_avionics
 # region Solar Power Systems
 
 # Battery design variables
-net_power = ops_var(initial_guess=0, scale_factor=1000, n_variables=n_timesteps)
+net_power = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=0,
+    scale=1000,
+    category="ops"
+)
 
-battery_stored_energy_nondim = ops_var(initial_guess=0.5, scale_factor=1, n_variables=n_timesteps)
+battery_stored_energy_nondim = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=0.5,
+    scale=1,
+    category="ops"
+)
 opti.subject_to([
     battery_stored_energy_nondim > 0,
     battery_stored_energy_nondim < allowable_battery_depth_of_discharge,
 ])
 
-battery_capacity = des_var(name="battery_capacity", initial_guess=3600 * 60e3,
-                           scale_factor=3600 * 60e3)  # Joules, not watt-hours!
+battery_capacity = opti.variable(
+    init_guess=3600 * 60e3, # Joules, not watt-hours!
+    scale= 3600 * 60e3,
+    category="des",
+)
 opti.subject_to([
     battery_capacity > 0
 ])
@@ -762,7 +836,11 @@ rho_solar_cells = 0.350  # kg/m^2, solar cell area density.
 MPPT_efficiency = 1 / 1.04
 # Bjarni, 4/17/20 in #powermanagement Slack.
 
-solar_area_fraction = des_var(name="solar_area_fraction", initial_guess=0.5, scale_factor=1)
+solar_area_fraction = opti.variable( # TODO log-transform?
+    init_guess=0.5,
+    scale=1,
+    category="des"
+)
 opti.subject_to([
     solar_area_fraction > 0,
     solar_area_fraction < 0.80,  # TODO check
@@ -801,7 +879,7 @@ mass_wires = lib_prop_elec.mass_wires(
 # mass_wires = 0.868  # Taken from Avionics spreadsheet on 4/10/20
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
-mass_MPPT = 3*lib_solar.mass_MPPT(5000)  # Model taken from Avionics spreadsheet on 4/10/20
+mass_MPPT = 3 * lib_solar.mass_MPPT(5000)  # Model taken from Avionics spreadsheet on 4/10/20
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
 mass_power_systems_misc = 0.314  # Taken from Avionics spreadsheet on 4/10/20, includes HV-LV convs. and fault isolation mechs
@@ -819,7 +897,11 @@ mass_power_systems = mass_solar_cells + mass_battery_pack + mass_wires + mass_MP
 ### Structural mass
 
 # Wing
-n_ribs_wing = des_var(name="n_ribs_wing", initial_guess=200, scale_factor=200)
+n_ribs_wing = opti.variable( # TODO log-transform?
+    init_guess=200,
+    scale=200,
+    category="des"
+)
 opti.subject_to([
     n_ribs_wing > 0,
 ])
@@ -887,11 +969,19 @@ def mass_hstab(
     return mass_hstab
 
 
-n_ribs_center_hstab = des_var(name="n_ribs_center_hstab", initial_guess=40, scale_factor=30)
+n_ribs_center_hstab = opti.variable(
+    init_guess=40,
+    scale=40,
+    category="des"
+)
 opti.subject_to(n_ribs_center_hstab > 0)
 mass_center_hstab = mass_hstab(center_hstab, n_ribs_center_hstab)
 
-n_ribs_outboard_hstab = des_var(name="n_ribs_outboard_hstab", initial_guess=40, scale_factor=30)
+n_ribs_outboard_hstab = opti.variable(
+    init_guess = 40,
+    scale=30,
+    category="des"
+)
 opti.subject_to(n_ribs_outboard_hstab > 0)
 mass_right_hstab = mass_hstab(right_hstab, n_ribs_outboard_hstab)
 mass_left_hstab = mass_hstab(left_hstab, n_ribs_outboard_hstab)
@@ -917,7 +1007,11 @@ def mass_vstab(
     return mass_vstab
 
 
-n_ribs_vstab = des_var(name="n_ribs_vstab", initial_guess=35, scale_factor=20)
+n_ribs_vstab = opti.variable(
+    init_guess=35,
+    scale=20,
+    category="des"
+)
 opti.subject_to(n_ribs_vstab > 0)
 mass_center_vstab = mass_vstab(center_vstab, n_ribs_vstab)
 
@@ -1099,8 +1193,9 @@ opti.subject_to([
     center_hstab_chord == outboard_hstab_chord,
     # center_hstab_twist_angle == outboard_hstab_twist_angle,
     # center_boom_length == outboard_boom_length,
-    center_hstab_twist_angle <= 0, # essentially enforces downforce, prevents hstab from lifting and exploiting config.
-    outboard_hstab_twist_angle <= 0, # essentially enforces downforce, prevents hstab from lifting and exploiting config.
+    center_hstab_twist_angle <= 0,  # essentially enforces downforce, prevents hstab from lifting and exploiting config.
+    outboard_hstab_twist_angle <= 0,
+    # essentially enforces downforce, prevents hstab from lifting and exploiting config.
 ])
 
 ##### Useful metrics
@@ -1162,11 +1257,6 @@ opti.solver('ipopt', p_opts, s_opts)
 if __name__ == "__main__":
     try:
         sol = opti.solve()
-        # If successful, save a cache of the design variables
-        solved_des_vars = {k: sol.value(des_vars[k]) for k in des_vars}
-        if file_to_save_to is not None:
-            with open(file_to_save_to, "w+") as f:
-                json.dump(solved_des_vars, f)
 
     except:
         sol = opti.debug
@@ -1253,6 +1343,7 @@ if __name__ == "__main__":
         plt.plot(s(x)[dusk - 1:dawn + 1], s(y)[dusk - 1:dawn + 1], '.-', color=(7 / 255, 36 / 255, 84 / 255),
                  label="Night")
         plt.legend()
+
 
     if make_plots:
         fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
@@ -1395,7 +1486,8 @@ if __name__ == "__main__":
                 1),
             0, 1
         )
-        pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (x * s(mass_structural) / 100, x * s(mass_structural / max_mass_total))
+        pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (
+            x * s(mass_structural) / 100, x * s(mass_structural / max_mass_total))
         ax_structural.pie(
             pie_values,
             labels=pie_labels,
