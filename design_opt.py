@@ -620,8 +620,8 @@ opti.subject_to([
     strut_loc <= wing_span / 6  # TODO review why this constraint is here, taken from Jamie DDT 12/30/20
 ])
 
-strut_span = (strut_loc ** 2 + (propeller_diameter / 2 + 0.25) ** 2) ** 0.5 # Formula from Jamie
-strut_chord = 0.167 * (strut_span * (propeller_diameter / 2 + 0.25)) ** 0.25 # Formula from Jamie
+strut_span = (strut_loc ** 2 + (propeller_diameter / 2 + 0.25) ** 2) ** 0.5  # Formula from Jamie
+strut_chord = 0.167 * (strut_span * (propeller_diameter / 2 + 0.25)) ** 0.25  # Formula from Jamie
 strut_Re = rho / mu * airspeed * strut_chord
 strut_airfoil = flat_plate
 strut_Cd_profile = flat_plate.CDp_function(0, strut_Re, mach, 0)
@@ -960,16 +960,74 @@ mass_wing_primary = lib_mass_struct.mass_wing_spar(
     ultimate_load_factor=structural_load_factor,
     n_booms=1
 ) * 11.382 / 9.222  # scaling factor taken from Daedalus weights to account for real-world effects, non-cap mass, etc.
-mass_wing_secondary = lib_mass_struct.mass_hpa_wing(
+
+
+def estimate_mass_wing_secondary(
+        span,
+        chord,
+        n_ribs,  # You should optimize on this, there's a trade between rib weight and LE sheeting weight!
+        skin_density,
+        n_wing_sections=1,  # defaults to a single-section wing (be careful: can you disassemble/transport this?)
+        t_over_c=0.128,  # default from DAE11
+        # Should we include the mass of the spar? Useful if you want to do your own primary structure calculations.
+        scaling_factor=1.0  # Scale-up factor for masses that haven't yet totally been pinned down experimentally
+):
+    """
+    Finds the mass of the wing structure of a human powered aircraft (HPA), following Juan Cruz's correlations in
+    http://journals.sfu.ca/ts/index.php/ts/article/viewFile/760/718
+    :param span: wing span [m]
+    :param chord: wing mean chord [m]
+    :param vehicle_mass: aircraft gross weight [kg]
+    :param n_ribs: number of ribs in the wing
+    :param n_wing_sections: number of wing sections or panels (for disassembly?)
+    :param ultimate_load_factor: ultimate load factor [unitless]
+    :param type: Type of bracing: "cantilevered", "one-wire", "multi-wire"
+    :param t_over_c: wing airfoil thickness-to-chord ratio
+    :param include_spar: Should we include the mass of the spar? Useful if you want to do your own primary structure calculations. [boolean]
+    :return: Wing structure mass [kg]
+    """
+    ### Secondary structure
+    ratio_of_rib_spacing_to_chord = (span / n_ribs) / chord
+    n_end_ribs = 2 * n_wing_sections - 2
+    area = span * chord
+
+    # Rib mass
+    W_wr = n_ribs * (chord ** 2 * t_over_c * 5.50e-2 + chord * 1.91e-3) * 1.3
+    # x1.3 scales to estimates from structures subteam
+
+    # Half rib mass
+    W_whr = (n_ribs - 1) * skin_density * chord * 0.65 * 0.072
+    # 40% of cross sectional area, same construction as skin panels
+
+    # End rib mass
+    W_wer = n_end_ribs * (chord ** 2 * t_over_c * 6.62e-1 + chord * 6.57e-3)
+
+    # LE sheeting mass
+    # W_wLE = 0.456/2 * (span ** 2 * ratio_of_rib_spacing_to_chord ** (4 / 3) / span)
+
+    # Skin Panel Mass
+    W_wsp = area * skin_density * 1.05  # assumed constant thickness from 0.9c around LE to 0.15c
+
+    # TE mass
+    W_wTE = span * 2.77e-2
+
+    # Covering
+    W_wc = area * 0.076  # 0.033 kg/m2 Tedlar covering on 2 sides, with 1.1 coverage factor
+
+    mass_secondary = (W_wr + W_whr + W_wer + W_wTE) * scaling_factor + W_wsp + W_wc
+
+    return mass_secondary
+
+
+mass_wing_secondary = estimate_mass_wing_secondary(
     span=wing.span(),
     chord=wing.mean_geometric_chord(),
-    vehicle_mass=max_mass_total,
     n_ribs=n_ribs_wing,
-    n_wing_sections=5,
-    ultimate_load_factor=structural_load_factor,
+    skin_density=0.220,  # kg/m^2
+    n_wing_sections=4,
     t_over_c=0.14,
-    include_spar=False,
-) * 1.5 # 1.5x multiplier suggested by Drela, April 2020
+    scaling_factor=1.3
+)
 
 mass_wing = mass_wing_primary + mass_wing_secondary
 
@@ -1066,9 +1124,9 @@ mass_left_boom = lib_mass_struct.mass_hpa_tail_boom(
 
 # The following taken from Daedalus:  # taken from Daedalus, http://journals.sfu.ca/ts/index.php/ts/article/viewFile/760/718
 mass_daedalus = 103.9  # kg, corresponds to 229 lb gross weight. Total mass of the Daedalus aircraft, used as a reference for scaling.
-mass_fairings = 2.067 * mass_total / mass_daedalus # Scale fairing mass to same mass fraction as Daedalus
-mass_landing_gear = 0.728 * mass_total / mass_daedalus # Scale landing gear mass to same mass fraction as Daedalus
-mass_strut = 661 / 2 * (strut_chord / 10) ** 2 * strut_span # mass per strut, formula from Jamie
+mass_fairings = 2.067 * mass_total / mass_daedalus  # Scale fairing mass to same mass fraction as Daedalus
+mass_landing_gear = 0.728 * mass_total / mass_daedalus  # Scale landing gear mass to same mass fraction as Daedalus
+mass_strut = 661 / 2 * (strut_chord / 10) ** 2 * strut_span  # mass per strut, formula from Jamie
 
 mass_center_fuse = mass_center_boom + mass_fairings + mass_landing_gear  # per fuselage
 mass_right_fuse = mass_right_boom
@@ -1083,7 +1141,7 @@ mass_structural = (
         mass_center_fuse +
         mass_right_fuse +
         mass_left_fuse +
-        mass_strut * 2 # left and right struts
+        mass_strut * 2  # left and right struts
 )
 mass_structural *= structural_mass_margin_multiplier
 
