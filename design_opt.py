@@ -40,7 +40,7 @@ days_to_simulate = opti.parameter(1)
 enforce_periodicity = True  # Tip: turn this off when looking at gas models or models w/o trajectory opt. enabled.
 allow_trajectory_optimization = True
 structural_load_factor = 3  # over static
-make_plots = False
+make_plots = True
 mass_payload = opti.parameter(30)
 wind_speed_func = lambda alt: 0 * lib_winds.wind_speed_conus_summer_99(alt, latitude)
 battery_specific_energy_Wh_kg = opti.parameter(450)
@@ -1026,7 +1026,7 @@ mass_wing_secondary = estimate_mass_wing_secondary(
     skin_density=0.220,  # kg/m^2
     n_wing_sections=4,
     t_over_c=0.14,
-    scaling_factor=1.3
+    scaling_factor=1.5 # Suggested by Drela
 )
 
 mass_wing = mass_wing_primary + mass_wing_secondary
