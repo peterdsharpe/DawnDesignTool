@@ -18,6 +18,7 @@ import matplotlib.style as style
 import seaborn as sns
 import json
 import design_opt_utilities as utils
+from typing import Union, List
 
 sns.set(font_scale=1)
 
@@ -50,7 +51,7 @@ battery_pack_cell_percentage = 0.89  # What percent of the battery pack consists
 # According to Kevin Uleck, Odysseus realized an 89% packing factor here.
 
 ##### Margins
-structural_mass_margin_multiplier = opti.parameter(1.25)
+structural_mass_margin_multiplier = opti.parameter(1.25)  # TODO Jamie dropped to 1.215 - why?
 energy_generation_margin = opti.parameter(1.05)
 allowable_battery_depth_of_discharge = opti.parameter(
     0.85)  # How much of the battery can you actually use? # Reviewed w/ Annick & Bjarni 4/30/2020
@@ -207,7 +208,7 @@ wing_x_quarter_chord = opti.variable(
 
 wing_y_taper_break = break_location * wing_span / 2
 
-wing_taper_ratio = 0.5
+wing_taper_ratio = 0.5  # TODO analyze this more
 
 # center hstab
 center_hstab_span = opti.variable(
@@ -302,6 +303,19 @@ nose_length = 1.80  # Calculated on 4/15/20 with Trevor and Olek
 
 fuse_diameter = 0.24 * 2  # Synced to Jonathan's fuselage CAD as of 8/7/20
 boom_diameter = 0.2
+
+# Propeller
+propeller_diameter = opti.variable(
+    init_guess=5,
+    scale=5,
+    category="des"
+)
+opti.subject_to([
+    propeller_diameter / 1 > 1,
+    propeller_diameter / 10 < 1
+])
+
+n_propellers = opti.parameter(4)
 
 # import pickle
 import dill as pickle
@@ -553,7 +567,7 @@ def wing_aero(
 
     wing_oswalds_efficiency = aero.oswalds_efficiency(
         taper_ratio=wing.taper_ratio(),
-        AR = wing.aspect_ratio(),
+        AR=wing.aspect_ratio(),
         sweep=wing.mean_sweep_angle()
     )
     drag_wing_induced = lift_wing ** 2 / (q * np.pi * wing.span() ** 2 * wing_oswalds_efficiency)
@@ -575,8 +589,7 @@ lift_right_hstab, drag_right_hstab, moment_right_hstab = wing_aero(right_hstab, 
 lift_left_hstab, drag_left_hstab, moment_left_hstab = wing_aero(left_hstab, outboard_hstab_twist_angle)
 
 # Increase the wing drag due to tripped flow (8/17/20)
-wing_drag_multiplier = opti.parameter()
-opti.set_value(wing_drag_multiplier, 1.12)
+wing_drag_multiplier = opti.parameter(1.12)  # TODO review
 drag_wing *= wing_drag_multiplier
 
 
@@ -597,8 +610,18 @@ def vstab_aero(vstab: asb.Wing):
 drag_center_vstab = vstab_aero(center_vstab)
 
 # strut drag
-strut_chord = 0.25
-strut_span = 3.5
+strut_loc = opti.variable(
+    init_guess=5,
+    scale=5,
+    category="des"
+)
+opti.subject_to([
+    strut_loc > 3,
+    strut_loc <= wing_span / 6  # TODO review why this constraint is here, taken from Jamie DDT 12/30/20
+])
+
+strut_span = (strut_loc ** 2 + (propeller_diameter / 2 + 0.25) ** 2) ** 0.5
+strut_chord = 0.167 * (strut_span * (propeller_diameter / 2 + 0.25)) ** (1 / 4)
 strut_Re = rho / mu * airspeed * strut_chord
 strut_airfoil = flat_plate
 strut_Cd_profile = flat_plate.CDp_function(0, strut_Re, mach, 0)
@@ -678,7 +701,9 @@ opti.subject_to([
     Vv > 0.02,
     # Vv < 0.05,
     # Vv == 0.035,
-    center_vstab.aspect_ratio() == 2.5  # TODO review this
+    center_vstab.aspect_ratio() == 2.5,  # TODO review this
+    # center_vstab.aspect_ratio() > 1.9, # from Jamie, based on ASWing
+    # center_vstab.aspect_ratio() < 2.5 # from Jamie, based on ASWing
 ])
 
 # endregion
@@ -686,18 +711,6 @@ opti.subject_to([
 # region Propulsion
 
 ### Propeller calculations
-propeller_diameter = opti.variable(
-    init_guess=5,
-    scale=5,
-    category="des"
-)
-opti.subject_to([
-    propeller_diameter / 1 > 1,
-    propeller_diameter / 10 < 1
-])
-
-n_propellers = opti.parameter()
-opti.set_value(n_propellers, 2)
 
 propeller_tip_mach = 0.36  # From Dongjoon, 4/30/20
 propeller_rads_per_sec = propeller_tip_mach * atmo.get_speed_of_sound_from_temperature(
@@ -706,58 +719,78 @@ propeller_rads_per_sec = propeller_tip_mach * atmo.get_speed_of_sound_from_tempe
 propeller_rpm = propeller_rads_per_sec * 30 / cas.pi
 
 area_propulsive = cas.pi / 4 * propeller_diameter ** 2 * n_propellers
-propeller_coefficient_of_performance = 0.90  # a total WAG
-motor_efficiency = 0.955  # Taken from ThinGap estimates
-# 0.856 / (0.856 + 0.026 + 0.018 + 0.004)  # back-calculated from Odysseus data (94.7%)
 
-power_out_propulsion_shaft = lib_prop_prop.propeller_shaft_power_from_thrust(
-    thrust_force=thrust_force,
-    area_propulsive=area_propulsive,
-    airspeed=airspeed,
-    rho=rho,
-    propeller_coefficient_of_performance=propeller_coefficient_of_performance
-)
+use_legacy_propulsion_models = True
 
-power_out_propulsion = power_out_propulsion_shaft / motor_efficiency
+if use_legacy_propulsion_models:
+    ### Use older models
 
-power_out_max = opti.variable(
+    motor_efficiency = 0.955  # Taken from ThinGap estimates
+
+    power_out_propulsion_shaft = lib_prop_prop.propeller_shaft_power_from_thrust(
+        thrust_force=thrust_force,
+        area_propulsive=area_propulsive,
+        airspeed=airspeed,
+        rho=rho,
+        propeller_coefficient_of_performance=0.90  # calibrated to QProp output with Dongjoon
+    )
+
+    gearbox_efficiency = 0.986
+
+else:
+    ### Use Jamie's model
+    from design_opt_utilities.new_models import eff_curve_fit
+
+    opti.subject_to(y < 30000)  # Bugs out without this limiter
+
+    propeller_efficiency, motor_efficiency = eff_curve_fit(
+        airspeed=airspeed,
+        total_thrust=thrust_force,
+        altitude=y,
+        var_pitch=False
+    )
+    power_out_propulsion_shaft = thrust_force * airspeed / propeller_efficiency
+
+    gearbox_efficiency = 0.986
+
+power_out_propulsion = power_out_propulsion_shaft / motor_efficiency / gearbox_efficiency
+
+# Motor thermal modeling
+heat_motor = power_out_propulsion * (1 - motor_efficiency) / n_propellers
+heat_motor_max = 175  # System is designed to reject 175 W
+opti.subject_to(heat_motor <= heat_motor_max)
+
+# Calculate maximum power in/out requirements
+power_out_propulsion_max = opti.variable(
     init_guess=5e3,
     scale=5e3,
     category="des",
 )
 opti.subject_to([
-    power_out_propulsion < power_out_max,
-    power_out_max > 0
+    power_out_propulsion < power_out_propulsion_max,
+    power_out_propulsion_max > 0
 ])
 
-propeller_max_torque = (power_out_max / n_propellers) / propeller_rads_per_sec
+propeller_max_torque = (power_out_propulsion_max / n_propellers) / propeller_rads_per_sec
 
 battery_voltage = 125  # From Olek Peraire >4/2, propulsion slack
-# battery_voltage = opti.variable()  # From Olek Peraire 4/2, propulsion slack
-# opti.set_initial(battery_voltage, 240)
-# opti.subject_to([
-#     battery_voltage > 0,
-#     battery_voltage < 2000
-# ])
 
 motor_kv = propeller_rpm / battery_voltage
 
 mass_motor_raw = lib_prop_elec.mass_motor_electric(
-    max_power=power_out_max / n_propellers,
+    max_power=power_out_propulsion_max / n_propellers,
     kv_rpm_volt=motor_kv,
     voltage=battery_voltage
 ) * n_propellers
-# mass_motor_raw = lib_prop_elec.mass_motor_electric(max_power=power_out_max / n_propellers) * n_propellers # old model
-
 
 mass_motor_mounted = 2 * mass_motor_raw  # similar to a quote from Raymer, modified to make sensible units, prop weight roughly subtracted
 
 mass_propellers = n_propellers * lib_prop_prop.mass_hpa_propeller(
     diameter=propeller_diameter,
-    max_power=power_out_max,
+    max_power=power_out_propulsion_max,
     include_variable_pitch_mechanism=True
 )
-mass_ESC = lib_prop_elec.mass_ESC(max_power=power_out_max)
+mass_ESC = lib_prop_elec.mass_ESC(max_power=power_out_propulsion_max)
 
 # Total propulsion mass
 mass_propulsion = mass_motor_mounted + mass_propellers + mass_ESC
@@ -801,8 +834,8 @@ opti.subject_to([
 ])
 
 battery_capacity = opti.variable(
-    init_guess=3600 * 60e3, # Joules, not watt-hours!
-    scale= 3600 * 60e3,
+    init_guess=3600 * 60e3,  # Joules, not watt-hours!
+    scale=3600 * 60e3,
     category="des",
 )
 opti.subject_to([
@@ -813,8 +846,8 @@ battery_stored_energy = battery_stored_energy_nondim * battery_capacity
 
 ### Solar calculations
 
-# solar_cell_efficiency = 0.21
-solar_cell_efficiency = 0.25
+# solar_cell_efficiency = 0.21 # Sunpower
+solar_cell_efficiency = 0.25  # Microlink.
 # This figure should take into account all temperature factors,
 # spectral losses (different spectrum at altitude), multi-junction effects, etc.
 # Should not take into account MPPT losses.
@@ -828,8 +861,8 @@ solar_cell_efficiency = 0.25
 # 4/29/20: Bjarni, Config slack: SunPower cells can do 21% on a panel level. Area density may change; TBD
 
 # Solar cell weight
-# rho_solar_cells = 0.425  # kg/m^2, solar cell area density.
-rho_solar_cells = 0.350  # kg/m^2, solar cell area density.
+# rho_solar_cells = 0.425  # kg/m^2, solar cell area density. Sunpower.
+rho_solar_cells = 0.350  # kg/m^2, solar cell area density. Microlink.
 # The solar_simple_demo model gives this as 0.27. Burton's model gives this as 0.30.
 # This paper (https://core.ac.uk/download/pdf/159146935.pdf) gives it as 0.42.
 # This paper (https://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=4144&context=facpub) effectively gives it as 0.3143.
@@ -841,7 +874,7 @@ rho_solar_cells = 0.350  # kg/m^2, solar cell area density.
 MPPT_efficiency = 1 / 1.04
 # Bjarni, 4/17/20 in #powermanagement Slack.
 
-solar_area_fraction = opti.variable( # TODO log-transform?
+solar_area_fraction = opti.variable(  # TODO log-transform?
     init_guess=0.5,
     scale=1,
     category="des"
@@ -877,14 +910,27 @@ mass_battery_cells = mass_battery_pack * battery_pack_cell_percentage
 
 mass_wires = lib_prop_elec.mass_wires(
     wire_length=wing.span() / 2,
-    max_current=power_out_max / battery_voltage,
+    max_current=power_out_propulsion_max / battery_voltage,
     allowable_voltage_drop=battery_voltage * 0.01,
     material="aluminum"
 )  # buildup model
 # mass_wires = 0.868  # Taken from Avionics spreadsheet on 4/10/20
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
-mass_MPPT = 3 * lib_solar.mass_MPPT(5000)  # Model taken from Avionics spreadsheet on 4/10/20
+# Calculate MPPT power requirement
+power_in_after_panels_max = opti.variable(
+    init_guess=5e3,
+    scale=5e3,
+    category="des"
+)
+opti.subject_to([
+    power_in_after_panels_max > power_in_after_panels,
+    power_in_after_panels_max > 0
+])
+
+n_MPPT = 5
+mass_MPPT = n_MPPT * lib_solar.mass_MPPT(
+    power_in_after_panels_max / n_MPPT)  # Model taken from Avionics spreadsheet on 4/10/20
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
 mass_power_systems_misc = 0.314  # Taken from Avionics spreadsheet on 4/10/20, includes HV-LV convs. and fault isolation mechs
@@ -896,8 +942,6 @@ mass_power_systems = mass_solar_cells + mass_battery_pack + mass_wires + mass_MP
 # endregion
 
 # region Weights
-# Payload mass
-# mass_payload = # defined above
 
 ### Structural mass
 
@@ -910,12 +954,12 @@ n_ribs_wing = opti.variable(
 )
 
 mass_wing_primary = lib_mass_struct.mass_wing_spar(
-    span=wing.span(),
+    span=wing.span() - 2 * strut_loc,  # effective span, TODO review
     mass_supported=max_mass_total,
     # technically the spar doesn't really have to support its own weight (since it's roughly spanloaded), so this is conservative
     ultimate_load_factor=structural_load_factor,
     n_booms=1
-) * 11.382 / 9.222  # scaling factor taken from Daedalus weights
+) * 11.382 / 9.222  # scaling factor taken from Daedalus weights to account for real-world effects, non-cap mass, etc.
 mass_wing_secondary = lib_mass_struct.mass_hpa_wing(
     span=wing.span(),
     chord=wing.mean_geometric_chord(),
@@ -925,26 +969,9 @@ mass_wing_secondary = lib_mass_struct.mass_hpa_wing(
     ultimate_load_factor=structural_load_factor,
     t_over_c=0.14,
     include_spar=False,
-) * 1.3  # TODO review this number! Mark says 1.5! 4/30/2020
-
-# ### Trevor's Buildup
-# opti.subject_to([n_ribs_wing >= wing_span / 0.5])
-# mass_ribs = 0.0605 * wing_root_chord ** 2 * n_ribs_wing
-# mass_skin = (0.0375 + 0.002 + 0.007 + 0.027) * (wing.area() * 2 / (1 * 0.5)) # excluding solar panels
-# mass_wing_secondary = mass_ribs + mass_skin
+) * 1.5
 
 mass_wing = mass_wing_primary + mass_wing_secondary
-
-# mass_wing = lib_mass_struct.mass_hpa_wing(
-#     span=wing.span(),
-#     chord=wing.mean_geometric_chord(),
-#     vehicle_mass=max_mass_total,
-#     n_ribs=n_ribs_wing,
-#     n_wing_sections=1,
-#     ultimate_load_factor=structural_load_factor,
-#     t_over_c=0.12,
-#     include_spar=True,
-# )
 
 # Stabilizers
 q_maneuver = 80  # TODO make this more accurate
@@ -981,7 +1008,7 @@ n_ribs_center_hstab = opti.variable(
 mass_center_hstab = mass_hstab(center_hstab, n_ribs_center_hstab)
 
 n_ribs_outboard_hstab = opti.variable(
-    init_guess = 40,
+    init_guess=40,
     scale=30,
     category="des",
     log_transform=True,
@@ -1025,7 +1052,7 @@ mass_center_boom = lib_mass_struct.mass_hpa_tail_boom(
     # mean_tail_surface_area=cas.fmax(center_hstab.area(), center_vstab.area()), # most optimistic
     # mean_tail_surface_area=cas.sqrt(center_hstab.area() ** 2 + center_vstab.area() ** 2),
     mean_tail_surface_area=center_hstab.area() + center_vstab.area(),  # most conservative
-)
+)  # / 3 # TODO Jamie divided this by 3 on basis of 11/17/20 structures presentation; check this.
 mass_right_boom = lib_mass_struct.mass_hpa_tail_boom(
     length_tail_boom=outboard_boom_length - wing_x_quarter_chord,  # support up to the quarter-chord
     dynamic_pressure_at_manuever_speed=q_maneuver,
@@ -1038,8 +1065,10 @@ mass_left_boom = lib_mass_struct.mass_hpa_tail_boom(
 )
 
 # The following taken from Daedalus:  # taken from Daedalus, http://journals.sfu.ca/ts/index.php/ts/article/viewFile/760/718
-mass_fairings = 2.067
-mass_landing_gear = 0.728
+mass_daedalus = 103.9  # kg, corresponds to 229 lb gross weight. Total mass of the Daedalus aircraft, used as a reference for scaling.
+mass_fairings = 2.067 * mass_total / mass_daedalus
+mass_landing_gear = 0.728 * mass_total / mass_daedalus
+mass_strut = 661 * (strut_chord / 10) ** 2 * strut_span
 
 mass_center_fuse = mass_center_boom + mass_fairings + mass_landing_gear  # per fuselage
 mass_right_fuse = mass_right_boom
@@ -1053,7 +1082,8 @@ mass_structural = (
         mass_center_vstab +
         mass_center_fuse +
         mass_right_fuse +
-        mass_left_fuse
+        mass_left_fuse +
+        mass_strut
 )
 mass_structural *= structural_mass_margin_multiplier
 
@@ -1156,8 +1186,8 @@ if enforce_periodicity:
     ])
 
 ##### Add initial state constraints
-opti.subject_to([  # Air Launch
-    x[0] == 0,
+opti.subject_to([
+    x[0] / 1e5 == 0,  # Start at x-datum of zero
 ])
 
 ##### Optional constraints
@@ -1207,6 +1237,7 @@ wing_loading_psf = wing_loading / 47.880258888889
 empty_wing_loading = 9.81 * mass_structural / wing.area()
 empty_wing_loading_psf = empty_wing_loading / 47.880258888889
 propeller_efficiency = thrust_force * airspeed / power_out_propulsion_shaft
+cruise_LD = lift_force / drag_force
 
 ##### Add tippers
 things_to_slightly_minimize = (
@@ -1260,18 +1291,11 @@ opti.solver('ipopt', p_opts, s_opts)
 if __name__ == "__main__":
     try:
         sol = opti.solve()
-
     except:
         sol = opti.debug
 
     if np.abs(sol.value(penalty / objective)) > 0.01:
         print("\nWARNING: high penalty term! P/O = %.3f\n" % sol.value(penalty / objective))
-
-    # save_sol_to_file(sol,
-    #                  save_primal=True,
-    #                  save_dual=False,
-    #                  primal_location="last_solution.sol"
-    #                  )
 
     # Find dusk and dawn
     try:
@@ -1281,15 +1305,26 @@ if __name__ == "__main__":
     except IndexError:
         print("Could not find dusk and dawn - you likely have a shorter-than-one-day mission.")
 
-    # # region Text Postprocessing & Utilities
-    # ##### Text output
-    o = lambda x: print(
-        "%s: %f" % (x, sol.value(eval(x))))  # A function to Output a scalar variable. Input a variable name as a string
-    outs = lambda xs: [o(x) for x in xs] and None  # input a list of variable names as strings
-    print_title = lambda s: print("\n********** %s **********" % s.upper())
+
+    # # region Postprocessing utilities, console output, etc.
+    def s(x: cas.MX) -> np.ndarray:  # Shorthand for evaluating the value of a quantity x at the optimum
+        return sol.value(x)
+
+
+    def output(x: Union[str, List[str]]) -> None:  # Output a scalar variable (give variable name as a string).
+        if isinstance(x, list):
+            for xi in x:
+                output(xi)
+            return
+        print(f"{x}: {sol.value(eval(x)):.3f}")
+
+
+    def print_title(s: str) -> None:  # Print a nicely formatted title
+        print(f"\n{'*' * 10} {s.upper()} {'*' * 10}")
+
 
     print_title("Key Results")
-    outs([
+    output([
         "max_mass_total",
         "wing_span",
         "wing_root_chord"
@@ -1298,7 +1333,7 @@ if __name__ == "__main__":
 
     def qp(var_name):
         # QuickPlot a variable.
-        fig = px.scatter(y=sol.value(eval(var_name)), title=var_name, labels={'y': var_name})
+        fig = px.scatter(y=s(eval(var_name)), title=var_name, labels={'y': var_name})
         fig.data[0].update(mode='markers+lines')
         fig.show()
 
@@ -1306,9 +1341,9 @@ if __name__ == "__main__":
     def qp2(x_name, y_name):
         # QuickPlot two variables.
         fig = px.scatter(
-            x=sol.value(eval(x_name)),
-            y=sol.value(eval(y_name)),
-            title="%s vs. %s" % (x_name, y_name),
+            x=s(eval(x_name)),
+            y=s(eval(y_name)),
+            title=f"{x_name} vs. {y_name}",
             labels={'x': x_name, 'y': y_name}
         )
         fig.data[0].update(mode='markers+lines')
@@ -1318,20 +1353,20 @@ if __name__ == "__main__":
     def qp3(x_name, y_name, z_name):
         # QuickPlot three variables.
         fig = px.scatter_3d(
-            x=sol.value(eval(x_name)),
-            y=sol.value(eval(y_name)),
-            z=sol.value(eval(z_name)),
-            title="%s vs. %s" % (x_name, y_name),
-            labels={'x': x_name, 'y': y_name},
+            x=s(eval(x_name)),
+            y=s(eval(y_name)),
+            z=s(eval(z_name)),
+            title=f"{x_name} vs. {y_name} vs. {z_name}",
+            labels={'x': x_name, 'y': y_name, 'z': z_name},
             size_max=18
         )
         fig.data[0].update(mode='markers+lines')
         fig.show()
 
 
-    s = lambda x: sol.value(x)
+    def draw():  # Draw the geometry of the optimal airplane
+        airplane.substitute_solution(sol).draw()
 
-    draw = lambda: airplane.substitute_solution(sol).draw()
 
     # endregion
 
@@ -1339,12 +1374,32 @@ if __name__ == "__main__":
     plot_dpi = 200
 
 
-    def plot(x, y):
-        # plt.plot(s(hour), s(y), ".-")
-        plt.plot(s(x)[:dusk], s(y)[:dusk], '.-', color=(103 / 255, 155 / 255, 240 / 255), label="Day")
-        plt.plot(s(x)[dawn:], s(y)[dawn:], '.-', color=(103 / 255, 155 / 255, 240 / 255))
-        plt.plot(s(x)[dusk - 1:dawn + 1], s(y)[dusk - 1:dawn + 1], '.-', color=(7 / 255, 36 / 255, 84 / 255),
-                 label="Night")
+    def plot(
+            x: str,
+            y: str,
+            plot_day_color=(103 / 255, 155 / 255, 240 / 255),
+            plot_night_color=(7 / 255, 36 / 255, 84 / 255)
+    ) -> None:  # Plot a variable x and variable y, highlighting where day and night occur
+        plt.plot(
+            s(x)[:dusk],
+            s(y)[:dusk],
+            '.-',
+            color=plot_day_color,
+            label="Day"
+        )
+        plt.plot(
+            s(x)[dawn:],
+            s(y)[dawn:],
+            '.-',
+            color=plot_day_color
+        )
+        plt.plot(
+            s(x)[dusk - 1:dawn + 1],
+            s(y)[dusk - 1:dawn + 1],
+            '.-',
+            color=plot_night_color,
+            label="Night"
+        )
         plt.legend()
 
 
@@ -1568,9 +1623,8 @@ if __name__ == "__main__":
     with open("outputs/mass_budget.csv", "w+") as f:
         from types import ModuleType
 
-        var_names = dir()
         f.write("Object or Collection of Objects, Mass [kg],\n")
-        for var_name in var_names:
+        for var_name in dir():
             if "mass" in var_name and not type(eval(var_name)) == ModuleType and not callable(eval(var_name)):
                 f.write("%s, %f,\n" % (var_name, s(eval(var_name))))
 
@@ -1610,7 +1664,4 @@ if __name__ == "__main__":
                 value = s(eval(var_name))
             except:
                 value = eval(var_name)
-            try:
-                f.write("%s, %f,\n" % (var_name, value))
-            except:
-                f.write("%s, %s,\n" % (var_name, value))
+            f.write(f"{var_name}, {value},\n")
