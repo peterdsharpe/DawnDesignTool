@@ -1265,45 +1265,13 @@ opti.minimize(
 )
 # endregion
 
-# region Solve
-p_opts = {}
-s_opts = {}
-s_opts["max_iter"] = 1000  # If you need to interrupt, just use ctrl+c
-# s_opts["bound_frac"] = 0.5
-# s_opts["bound_push"] = 0.5
-# s_opts["slack_bound_frac"] = 0.5
-# s_opts["slack_bound_push"] = 0.5
-s_opts["mu_strategy"] = "adaptive"
-# s_opts["mu_oracle"] = "quality-function"
-# s_opts["quality_function_max_section_steps"] = 20
-# s_opts["fixed_mu_oracle"] = "quality-function"
-# s_opts["alpha_for_y"] = "min"
-# s_opts["alpha_for_y"] = "primal-and-full"
-# s_opts["watchdog_shortened_iter_trigger"] = 1
-# s_opts["expect_infeasible_problem"]="yes"
-# s_opts["start_with_resto"] = "yes"
-# s_opts["required_infeasibility_reduction"] = 0.001
-# s_opts["evaluate_orig_obj_at_resto_trial"] = "yes"
-opti.solver('ipopt', p_opts, s_opts)
-
-# endregion
-
 if __name__ == "__main__":
-    try:
-        sol = opti.solve()
-    except:
-        sol = opti.debug
+    # Solve
+    sol = opti.solve()
 
+    # Print a warning if the penalty term is unreasonably high
     if np.abs(sol.value(penalty / objective)) > 0.01:
         print("\nWARNING: high penalty term! P/O = %.3f\n" % sol.value(penalty / objective))
-
-    # Find dusk and dawn
-    try:
-        si = sol.value(solar_flux_on_horizontal)
-        dusk = np.argwhere(si[:round(len(si) / 2)] < 1)[0, 0]
-        dawn = np.argwhere(si[round(len(si) / 2):] > 1)[0, 0] + round(len(si) / 2)
-    except IndexError:
-        print("Could not find dusk and dawn - you likely have a shorter-than-one-day mission.")
 
 
     # # region Postprocessing utilities, console output, etc.
@@ -1370,8 +1338,16 @@ if __name__ == "__main__":
 
     # endregion
 
-    # Draw plots
+    ### Draw plots
     plot_dpi = 200
+
+    # Find dusk and dawn
+    try:
+        solar_flux = s(solar_flux_on_horizontal)
+        index_dusk = np.argwhere(solar_flux[:round(len(solar_flux) / 2)] < 1)[0, 0]
+        index_dawn = np.argwhere(solar_flux[round(len(solar_flux) / 2):] > 1)[0, 0] + round(len(solar_flux) / 2)
+    except IndexError:
+        print("Could not find dusk and dawn - you likely have a shorter-than-one-day mission.")
 
 
     def plot(
@@ -1381,21 +1357,21 @@ if __name__ == "__main__":
             plot_night_color=(7 / 255, 36 / 255, 84 / 255)
     ) -> None:  # Plot a variable x and variable y, highlighting where day and night occur
         plt.plot(
-            s(x)[:dusk],
-            s(y)[:dusk],
+            s(x)[:index_dusk],
+            s(y)[:index_dusk],
             '.-',
             color=plot_day_color,
             label="Day"
         )
         plt.plot(
-            s(x)[dawn:],
-            s(y)[dawn:],
+            s(x)[index_dawn:],
+            s(y)[index_dawn:],
             '.-',
             color=plot_day_color
         )
         plt.plot(
-            s(x)[dusk - 1:dawn + 1],
-            s(y)[dusk - 1:dawn + 1],
+            s(x)[index_dusk - 1:index_dawn + 1],
+            s(y)[index_dusk - 1:index_dawn + 1],
             '.-',
             color=plot_night_color,
             label="Night"
