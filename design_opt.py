@@ -969,7 +969,7 @@ mass_wing_secondary = lib_mass_struct.mass_hpa_wing(
     ultimate_load_factor=structural_load_factor,
     t_over_c=0.14,
     include_spar=False,
-) * 1.5
+) * 1.5 # 1.5x multiplier suggested by Drela, April 2020
 
 mass_wing = mass_wing_primary + mass_wing_secondary
 
