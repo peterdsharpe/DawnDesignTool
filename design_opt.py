@@ -974,7 +974,7 @@ mass_wing_secondary = lib_mass_struct.mass_hpa_wing(
 mass_wing = mass_wing_primary + mass_wing_secondary
 
 # Stabilizers
-q_maneuver = 80  # TODO make this more accurate
+q_ne = 100  # Never-exceed dynamic pressure [Pa]. TODO verify this against 16.82 CDR.
 
 
 def mass_hstab(
@@ -983,14 +983,14 @@ def mass_hstab(
 ):
     mass_hstab_primary = lib_mass_struct.mass_wing_spar(
         span=hstab.span(),
-        mass_supported=q_maneuver * 1.5 * hstab.area() / 9.81,
+        mass_supported=q_ne * 1.5 * hstab.area() / 9.81,
         ultimate_load_factor=structural_load_factor
     )
 
     mass_hstab_secondary = lib_mass_struct.mass_hpa_stabilizer(
         span=hstab.span(),
         chord=hstab.mean_geometric_chord(),
-        dynamic_pressure_at_manuever_speed=q_maneuver,
+        dynamic_pressure_at_manuever_speed=q_ne,
         n_ribs=n_ribs_hstab,
         t_over_c=0.08,
         include_spar=False
@@ -1023,13 +1023,13 @@ def mass_vstab(
 ):
     mass_vstab_primary = lib_mass_struct.mass_wing_spar(
         span=vstab.span(),
-        mass_supported=q_maneuver * 1.5 * vstab.area() / 9.81,
+        mass_supported=q_ne * 1.5 * vstab.area() / 9.81,
         ultimate_load_factor=structural_load_factor
     ) * 1.2  # TODO due to asymmetry, a guess
     mass_vstab_secondary = lib_mass_struct.mass_hpa_stabilizer(
         span=vstab.span(),
         chord=vstab.mean_geometric_chord(),
-        dynamic_pressure_at_manuever_speed=q_maneuver,
+        dynamic_pressure_at_manuever_speed=q_ne,
         n_ribs=n_ribs_vstab,
         t_over_c=0.08
     )
@@ -1048,19 +1048,19 @@ mass_center_vstab = mass_vstab(center_vstab, n_ribs_vstab)
 # Fuselage & Boom
 mass_center_boom = lib_mass_struct.mass_hpa_tail_boom(
     length_tail_boom=center_boom_length - wing_x_quarter_chord,  # support up to the quarter-chord
-    dynamic_pressure_at_manuever_speed=q_maneuver,
+    dynamic_pressure_at_manuever_speed=q_ne,
     # mean_tail_surface_area=cas.fmax(center_hstab.area(), center_vstab.area()), # most optimistic
     # mean_tail_surface_area=cas.sqrt(center_hstab.area() ** 2 + center_vstab.area() ** 2),
     mean_tail_surface_area=center_hstab.area() + center_vstab.area(),  # most conservative
 )  # / 3 # TODO Jamie divided this by 3 on basis of 11/17/20 structures presentation; check this.
 mass_right_boom = lib_mass_struct.mass_hpa_tail_boom(
     length_tail_boom=outboard_boom_length - wing_x_quarter_chord,  # support up to the quarter-chord
-    dynamic_pressure_at_manuever_speed=q_maneuver,
+    dynamic_pressure_at_manuever_speed=q_ne,
     mean_tail_surface_area=right_hstab.area()
 )
 mass_left_boom = lib_mass_struct.mass_hpa_tail_boom(
     length_tail_boom=outboard_boom_length - wing_x_quarter_chord,  # support up to the quarter-chord
-    dynamic_pressure_at_manuever_speed=q_maneuver,
+    dynamic_pressure_at_manuever_speed=q_ne,
     mean_tail_surface_area=left_hstab.area()
 )
 
