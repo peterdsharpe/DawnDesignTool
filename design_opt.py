@@ -620,8 +620,8 @@ opti.subject_to([
     strut_loc <= wing_span / 6  # TODO review why this constraint is here, taken from Jamie DDT 12/30/20
 ])
 
-strut_span = (strut_loc ** 2 + (propeller_diameter / 2 + 0.25) ** 2) ** 0.5
-strut_chord = 0.167 * (strut_span * (propeller_diameter / 2 + 0.25)) ** (1 / 4)
+strut_span = (strut_loc ** 2 + (propeller_diameter / 2 + 0.25) ** 2) ** 0.5 # Formula from Jamie
+strut_chord = 0.167 * (strut_span * (propeller_diameter / 2 + 0.25)) ** 0.25 # Formula from Jamie
 strut_Re = rho / mu * airspeed * strut_chord
 strut_airfoil = flat_plate
 strut_Cd_profile = flat_plate.CDp_function(0, strut_Re, mach, 0)
@@ -1066,9 +1066,9 @@ mass_left_boom = lib_mass_struct.mass_hpa_tail_boom(
 
 # The following taken from Daedalus:  # taken from Daedalus, http://journals.sfu.ca/ts/index.php/ts/article/viewFile/760/718
 mass_daedalus = 103.9  # kg, corresponds to 229 lb gross weight. Total mass of the Daedalus aircraft, used as a reference for scaling.
-mass_fairings = 2.067 * mass_total / mass_daedalus
-mass_landing_gear = 0.728 * mass_total / mass_daedalus
-mass_strut = 661 * (strut_chord / 10) ** 2 * strut_span
+mass_fairings = 2.067 * mass_total / mass_daedalus # Scale fairing mass to same mass fraction as Daedalus
+mass_landing_gear = 0.728 * mass_total / mass_daedalus # Scale landing gear mass to same mass fraction as Daedalus
+mass_strut = 661 / 2 * (strut_chord / 10) ** 2 * strut_span # mass per strut, formula from Jamie
 
 mass_center_fuse = mass_center_boom + mass_fairings + mass_landing_gear  # per fuselage
 mass_right_fuse = mass_right_boom
@@ -1083,7 +1083,7 @@ mass_structural = (
         mass_center_fuse +
         mass_right_fuse +
         mass_left_fuse +
-        mass_strut
+        mass_strut * 2 # left and right struts
 )
 mass_structural *= structural_mass_margin_multiplier
 
