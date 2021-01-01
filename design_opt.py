@@ -872,8 +872,8 @@ MPPT_efficiency = 1 / 1.04
 # Bjarni, 4/17/20 in #powermanagement Slack.
 
 solar_area_fraction = opti.variable(  # TODO log-transform?
-    init_guess=0.5,
-    scale=1,
+    init_guess=0.80,
+    scale=0.5,
     category="des"
 )
 opti.subject_to([
