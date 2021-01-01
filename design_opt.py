@@ -590,12 +590,9 @@ lift_left_hstab, drag_left_hstab, moment_left_hstab = wing_aero(left_hstab, outb
 
 # Increase the wing drag due to tripped flow (8/17/20)
 wing_drag_multiplier = opti.parameter(1.12)  # TODO review
+# Was originally 1.25
 drag_wing *= wing_drag_multiplier
 
-
-# drag_right_hstab *= 1.2
-# drag_left_hstab *= 1.2
-# drag_center_hstab *= 1.2
 
 # center_vstab
 def vstab_aero(vstab: asb.Wing):
@@ -610,17 +607,17 @@ def vstab_aero(vstab: asb.Wing):
 drag_center_vstab = vstab_aero(center_vstab)
 
 # strut drag
-strut_loc = opti.variable(
+strut_y_location = opti.variable(
     init_guess=5,
     scale=5,
     category="des"
 )
 opti.subject_to([
-    strut_loc > 3,
-    strut_loc <= wing_span / 6  # TODO review why this constraint is here, taken from Jamie DDT 12/30/20
+    strut_y_location > 3,
+    strut_y_location <= wing_span / 6  # TODO review why this constraint is here, taken from Jamie DDT 12/30/20
 ])
 
-strut_span = (strut_loc ** 2 + (propeller_diameter / 2 + 0.25) ** 2) ** 0.5  # Formula from Jamie
+strut_span = (strut_y_location ** 2 + (propeller_diameter / 2 + 0.25) ** 2) ** 0.5  # Formula from Jamie
 strut_chord = 0.167 * (strut_span * (propeller_diameter / 2 + 0.25)) ** 0.25  # Formula from Jamie
 strut_Re = rho / mu * airspeed * strut_chord
 strut_airfoil = flat_plate
@@ -954,7 +951,7 @@ n_ribs_wing = opti.variable(
 )
 
 mass_wing_primary = lib_mass_struct.mass_wing_spar(
-    span=wing.span() - 2 * strut_loc,  # effective span, TODO review
+    span=wing.span() - 2 * strut_y_location,  # effective span, TODO review
     mass_supported=max_mass_total,
     # technically the spar doesn't really have to support its own weight (since it's roughly spanloaded), so this is conservative
     ultimate_load_factor=structural_load_factor,
@@ -1026,7 +1023,7 @@ mass_wing_secondary = estimate_mass_wing_secondary(
     skin_density=0.220,  # kg/m^2
     n_wing_sections=4,
     t_over_c=0.14,
-    scaling_factor=1.5 # Suggested by Drela
+    scaling_factor=1.5  # Suggested by Drela
 )
 
 mass_wing = mass_wing_primary + mass_wing_secondary
