@@ -15,6 +15,7 @@ from aerosandbox.library.airfoils import *
 import copy
 import matplotlib.pyplot as plt
 import matplotlib.style as style
+import matplotlib.ticker as ticker
 import seaborn as sns
 import json
 import design_opt_utilities as utils
@@ -31,13 +32,12 @@ minimize = "wing.span() / 50"  # any "eval-able" expression
 # minimize = "wing.span() / 50 * 0.9 + max_mass_total / 300 * 0.1"
 
 ##### Operating Parameters
+climb_opt = True  # are we optimizing for the climb as well?
 latitude = opti.parameter(49)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
 day_of_year = opti.parameter(244)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
-min_altitude = opti.parameter(18288)  # meters. 19812 m = 65000 ft, 18288 m = 60000 ft.
+min_altitude = 18288  # meters. 19812 m = 65000 ft, 18288 m = 60000 ft.
 required_headway_per_day = 10e3  # meters
 n_booms = 3
-days_to_simulate = opti.parameter(1)
-enforce_periodicity = True  # Tip: turn this off when looking at gas models or models w/o trajectory opt. enabled.
 allow_trajectory_optimization = True
 structural_load_factor = 3  # over static
 make_plots = True
@@ -57,23 +57,52 @@ allowable_battery_depth_of_discharge = opti.parameter(
     0.85)  # How much of the battery can you actually use? # Reviewed w/ Annick & Bjarni 4/30/2020
 
 ##### Simulation Parameters
-n_timesteps = 150  # Only relevant if allow_trajectory_optimization is True.
+n_timesteps_per_segment = 120  # Only relevant if allow_trajectory_optimization is True.
 # Quick convergence testing indicates you can get bad analyses below 150 or so...
 
 ##### Optimization bounds
 min_speed = 1  # Specify a minimum speed - keeps the speed-gamma velocity parameterization from NaNing
 
-##### Climb Optimization
-climb_opt = False  # are we optimizing for the climb as well
-seconds_per_day = 86400
-if climb_opt:
-    simulation_days = 1.5  # must be greater than 1
-    opti.set_value(days_to_simulate, simulation_days)
-    enforce_periodicity = False  # Leave False
-    time_shift = -6.5 * 60 * 60  # 60*((seconds_per_day*2)/(n_timesteps))
-    timesteps_of_last_day = int((1 - (1 / simulation_days)) * n_timesteps)
-else:
-    time_shift = 0
+##### Time Discretization
+if climb_opt:  # roughly 1-day-plus-climb window, starting at ground. Periodicity enforced for last 24 hours.
+    # time_start = -9 * 3600
+    time_start = opti.variable(
+        init_guess=-18 * 3600,
+        scale=3600,
+        category="ops",
+    )
+    time_end = 36 * 3600
+
+    time_periodic_window_start = time_end - 24 * 3600
+    time = cas.vertcat(
+        cas.linspace(
+            time_start,
+            time_periodic_window_start,
+            n_timesteps_per_segment
+        ),
+        cas.linspace(
+            time_periodic_window_start,
+            time_end,
+            n_timesteps_per_segment
+        )
+    )
+    time_periodic_start_index = time.shape[0] - n_timesteps_per_segment
+    time_periodic_end_index = time.shape[0] - 1
+
+else:  # Normal mode: 24-hour periodic window, starting at altitude.
+    time_start = 0 * 3600
+    time_end = 24 * 3600
+
+    time = np.linspace(
+        time_start,
+        time_end,
+        n_timesteps_per_segment
+    )
+    time_periodic_start_index = 0
+    time_periodic_end_index = time.shape[0] - 1
+
+n_timesteps = time.shape[0]
+hour = time / 3600
 
 # endregion
 
@@ -86,23 +115,22 @@ x = opti.variable(
     scale=1e5,
     category="ops"
 )
+x_km = x / 1000
+x_mi = x / 1609.34
+
 y = opti.variable(
     n_vars=n_timesteps,
-    init_guess=20000,
+    init_guess=min_altitude,
     scale=1e4,
     category="ops"
 )
+y_km = y / 1000
+y_ft = y / 0.3048
 
-if not climb_opt:
-    opti.subject_to([
-        y / min_altitude > 1,
-        y / 40000 < 1,  # models break down
-    ])
-else:
-    opti.subject_to([
-        y[timesteps_of_last_day:-1] > min_altitude,
-        y / 40000 < 1
-    ])
+opti.subject_to([
+    y[time_periodic_start_index:] / min_altitude > 1,
+    y / 40000 < 1,  # models break down
+])
 
 airspeed = opti.variable(
     n_vars=n_timesteps,
@@ -158,13 +186,6 @@ net_accel_perpendicular = opti.variable(
     scale=1e-1,
     category="ops"
 )
-
-##### Set up time
-time_nondim = cas.linspace(0, 1, n_timesteps)
-seconds_per_day = 86400
-time = time_nondim * days_to_simulate * seconds_per_day
-hour = time / 3600
-
 # endregion
 
 # region Design Optimization Variables
@@ -522,7 +543,7 @@ mach = airspeed / a
 g = 9.81  # gravitational acceleration, m/s^2
 q = 1 / 2 * rho * airspeed ** 2  # Solar calculations
 solar_flux_on_horizontal = lib_solar.solar_flux_on_horizontal(
-    latitude, day_of_year, time + time_shift, scattering=True
+    latitude, day_of_year, time, scattering=True
 )
 
 
@@ -840,6 +861,7 @@ opti.subject_to([
 ])
 battery_capacity_watt_hours = battery_capacity / 3600
 battery_stored_energy = battery_stored_energy_nondim * battery_capacity
+battery_state_of_charge_percentage = 100 * (battery_stored_energy_nondim + (1 - allowable_battery_depth_of_discharge))
 
 ### Solar calculations
 
@@ -1223,26 +1245,24 @@ dbattery_stored_energy_nondim = cas.diff(battery_stored_energy_nondim)
 opti.subject_to([
     dbattery_stored_energy_nondim / 1e-2 < (net_power_to_battery_trapz / battery_capacity) * dt / 1e-2,
 ])
-opti.subject_to([
-    battery_stored_energy_nondim[-1] > battery_stored_energy_nondim[0],
-])
 # endregion
 
 # region Finalize Optimization Problem
-##### Add periodic constraints
-if enforce_periodicity:
-    opti.subject_to([
-        x[-1] / 1e5 > (x[0] + days_to_simulate * required_headway_per_day) / 1e5,
-        y[-1] / 1e4 > y[0] / 1e4,
-        airspeed[-1] / 2e1 > airspeed[0] / 2e1,
-        flight_path_angle[-1] == flight_path_angle[0],
-        alpha[-1] == alpha[0],
-        thrust_force[-1] / 1e2 == thrust_force[0] / 1e2,
-    ])
 
 ##### Add initial state constraints
 opti.subject_to([
     x[0] / 1e5 == 0,  # Start at x-datum of zero
+])
+
+##### Add periodic constraints
+opti.subject_to([
+    x[time_periodic_end_index] / 1e5 > (x[time_periodic_start_index] + required_headway_per_day) / 1e5,
+    y[time_periodic_end_index] / 1e4 > y[time_periodic_start_index] / 1e4,
+    airspeed[time_periodic_end_index] / 2e1 > airspeed[time_periodic_start_index] / 2e1,
+    battery_stored_energy_nondim[time_periodic_end_index] > battery_stored_energy_nondim[time_periodic_start_index],
+    flight_path_angle[time_periodic_end_index] == flight_path_angle[time_periodic_start_index],
+    alpha[time_periodic_end_index] == alpha[time_periodic_start_index],
+    thrust_force[time_periodic_end_index] / 1e2 == thrust_force[time_periodic_start_index] / 1e2,
 ])
 
 ##### Optional constraints
@@ -1257,14 +1277,8 @@ if not allow_trajectory_optimization:
 
 ###### Climb Optimization Constraints
 if climb_opt:
-    opti.subject_to([y[0] == 0])
     opti.subject_to([
-        x[-1] / 1e5 > (x[timesteps_of_last_day] + days_to_simulate * required_headway_per_day) / 1e5,
-        y[-1] / 1e4 > y[timesteps_of_last_day] / 1e4,
-        airspeed[-1] / 2e1 > airspeed[timesteps_of_last_day] / 2e1,
-        flight_path_angle[-1] == flight_path_angle[timesteps_of_last_day],
-        alpha[-1] == alpha[timesteps_of_last_day],
-        thrust_force[-1] / 1e2 == thrust_force[timesteps_of_last_day] / 1e2,
+        y[0] / 1e4 == 0
     ])
     opti.subject_to([battery_stored_energy_nondim[0] == allowable_battery_depth_of_discharge])
 
@@ -1305,13 +1319,18 @@ things_to_slightly_minimize = (
 
 # Dewiggle
 penalty = 0
-penalty_denominator = n_timesteps
-penalty += cas.sum1(cas.diff(thrust_force / 10) ** 2) / penalty_denominator
-penalty += cas.sum1(cas.diff(net_accel_parallel / 1e-1) ** 2) / penalty_denominator
-penalty += cas.sum1(cas.diff(net_accel_perpendicular / 1e-1) ** 2) / penalty_denominator
-penalty += cas.sum1(cas.diff(airspeed / 2) ** 2) / penalty_denominator
-penalty += cas.sum1(cas.diff(flight_path_angle / 2) ** 2) / penalty_denominator
-penalty += cas.sum1(cas.diff(alpha / 1) ** 2) / penalty_denominator
+
+
+def penalty_norm(x):
+    return cas.sumsqr(cas.diff(cas.diff(x))) / n_timesteps_per_segment
+
+
+penalty += penalty_norm(thrust_force / 10)
+penalty += penalty_norm(net_accel_parallel / 1e-1)
+penalty += penalty_norm(net_accel_perpendicular / 1e-1)
+penalty += penalty_norm(airspeed / 2)
+penalty += penalty_norm(flight_path_angle / 2)
+penalty += penalty_norm(alpha / 1)
 
 opti.minimize(
     objective
@@ -1325,8 +1344,10 @@ if __name__ == "__main__":
     sol = opti.solve()
 
     # Print a warning if the penalty term is unreasonably high
-    if np.abs(sol.value(penalty / objective)) > 0.01:
-        print("\nWARNING: high penalty term! P/O = %.3f\n" % sol.value(penalty / objective))
+    penalty_objective_ratio = np.abs(sol.value(penalty / objective))
+    if penalty_objective_ratio > 0.01:
+        print(
+            f"\nWARNING: High penalty term, non-negligible integration error likely! P/O = {penalty_objective_ratio}\n")
 
 
     # # region Postprocessing utilities, console output, etc.
@@ -1397,113 +1418,107 @@ if __name__ == "__main__":
     plot_dpi = 200
 
     # Find dusk and dawn
-    try:
-        solar_flux = s(solar_flux_on_horizontal)
-        index_dusk = np.argwhere(solar_flux[:round(len(solar_flux) / 2)] < 1)[0, 0]
-        index_dawn = np.argwhere(solar_flux[round(len(solar_flux) / 2):] > 1)[0, 0] + round(len(solar_flux) / 2)
-    except IndexError:
-        print("Could not find dusk and dawn - you likely have a shorter-than-one-day mission.")
+    is_daytime = s(solar_flux_on_horizontal) >= 1  # 1 W/m^2 or greater insolation
+    is_nighttime = np.logical_not(is_daytime)
 
 
     def plot(
-            x: str,
-            y: str,
+            x_name: str,
+            y_name: str,
+            xlabel: str,
+            ylabel: str,
+            title: str,
+            save_name: str = None,
+            show: bool = True,
             plot_day_color=(103 / 255, 155 / 255, 240 / 255),
-            plot_night_color=(7 / 255, 36 / 255, 84 / 255)
+            plot_night_color=(7 / 255, 36 / 255, 84 / 255),
     ) -> None:  # Plot a variable x and variable y, highlighting where day and night occur
-        plt.plot(
-            s(x)[:index_dusk],
-            s(y)[:index_dusk],
-            '.-',
+
+        # Make the plot axes
+        fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
+
+        # Evaluate the data, and plot it. Shade according to whether it's day/night.
+        x = s(eval(x_name))
+        y = s(eval(y_name))
+        plot_average_color = tuple([
+            (d + n) / 2
+            for d, n in zip(plot_day_color, plot_night_color)
+        ])
+        plt.plot(  # Plot a black line through all points
+            x,
+            y,
+            '-',
+            color=plot_average_color,
+        )
+        plt.plot(  # Emphasize daytime points
+            x[is_daytime],
+            y[is_daytime],
+            '.',
             color=plot_day_color,
             label="Day"
         )
-        plt.plot(
-            s(x)[index_dawn:],
-            s(y)[index_dawn:],
-            '.-',
-            color=plot_day_color
-        )
-        plt.plot(
-            s(x)[index_dusk - 1:index_dawn + 1],
-            s(y)[index_dusk - 1:index_dawn + 1],
-            '.-',
+        plt.plot(  # Emphasize nighttime points
+            x[is_nighttime],
+            y[is_nighttime],
+            '.',
             color=plot_night_color,
             label="Night"
         )
+
+        # Disable offset notation, which makes things hard to read.
+        ax.ticklabel_format(useOffset=False)
+
+        # Do specific things for certain variable names.
+        if x_name == "hour":
+            ax.xaxis.set_major_locator(
+                ticker.MultipleLocator(base=3)
+            )
+
+        # Do the usual plot things.
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+        plt.title(title)
         plt.legend()
+        plt.tight_layout()
+        if save_name is not None:
+            plt.savefig(save_name)
+        if show:
+            plt.show()
+
+        return fig, ax
 
 
     if make_plots:
-        fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
-        plot(hour, y / 1000)
-        ax.ticklabel_format(useOffset=False)
-        plt.xlabel("Hours after Solar Noon")
-        plt.ylabel("Altitude [km]")
-        plt.title("Altitude over a Day (Aug. 31)")
-        plt.tight_layout()
-        plt.savefig("outputs/altitude.png")
-        plt.show()
-
-        fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
-        plot(hour, airspeed)
-        ax.ticklabel_format(useOffset=False)
-        plt.xlabel("Hours after Solar Noon")
-        plt.ylabel("True Airspeed [m/s]")
-        plt.title("True Airspeed over a Day (Aug. 31)")
-        plt.tight_layout()
-        plt.savefig("outputs/airspeed.png")
-        plt.show()
-
-        fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
-        plot(hour, net_power)
-        ax.ticklabel_format(useOffset=False)
-        plt.xlabel("Hours after Solar Noon")
-        plt.ylabel("Net Power [W] (positive is charging)")
-        plt.title("Net Power over a Day (Aug. 31)")
-        plt.tight_layout()
-        plt.savefig("outputs/net_power.png")
-        plt.show()
-
-        fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
-        plot(hour, 100 * (battery_stored_energy_nondim + (1 - allowable_battery_depth_of_discharge)))
-        ax.ticklabel_format(useOffset=False)
-        plt.xlabel("Hours after Solar Noon")
-        plt.ylabel("State of Charge [%]")
-        plt.title("Battery Charge State over a Day")
-        plt.tight_layout()
-        plt.savefig("outputs/battery_charge.png")
-        plt.close(fig)
-
-        fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
-        plot(x / 1000, y / 1000)
-        ax.ticklabel_format(useOffset=False)
-        plt.xlabel("Downrange Distance [km]")
-        plt.ylabel("Altitude [km]")
-        plt.title("Optimal Trajectory (Aug. 31)")
-        plt.tight_layout()
-        plt.savefig("outputs/trajectory.png")
-        plt.close(fig)
-
-        fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
-        plot(hour, power_in)
-        ax.ticklabel_format(useOffset=False)
-        plt.xlabel("Hours after Solar Noon")
-        plt.ylabel("Power Generated [W]")
-        plt.title("Power Generated over a Day (Aug. 31)")
-        plt.tight_layout()
-        plt.savefig("outputs/power_in.png")
-        plt.close(fig)
-
-        fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
-        plot(hour, power_out)
-        ax.ticklabel_format(useOffset=False)
-        plt.xlabel("Hours after Solar Noon")
-        plt.ylabel("Power Consumed [W]")
-        plt.title("Power Consumed over a Day (Aug. 31)")
-        plt.tight_layout()
-        plt.savefig("outputs/power_out.png")
-        plt.close(fig)
+        plot("hour", "y_km",
+             xlabel="Hours after Solar Noon",
+             ylabel="Altitude [km]",
+             title="Altitude over Simulation",
+             save_name="outputs/altitude.png"
+             )
+        plot("hour", "airspeed",
+             xlabel="Hours after Solar Noon",
+             ylabel="True Airspeed [m/s]",
+             title="True Airspeed over Simulation",
+             save_name="outputs/airspeed.png"
+             )
+        plot("hour", "net_power",
+             xlabel="Hours after Solar Noon",
+             ylabel="Net Power [W] (positive is charging)",
+             title="Net Power over Simulation",
+             save_name="outputs/net_power.png"
+             )
+        plot("hour", "battery_state_of_charge_percentage",
+             xlabel="Hours after Solar Noon",
+             ylabel="State of Charge [%]",
+             title="Battery Charge State over Simulation",
+             save_name="outputs/battery_charge.png"
+             )
+        plot("x_km", "y_km",
+             xlabel="Downrange Distance [km]",
+             ylabel="Altitude [km]",
+             title="Optimal Trajectory over Simulation",
+             save_name="outputs/trajectory.png"
+             )
 
         # Draw mass breakdown
         fig = plt.figure(figsize=(10, 8), dpi=plot_dpi)
