@@ -1,5 +1,3 @@
-# TODO un-hard-code the MPPT mass power input
-
 # Imports
 import aerosandbox as asb
 import aerosandbox.library.aerodynamics as aero
@@ -17,7 +15,6 @@ import matplotlib.pyplot as plt
 import matplotlib.style as style
 import matplotlib.ticker as ticker
 import seaborn as sns
-import json
 import design_opt_utilities as utils
 from typing import Union, List
 
@@ -25,7 +22,16 @@ sns.set(font_scale=1)
 
 # region Setup
 ##### Initialize Optimization
-opti = asb.Opti()
+opti = asb.Opti( # Normal mode - Design Optimization
+    cache_filename="cache/optimization_solution.json",
+    save_to_cache_on_solve=True
+)
+# opti = asb.Opti( # Alternate mode - Frozen Design Optimization
+#     variable_categories_to_freeze=["des"],
+#     cache_filename="cache/optimization_solution.json",
+#     load_frozen_variables_from_cache=True,
+#     ignore_violated_parametric_constraints=True
+# )
 
 minimize = "wing.span() / 50"  # any "eval-able" expression
 # minimize = "max_mass_total / 300" # any "eval-able" expression
@@ -33,17 +39,16 @@ minimize = "wing.span() / 50"  # any "eval-able" expression
 
 ##### Operating Parameters
 climb_opt = True  # are we optimizing for the climb as well?
-latitude = opti.parameter(49)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
-day_of_year = opti.parameter(244)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
-min_altitude = 18288  # meters. 19812 m = 65000 ft, 18288 m = 60000 ft.
+latitude = opti.parameter(value=49)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
+day_of_year = opti.parameter(value=244)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
+min_altitude = opti.parameter(value=18288)  # meters. 19812 m = 65000 ft, 18288 m = 60000 ft.
 required_headway_per_day = 10e3  # meters
-n_booms = 3
 allow_trajectory_optimization = True
 structural_load_factor = 3  # over static
-make_plots = True
-mass_payload = opti.parameter(30)
-wind_speed_func = lambda alt: 0 * lib_winds.wind_speed_conus_summer_99(alt, latitude)
-battery_specific_energy_Wh_kg = opti.parameter(450)
+make_plots = False
+mass_payload = opti.parameter(value=30)
+wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
+battery_specific_energy_Wh_kg = opti.parameter(value=450)
 battery_pack_cell_percentage = 0.89  # What percent of the battery pack consists of the module, by weight?
 # Accounts for module HW, BMS, pack installation, etc.
 # Ed Lovelace (in his presentation) gives 70% as a state-of-the-art fraction.
@@ -51,13 +56,13 @@ battery_pack_cell_percentage = 0.89  # What percent of the battery pack consists
 # According to Kevin Uleck, Odysseus realized an 89% packing factor here.
 
 ##### Margins
-structural_mass_margin_multiplier = opti.parameter(1.25)  # TODO Jamie dropped to 1.215 - why?
-energy_generation_margin = opti.parameter(1.05)
+structural_mass_margin_multiplier = opti.parameter(value=1.25)  # TODO Jamie dropped to 1.215 - why?
+energy_generation_margin = opti.parameter(value=1.05)
 allowable_battery_depth_of_discharge = opti.parameter(
-    0.85)  # How much of the battery can you actually use? # Reviewed w/ Annick & Bjarni 4/30/2020
+    value=0.85)  # How much of the battery can you actually use? # Reviewed w/ Annick & Bjarni 4/30/2020
 
 ##### Simulation Parameters
-n_timesteps_per_segment = 120  # Only relevant if allow_trajectory_optimization is True.
+n_timesteps_per_segment = 180  # Only relevant if allow_trajectory_optimization is True.
 # Quick convergence testing indicates you can get bad analyses below 150 or so...
 
 ##### Optimization bounds
@@ -65,6 +70,7 @@ min_speed = 1  # Specify a minimum speed - keeps the speed-gamma velocity parame
 
 ##### Time Discretization
 if climb_opt:  # roughly 1-day-plus-climb window, starting at ground. Periodicity enforced for last 24 hours.
+    assert allow_trajectory_optimization, "You can't do climb optimization without trajectory optimziation!"
     # time_start = -9 * 3600
     time_start = opti.variable(
         init_guess=-18 * 3600,
@@ -120,7 +126,7 @@ x_mi = x / 1609.34
 
 y = opti.variable(
     n_vars=n_timesteps,
-    init_guess=min_altitude,
+    init_guess=opti.value(min_altitude),
     scale=1e4,
     category="ops"
 )
@@ -177,13 +183,13 @@ opti.subject_to([
 net_accel_parallel = opti.variable(
     n_vars=n_timesteps,
     init_guess=0,
-    scale=1e-2,
+    scale=1e-4,
     category="ops"
 )
 net_accel_perpendicular = opti.variable(
     n_vars=n_timesteps,
     init_guess=0,
-    scale=1e-1,
+    scale=1e-5,
     category="ops"
 )
 # endregion
@@ -233,13 +239,13 @@ wing_taper_ratio = 0.5  # TODO analyze this more
 
 # center hstab
 center_hstab_span = opti.variable(
-    init_guess=12,
-    scale=15,
+    init_guess=4,
+    scale=4,
     category="des"
 )
 opti.subject_to([
     center_hstab_span > 0.1,
-    center_hstab_span < wing_span / n_booms / 2
+    center_hstab_span < wing_span / 6
 ])
 
 center_hstab_chord = opti.variable(
@@ -258,13 +264,13 @@ center_hstab_twist_angle = opti.variable(
 
 # center hstab
 outboard_hstab_span = opti.variable(
-    init_guess=12,
-    scale=15,
+    init_guess=4,
+    scale=4,
     category="des"
 )
 opti.subject_to([
     outboard_hstab_span > 2,  # TODO review this, driven by Trevor's ASWing findings on turn radius sizing, 8/16/20
-    outboard_hstab_span < wing_span / n_booms / 2,
+    outboard_hstab_span < wing_span / 6,
 ])
 
 outboard_hstab_chord = opti.variable(
@@ -280,7 +286,7 @@ outboard_hstab_twist_angle = opti.variable(
     n_vars=n_timesteps,
     init_guess=-3,
     scale=2,
-    category="des"
+    category="ops"
 )
 
 # center_vstab
@@ -336,7 +342,7 @@ opti.subject_to([
     propeller_diameter / 10 < 1
 ])
 
-n_propellers = opti.parameter(4)
+n_propellers = opti.parameter(value=4)
 
 # import pickle
 import dill as pickle
@@ -610,7 +616,7 @@ lift_right_hstab, drag_right_hstab, moment_right_hstab = wing_aero(right_hstab, 
 lift_left_hstab, drag_left_hstab, moment_left_hstab = wing_aero(left_hstab, outboard_hstab_twist_angle)
 
 # Increase the wing drag due to tripped flow (8/17/20)
-wing_drag_multiplier = opti.parameter(1.12)  # TODO review
+wing_drag_multiplier = opti.parameter(value=1.06)  # TODO review
 # Was originally 1.25
 drag_wing *= wing_drag_multiplier
 
@@ -691,12 +697,8 @@ x_ac = (
        )
 static_margin_fraction = (x_ac - airplane.xyz_ref[0]) / wing.mean_aerodynamic_chord()
 opti.subject_to([
-    static_margin_fraction == 0.2
-])
-
-### Trim
-opti.subject_to([
-    moment / 1e4 == 0  # Trim condition
+    static_margin_fraction == 0.2, # Stability condition
+    moment / 1e4 == 0 # Trim condition
 ])
 
 ### Size the tails off of tail volume coefficients
