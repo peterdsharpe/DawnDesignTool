@@ -22,7 +22,7 @@ sns.set(font_scale=1)
 
 # region Setup
 ##### Initialize Optimization
-opti = asb.Opti( # Normal mode - Design Optimization
+opti = asb.Opti(  # Normal mode - Design Optimization
     cache_filename="cache/optimization_solution.json",
     save_to_cache_on_solve=True
 )
@@ -697,8 +697,8 @@ x_ac = (
        )
 static_margin_fraction = (x_ac - airplane.xyz_ref[0]) / wing.mean_aerodynamic_chord()
 opti.subject_to([
-    static_margin_fraction == 0.2, # Stability condition
-    moment / 1e4 == 0 # Trim condition
+    static_margin_fraction == 0.2,  # Stability condition
+    moment / 1e4 == 0  # Trim condition
 ])
 
 ### Size the tails off of tail volume coefficients
