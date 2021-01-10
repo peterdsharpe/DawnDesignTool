@@ -38,14 +38,14 @@ minimize = "wing.span() / 50"  # any "eval-able" expression
 # minimize = "wing.span() / 50 * 0.9 + max_mass_total / 300 * 0.1"
 
 ##### Operating Parameters
-climb_opt = True  # are we optimizing for the climb as well?
+climb_opt = False  # are we optimizing for the climb as well?
 latitude = opti.parameter(value=49)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
 day_of_year = opti.parameter(value=244)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 min_altitude = opti.parameter(value=18288)  # meters. 19812 m = 65000 ft, 18288 m = 60000 ft.
 required_headway_per_day = 10e3  # meters
 allow_trajectory_optimization = True
 structural_load_factor = 3  # over static
-make_plots = False
+make_plots = True
 mass_payload = opti.parameter(value=30)
 wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
 battery_specific_energy_Wh_kg = opti.parameter(value=450)
@@ -200,10 +200,15 @@ net_accel_perpendicular = opti.variable(
 mass_total = opti.variable(
     init_guess=600,
     scale=600,
-    category="des"
+    category="ops"
 )
 
-max_mass_total = mass_total
+max_mass_total = opti.variable(
+    init_guess=600,
+    scale=600,
+    category="des"
+)
+opti.subject_to(max_mass_total / 600 >= mass_total / 600)
 
 ### Initialize geometric variables
 
@@ -1145,8 +1150,8 @@ mass_left_boom = lib_mass_struct.mass_hpa_tail_boom(
 
 # The following taken from Daedalus:  # taken from Daedalus, http://journals.sfu.ca/ts/index.php/ts/article/viewFile/760/718
 mass_daedalus = 103.9  # kg, corresponds to 229 lb gross weight. Total mass of the Daedalus aircraft, used as a reference for scaling.
-mass_fairings = 2.067 * mass_total / mass_daedalus  # Scale fairing mass to same mass fraction as Daedalus
-mass_landing_gear = 0.728 * mass_total / mass_daedalus  # Scale landing gear mass to same mass fraction as Daedalus
+mass_fairings = 2.067 * max_mass_total / mass_daedalus  # Scale fairing mass to same mass fraction as Daedalus
+mass_landing_gear = 0.728 * max_mass_total / mass_daedalus  # Scale landing gear mass to same mass fraction as Daedalus
 mass_strut = 661 / 2 * (strut_chord / 10) ** 2 * strut_span  # mass per strut, formula from Jamie
 
 mass_center_fuse = mass_center_boom + mass_fairings + mass_landing_gear  # per fuselage
@@ -1279,10 +1284,7 @@ if not allow_trajectory_optimization:
 
 ###### Climb Optimization Constraints
 if climb_opt:
-    opti.subject_to([
-        y[0] / 1e4 == 0
-    ])
-    opti.subject_to([battery_stored_energy_nondim[0] == allowable_battery_depth_of_discharge])
+    opti.subject_to(y[0] / 1e4 == 0)
 
 ##### Add objective
 objective = eval(minimize)
