@@ -5,7 +5,7 @@
 ### Project-Specific
 # Add things here!
 outputs/
-des_vars.json
+cache/optimization_solution.json
 
 ### IntelliJ project files
 .idea/
