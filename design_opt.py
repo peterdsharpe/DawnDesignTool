@@ -41,7 +41,7 @@ minimize = "wing.span() / 50"  # any "eval-able" expression
 climb_opt = False  # are we optimizing for the climb as well?
 latitude = opti.parameter(value=49)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
 day_of_year = opti.parameter(value=244)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
-min_altitude = opti.parameter(value=18288)  # meters. 19812 m = 65000 ft, 18288 m = 60000 ft.
+min_cruise_altitude = opti.parameter(value=18288)  # meters. 19812 m = 65000 ft, 18288 m = 60000 ft.
 required_headway_per_day = 10e3  # meters
 allow_trajectory_optimization = True
 structural_load_factor = 3  # over static
@@ -126,7 +126,7 @@ x_mi = x / 1609.34
 
 y = opti.variable(
     n_vars=n_timesteps,
-    init_guess=opti.value(min_altitude),
+    init_guess=opti.value(min_cruise_altitude),
     scale=1e4,
     category="ops"
 )
@@ -134,7 +134,8 @@ y_km = y / 1000
 y_ft = y / 0.3048
 
 opti.subject_to([
-    y[time_periodic_start_index:] / min_altitude > 1,
+    y[time_periodic_start_index:] / min_cruise_altitude > 1,
+    y / 40000 > 0,  # stay above ground
     y / 40000 < 1,  # models break down
 ])
 
