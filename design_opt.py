@@ -1379,38 +1379,34 @@ if __name__ == "__main__":
     ])
 
 
-    def qp(var_name):
-        # QuickPlot a variable.
-        fig = px.scatter(y=s(eval(var_name)), title=var_name, labels={'y': var_name})
+    def qp(*args:List[str]):
+        """
+        QuickPlot a variable or set of variables
+        :param args: Variable names, given as strings (e.g. 'x')
+        """
+        n = len(args)
+        if n == 1:
+            fig = px.scatter(y=s(eval(args[0])), title=args[0], labels={'y': args[0]})
+        elif n == 2:
+            fig = px.scatter(
+                x=s(eval(args[0])),
+                y=s(eval(args[1])),
+                title=f"{args[0]} vs. {args[1]}",
+                labels={'x': args[0], 'y': args[1]}
+            )
+        elif n == 3:
+            fig = px.scatter_3d(
+                x=s(eval(args[0])),
+                y=s(eval(args[1])),
+                z=s(eval(args[2])),
+                title=f"{args[0]} vs. {args[1]} vs. {args[2]}",
+                labels={'x': args[0], 'y': args[1], 'z': args[2]},
+                size_max=18
+            )
+        else:
+            raise ValueError("Too many inputs to plot!")
         fig.data[0].update(mode='markers+lines')
         fig.show()
-
-
-    def qp2(x_name, y_name):
-        # QuickPlot two variables.
-        fig = px.scatter(
-            x=s(eval(x_name)),
-            y=s(eval(y_name)),
-            title=f"{x_name} vs. {y_name}",
-            labels={'x': x_name, 'y': y_name}
-        )
-        fig.data[0].update(mode='markers+lines')
-        fig.show()
-
-
-    def qp3(x_name, y_name, z_name):
-        # QuickPlot three variables.
-        fig = px.scatter_3d(
-            x=s(eval(x_name)),
-            y=s(eval(y_name)),
-            z=s(eval(z_name)),
-            title=f"{x_name} vs. {y_name} vs. {z_name}",
-            labels={'x': x_name, 'y': y_name, 'z': z_name},
-            size_max=18
-        )
-        fig.data[0].update(mode='markers+lines')
-        fig.show()
-
 
     def draw():  # Draw the geometry of the optimal airplane
         airplane.substitute_solution(sol).draw()
