@@ -1236,10 +1236,11 @@ opti.subject_to([
 ])
 
 # Do the math for battery charging/discharging efficiency
+# Use tanh blending on charge/discharge eff. to avoid non-differentiability in integrator
 net_power_to_battery = net_power * blend(
     value_switch_low=1 / battery_discharge_efficiency,
     value_switch_high=battery_charge_efficiency,
-    switch=net_power / 50
+    switch=net_power / (0.01 * power_out_propulsion_max)
 )
 
 # Do the integration
