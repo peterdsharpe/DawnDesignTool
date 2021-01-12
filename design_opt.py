@@ -567,79 +567,67 @@ solar_flux_on_horizontal = lib_solar.solar_flux_on_horizontal(
 ##### Aerodynamics
 
 # Fuselage
-def fuse_aero(fuse: asb.Fuselage):
-    fuse_Re = rho / mu * airspeed * fuse.length()
-    CLA_fuse = 0
-    CDA_fuse = aero.Cf_flat_plate(fuse_Re) * fuse.area_wetted() * 1.2  # wetted area with form factor
+def compute_fuse_aerodynamics(fuse: asb.Fuselage):
+    fuse.Re = rho / mu * airspeed * fuse.length()
+    fuse.CLA = 0
+    fuse.CDA = aero.Cf_flat_plate(fuse.Re) * fuse.area_wetted() * 1.2  # wetted area with form factor
 
-    lift_fuse = CLA_fuse * q  # per fuse
-    drag_fuse = CDA_fuse * q  # per fuse
-    return lift_fuse, drag_fuse
+    fuse.lift = fuse.CLA * q  # per fuse
+    fuse.drag = fuse.CDA * q  # per fuse
 
 
-lift_center_fuse, drag_center_fuse = fuse_aero(center_fuse)
-lift_left_fuse, drag_left_fuse = fuse_aero(left_fuse)
-lift_right_fuse, drag_right_fuse = fuse_aero(right_fuse)
+compute_fuse_aerodynamics(center_fuse)
+compute_fuse_aerodynamics(left_fuse)
+compute_fuse_aerodynamics(right_fuse)
 
 
 # Wing
-def wing_aero(
+def compute_wing_aerodynamics(
         wing: asb.Wing,
-        incidence_angle: float
+        incidence_angle: float = 0,
+        is_horizontal_surface: bool = True
 ):
-    alpha_eff = alpha + incidence_angle + wing.mean_twist_angle()
+    wing.alpha_eff = incidence_angle + wing.mean_twist_angle()
+    if is_horizontal_surface:
+        wing.alpha_eff += alpha
 
-    wing_Re = rho / mu * airspeed * wing.mean_geometric_chord()
-    wing_airfoil = wing.xsecs[0].airfoil  # type: asb.Airfoil
-    wing_Cl_inc = wing_airfoil.CL_function(alpha_eff, wing_Re, 0,
+    wing.Re = rho / mu * airspeed * wing.mean_geometric_chord()
+    wing.airfoil = wing.xsecs[0].airfoil  # type: asb.Airfoil
+    wing.Cl_inc = wing_airfoil.CL_function(wing.alpha_eff, wing.Re, 0,
                                            0)  # Incompressible 2D lift coefficient
-    wing_CL = wing_Cl_inc * aero.CL_over_Cl(wing.aspect_ratio(), mach=mach,
+    wing.CL = wing.Cl_inc * aero.CL_over_Cl(wing.aspect_ratio(), mach=mach,
                                             sweep=wing.mean_sweep_angle())  # Compressible 3D lift coefficient
-    lift_wing = wing_CL * q * wing.area()
+    wing.lift = wing.CL * q * wing.area()
 
-    wing_Cd_profile = wing_airfoil.CDp_function(alpha_eff, wing_Re, mach, 0)
-    drag_wing_profile = wing_Cd_profile * q * wing.area()
+    wing.Cd_profile = wing_airfoil.CDp_function(wing.alpha_eff, wing.Re, mach, 0)
+    wing.drag_profile = wing.Cd_profile * q * wing.area()
 
-    wing_oswalds_efficiency = aero.oswalds_efficiency(
+    wing.oswalds_efficiency = aero.oswalds_efficiency(
         taper_ratio=wing.taper_ratio(),
         AR=wing.aspect_ratio(),
         sweep=wing.mean_sweep_angle()
     )
-    drag_wing_induced = lift_wing ** 2 / (q * np.pi * wing.span() ** 2 * wing_oswalds_efficiency)
+    wing.drag_induced = wing.lift ** 2 / (q * np.pi * wing.span() ** 2 * wing.oswalds_efficiency)
 
-    drag_wing = drag_wing_profile + drag_wing_induced
+    wing.drag = wing.drag_profile + wing.drag_induced
 
-    wing_Cm_inc = wing_airfoil.Cm_function(alpha_eff, wing_Re, 0,
+    wing.Cm_inc = wing_airfoil.Cm_function(wing.alpha_eff, wing.Re, 0,
                                            0)  # Incompressible 2D moment coefficient
-    wing_CM = wing_Cm_inc * aero.CL_over_Cl(wing.aspect_ratio(), mach=mach,
+    wing.CM = wing.Cm_inc * aero.CL_over_Cl(wing.aspect_ratio(), mach=mach,
                                             sweep=wing.mean_sweep_angle())  # Compressible 3D moment coefficient
-    moment_wing = wing_CM * q * wing.area() * wing.mean_geometric_chord()
-
-    return lift_wing, drag_wing, moment_wing
+    wing.moment = wing.CM * q * wing.area() * wing.mean_geometric_chord()
 
 
-lift_wing, drag_wing, moment_wing = wing_aero(wing, 0)
-lift_center_hstab, drag_center_hstab, moment_center_hstab = wing_aero(center_hstab, center_hstab_twist_angle)
-lift_right_hstab, drag_right_hstab, moment_right_hstab = wing_aero(right_hstab, outboard_hstab_twist_angle)
-lift_left_hstab, drag_left_hstab, moment_left_hstab = wing_aero(left_hstab, outboard_hstab_twist_angle)
+compute_wing_aerodynamics(wing)
+compute_wing_aerodynamics(center_hstab, incidence_angle=center_hstab_twist_angle)
+compute_wing_aerodynamics(right_hstab, incidence_angle=outboard_hstab_twist_angle)
+compute_wing_aerodynamics(left_hstab, incidence_angle=outboard_hstab_twist_angle)
+compute_wing_aerodynamics(center_vstab, is_horizontal_surface=False)
 
 # Increase the wing drag due to tripped flow (8/17/20)
 wing_drag_multiplier = opti.parameter(value=1.06)  # TODO review
 # Was originally 1.25
-drag_wing *= wing_drag_multiplier
-
-
-# center_vstab
-def vstab_aero(vstab: asb.Wing):
-    vstab_Re = rho / mu * airspeed * vstab.mean_geometric_chord()
-    vstab_airfoil = vstab.xsecs[0].airfoil  # type: asb.Airfoil
-    vstab_Cd_profile = vstab_airfoil.CDp_function(0, vstab_Re, mach, 0)
-    drag_vstab_profile = vstab_Cd_profile * q * vstab.area()
-    drag_vstab = drag_vstab_profile  # per vstab
-    return drag_vstab
-
-
-drag_center_vstab = vstab_aero(center_vstab)
+wing.drag *= wing_drag_multiplier
 
 # strut drag
 strut_y_location = opti.variable(
@@ -662,30 +650,30 @@ drag_strut = drag_strut_profile  # per strut
 
 # Force totals
 lift_force = (
-        lift_wing +
-        lift_center_hstab +
-        lift_right_hstab +
-        lift_left_hstab +
-        lift_center_fuse +
-        lift_right_fuse +
-        lift_left_fuse
+        wing.lift +
+        center_hstab.lift +
+        right_hstab.lift +
+        left_hstab.lift +
+        center_fuse.lift +
+        right_fuse.lift +
+        left_fuse.lift
 )
 drag_force = (
-        drag_wing +
-        drag_center_hstab +
-        drag_right_hstab +
-        drag_left_hstab +
-        drag_center_vstab +
-        drag_center_fuse +
-        drag_right_fuse +
-        drag_left_fuse +
+        wing.drag +
+        center_hstab.drag +
+        right_hstab.drag +
+        left_hstab.drag +
+        center_vstab.drag +
+        center_fuse.drag +
+        right_fuse.drag +
+        left_fuse.drag +
         drag_strut * 2  # 2 struts
 )
 moment = (
-        -wing.approximate_center_of_pressure()[0] * lift_wing + moment_wing +
-        -center_hstab.approximate_center_of_pressure()[0] * lift_center_hstab + moment_center_hstab +
-        -right_hstab.approximate_center_of_pressure()[0] * lift_right_hstab + moment_right_hstab +
-        -left_hstab.approximate_center_of_pressure()[0] * lift_left_hstab + moment_left_hstab
+        -wing.approximate_center_of_pressure()[0] * wing.lift + wing.moment +
+        -center_hstab.approximate_center_of_pressure()[0] * center_hstab.lift + center_hstab.moment +
+        -right_hstab.approximate_center_of_pressure()[0] * right_hstab.lift + right_hstab.moment +
+        -left_hstab.approximate_center_of_pressure()[0] * left_hstab.lift + left_hstab.moment
 )
 
 # endregion
