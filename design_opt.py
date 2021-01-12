@@ -4,7 +4,6 @@ import aerosandbox.library.aerodynamics as aero
 import aerosandbox.library.atmosphere as atmo
 from aerosandbox.tools.casadi_tools import *
 from aerosandbox.library import mass_structural as lib_mass_struct
-from aerosandbox.library import power_gas as lib_gas
 from aerosandbox.library import power_solar as lib_solar
 from aerosandbox.library import propulsion_electric as lib_prop_elec
 from aerosandbox.library import propulsion_propeller as lib_prop_prop
@@ -13,7 +12,6 @@ from aerosandbox.library.airfoils import naca0008, flat_plate
 import plotly.express as px
 import copy
 import matplotlib.pyplot as plt
-import matplotlib.style as style
 import matplotlib.ticker as ticker
 import seaborn as sns
 import design_opt_utilities as utils
