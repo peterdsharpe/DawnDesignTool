@@ -9,7 +9,8 @@ from aerosandbox.library import power_solar as lib_solar
 from aerosandbox.library import propulsion_electric as lib_prop_elec
 from aerosandbox.library import propulsion_propeller as lib_prop_prop
 from aerosandbox.library import winds as lib_winds
-from aerosandbox.library.airfoils import *
+from aerosandbox.library.airfoils import naca0008, flat_plate
+import plotly.express as px
 import copy
 import matplotlib.pyplot as plt
 import matplotlib.style as style
@@ -365,11 +366,11 @@ try:
     with open(path + "/cache/tail_airfoil.cache", "rb") as f:
         tail_airfoil = pickle.load(f)
 except (FileNotFoundError, TypeError):
-    wing_airfoil = Airfoil(name="HALE_03", coordinates=r"studies/airfoil_optimizer/HALE_03.dat")
+    wing_airfoil = asb.Airfoil(name="HALE_03", coordinates=r"studies/airfoil_optimizer/HALE_03.dat")
     wing_airfoil.populate_sectional_functions_from_xfoil_fits(parallel=False)
     with open(path + "/cache/wing_airfoil.cache", "wb+") as f:
         pickle.dump(wing_airfoil, f)
-    tail_airfoil = Airfoil("naca0008")
+    tail_airfoil = asb.Airfoil("naca0008")
     tail_airfoil.populate_sectional_functions_from_xfoil_fits(parallel=False)
     with open(path + "/cache/tail_airfoil.cache", "wb+") as f:
         pickle.dump(tail_airfoil, f)
