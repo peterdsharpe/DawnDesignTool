@@ -37,7 +37,7 @@ minimize = "wing.span() / 50"  # any "eval-able" expression
 # minimize = "wing.span() / 50 * 0.9 + max_mass_total / 300 * 0.1"
 
 ##### Operating Parameters
-climb_opt = False  # are we optimizing for the climb as well?
+climb_opt = True  # are we optimizing for the climb as well?
 latitude = opti.parameter(value=49)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
 day_of_year = opti.parameter(value=244)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 min_cruise_altitude = opti.parameter(value=18288)  # meters. 19812 m = 65000 ft, 18288 m = 60000 ft.
@@ -70,12 +70,15 @@ min_speed = 1  # Specify a minimum speed - keeps the speed-gamma velocity parame
 ##### Time Discretization
 if climb_opt:  # roughly 1-day-plus-climb window, starting at ground. Periodicity enforced for last 24 hours.
     assert allow_trajectory_optimization, "You can't do climb optimization without trajectory optimziation!"
-    # time_start = -9 * 3600
     time_start = opti.variable(
-        init_guess=-18 * 3600,
+        init_guess=-12 * 3600,
         scale=3600,
         category="ops",
     )
+    opti.subject_to([
+        time_start / 3600 < 0,
+        time_start / 3600 > -24,
+    ])
     time_end = 36 * 3600
 
     time_periodic_window_start = time_end - 24 * 3600
@@ -1313,33 +1316,38 @@ propeller_efficiency = thrust_force * airspeed / power_out_propulsion_shaft
 cruise_LD = lift_force / drag_force
 
 ##### Add tippers
-things_to_slightly_minimize = (
-        wing_span / 80
-        + n_propellers / 1
-        + propeller_diameter / 2
-        + battery_capacity_watt_hours / 30000
-        + solar_area_fraction / 0.5
-)
+things_to_slightly_minimize = 0
+
+for tipper_input in [
+    wing_span / 50,
+    n_propellers / 2,
+    propeller_diameter / 3,
+    battery_capacity_watt_hours / 50000,
+    solar_area_fraction / 0.5,
+    (hour[-1] - hour[0]) / 24,
+]:
+    try:
+        things_to_slightly_minimize += tipper_input
+    except NameError:
+        pass
 
 # Dewiggle
 penalty = 0
 
-
-def penalty_norm(x):
-    return cas.sumsqr(cas.diff(cas.diff(x))) / n_timesteps_per_segment
-
-
-penalty += penalty_norm(thrust_force / 10)
-penalty += penalty_norm(net_accel_parallel / 1e-1)
-penalty += penalty_norm(net_accel_perpendicular / 1e-1)
-penalty += penalty_norm(airspeed / 2)
-penalty += penalty_norm(flight_path_angle / 2)
-penalty += penalty_norm(alpha / 1)
+for penalty_input in [
+    thrust_force / 10,
+    net_accel_parallel / 1e-1,
+    net_accel_perpendicular / 1e-1,
+    airspeed / 2,
+    flight_path_angle / 2,
+    alpha / 1,
+]:
+    penalty += cas.sumsqr(cas.diff(cas.diff(penalty_input))) / n_timesteps_per_segment
 
 opti.minimize(
     objective
     + penalty
-    + 1e-6 * things_to_slightly_minimize
+    + 1e-3 * things_to_slightly_minimize
 )
 # endregion
 
@@ -1379,7 +1387,7 @@ if __name__ == "__main__":
     ])
 
 
-    def qp(*args:List[str]):
+    def qp(*args: List[str]):
         """
         QuickPlot a variable or set of variables
         :param args: Variable names, given as strings (e.g. 'x')
@@ -1407,6 +1415,7 @@ if __name__ == "__main__":
             raise ValueError("Too many inputs to plot!")
         fig.data[0].update(mode='markers+lines')
         fig.show()
+
 
     def draw():  # Draw the geometry of the optimal airplane
         airplane.substitute_solution(sol).draw()
