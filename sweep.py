@@ -5,7 +5,6 @@ from design_opt import *
 
 param_range = np.linspace(1, 1.169, 30)
 outputs = []
-s_opts["max_iter"] = 1000
 
 for i, param in enumerate(param_range):
     print(f"{'-' * 50}\nIteration {i + 1} of {len(param_range)}\n{'-' * 50}")
@@ -18,6 +17,8 @@ for i, param in enumerate(param_range):
     except:
         outputs.append(np.NaN)
 outputs = np.array(outputs)
+
+
 
 import matplotlib.pyplot as plt
 from matplotlib import style
