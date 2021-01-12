@@ -607,7 +607,12 @@ def compute_wing_aerodynamics(
         AR=wing.aspect_ratio(),
         sweep=wing.mean_sweep_angle()
     )
-    wing.drag_induced = wing.lift ** 2 / (q * np.pi * wing.span() ** 2 * wing.oswalds_efficiency)
+    wing.drag_induced = aero.induced_drag(
+        lift=wing.lift,
+        span=wing.span(),
+        dynamic_pressure=q,
+        oswalds_efficiency=wing.oswalds_efficiency
+    )
 
     wing.drag = wing.drag_profile + wing.drag_induced
 
@@ -626,7 +631,6 @@ compute_wing_aerodynamics(center_vstab, is_horizontal_surface=False)
 
 # Increase the wing drag due to tripped flow (8/17/20)
 wing_drag_multiplier = opti.parameter(value=1.06)  # TODO review
-# Was originally 1.25
 wing.drag *= wing_drag_multiplier
 
 # strut drag
