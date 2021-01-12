@@ -1545,7 +1545,7 @@ if __name__ == "__main__":
             s(mass_avionics),
         ]
         colors = plt.cm.Set2(np.arange(5))
-        pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (x * s(max_mass_total) / 100, x)
+        pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (x * s(mass_total) / 100, x)
         ax_main.pie(
             pie_values,
             labels=pie_labels,
@@ -1596,7 +1596,7 @@ if __name__ == "__main__":
             0, 1
         )
         pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (
-            x * s(mass_structural) / 100, x * s(mass_structural / max_mass_total))
+            x * s(mass_structural) / 100, x * s(mass_structural / mass_total))
         ax_structural.pie(
             pie_values,
             labels=pie_labels,
@@ -1628,7 +1628,7 @@ if __name__ == "__main__":
             0, 1
         )[::-1]
         pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (
-            x * s(mass_power_systems) / 100, x * s(mass_power_systems / max_mass_total))
+            x * s(mass_power_systems) / 100, x * s(mass_power_systems / mass_total))
         ax_power_systems.pie(
             pie_values,
             labels=pie_labels,
@@ -1655,7 +1655,7 @@ if __name__ == "__main__":
             s="""
             Total mass: %.1f kg
             Wing span: %.2f m
-            """ % (s(max_mass_total), s(wing.span())),
+            """ % (s(mass_total), s(wing.span())),
             xy=(0.03, 0.70),
             # xytext=(0.03, 0.03),
             xycoords="figure fraction",
@@ -1698,6 +1698,7 @@ if __name__ == "__main__":
             'center_vstab_chord',
             '',
             'max_mass_total',
+            'mass_total'
             '',
             'solar_area_fraction',
             'battery_capacity_watt_hours',
