@@ -2,13 +2,15 @@
 import aerosandbox as asb
 import aerosandbox.library.aerodynamics as aero
 import aerosandbox.library.atmosphere as atmo
-from aerosandbox.tools.casadi_tools import *
+from aerosandbox.tools.casadi_functions import sind, cosd, blend
 from aerosandbox.library import mass_structural as lib_mass_struct
 from aerosandbox.library import power_solar as lib_solar
 from aerosandbox.library import propulsion_electric as lib_prop_elec
 from aerosandbox.library import propulsion_propeller as lib_prop_prop
 from aerosandbox.library import winds as lib_winds
 from aerosandbox.library.airfoils import naca0008, flat_plate
+from aerosandbox import cas
+import numpy as np
 import plotly.express as px
 import copy
 import matplotlib.pyplot as plt
@@ -594,7 +596,7 @@ def compute_wing_aerodynamics(
     surface.Re = rho / mu * airspeed * surface.mean_geometric_chord()
     surface.airfoil = surface.xsecs[0].airfoil  # type: asb.Airfoil
     surface.Cl_inc = surface.airfoil.CL_function(surface.alpha_eff, surface.Re, 0,
-                                              0)  # Incompressible 2D lift coefficient
+                                                 0)  # Incompressible 2D lift coefficient
     surface.CL = surface.Cl_inc * aero.CL_over_Cl(surface.aspect_ratio(), mach=mach,
                                                   sweep=surface.mean_sweep_angle())  # Compressible 3D lift coefficient
     surface.lift = surface.CL * q * surface.area()
@@ -1234,11 +1236,11 @@ opti.subject_to([
 ])
 
 # Do the math for battery charging/discharging efficiency
-tanh_sigmoid = lambda x: 0.5 + 0.5 * cas.tanh(x)
-net_power_to_battery = net_power * (
-        1 / battery_discharge_efficiency * (1 - tanh_sigmoid(net_power / 10)) +
-        battery_charge_efficiency * tanh_sigmoid(net_power / 10)
-)  # tanh blending to avoid optimizer stalling on nonsmooth integrator
+net_power_to_battery = net_power * blend(
+    value_switch_low=1 / battery_discharge_efficiency,
+    value_switch_high=battery_charge_efficiency,
+    switch=net_power / 50
+)
 
 # Do the integration
 net_power_to_battery_trapz = trapz(net_power_to_battery)
