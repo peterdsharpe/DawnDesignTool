@@ -583,44 +583,44 @@ compute_fuse_aerodynamics(right_fuse)
 
 # Wing
 def compute_wing_aerodynamics(
-        wing: asb.Wing,
+        surface: asb.Wing,
         incidence_angle: float = 0,
         is_horizontal_surface: bool = True
 ):
-    wing.alpha_eff = incidence_angle + wing.mean_twist_angle()
+    surface.alpha_eff = incidence_angle + surface.mean_twist_angle()
     if is_horizontal_surface:
-        wing.alpha_eff += alpha
+        surface.alpha_eff += alpha
 
-    wing.Re = rho / mu * airspeed * wing.mean_geometric_chord()
-    wing.airfoil = wing.xsecs[0].airfoil  # type: asb.Airfoil
-    wing.Cl_inc = wing_airfoil.CL_function(wing.alpha_eff, wing.Re, 0,
-                                           0)  # Incompressible 2D lift coefficient
-    wing.CL = wing.Cl_inc * aero.CL_over_Cl(wing.aspect_ratio(), mach=mach,
-                                            sweep=wing.mean_sweep_angle())  # Compressible 3D lift coefficient
-    wing.lift = wing.CL * q * wing.area()
+    surface.Re = rho / mu * airspeed * surface.mean_geometric_chord()
+    surface.airfoil = surface.xsecs[0].airfoil  # type: asb.Airfoil
+    surface.Cl_inc = surface.airfoil.CL_function(surface.alpha_eff, surface.Re, 0,
+                                              0)  # Incompressible 2D lift coefficient
+    surface.CL = surface.Cl_inc * aero.CL_over_Cl(surface.aspect_ratio(), mach=mach,
+                                                  sweep=surface.mean_sweep_angle())  # Compressible 3D lift coefficient
+    surface.lift = surface.CL * q * surface.area()
 
-    wing.Cd_profile = wing_airfoil.CDp_function(wing.alpha_eff, wing.Re, mach, 0)
-    wing.drag_profile = wing.Cd_profile * q * wing.area()
+    surface.Cd_profile = surface.airfoil.CDp_function(surface.alpha_eff, surface.Re, mach, 0)
+    surface.drag_profile = surface.Cd_profile * q * surface.area()
 
-    wing.oswalds_efficiency = aero.oswalds_efficiency(
-        taper_ratio=wing.taper_ratio(),
-        AR=wing.aspect_ratio(),
-        sweep=wing.mean_sweep_angle()
+    surface.oswalds_efficiency = aero.oswalds_efficiency(
+        taper_ratio=surface.taper_ratio(),
+        AR=surface.aspect_ratio(),
+        sweep=surface.mean_sweep_angle()
     )
-    wing.drag_induced = aero.induced_drag(
-        lift=wing.lift,
-        span=wing.span(),
+    surface.drag_induced = aero.induced_drag(
+        lift=surface.lift,
+        span=surface.span(),
         dynamic_pressure=q,
-        oswalds_efficiency=wing.oswalds_efficiency
+        oswalds_efficiency=surface.oswalds_efficiency
     )
 
-    wing.drag = wing.drag_profile + wing.drag_induced
+    surface.drag = surface.drag_profile + surface.drag_induced
 
-    wing.Cm_inc = wing_airfoil.Cm_function(wing.alpha_eff, wing.Re, 0,
-                                           0)  # Incompressible 2D moment coefficient
-    wing.CM = wing.Cm_inc * aero.CL_over_Cl(wing.aspect_ratio(), mach=mach,
-                                            sweep=wing.mean_sweep_angle())  # Compressible 3D moment coefficient
-    wing.moment = wing.CM * q * wing.area() * wing.mean_geometric_chord()
+    surface.Cm_inc = wing_airfoil.Cm_function(surface.alpha_eff, surface.Re, 0,
+                                              0)  # Incompressible 2D moment coefficient
+    surface.CM = surface.Cm_inc * aero.CL_over_Cl(surface.aspect_ratio(), mach=mach,
+                                                  sweep=surface.mean_sweep_angle())  # Compressible 3D moment coefficient
+    surface.moment = surface.CM * q * surface.area() * surface.mean_geometric_chord()
 
 
 compute_wing_aerodynamics(wing)
