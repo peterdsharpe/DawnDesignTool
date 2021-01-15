@@ -1,15 +1,8 @@
 aerosandbox
-dash
-dash-core-components
-dash-html-components
-dash-renderer
-dash-table
-dash-bootstrap-components
 numpy
 pandas
 plotly
 casadi
-gunicorn
 tqdm
 scipy
 seaborn
