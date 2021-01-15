@@ -61,7 +61,7 @@ structural_mass_margin_multiplier = opti.parameter(value=1.25)  # TODO Jamie dro
 energy_generation_margin = opti.parameter(value=1.05)
 allowable_battery_depth_of_discharge = opti.parameter(
     value=0.85)  # How much of the battery can you actually use? # Reviewed w/ Annick & Bjarni 4/30/2020
-q_ne_over_q_max = opti.parameter(value=1.5)
+q_ne_over_q_max = opti.parameter(value=2)
 
 ##### Simulation Parameters
 n_timesteps_per_segment = 180  # Only relevant if allow_trajectory_optimization is True.
@@ -595,7 +595,7 @@ def compute_wing_aerodynamics(
         surface.alpha_eff += alpha
 
     surface.Re = rho / mu * airspeed * surface.mean_geometric_chord()
-    surface.airfoil = surface.xsecs[0].airfoil  # type: asb.Airfoil
+    surface.airfoil = surface.xsecs[0].airfoil
     surface.Cl_inc = surface.airfoil.CL_function(surface.alpha_eff, surface.Re, 0,
                                                  0)  # Incompressible 2D lift coefficient
     surface.CL = surface.Cl_inc * aero.CL_over_Cl(surface.aspect_ratio(), mach=mach,
@@ -1059,7 +1059,7 @@ mass_wing = mass_wing_primary + mass_wing_secondary
 q_ne = opti.variable(
     init_guess=70,
     category = "des"
-)  # Never-exceed dynamic pressure [Pa]. TODO verify this against 16.82 CDR.
+)  # Never-exceed dynamic pressure [Pa].
 opti.subject_to(q_ne / 100 > q * q_ne_over_q_max / 100)
 
 def mass_hstab(
