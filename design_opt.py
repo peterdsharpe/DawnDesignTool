@@ -16,7 +16,7 @@ import copy
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import seaborn as sns
-import design_opt_utilities as utils
+from design_opt_utilities.fuselage import make_fuselage
 from typing import Union, List
 
 sns.set(font_scale=1)
@@ -61,6 +61,7 @@ structural_mass_margin_multiplier = opti.parameter(value=1.25)  # TODO Jamie dro
 energy_generation_margin = opti.parameter(value=1.05)
 allowable_battery_depth_of_discharge = opti.parameter(
     value=0.85)  # How much of the battery can you actually use? # Reviewed w/ Annick & Bjarni 4/30/2020
+q_ne_over_q_max = opti.parameter(value=1.5)
 
 ##### Simulation Parameters
 n_timesteps_per_segment = 180  # Only relevant if allow_trajectory_optimization is True.
@@ -507,14 +508,14 @@ center_vstab = asb.Wing(
     ]
 )
 
-center_fuse = utils.fuselage(
+center_fuse = make_fuselage(
     boom_length=center_boom_length,
     nose_length=nose_length,
     fuse_diameter=fuse_diameter,
     boom_diameter=boom_diameter,
 )
 
-right_fuse = utils.fuselage(
+right_fuse = make_fuselage(
     boom_length=outboard_boom_length,
     nose_length=0.5,  # Review this for fit
     fuse_diameter=boom_diameter,
@@ -1055,8 +1056,11 @@ mass_wing_secondary = estimate_mass_wing_secondary(
 mass_wing = mass_wing_primary + mass_wing_secondary
 
 # Stabilizers
-q_ne = 100  # Never-exceed dynamic pressure [Pa]. TODO verify this against 16.82 CDR.
-
+q_ne = opti.variable(
+    init_guess=70,
+    category = "des"
+)  # Never-exceed dynamic pressure [Pa]. TODO verify this against 16.82 CDR.
+opti.subject_to(q_ne / 100 > q * q_ne_over_q_max / 100)
 
 def mass_hstab(
         hstab,

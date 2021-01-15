@@ -2,7 +2,7 @@ import numpy as np
 import aerosandbox as asb
 
 
-def fuselage(
+def make_fuselage(
         boom_length,
         nose_length,
         fuse_diameter,
