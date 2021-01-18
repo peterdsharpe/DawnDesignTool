@@ -51,6 +51,8 @@ mass_payload = opti.parameter(value=30)
 wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
 battery_specific_energy_Wh_kg = opti.parameter(value=450)
 battery_pack_cell_percentage = 0.89  # What percent of the battery pack consists of the module, by weight?
+variable_pitch = False
+use_propulsion_fits_from_FL2020_1682_undergrads = True # Warning: Fits not yet validated
 # Accounts for module HW, BMS, pack installation, etc.
 # Ed Lovelace (in his presentation) gives 70% as a state-of-the-art fraction.
 # Used 75% in the 16.82 CDR.
@@ -743,9 +745,7 @@ propeller_rpm = propeller_rads_per_sec * 30 / cas.pi
 
 area_propulsive = cas.pi / 4 * propeller_diameter ** 2 * n_propellers
 
-use_legacy_propulsion_models = True
-
-if use_legacy_propulsion_models:
+if not use_propulsion_fits_from_FL2020_1682_undergrads:
     ### Use older models
 
     motor_efficiency = 0.955  # Taken from ThinGap estimates
@@ -770,7 +770,7 @@ else:
         airspeed=airspeed,
         total_thrust=thrust_force,
         altitude=y,
-        var_pitch=False
+        var_pitch=variable_pitch
     )
     power_out_propulsion_shaft = thrust_force * airspeed / propeller_efficiency
 
@@ -811,7 +811,7 @@ mass_motor_mounted = 2 * mass_motor_raw  # similar to a quote from Raymer, modif
 mass_propellers = n_propellers * lib_prop_prop.mass_hpa_propeller(
     diameter=propeller_diameter,
     max_power=power_out_propulsion_max,
-    include_variable_pitch_mechanism=True
+    include_variable_pitch_mechanism=variable_pitch
 )
 mass_ESC = lib_prop_elec.mass_ESC(max_power=power_out_propulsion_max)
 
