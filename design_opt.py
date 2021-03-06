@@ -1,9 +1,10 @@
 # Imports
 import aerosandbox as asb
 import aerosandbox.library.aerodynamics as aero
-import aerosandbox.library.atmosphere as atmo
+from aerosandbox.atmosphere import Atmosphere as atmo
 from aerosandbox.library import mass_structural as lib_mass_struct
 from aerosandbox.library import power_solar as lib_solar
+lib_solar
 from aerosandbox.library import propulsion_electric as lib_prop_elec
 from aerosandbox.library import propulsion_propeller as lib_prop_prop
 from aerosandbox.library import winds as lib_winds
@@ -520,11 +521,12 @@ airplane = asb.Airplane(
 
 # region Atmosphere
 ##### Atmosphere
-P = atmo.get_pressure_at_altitude(y)
-rho = atmo.get_density_at_altitude(y)
-T = atmo.get_temperature_at_altitude(y)
-mu = atmo.get_viscosity_from_temperature(T)
-a = atmo.get_speed_of_sound_from_temperature(T)
+my_atmosphere = atmo(altitude=y)
+P = my_atmosphere.pressure()
+rho = my_atmosphere.density()
+T = my_atmosphere.temperature()
+mu = my_atmosphere.dynamic_viscosity()
+a = my_atmosphere.speed_of_sound()
 mach = airspeed / a
 g = 9.81  # gravitational acceleration, m/s^2
 q = 1 / 2 * rho * airspeed ** 2  # Solar calculations
