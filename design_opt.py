@@ -1,7 +1,7 @@
 # Imports
 import aerosandbox as asb
 import aerosandbox.library.aerodynamics as aero
-#import aerosandbox.library.atmosphere as atmo
+import aerosandbox.library.atmosphere as atmo
 from aerosandbox.library import mass_structural as lib_mass_struct
 from aerosandbox.library import power_solar as lib_solar
 from aerosandbox.library import propulsion_electric as lib_prop_elec
@@ -493,7 +493,7 @@ right_fuse = make_fuselage(
     boom_diameter=boom_diameter,
 )
 
-right_fuse.xyz_le += np.concatenate(0, boom_location * wing_span / 2, 0)
+right_fuse.xyz_le += np.concatenate((0, boom_location * wing_span / 2, 0))
 
 left_fuse = copy.deepcopy(right_fuse)
 left_fuse.xyz_le[1] *= -1
@@ -501,9 +501,7 @@ left_fuse.xyz_le[1] *= -1
 # Assemble the airplane
 airplane = asb.Airplane(
     name="Solar1",
-    x_ref=0,
-    y_ref=0,
-    z_ref=0,
+    xyz_ref = np.array([0, 0, 0]),
     wings=[
         wing,
         center_hstab,
