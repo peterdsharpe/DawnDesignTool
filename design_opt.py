@@ -4,7 +4,6 @@ import aerosandbox.library.aerodynamics as aero
 from aerosandbox.atmosphere import Atmosphere as atmo
 from aerosandbox.library import mass_structural as lib_mass_struct
 from aerosandbox.library import power_solar as lib_solar
-lib_solar
 from aerosandbox.library import propulsion_electric as lib_prop_elec
 from aerosandbox.library import propulsion_propeller as lib_prop_prop
 from aerosandbox.library import winds as lib_winds
@@ -578,7 +577,7 @@ def compute_wing_aerodynamics(
 
     surface.oswalds_efficiency = aero.oswalds_efficiency(
         taper_ratio=surface.taper_ratio(),
-        AR=surface.aspect_ratio(),
+        aspect_ratio=surface.aspect_ratio(),
         sweep=surface.mean_sweep_angle()
     )
     surface.drag_induced = aero.induced_drag(
@@ -648,10 +647,10 @@ drag_force = (
         drag_strut * 2  # 2 struts
 )
 moment = (
-        -wing.approximate_center_of_pressure()[0] * wing.lift + wing.moment +
-        -center_hstab.approximate_center_of_pressure()[0] * center_hstab.lift + center_hstab.moment +
-        -right_hstab.approximate_center_of_pressure()[0] * right_hstab.lift + right_hstab.moment +
-        -left_hstab.approximate_center_of_pressure()[0] * left_hstab.lift + left_hstab.moment
+        -wing.aerodynamic_center()[0] * wing.lift + wing.moment +
+        -center_hstab.aerodynamic_center()[0] * center_hstab.lift + center_hstab.moment +
+        -right_hstab.aerodynamic_center()[0] * right_hstab.lift + right_hstab.moment +
+        -left_hstab.aerodynamic_center()[0] * left_hstab.lift + left_hstab.moment
 )
 
 # endregion
@@ -659,10 +658,10 @@ moment = (
 # region Stability
 ### Estimate aerodynamic center
 x_ac = (
-               wing.approximate_center_of_pressure()[0] * wing.area() +
-               center_hstab.approximate_center_of_pressure()[0] * center_hstab.area() +
-               right_hstab.approximate_center_of_pressure()[0] * right_hstab.area() +
-               left_hstab.approximate_center_of_pressure()[0] * left_hstab.area()
+               wing.aerodynamic_center()[0] * wing.area() +
+               center_hstab.aerodynamic_center()[0] * center_hstab.area() +
+               right_hstab.aerodynamic_center()[0] * right_hstab.area() +
+               left_hstab.aerodynamic_center()[0] * left_hstab.area()
        ) / (
                wing.area() +
                center_hstab.area() +
@@ -677,7 +676,7 @@ opti.subject_to([
 
 ### Size the tails off of tail volume coefficients
 Vv = center_vstab.area() * (
-        center_vstab.approximate_center_of_pressure()[0] - wing.approximate_center_of_pressure()[0]
+        center_vstab.aerodynamic_center()[0] - wing.aerodynamic_center()[0]
 ) / (wing.area() * wing.span())
 
 vstab_effectiveness_factor = aero.CL_over_Cl(center_vstab.aspect_ratio()) / aero.CL_over_Cl(wing.aspect_ratio())
@@ -707,12 +706,10 @@ opti.subject_to([
 ### Propeller calculations
 
 propeller_tip_mach = 0.36  # From Dongjoon, 4/30/20
-propeller_rads_per_sec = propeller_tip_mach * atmo.get_speed_of_sound_from_temperature(
-    atmo.get_temperature_at_altitude(20000)
-) / (propeller_diameter / 2)
-propeller_rpm = propeller_rads_per_sec * 30 / cas.pi
+propeller_rads_per_sec = propeller_tip_mach * my_atmosphere.speed_of_sound() / (propeller_diameter / 2)
+propeller_rpm = propeller_rads_per_sec * 30 / np.pi
 
-area_propulsive = cas.pi / 4 * propeller_diameter ** 2 * n_propellers
+area_propulsive = np.pi / 4 * propeller_diameter ** 2 * n_propellers
 
 if not use_propulsion_fits_from_FL2020_1682_undergrads:
     ### Use older models
@@ -788,7 +785,7 @@ mass_ESC = lib_prop_elec.mass_ESC(max_power=power_out_propulsion_max)
 mass_propulsion = mass_motor_mounted + mass_propellers + mass_ESC
 
 # Account for payload power
-power_out_payload = cas.if_else(
+power_out_payload = np.if_else(
     solar_flux_on_horizontal > 1,
     500,
     150
