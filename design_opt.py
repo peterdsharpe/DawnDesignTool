@@ -785,7 +785,7 @@ mass_ESC = lib_prop_elec.mass_ESC(max_power=power_out_propulsion_max)
 mass_propulsion = mass_motor_mounted + mass_propellers + mass_ESC
 
 # Account for payload power
-power_out_payload = np.if_else(
+power_out_payload = np.where(
     solar_flux_on_horizontal > 1,
     500,
     150
@@ -1156,14 +1156,14 @@ gravity_force = g * mass_total
 # region Dynamics
 
 net_force_parallel_calc = (
-        thrust_force * cosd(alpha) -
+        thrust_force * np.cosd(alpha) -
         drag_force -
-        gravity_force * sind(flight_path_angle)
+        gravity_force * np.sind(flight_path_angle)
 )
 net_force_perpendicular_calc = (
-        thrust_force * sind(alpha) +
+        thrust_force * np.sind(alpha) +
         lift_force -
-        gravity_force * cosd(flight_path_angle)
+        gravity_force * np.cosd(flight_path_angle)
 )
 
 opti.subject_to([
@@ -1176,14 +1176,14 @@ gammadot = (net_accel_perpendicular / airspeed) * 180 / np.pi
 
 trapz = lambda x: (x[1:] + x[:-1]) / 2
 
-dt = cas.diff(time)
-dx = cas.diff(x)
-dy = cas.diff(y)
-dspeed = cas.diff(airspeed)
-dgamma = cas.diff(flight_path_angle)
+dt = np.diff(time)
+dx = np.diff(x)
+dy = np.diff(y)
+dspeed = np.diff(airspeed)
+dgamma = np.diff(flight_path_angle)
 
-xdot_trapz = trapz(airspeed * cosd(flight_path_angle))
-ydot_trapz = trapz(airspeed * sind(flight_path_angle))
+xdot_trapz = trapz(airspeed * np.cosd(flight_path_angle))
+ydot_trapz = trapz(airspeed * np.sind(flight_path_angle))
 speeddot_trapz = trapz(speeddot)
 gammadot_trapz = trapz(gammadot)
 
@@ -1207,7 +1207,7 @@ opti.subject_to([
 
 # Do the math for battery charging/discharging efficiency
 # Use tanh blending on charge/discharge eff. to avoid non-differentiability in integrator
-net_power_to_battery = net_power * blend(
+net_power_to_battery = net_power * np.blend(
     value_switch_low=1 / battery_discharge_efficiency,
     value_switch_high=battery_charge_efficiency,
     switch=net_power / (0.01 * power_out_propulsion_max)
@@ -1216,7 +1216,7 @@ net_power_to_battery = net_power * blend(
 # Do the integration
 net_power_to_battery_trapz = trapz(net_power_to_battery)
 
-dbattery_stored_energy_nondim = cas.diff(battery_stored_energy_nondim)
+dbattery_stored_energy_nondim = np.diff(battery_stored_energy_nondim)
 opti.subject_to([
     dbattery_stored_energy_nondim / 1e-2 < (net_power_to_battery_trapz / battery_capacity) * dt / 1e-2,
 ])
@@ -1307,8 +1307,7 @@ for penalty_input in [
     flight_path_angle / 2,
     alpha / 1,
 ]:
-    penalty += cas.sumsqr(cas.diff(cas.diff(penalty_input))) / n_timesteps_per_segment
-
+    penalty += cas.sumsqr(cas.diff(cas.diff(penalty_input))) / n_timesteps_per_segment #TODO change expression to remove cas
 opti.minimize(
     objective
     + penalty
@@ -1328,7 +1327,7 @@ if __name__ == "__main__":
 
 
     # # region Postprocessing utilities, console output, etc.
-    def s(x: cas.MX) -> np.ndarray:  # Shorthand for evaluating the value of a quantity x at the optimum
+    def s(x: np.MX) -> np.ndarray:  # Shorthand for evaluating the value of a quantity x at the optimum
         return sol.value(x)
 
 
@@ -1510,7 +1509,7 @@ if __name__ == "__main__":
             s(mass_payload),
             s(mass_structural),
             s(mass_propulsion),
-            s(cas.mmax(mass_power_systems)),
+            s(np.mmax(mass_power_systems)),
             s(mass_avionics),
         ]
         colors = plt.cm.Set2(np.arange(5))
