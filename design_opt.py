@@ -46,7 +46,7 @@ min_cruise_altitude = opti.parameter(value=18288)  # meters. 19812 m = 65000 ft,
 required_headway_per_day = 10e3  # meters
 allow_trajectory_optimization = True
 structural_load_factor = 3  # over static
-make_plots = True
+make_plots = False
 mass_payload = opti.parameter(value=30)
 wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
 battery_specific_energy_Wh_kg = opti.parameter(value=450)
