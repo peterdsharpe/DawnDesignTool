@@ -1,16 +1,14 @@
 # Imports
 import aerosandbox as asb
 import aerosandbox.library.aerodynamics as aero
-import aerosandbox.library.atmosphere as atmo
-from aerosandbox.tools.casadi_functions import sind, cosd, blend
+#import aerosandbox.library.atmosphere as atmo
 from aerosandbox.library import mass_structural as lib_mass_struct
 from aerosandbox.library import power_solar as lib_solar
 from aerosandbox.library import propulsion_electric as lib_prop_elec
 from aerosandbox.library import propulsion_propeller as lib_prop_prop
 from aerosandbox.library import winds as lib_winds
 from aerosandbox.library.airfoils import naca0008, flat_plate
-from aerosandbox import cas
-import numpy as np
+import aerosandbox.numpy as np
 import plotly.express as px
 import copy
 import matplotlib.pyplot as plt
@@ -18,6 +16,7 @@ import matplotlib.ticker as ticker
 import seaborn as sns
 from design_opt_utilities.fuselage import make_fuselage
 from typing import Union, List
+
 
 sns.set(font_scale=1)
 
@@ -46,7 +45,7 @@ min_cruise_altitude = opti.parameter(value=18288)  # meters. 19812 m = 65000 ft,
 required_headway_per_day = 10e3  # meters
 allow_trajectory_optimization = True
 structural_load_factor = 3  # over static
-make_plots = False
+make_plots = True
 mass_payload = opti.parameter(value=30)
 wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
 battery_specific_energy_Wh_kg = opti.parameter(value=450)
@@ -75,11 +74,7 @@ min_speed = 1  # Specify a minimum speed - keeps the speed-gamma velocity parame
 ##### Time Discretization
 if climb_opt:  # roughly 1-day-plus-climb window, starting at ground. Periodicity enforced for last 24 hours.
     assert allow_trajectory_optimization, "You can't do climb optimization without trajectory optimziation!"
-    time_start = opti.variable(
-        init_guess=-12 * 3600,
-        scale=3600,
-        category="ops",
-    )
+    time_start = opti.variable(init_guess=-12 * 3600, scale=3600, category="ops")
     opti.subject_to([
         time_start / 3600 < 0,
         time_start / 3600 > -24,
@@ -87,18 +82,18 @@ if climb_opt:  # roughly 1-day-plus-climb window, starting at ground. Periodicit
     time_end = 36 * 3600
 
     time_periodic_window_start = time_end - 24 * 3600
-    time = cas.vertcat(
-        cas.linspace(
+    time = np.concatenate((
+        np.linspace(
             time_start,
             time_periodic_window_start,
             n_timesteps_per_segment
         ),
-        cas.linspace(
+        np.linspace(
             time_periodic_window_start,
             time_end,
             n_timesteps_per_segment
         )
-    )
+    ))
     time_periodic_start_index = time.shape[0] - n_timesteps_per_segment
     time_periodic_end_index = time.shape[0] - 1
 
@@ -368,7 +363,7 @@ path = str(
 
 try:
     with open(path + "/cache/wing_airfoil.cache", "rb") as f:
-        wing_airfoil = pickle.load(f)
+        wing_airfoil = pickle.load(f) #TODO rerun airfoil in xfoil to load in Python 3.8
     with open(path + "/cache/tail_airfoil.cache", "rb") as f:
         tail_airfoil = pickle.load(f)
 except (FileNotFoundError, TypeError):
@@ -385,36 +380,28 @@ tail_airfoil = naca0008  # TODO remove this and use fits?
 
 wing = asb.Wing(
     name="Main Wing",
-    x_le=wing_x_quarter_chord,  # Coordinates of the wing's leading edge
-    y_le=0,  # Coordinates of the wing's leading edge
-    z_le=0,  # Coordinates of the wing's leading edge
+    xyz_le = np.array([wing_x_quarter_chord, 0, 0]),
     symmetric=True,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
-            x_le=-wing_root_chord / 4,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
-            y_le=0,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
-            z_le=0,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
+            xyz_le = np.array([-wing_root_chord/4, 0, 0]),
             chord=wing_root_chord,
-            twist=0,  # degrees
+            twist_angle=0,  # degrees
             airfoil=wing_airfoil,  # Airfoils are blended between a given XSec and the next one.
-            control_surface_type='symmetric',
+            control_surface_is_symmetric=True,
             # Flap # Control surfaces are applied between a given XSec and the next one.
             control_surface_deflection=0,  # degrees
         ),
         asb.WingXSec(  # Break
-            x_le=-wing_root_chord / 4,
-            y_le=wing_y_taper_break,
-            z_le=0,  # wing_span / 2 * cas.pi / 180 * 5,
+            xyz_le = np.array([-wing_root_chord/4, wing_y_taper_break, 0]),
             chord=wing_root_chord,
-            twist=0,
+            twist_angle=0,
             airfoil=wing_airfoil,
         ),
         asb.WingXSec(  # Tip
-            x_le=-wing_root_chord * wing_taper_ratio / 4,
-            y_le=wing_span / 2,
-            z_le=0,  # wing_span / 2 * cas.pi / 180 * 5,
+            xyz_le = np.array([-wing_root_chord * wing_taper_ratio / 4, wing_span / 2, 0]),
             chord=wing_root_chord * wing_taper_ratio,
-            twist=0,
+            twist_angle=0,
             airfoil=wing_airfoil,
         ),
     ]
@@ -422,28 +409,22 @@ wing = asb.Wing(
 
 center_hstab = asb.Wing(
     name="Horizontal Stabilizer",
-    x_le=center_boom_length - center_vstab_chord * 0.75 - center_hstab_chord,  # Coordinates of the wing's leading edge
-    y_le=0,  # Coordinates of the wing's leading edge
-    z_le=0.1,  # Coordinates of the wing's leading edge
+    xyz_le=np.array([center_boom_length - center_vstab_chord * 0.75 - center_hstab_chord, 0, 0.1]),
     symmetric=True,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
-            x_le=0,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
-            y_le=0,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
-            z_le=0,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
+            xyz_le=np.array([0, 0, 0]),
             chord=center_hstab_chord,
-            twist=-3,  # degrees
+            twist_angle=-3,  # degrees
             airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
-            control_surface_type='symmetric',
+            control_surface_is_symmetric = True,
             # Flap # Control surfaces are applied between a given XSec and the next one.
             control_surface_deflection=0,  # degrees
         ),
         asb.WingXSec(  # Tip
-            x_le=0,
-            y_le=center_hstab_span / 2,
-            z_le=0,
+            xyz_le=np.array([0, center_hstab_span / 2, 0]),
             chord=center_hstab_chord,
-            twist=-3,
+            twist_angle=-3,
             airfoil=tail_airfoil,
         ),
     ]
@@ -451,28 +432,22 @@ center_hstab = asb.Wing(
 
 right_hstab = asb.Wing(
     name="Horizontal Stabilizer",
-    x_le=outboard_boom_length - outboard_hstab_chord * 0.75,  # Coordinates of the wing's leading edge
-    y_le=boom_location * wing_span / 2,  # Coordinates of the wing's leading edge
-    z_le=0.1,  # Coordinates of the wing's leading edge
+    xyz_le=np.array([outboard_boom_length - outboard_hstab_chord * 0.75, boom_location * wing_span / 2, 0.1]),
     symmetric=True,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
-            x_le=0,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
-            y_le=0,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
-            z_le=0,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
+            xyz_le=np.array([0, 0, 0]),
             chord=outboard_hstab_chord,
-            twist=-3,  # degrees
+            twist_angle=-3,  # degrees
             airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
-            control_surface_type='symmetric',
+            control_surface_is_symmetric = True,
             # Flap # Control surfaces are applied between a given XSec and the next one.
             control_surface_deflection=0,  # degrees
         ),
         asb.WingXSec(  # Tip
-            x_le=0,
-            y_le=outboard_hstab_span / 2,
-            z_le=0,
+            xyz_le=np.array([0, outboard_hstab_span / 2, 0]),
             chord=outboard_hstab_chord,
-            twist=-3,
+            twist_angle=-3,
             airfoil=tail_airfoil,
         ),
     ]
@@ -483,28 +458,22 @@ left_hstab.xyz_le[1] *= -1
 
 center_vstab = asb.Wing(
     name="Vertical Stabilizer",
-    x_le=center_boom_length - center_vstab_chord * 0.75,  # Coordinates of the wing's leading edge
-    y_le=0,  # Coordinates of the wing's leading edge
-    z_le=-center_vstab_span / 2 + center_vstab_span * 0.15,  # Coordinates of the wing's leading edge
+    xyz_le=np.array([center_boom_length - center_vstab_chord * 0.75, 0, -center_vstab_span / 2 + center_vstab_span * 0.15]),
     symmetric=False,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
-            x_le=0,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
-            y_le=0,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
-            z_le=0,  # Coordinates of the XSec's leading edge, relative to the wing's leading edge.
+            xyz_le=np.array([0, 0, 0]),
             chord=center_vstab_chord,
-            twist=0,  # degrees
+            twist_angle=0,  # degrees
             airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
-            control_surface_type='symmetric',
+            control_surface_is_symmetric = True,
             # Flap # Control surfaces are applied between a given XSec and the next one.
             control_surface_deflection=0,  # degrees
         ),
         asb.WingXSec(  # Tip
-            x_le=0,
-            y_le=0,
-            z_le=center_vstab_span,
+            xyz_le=np.array([0, 0, center_vstab_span]),
             chord=center_vstab_chord,
-            twist=0,
+            twist_angle=0,
             airfoil=tail_airfoil,
         ),
     ]
@@ -524,7 +493,7 @@ right_fuse = make_fuselage(
     boom_diameter=boom_diameter,
 )
 
-right_fuse.xyz_le += cas.vertcat(0, boom_location * wing_span / 2, 0)
+right_fuse.xyz_le += np.concatenate(0, boom_location * wing_span / 2, 0)
 
 left_fuse = copy.deepcopy(right_fuse)
 left_fuse.xyz_le[1] *= -1
