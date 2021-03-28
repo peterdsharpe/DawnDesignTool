@@ -1307,7 +1307,8 @@ for penalty_input in [
     flight_path_angle / 2,
     alpha / 1,
 ]:
-    penalty += cas.sumsqr(cas.diff(cas.diff(penalty_input))) / n_timesteps_per_segment #TODO change expression to remove cas
+    penalty += np.sum(np.diff(np.diff(penalty_input)) ** 2) / n_timesteps_per_segment
+
 opti.minimize(
     objective
     + penalty
