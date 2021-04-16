@@ -16,6 +16,8 @@ import matplotlib.ticker as ticker
 import seaborn as sns
 from design_opt_utilities.fuselage import make_fuselage
 from typing import Union, List
+from aerosandbox.modeling.interpolation import InterpolatedModel
+
 
 
 sns.set(font_scale=1)
@@ -38,7 +40,7 @@ minimize = "wing.span() / 50"  # any "eval-able" expression
 # minimize = "wing.span() / 50 * 0.9 + max_mass_total / 300 * 0.1"
 
 ##### Operating Parameters
-climb_opt = True  # are we optimizing for the climb as well?
+climb_opt = False  # are we optimizing for the climb as well?
 latitude = opti.parameter(value=49)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
 day_of_year = opti.parameter(value=244)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 min_cruise_altitude = opti.parameter(value=18288)  # meters. 19812 m = 65000 ft, 18288 m = 60000 ft.
@@ -361,20 +363,26 @@ path = str(
     pathlib.Path(__file__).parent.absolute()
 )
 
-try:
-    with open(path + "/cache/wing_airfoil.cache", "rb") as f:
-        wing_airfoil = pickle.load(f) #TODO rerun airfoil in xfoil to load in Python 3.8
-    with open(path + "/cache/tail_airfoil.cache", "rb") as f:
-        tail_airfoil = pickle.load(f)
-except (FileNotFoundError, TypeError):
-    wing_airfoil = asb.Airfoil(name="HALE_03", coordinates=r"studies/airfoil_optimizer/HALE_03.dat")
-    wing_airfoil.populate_sectional_functions_from_xfoil_fits(parallel=False)
-    with open(path + "/cache/wing_airfoil.cache", "wb+") as f:
-        pickle.dump(wing_airfoil, f)
-    tail_airfoil = asb.Airfoil("naca0008")
-    tail_airfoil.populate_sectional_functions_from_xfoil_fits(parallel=False)
-    with open(path + "/cache/tail_airfoil.cache", "wb+") as f:
-        pickle.dump(tail_airfoil, f)
+
+# wing_airfoil = wing_airfoil.repanel()
+cl_array = np.load(path + '/cache/cl_function.npy')
+cd_array = np.load(path + '/cache/cd_function.npy')
+cm_array = np.load(path + '/cache/cm_function.npy')
+alpha_array = np.load(path + '/cache/alpha.npy')
+reynolds_array = np.load(path + '/cache/reynolds.npy')
+cl_function = InterpolatedModel({"alpha": alpha_array, "reynolds": reynolds_array,},
+                                              cl_array, "bspline")
+cd_function = InterpolatedModel({"alpha": alpha_array, "reynolds": reynolds_array},
+                                              cd_array, "bspline")
+cm_function = InterpolatedModel({"alpha": alpha_array, "reynolds": reynolds_array},
+                                              cm_array, "bspline")
+
+wing_airfoil = asb.geometry.Airfoil(
+    name="HALE_03",
+    coordinates=r"studies/airfoil_optimizer/HALE_03.dat",
+    CL_function=cl_function,
+    CD_function=cd_function,
+    CM_function=cm_function)
 
 tail_airfoil = naca0008  # TODO remove this and use fits?
 
@@ -566,34 +574,62 @@ def compute_wing_aerodynamics(
 
     surface.Re = rho / mu * airspeed * surface.mean_geometric_chord()
     surface.airfoil = surface.xsecs[0].airfoil
-    surface.Cl_inc = surface.airfoil.CL_function(surface.alpha_eff, surface.Re, 0,
-                                                 0)  # Incompressible 2D lift coefficient
-    surface.CL = surface.Cl_inc * aero.CL_over_Cl(surface.aspect_ratio(), mach=mach,
-                                                  sweep=surface.mean_sweep_angle())  # Compressible 3D lift coefficient
-    surface.lift = surface.CL * q * surface.area()
+    try:
+        surface.Cl_inc = surface.airfoil.CL_function({'alpha': surface.alpha_eff, 'reynolds': surface.Re})  # Incompressible 2D lift coefficient
+        surface.CL = surface.Cl_inc * aero.CL_over_Cl(surface.aspect_ratio(), mach=mach,
+                                                      sweep=surface.mean_sweep_angle())  # Compressible 3D lift coefficient
+        surface.lift = surface.CL * q * surface.area()
 
-    surface.Cd_profile = surface.airfoil.CDp_function(surface.alpha_eff, surface.Re, mach, 0)
-    surface.drag_profile = surface.Cd_profile * q * surface.area()
+        surface.Cd_profile = surface.airfoil.CD_function({'alpha': surface.alpha_eff, 'reynolds': surface.Re})
+        surface.drag_profile = surface.Cd_profile * q * surface.area()
 
-    surface.oswalds_efficiency = aero.oswalds_efficiency(
-        taper_ratio=surface.taper_ratio(),
-        aspect_ratio=surface.aspect_ratio(),
-        sweep=surface.mean_sweep_angle()
-    )
-    surface.drag_induced = aero.induced_drag(
-        lift=surface.lift,
-        span=surface.span(),
-        dynamic_pressure=q,
-        oswalds_efficiency=surface.oswalds_efficiency
-    )
+        surface.oswalds_efficiency = aero.oswalds_efficiency(
+            taper_ratio=surface.taper_ratio(),
+            aspect_ratio=surface.aspect_ratio(),
+            sweep=surface.mean_sweep_angle()
+        )
+        surface.drag_induced = aero.induced_drag(
+            lift=surface.lift,
+            span=surface.span(),
+            dynamic_pressure=q,
+            oswalds_efficiency=surface.oswalds_efficiency
+        )
 
-    surface.drag = surface.drag_profile + surface.drag_induced
+        surface.drag = surface.drag_profile + surface.drag_induced
 
-    surface.Cm_inc = wing_airfoil.Cm_function(surface.alpha_eff, surface.Re, 0,
-                                              0)  # Incompressible 2D moment coefficient
-    surface.CM = surface.Cm_inc * aero.CL_over_Cl(surface.aspect_ratio(), mach=mach,
-                                                  sweep=surface.mean_sweep_angle())  # Compressible 3D moment coefficient
-    surface.moment = surface.CM * q * surface.area() * surface.mean_geometric_chord()
+        surface.Cm_inc = surface.airfoil.CM_function({'alpha':surface.alpha_eff, 'reynolds':surface.Re})  # Incompressible 2D moment coefficient
+        surface.CM = surface.Cm_inc * aero.CL_over_Cl(surface.aspect_ratio(), mach=mach,
+                                                      sweep=surface.mean_sweep_angle())  # Compressible 3D moment coefficient
+        surface.moment = surface.CM * q * surface.area() * surface.mean_geometric_chord()
+    except TypeError:
+        surface.Cl_inc = surface.airfoil.CL_function(surface.alpha_eff, surface.Re, 0,
+                                                     0)  # Incompressible 2D lift coefficient
+        surface.CL = surface.Cl_inc * aero.CL_over_Cl(surface.aspect_ratio(), mach=mach,
+                                                      sweep=surface.mean_sweep_angle())  # Compressible 3D lift coefficient
+        surface.lift = surface.CL * q * surface.area()
+
+        surface.Cd_profile = surface.airfoil.CD_function(surface.alpha_eff, surface.Re, mach, 0)
+        surface.drag_profile = surface.Cd_profile * q * surface.area()
+
+        surface.oswalds_efficiency = aero.oswalds_efficiency(
+            taper_ratio=surface.taper_ratio(),
+            aspect_ratio=surface.aspect_ratio(),
+            sweep=surface.mean_sweep_angle()
+        )
+        surface.drag_induced = aero.induced_drag(
+            lift=surface.lift,
+            span=surface.span(),
+            dynamic_pressure=q,
+            oswalds_efficiency=surface.oswalds_efficiency
+        )
+
+        surface.drag = surface.drag_profile + surface.drag_induced
+
+        surface.Cm_inc = surface.airfoil.CM_function(surface.alpha_eff, surface.Re, 0, 0)  # Incompressible 2D moment coefficient
+        surface.CM = surface.Cm_inc * aero.CL_over_Cl(surface.aspect_ratio(), mach=mach,
+                                                      sweep=surface.mean_sweep_angle())  # Compressible 3D moment coefficient
+        surface.moment = surface.CM * q * surface.area() * surface.mean_geometric_chord()
+
 
 
 compute_wing_aerodynamics(wing)
@@ -621,7 +657,7 @@ strut_span = (strut_y_location ** 2 + (propeller_diameter / 2 + 0.25) ** 2) ** 0
 strut_chord = 0.167 * (strut_span * (propeller_diameter / 2 + 0.25)) ** 0.25  # Formula from Jamie
 strut_Re = rho / mu * airspeed * strut_chord
 strut_airfoil = flat_plate
-strut_Cd_profile = flat_plate.CDp_function(0, strut_Re, mach, 0)
+strut_Cd_profile = flat_plate.CD_function(0, strut_Re, mach, 0)
 drag_strut_profile = strut_Cd_profile * q * strut_chord * strut_span
 drag_strut = drag_strut_profile  # per strut
 
@@ -755,6 +791,7 @@ power_out_propulsion_max = opti.variable(
     scale=5e3,
     category="des",
 )
+
 opti.subject_to([
     power_out_propulsion < power_out_propulsion_max,
     power_out_propulsion_max > 0
@@ -782,6 +819,7 @@ mass_propellers = n_propellers * lib_prop_prop.mass_hpa_propeller(
 mass_ESC = lib_prop_elec.mass_ESC(max_power=power_out_propulsion_max)
 
 # Total propulsion mass
+mass_propulsion = mass_motor_mounted + mass_propellers# Total propulsion mass
 mass_propulsion = mass_motor_mounted + mass_propellers + mass_ESC
 
 # Account for payload power
