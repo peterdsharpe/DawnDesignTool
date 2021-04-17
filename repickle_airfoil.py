@@ -10,7 +10,7 @@ from aerosandbox.modeling.interpolation import InterpolatedModel
 # from aerosandbox.tools.airfoil_fitter.airfoil_fitter import AirfoilFitter
 #
 # ### load wing airfoil from datafile
-# wing_airfoil = asb.geometry.Airfoil(name="HALE_03", coordinates=r"studies/airfoil_optimizer/HALE_03.dat")
+wing_airfoil = asb.geometry.Airfoil(name="HALE_03", coordinates=r"studies/airfoil_optimizer/HALE_03.dat")
 # #
 # reynolds = np.logspace(3, 8, num=100)[50:65]
 # #reynolds = [10000]
@@ -91,7 +91,7 @@ for Re in reynolds:
                 cm = cm_out
 
             # reorder from alpha -15 to 15
-            #alpha = np.concatenate([np.flip(alpha[16:]), np.flip(alpha[13:16]), alpha[0:13]])
+            # alpha = np.concatenate([np.flip(alpha[16:]), np.flip(alpha[13:16]), alpha[0:13]])
             cl = np.concatenate([np.flip(cl[16:]), np.flip(cl[13:16]), cl[0:13]])
             cd = np.concatenate([np.flip(cd[16:]), np.flip(cd[13:16]), cd[0:13]])
             cm = np.concatenate([np.flip(cm[16:]), np.flip(cm[13:16]), cm[0:13]])
@@ -115,23 +115,41 @@ for Re in reynolds:
 cl_array = cl_array[1:]
 cd_array = cd_array[1:]
 cm_array = cm_array[1:]
-alpha = np.array(alpha_spec)
+alpha = np.linspace(-15,15, 31)
+alpha = np.array(alpha)
 reynolds = np.array(reynolds)
 
 
 # use patch nans to put reasonable guesses in there
 cl_array = patch_nans(cl_array)
+cl_array = np.transpose(cl_array)
 cd_array = patch_nans(cd_array)
+cd_array = np.transpose(cd_array)
 cm_array = patch_nans(cm_array)
+cm_array = np.transpose(cm_array)
 # save nparray to .npy files
-np.save('cl_function', cl_array)
-np.save('cd_function', cd_array)
-np.save('cm_function', cm_array)
-np.save('alpha', alpha)
-np.save('reynolds', reynolds)
-cl_function = InterpolatedModel({"reynolds": reynolds, "alpha": alpha},
+np.save('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/cl_function.npy', cl_array)
+np.save('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/cd_function.npy', cd_array)
+np.save('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/cm_function.npy', cm_array)
+np.save('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/alpha.npy', alpha)
+np.save('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/reynolds.npy', reynolds)
+
+# cl_array = np.load('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/cl_function.npy')
+# cd_array = np.load('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/cd_function.npy')
+# cm_array = np.load('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/cm_function.npy')
+# alpha = np.load('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/alpha.npy')
+# reynolds = np.load('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/reynolds.npy')
+
+# create functions of cl, cd, and cm
+cl_function = InterpolatedModel({"alpha": alpha, "reynolds": reynolds,},
                                               cl_array, "bspline")
-cd_function = InterpolatedModel({"reynolds": reynolds, "alpha": alpha},
+cd_function = InterpolatedModel({"alpha": alpha, "reynolds": reynolds},
                                               cd_array, "bspline")
-cm_function = InterpolatedModel({"reynolds": reynolds, "alpha": alpha},
+cm_function = InterpolatedModel({"alpha": alpha, "reynolds": reynolds},
                                               cm_array, "bspline")
+wing_airfoil.CL_function = cl_function
+wing_airfoil.CD_function = cd_function
+wing_airfoil.CM_function = cd_function
+# pickle.dump(wing_airfoil, "/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/wing_airfoil.cache",  )
+with open("/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/wing_airfoil.cache", "wb+") as f:
+    pickle.dump(wing_airfoil, f)

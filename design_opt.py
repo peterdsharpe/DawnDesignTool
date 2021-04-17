@@ -742,7 +742,7 @@ opti.subject_to([
 ### Propeller calculations
 
 propeller_tip_mach = 0.36  # From Dongjoon, 4/30/20
-propeller_rads_per_sec = propeller_tip_mach * my_atmosphere.speed_of_sound() / (propeller_diameter / 2)
+propeller_rads_per_sec = propeller_tip_mach * atmo(altitude=20000).speed_of_sound() / (propeller_diameter / 2)
 propeller_rpm = propeller_rads_per_sec * 30 / np.pi
 
 area_propulsive = np.pi / 4 * propeller_diameter ** 2 * n_propellers
@@ -1366,7 +1366,7 @@ if __name__ == "__main__":
 
 
     # # region Postprocessing utilities, console output, etc.
-    def s(x: np.MX) -> np.ndarray:  # Shorthand for evaluating the value of a quantity x at the optimum
+    def s(x):  # Shorthand for evaluating the value of a quantity x at the optimum
         return sol.value(x)
 
 
@@ -1548,7 +1548,7 @@ if __name__ == "__main__":
             s(mass_payload),
             s(mass_structural),
             s(mass_propulsion),
-            s(np.mmax(mass_power_systems)),
+            s(np.max(mass_power_systems)),
             s(mass_avionics),
         ]
         colors = plt.cm.Set2(np.arange(5))
