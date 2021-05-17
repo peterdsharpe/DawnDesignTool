@@ -9,5 +9,18 @@ plt.tricontourf(
 cbar = fig.colorbar(cs)
 ax.set_xscale("log")
 ax.set(xlabel="Reynolds Number", ylabel=r"$\alpha$ (angle)",
-       title=r"$C_l$ Pre-Interpolated")
+       title=r"$C_l$ Raw from XFoil")
+plt.show()
+
+
+fig, ax = plt.subplots()
+plt.contourf(
+    reynolds,
+    alpha,
+    grid_cl.T
+)
+cbar = fig.colorbar(cs)
+ax.set_xscale("log")
+ax.set(xlabel="Reynolds Number", ylabel=r"$\alpha$ (angle)",
+       title=r"$C_l$ after griddata()")
 plt.show()
