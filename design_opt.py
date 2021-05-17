@@ -24,16 +24,16 @@ sns.set(font_scale=1)
 
 # region Setup
 ##### Initialize Optimization
-opti = asb.Opti(  # Normal mode - Design Optimization
-    cache_filename="cache/optimization_solution.json",
-    save_to_cache_on_solve=True
-)
-# opti = asb.Opti( # Alternate mode - Frozen Design Optimization
-#     variable_categories_to_freeze=["des"],
+# opti = asb.Opti(  # Normal mode - Design Optimization
 #     cache_filename="cache/optimization_solution.json",
-#     load_frozen_variables_from_cache=True,
-#     ignore_violated_parametric_constraints=True
+#     save_to_cache_on_solve=True
 # )
+opti = asb.Opti( # Alternate mode - Frozen Design Optimization
+    variable_categories_to_freeze=["des"],
+    cache_filename="cache/optimization_solution.json",
+    load_frozen_variables_from_cache=True,
+    ignore_violated_parametric_constraints=True
+)
 
 minimize = "wing.span() / 50"  # any "eval-able" expression
 # minimize = "max_mass_total / 300" # any "eval-able" expression
@@ -45,11 +45,14 @@ latitude = opti.parameter(value=49)  # degrees (49 deg is top of CONUS, 26 deg i
 day_of_year = opti.parameter(value=244)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 min_cruise_altitude = opti.parameter(value=18288)  # meters. 19812 m = 65000 ft, 18288 m = 60000 ft.
 required_headway_per_day = 10e3  # meters
-allow_trajectory_optimization = True
+allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
-make_plots = True
+make_plots = False
 mass_payload = opti.parameter(value=30)
 wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
+# def wind_speed_func(alt):
+#     latitude_array = np.full(shape=alt.shape[0], fill_value=opti.value(latitude))
+#     return lib_winds.wind_speed_world_95(alt, latitude_array, opti.value(day_of_year))
 battery_specific_energy_Wh_kg = opti.parameter(value=450)
 battery_pack_cell_percentage = 0.89  # What percent of the battery pack consists of the module, by weight?
 variable_pitch = False
@@ -1250,6 +1253,7 @@ net_power_to_battery = net_power * np.blend(
     value_switch_high=battery_charge_efficiency,
     switch=net_power / (0.01 * power_out_propulsion_max)
 )
+net_power_to_battery_pack = net_power_to_battery / (3 * 21)
 
 # Do the integration
 net_power_to_battery_trapz = trapz(net_power_to_battery)
@@ -1501,36 +1505,42 @@ if __name__ == "__main__":
 
 
     if make_plots:
-        plot("hour", "y_km",
-             xlabel="Hours after Solar Noon",
-             ylabel="Altitude [km]",
-             title="Altitude over Simulation",
-             save_name="outputs/altitude.png"
-             )
-        plot("hour", "airspeed",
-             xlabel="Hours after Solar Noon",
-             ylabel="True Airspeed [m/s]",
-             title="True Airspeed over Simulation",
-             save_name="outputs/airspeed.png"
-             )
-        plot("hour", "net_power",
+        # plot("hour", "y_km",
+        #      xlabel="Hours after Solar Noon",
+        #      ylabel="Altitude [km]",
+        #      title="Altitude over Simulation",
+        #      save_name="outputs/altitude.png"
+        #      )
+        # plot("hour", "airspeed",
+        #      xlabel="Hours after Solar Noon",
+        #      ylabel="True Airspeed [m/s]",
+        #      title="True Airspeed over Simulation",
+        #      save_name="outputs/airspeed.png"
+        #     )
+        plot("hour", "net_power_to_battery",
              xlabel="Hours after Solar Noon",
              ylabel="Net Power [W] (positive is charging)",
-             title="Net Power over Simulation",
-             save_name="outputs/net_power.png"
+             title="Net Power to Battery on July 15th",
+             save_name="outputs/net_powerJuly15.png"
              )
-        plot("hour", "battery_state_of_charge_percentage",
+        plot("hour", "net_power_to_battery_pack",
              xlabel="Hours after Solar Noon",
-             ylabel="State of Charge [%]",
-             title="Battery Charge State over Simulation",
-             save_name="outputs/battery_charge.png"
+             ylabel="Net Power [W] (positive is charging)",
+             title="Net Power to Battery Pack on July 15th",
+             save_name="outputs/net_power_packJuly15.png"
              )
-        plot("x_km", "y_km",
-             xlabel="Downrange Distance [km]",
-             ylabel="Altitude [km]",
-             title="Optimal Trajectory over Simulation",
-             save_name="outputs/trajectory.png"
-             )
+        # plot("hour", "battery_state_of_charge_percentage",
+        #      xlabel="Hours after Solar Noon",
+        #      ylabel="State of Charge [%]",
+        #      title="Battery Charge State over Simulation",
+        #      save_name="outputs/battery_charge.png"
+        #      )
+        # plot("x_km", "y_km",
+        #      xlabel="Downrange Distance [km]",
+        #      ylabel="Altitude [km]",
+        #      title="Optimal Trajectory over Simulation",
+        #      save_name="outputs/trajectory.png"
+        #      )
 
         # Draw mass breakdown
         fig = plt.figure(figsize=(10, 8), dpi=plot_dpi)
@@ -1675,7 +1685,7 @@ if __name__ == "__main__":
         )
 
         plt.savefig("outputs/mass_pie_chart.png")
-        plt.show() if make_plots else plt.close(fig)
+        # plt.show() if make_plots else plt.close(fig)
 
     # Write a mass budget
     with open("outputs/mass_budget.csv", "w+") as f:
@@ -1724,3 +1734,6 @@ if __name__ == "__main__":
             except:
                 value = eval(var_name)
             f.write(f"{var_name}, {value},\n")
+    opti.value(net_power_to_battery)
+    opti.value(net_power_to_battery_pack)
+    opti.value(time)
