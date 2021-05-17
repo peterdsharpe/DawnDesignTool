@@ -32,7 +32,7 @@ cl_rbf = Rbf(
     np.array(alpha_list),
     np.array(cl_values),
     function='linear',
-    smooth=1,
+    smooth=0.5,
 )
 Reynolds, Alpha = np.meshgrid(reynolds, alpha, indexing="ij")
 plt.contourf(
