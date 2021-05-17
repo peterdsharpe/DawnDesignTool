@@ -8,6 +8,7 @@ from aerosandbox.modeling.interpolation import InterpolatedModel
 import dill as pickle
 import pathlib
 from pathlib import Path
+
 # from aerosandbox.tools.airfoil_fitter.airfoil_fitter import AirfoilFitter
 
 # #
@@ -82,11 +83,11 @@ for Re in reynolds:
 points = np.column_stack((reynolds_list, alpha_list))
 alpha = np.linspace(-15, 15, 31)
 grid_alpha_y = np.array(alpha)
-reynolds_vert = np.reshape(reynolds, (-1,1))
+reynolds_vert = np.reshape(reynolds, (-1, 1))
 grid_reynolds_x = reynolds_vert
-for i in range(0, len(reynolds)-1):
+for i in range(0, len(reynolds) - 1):
     grid_alpha_y = np.vstack([grid_alpha_y, alpha])
-for i in range(0, len(alpha)-1):
+for i in range(0, len(alpha) - 1):
     grid_reynolds_x = np.hstack([grid_reynolds_x, reynolds_vert])
 
 from scipy.interpolate import griddata
@@ -124,12 +125,12 @@ grid_cl3 = gaussian_filter(grid_cl2, sigma=0.9, mode='reflect')
 grid_cd3 = gaussian_filter(grid_cd2, sigma=0.9, mode='reflect')
 grid_cm3 = gaussian_filter(grid_cm2, sigma=0.9, mode='reflect')
 
-cl_function = InterpolatedModel({"alpha": alpha, "reynolds": reynolds,},
-                                              grid_cl3.T, "bspline")
+cl_function = InterpolatedModel({"alpha": alpha, "reynolds": reynolds, },
+                                grid_cl3.T, "bspline")
 cd_function = InterpolatedModel({"alpha": alpha, "reynolds": reynolds},
-                                              grid_cd3.T, "bspline")
+                                grid_cd3.T, "bspline")
 cm_function = InterpolatedModel({"alpha": alpha, "reynolds": reynolds},
-                                              grid_cm3.T, "bspline")
+                                grid_cm3.T, "bspline")
 
 np.save('./cache/cl_function.npy', grid_cl3.T)
 np.save('./cache/cd_function.npy', grid_cd3.T)
@@ -138,6 +139,7 @@ np.save('./cache/alpha.npy', alpha)
 np.save('./cache/reynolds.npy', reynolds)
 
 import matplotlib.pyplot as plt
+
 fig, ax = plt.subplots()
 ax.contour(reynolds, alpha, grid_cl.T, levels=25, linewidths=0.5, colors='k')
 cs = ax.contourf(reynolds, alpha, grid_cl.T, levels=25, cmap="viridis")
@@ -321,7 +323,6 @@ plt.show()
 #                                               cd_array, "bspline")
 # cm_function = InterpolatedModel({"alpha": alpha_array, "reynolds": reynolds_array},
 #                                               cm_array, "bspline")
-
 
 
 # import numpy as np
