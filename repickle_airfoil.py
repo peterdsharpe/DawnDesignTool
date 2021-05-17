@@ -145,6 +145,7 @@ cbar = fig.colorbar(cs)
 ax.set_xscale("log")
 ax.set(xlabel="Reynolds Number", ylabel=r"$\alpha$ (angle)",
        title=r"$C_l$ Pre-Interpolated")
+plt.show()
 
 fig, ax = plt.subplots()
 ax.contour(reynolds, alpha, grid_cl2.T, levels=25, linewidths=0.5, colors='k')
@@ -153,6 +154,7 @@ cbar = fig.colorbar(cs)
 ax.set_xscale("log")
 ax.set(xlabel="Reynolds Number", ylabel=r"$\alpha$ (angle)",
        title=r"$C_l$ Pre-smoothed")
+plt.show()
 
 fig, ax = plt.subplots()
 ax.contour(reynolds, alpha, grid_cl3.T, levels=25, linewidths=0.5, colors='k')
@@ -161,6 +163,7 @@ cbar = fig.colorbar(cs)
 ax.set_xscale("log")
 ax.set(xlabel="Reynolds Number", ylabel=r"$\alpha$ (angle)",
        title=r"$C_l$ Smoothed")
+plt.show()
 
 # rbfi = Rbf(reynolds_list, alpha_list, cl_values, function='gaussian', smooth=10)
 # alpha = np.linspace(-15, 15, 100)
