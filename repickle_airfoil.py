@@ -3,12 +3,13 @@ import aerosandbox.aerodynamics.aero_2D.xfoil as xfoil
 import aerosandbox.numpy as np
 import pandas as pd
 import aerosandbox.modeling.interpolation
-from aerosandbox.tools.carpet_plot_utils import time_limit, patch_nans
+# from aerosandbox.tools.carpet_plot_utils import time_limit, patch_nans # Moved to aerosandbox.visualization.carpet_plot_utils in new ASB version; change if you have errors
 from aerosandbox.modeling.interpolation import InterpolatedModel
 import dill as pickle
 import pathlib
 from pathlib import Path
-from aerosandbox.tools.airfoil_fitter.airfoil_fitter import AirfoilFitter
+# from aerosandbox.tools.airfoil_fitter.airfoil_fitter import AirfoilFitter
+
 # #
 # # ### load wing airfoil from datafile
 # wing_airfoil = asb.geometry.Airfoil(name="HALE_03", coordinates=r"studies/airfoil_optimizer/HALE_03.dat")
@@ -130,11 +131,11 @@ cd_function = InterpolatedModel({"alpha": alpha, "reynolds": reynolds},
 cm_function = InterpolatedModel({"alpha": alpha, "reynolds": reynolds},
                                               grid_cm3.T, "bspline")
 
-np.save('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/cl_function.npy', grid_cl3.T)
-np.save('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/cd_function.npy', grid_cd3.T)
-np.save('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/cm_function.npy', grid_cm3.T)
-np.save('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/alpha.npy', alpha)
-np.save('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/reynolds.npy', reynolds)
+np.save('./cache/cl_function.npy', grid_cl3.T)
+np.save('./cache/cd_function.npy', grid_cd3.T)
+np.save('./cache/cm_function.npy', grid_cm3.T)
+np.save('./cache/alpha.npy', alpha)
+np.save('./cache/reynolds.npy', reynolds)
 
 import matplotlib.pyplot as plt
 fig, ax = plt.subplots()
