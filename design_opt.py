@@ -49,10 +49,10 @@ allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
 make_plots = False
 mass_payload = opti.parameter(value=30)
-wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
-# def wind_speed_func(alt):
-#     latitude_array = np.full(shape=alt.shape[0], fill_value=opti.value(latitude))
-#     return lib_winds.wind_speed_world_95(alt, latitude_array, opti.value(day_of_year))
+# wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
+def wind_speed_func(alt):
+    latitude_array = np.full(shape=alt.shape[0], fill_value=opti.value(latitude))
+    return lib_winds.wind_speed_world_95(alt, latitude_array, opti.value(day_of_year))
 battery_specific_energy_Wh_kg = opti.parameter(value=450)
 battery_pack_cell_percentage = 0.89  # What percent of the battery pack consists of the module, by weight?
 variable_pitch = False

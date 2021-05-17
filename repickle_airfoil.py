@@ -97,77 +97,124 @@ from scipy.interpolate import CloughTocher2DInterpolator
 from scipy.ndimage import gaussian_filter
 
 # Use cubic interpolator to fill in the gaps
-grid_cl = griddata(points, cl_values, (grid_reynolds_x, grid_alpha_y), method='cubic')
-grid_cd = griddata(points, cd_values, (grid_reynolds_x, grid_alpha_y), method='cubic')
-grid_cm = griddata(points, cm_values, (grid_reynolds_x, grid_alpha_y), method='cubic')
+# grid_cl = griddata(points, cl_values, (grid_reynolds_x, grid_alpha_y), method='cubic')
+# grid_cd = griddata(points, cd_values, (grid_reynolds_x, grid_alpha_y), method='cubic')
+# grid_cm = griddata(points, cm_values, (grid_reynolds_x, grid_alpha_y), method='cubic')
+cl_rbf = Rbf(
+    np.log(np.array(reynolds_list)),
+    np.array(alpha_list),
+    np.array(cl_values),
+    function='linear',
+    smooth=0.5,
+)
+cd_rbf = Rbf(
+    np.log(np.array(reynolds_list)),
+    np.array(alpha_list),
+    np.array(cd_values),
+    function='linear',
+    smooth=0.5,
+)
+cm_rbf = Rbf(
+    np.log(np.array(reynolds_list)),
+    np.array(alpha_list),
+    np.array(cm_values),
+    function='linear',
+    smooth=0.5,
+)
+Reynolds, Alpha = np.meshgrid(reynolds, alpha, indexing="ij")
+cl_grid = cl_rbf(np.log(Reynolds.flatten()), Alpha.flatten()).reshape(len(reynolds), len(alpha)).T
+cd_grid = cd_rbf(np.log(Reynolds.flatten()), Alpha.flatten()).reshape(len(reynolds), len(alpha)).T
+cm_grid = cm_rbf(np.log(Reynolds.flatten()), Alpha.flatten()).reshape(len(reynolds), len(alpha)).T
 
-# Use linear interpolator to fill in the edges
-cl_array = np.vstack([grid_reynolds_x.flatten(), grid_alpha_y.flatten(), grid_cl.flatten()]).T
-cl_array = cl_array[~np.isnan(cl_array).any(axis=1), :]
-points = cl_array[:, 0:2]
-values = cl_array[:, 2]
-grid_cl2 = griddata(points, values, (grid_reynolds_x, grid_alpha_y), method='nearest')
-
-cd_array = np.vstack([grid_reynolds_x.flatten(), grid_alpha_y.flatten(), grid_cd.flatten()]).T
-cd_array = cd_array[~np.isnan(cd_array).any(axis=1), :]
-points = cd_array[:, 0:2]
-values = cd_array[:, 2]
-grid_cd2 = griddata(points, values, (grid_reynolds_x, grid_alpha_y), method='nearest')
-
-cm_array = np.vstack([grid_reynolds_x.flatten(), grid_alpha_y.flatten(), grid_cm.flatten()]).T
-cm_array = cm_array[~np.isnan(cm_array).any(axis=1), :]
-points = cm_array[:, 0:2]
-values = cm_array[:, 2]
-grid_cm2 = griddata(points, values, (grid_reynolds_x, grid_alpha_y), method='nearest')
-
-# smooth grid using
-grid_cl3 = gaussian_filter(grid_cl2, sigma=0.9, mode='reflect')
-grid_cd3 = gaussian_filter(grid_cd2, sigma=0.9, mode='reflect')
-grid_cm3 = gaussian_filter(grid_cm2, sigma=0.9, mode='reflect')
+#
+# # Use linear interpolator to fill in the edges
+# cl_array = np.vstack([grid_reynolds_x.flatten(), grid_alpha_y.flatten(), grid_cl.flatten()]).T
+# cl_array = cl_array[~np.isnan(cl_array).any(axis=1), :]
+# points = cl_array[:, 0:2]
+# values = cl_array[:, 2]
+# grid_cl2 = griddata(points, values, (grid_reynolds_x, grid_alpha_y), method='nearest')
+#
+# cd_array = np.vstack([grid_reynolds_x.flatten(), grid_alpha_y.flatten(), grid_cd.flatten()]).T
+# cd_array = cd_array[~np.isnan(cd_array).any(axis=1), :]
+# points = cd_array[:, 0:2]
+# values = cd_array[:, 2]
+# grid_cd2 = griddata(points, values, (grid_reynolds_x, grid_alpha_y), method='nearest')
+#
+# cm_array = np.vstack([grid_reynolds_x.flatten(), grid_alpha_y.flatten(), grid_cm.flatten()]).T
+# cm_array = cm_array[~np.isnan(cm_array).any(axis=1), :]
+# points = cm_array[:, 0:2]
+# values = cm_array[:, 2]
+# grid_cm2 = griddata(points, values, (grid_reynolds_x, grid_alpha_y), method='nearest')
+#
+# # smooth grid using
+# grid_cl3 = gaussian_filter(grid_cl2, sigma=0.9, mode='reflect')
+# grid_cd3 = gaussian_filter(grid_cd2, sigma=0.9, mode='reflect')
+# grid_cm3 = gaussian_filter(grid_cm2, sigma=0.9, mode='reflect')
 
 cl_function = InterpolatedModel({"alpha": alpha, "reynolds": reynolds, },
-                                grid_cl3.T, "bspline")
+                                cl_grid, "bspline")
 cd_function = InterpolatedModel({"alpha": alpha, "reynolds": reynolds},
-                                grid_cd3.T, "bspline")
+                                cd_grid, "bspline")
 cm_function = InterpolatedModel({"alpha": alpha, "reynolds": reynolds},
-                                grid_cm3.T, "bspline")
+                                cm_grid, "bspline")
 
-np.save('./cache/cl_function.npy', grid_cl3.T)
-np.save('./cache/cd_function.npy', grid_cd3.T)
-np.save('./cache/cm_function.npy', grid_cm3.T)
+np.save('./cache/cl_function.npy', cl_grid)
+np.save('./cache/cd_function.npy', cd_grid)
+np.save('./cache/cm_function.npy', cm_grid)
 np.save('./cache/alpha.npy', alpha)
 np.save('./cache/reynolds.npy', reynolds)
 
 if __name__ == '__main__':
 
     import matplotlib.pyplot as plt
-
     fig, ax = plt.subplots()
-    ax.contour(reynolds, alpha, grid_cl.T, levels=25, linewidths=0.5, colors='k')
-    cs = ax.contourf(reynolds, alpha, grid_cl.T, levels=25, cmap="viridis")
-    cbar = fig.colorbar(cs)
+    plt.contourf(
+        reynolds,
+        alpha,
+        cl_rbf(np.log(Reynolds.flatten()), Alpha.flatten()).reshape(len(reynolds), len(alpha)).T
+    )
     ax.set_xscale("log")
     ax.set(xlabel="Reynolds Number", ylabel=r"$\alpha$ (angle)",
-           title=r"$C_l$ Pre-Interpolated")
+           title=r"$C_l$ after RBF")
     plt.show()
-
     fig, ax = plt.subplots()
-    ax.contour(reynolds, alpha, grid_cl2.T, levels=25, linewidths=0.5, colors='k')
-    cs = ax.contourf(reynolds, alpha, grid_cl2.T, levels=25, cmap="viridis")
-    cbar = fig.colorbar(cs)
+    plt.contourf(
+        reynolds,
+        alpha,
+        cd_rbf(np.log(Reynolds.flatten()), Alpha.flatten()).reshape(len(reynolds), len(alpha)).T
+    )
     ax.set_xscale("log")
     ax.set(xlabel="Reynolds Number", ylabel=r"$\alpha$ (angle)",
-           title=r"$C_l$ Pre-smoothed")
+           title=r"$C_d$ after RBF")
     plt.show()
-
     fig, ax = plt.subplots()
-    ax.contour(reynolds, alpha, grid_cl3.T, levels=25, linewidths=0.5, colors='k')
-    cs = ax.contourf(reynolds, alpha, grid_cl3.T, levels=25, cmap="viridis")
-    cbar = fig.colorbar(cs)
+    plt.contourf(
+        reynolds,
+        alpha,
+        cm_rbf(np.log(Reynolds.flatten()), Alpha.flatten()).reshape(len(reynolds), len(alpha)).T
+    )
     ax.set_xscale("log")
     ax.set(xlabel="Reynolds Number", ylabel=r"$\alpha$ (angle)",
-           title=r"$C_l$ Smoothed")
+           title=r"$C_m$ after RBF")
     plt.show()
+
+    # fig, ax = plt.subplots()
+    # ax.contour(reynolds, alpha, grid_cl2.T, levels=25, linewidths=0.5, colors='k')
+    # cs = ax.contourf(reynolds, alpha, grid_cl2.T, levels=25, cmap="viridis")
+    # cbar = fig.colorbar(cs)
+    # ax.set_xscale("log")
+    # ax.set(xlabel="Reynolds Number", ylabel=r"$\alpha$ (angle)",
+    #        title=r"$C_l$ Pre-smoothed")
+    # plt.show()
+    #
+    # fig, ax = plt.subplots()
+    # ax.contour(reynolds, alpha, grid_cl3.T, levels=25, linewidths=0.5, colors='k')
+    # cs = ax.contourf(reynolds, alpha, grid_cl3.T, levels=25, cmap="viridis")
+    # cbar = fig.colorbar(cs)
+    # ax.set_xscale("log")
+    # ax.set(xlabel="Reynolds Number", ylabel=r"$\alpha$ (angle)",
+    #        title=r"$C_l$ Smoothed")
+    # plt.show()
 
 # rbfi = Rbf(reynolds_list, alpha_list, cl_values, function='gaussian', smooth=10)
 # alpha = np.linspace(-15, 15, 100)

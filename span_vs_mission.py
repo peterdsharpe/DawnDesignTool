@@ -5,7 +5,7 @@ cache_suffix="_60kft"
 
 ### Data acquisition
 def run_sweep():
-    latitudes = np.linspace(-80, 80, 30)
+    latitudes = np.linspace(0, 80, 15)
     day_of_years = np.linspace(0, 365, 30)
     spans = np.empty((
         len(latitudes),
@@ -68,7 +68,7 @@ def analyze():
         Spans,
     ]
     levels = np.arange(20, 50.1, 2)
-    plt.contour(*args, levels=[34], colors="r", linewidths=3)
+    # plt.contour(*args, levels=[34], colors="r", linewidths=3)
     CS = plt.contour(*args, levels=levels, linewidths=0.5, colors="k", alpha=0.7, extend='both')
     CF = plt.contourf(*args, levels=levels, cmap="viridis", alpha=0.7, extend='both')
     ax.clabel(CS, inline=1, fontsize=10, fmt="%.0f m")
