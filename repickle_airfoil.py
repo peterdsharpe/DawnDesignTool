@@ -9,49 +9,55 @@ import dill as pickle
 import pathlib
 from pathlib import Path
 
-# from aerosandbox.tools.airfoil_fitter.airfoil_fitter import AirfoilFitter
+from aerosandbox.tools.airfoil_fitter.airfoil_fitter import AirfoilFitter
 
-# #
-# # ### load wing airfoil from datafile
+#
+# ### load wing airfoil from datafile
 # wing_airfoil = asb.geometry.Airfoil(name="HALE_03", coordinates=r"studies/airfoil_optimizer/HALE_03.dat")
-# # #
-# # reynolds = np.logspace(3, 8, num=100)
-# # #reynolds = [10000]
-# # output = {}
-# # # sweep over wide range of logspaced Re values
-# # for Re in reynolds:
-# #
-# #     # initialize xfoil through asb
-# #     xf = xfoil.XFoil(
-# #         airfoil=wing_airfoil,
-# #         Re=Re,
-# #         n_crit=7,
-# #         mach=0,
-# #         xtr_upper=1,
-# #         xtr_lower=1,
-# #         max_iter=40,
-# #         verbose=True,
-# #         xfoil_command = "/Users/annickdewald/Desktop/Xfoil/bin/xfoil",
-# #     )
-# #
-# #     # test range of alpha values
-# #     result = xf.alpha([3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 2, 1, 0, -1, -2, -3, \
-# #                   -4, -5, -6, -7, -8, -9, -10, -11, -12, -13, -14, -15])
-# #
-# #     # pickle each output dict
-# #     import dill as pickle
-# #     import pathlib
-# #
-# #     path = str(
-# #         pathlib.Path(__file__).parent.absolute()
-# #     )
-# #     with open(path + f"/cache/airfoil_xfoil_results/airfoil_{Re}.cache", "wb+") as f:
-# #         pickle.dump(result, f)
+#
+# reynolds = np.geomspace(1000, 100000000, 200)
+# alphas = np.arange(-15, 15, 0.1)
+# alpha = alphas[180:]
+# np.append(alpha, alphas[0:180])
+# #reynolds = [10000]
+# output = {}
+# # sweep over wide range of logspaced Re values
+# for Re in reynolds:
+#
+#     # initialize xfoil through asb
+#     xf = xfoil.XFoil(
+#         airfoil=wing_airfoil,
+#         Re=Re,
+#         n_crit=7,
+#         mach=0,
+#         xtr_upper=1,
+#         xtr_lower=1,
+#         max_iter=40,
+#         verbose=True,
+#         xfoil_command = "/Users/annickdewald/Desktop/Xfoil/bin/xfoil",
+#     )
+#
+#     # test range of alpha values
+#     result = xf.alpha([alpha])
+#
+#     # pickle each output dict
+#     import dill as pickle
+#     import pathlib
+#
+    # path = str(
+    #     pathlib.Path(__file__).parent.absolute()
+#     )
+#     with open(path + f"/cache/airfoil_xfoil_results/airfoil_{Re}.cache", "wb+") as f:
+#         pickle.dump(result, f)
 #
 #
-##
-
-reynolds = np.logspace(3, 8, num=100)
+# #
+#
+# reynolds = np.logspace(3, 8, num=100)
+reynolds = np.geomspace(1000, 100000000, 200)
+alphas = np.arange(-15, 15, 0.1)
+alpha = alphas[180:]
+np.append(alpha, alphas[0:180])
 alpha_list = []
 reynolds_list = []
 cl_values = []
@@ -80,15 +86,16 @@ for Re in reynolds:
     except (FileNotFoundError, TypeError):
         pass
 
-points = np.column_stack((reynolds_list, alpha_list))
-alpha = np.linspace(-15, 15, 31)
-grid_alpha_y = np.array(alpha)
-reynolds_vert = np.reshape(reynolds, (-1, 1))
-grid_reynolds_x = reynolds_vert
-for i in range(0, len(reynolds) - 1):
-    grid_alpha_y = np.vstack([grid_alpha_y, alpha])
-for i in range(0, len(alpha) - 1):
-    grid_reynolds_x = np.hstack([grid_reynolds_x, reynolds_vert])
+
+# points = np.column_stack((reynolds_list, alpha_list))
+# alpha = np.linspace(-15, 15, 31)
+# grid_alpha_y = np.array(alpha)
+# reynolds_vert = np.reshape(reynolds, (-1, 1))
+# grid_reynolds_x = reynolds_vert
+# for i in range(0, len(reynolds) - 1):
+#     grid_alpha_y = np.vstack([grid_alpha_y, alpha])
+# for i in range(0, len(alpha) - 1):
+#     grid_reynolds_x = np.hstack([grid_reynolds_x, reynolds_vert])
 
 from scipy.interpolate import griddata
 from scipy.interpolate import Rbf
@@ -105,27 +112,31 @@ cl_rbf = Rbf(
     np.array(alpha_list),
     np.array(cl_values),
     function='linear',
-    smooth=0.5,
+    smooth=5,
 )
 cd_rbf = Rbf(
     np.log(np.array(reynolds_list)),
     np.array(alpha_list),
-    np.array(cd_values),
+    np.log(np.array(cd_values)),
     function='linear',
-    smooth=0.5,
+    smooth=5,
 )
 cm_rbf = Rbf(
     np.log(np.array(reynolds_list)),
     np.array(alpha_list),
     np.array(cm_values),
     function='linear',
-    smooth=0.5,
+    smooth=5,
 )
-Reynolds, Alpha = np.meshgrid(reynolds, alpha, indexing="ij")
+# reynolds = reynolds = np.geomspace(1000, 100000000, 30)
+
+Reynolds, Alpha = np.meshgrid(reynolds[::8], alpha[::4], indexing="ij")
 cl_grid = cl_rbf(np.log(Reynolds.flatten()), Alpha.flatten()).reshape(len(reynolds), len(alpha)).T
 cd_grid = cd_rbf(np.log(Reynolds.flatten()), Alpha.flatten()).reshape(len(reynolds), len(alpha)).T
 cm_grid = cm_rbf(np.log(Reynolds.flatten()), Alpha.flatten()).reshape(len(reynolds), len(alpha)).T
 
+# df = pd.DataFrame(cd_grid, columns = reynolds)
+# df.index = alpha
 #
 # # Use linear interpolator to fill in the edges
 # cl_array = np.vstack([grid_reynolds_x.flatten(), grid_alpha_y.flatten(), grid_cl.flatten()]).T
@@ -164,39 +175,109 @@ np.save('./cache/cm_function.npy', cm_grid)
 np.save('./cache/alpha.npy', alpha)
 np.save('./cache/reynolds.npy', reynolds)
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
 
-    import matplotlib.pyplot as plt
-    fig, ax = plt.subplots()
-    plt.contourf(
-        reynolds,
-        alpha,
-        cl_rbf(np.log(Reynolds.flatten()), Alpha.flatten()).reshape(len(reynolds), len(alpha)).T
-    )
-    ax.set_xscale("log")
-    ax.set(xlabel="Reynolds Number", ylabel=r"$\alpha$ (angle)",
-           title=r"$C_l$ after RBF")
-    plt.show()
-    fig, ax = plt.subplots()
-    plt.contourf(
-        reynolds,
-        alpha,
-        cd_rbf(np.log(Reynolds.flatten()), Alpha.flatten()).reshape(len(reynolds), len(alpha)).T
-    )
-    ax.set_xscale("log")
-    ax.set(xlabel="Reynolds Number", ylabel=r"$\alpha$ (angle)",
-           title=r"$C_d$ after RBF")
-    plt.show()
-    fig, ax = plt.subplots()
-    plt.contourf(
-        reynolds,
-        alpha,
-        cm_rbf(np.log(Reynolds.flatten()), Alpha.flatten()).reshape(len(reynolds), len(alpha)).T
-    )
-    ax.set_xscale("log")
-    ax.set(xlabel="Reynolds Number", ylabel=r"$\alpha$ (angle)",
-           title=r"$C_m$ after RBF")
-    plt.show()
+    # import matplotlib.pyplot as plt
+    # fig, ax = plt.subplots()
+    # alphas = np.linspace(4, 10, 30)
+    # reynolds = reynolds = np.geomspace(300000, 700000, 30)
+    # Reynolds, Alpha = np.meshgrid(reynolds, alphas, indexing="ij")
+    # plt.contourf(
+    #     reynolds,
+    #     alphas,
+    #     cl_rbf(np.log(Reynolds.flatten()), Alpha.flatten()).reshape(len(reynolds), len(alphas)).T,
+    #     levels=50,
+    # )
+    # plt.contour(
+    #     reynolds,
+    #     alphas,
+    #     cl_rbf(np.log(Reynolds.flatten()), Alpha.flatten()).reshape(len(reynolds), len(alphas)).T,
+    #     levels=50,
+    #     colors='black',
+    #     linewidths=0.7
+    # )
+    # ax.set_xscale("log")
+    # ax.set(xlabel="Reynolds Number", ylabel=r"$\alpha$ (angle)",
+    #        title=r"$C_l$ after RBF")
+    # plt.show()
+    # fig, ax = plt.subplots()
+    # plt.contourf(
+    #     reynolds,
+    #     alphas,
+    #     cd_rbf(np.log(Reynolds.flatten()), Alpha.flatten()).reshape(len(reynolds), len(alphas)).T,
+    #     levels=50,
+    #
+    # )
+    # plt.contour(
+    #     reynolds,
+    #     alphas,
+    #     cd_rbf(np.log(Reynolds.flatten()), Alpha.flatten()).reshape(len(reynolds), len(alphas)).T,
+    #     levels=50,
+    #     colors='black',
+    #     linewidths=0.7
+    # )
+    # ax.set_xscale("log")
+    # ax.set(xlabel="Reynolds Number", ylabel=r"$\alpha$ (angle)",
+    #        title=r"$C_d$ after RBF")
+    # plt.show()
+    # fig, ax = plt.subplots()
+    # plt.contourf(
+    #     reynolds,
+    #     alphas,
+    #     cm_rbf(np.log(Reynolds.flatten()), Alpha.flatten()).reshape(len(reynolds), len(alphas)).T,
+    #     levels=50,
+    # )
+    # plt.contour(
+    #     reynolds,
+    #     alphas,
+    #     cm_rbf(np.log(Reynolds.flatten()), Alpha.flatten()).reshape(len(reynolds), len(alphas)).T,
+    #     levels=50,
+    #     colors='black',
+    #     linewidths=0.7
+    # )
+    # ax.set_xscale("log")
+    # ax.set(xlabel="Reynolds Number", ylabel=r"$\alpha$ (angle)",
+    #        title=r"$C_m$ after RBF")
+    # plt.show()
+    #
+    # fig, ax = plt.subplots()
+    # plt.contourf(
+    #     reynolds,
+    #     alphas,
+    #     np.divide(cl_rbf(np.log(Reynolds.flatten()), Alpha.flatten()).reshape(len(reynolds), len(alphas)).T, np.exp(cd_rbf(np.log(Reynolds.flatten()), Alpha.flatten()).reshape(len(reynolds), len(alphas)).T)),
+    #     levels=50,
+    # )
+    # plt.contour(
+    #     reynolds,
+    #     alphas,
+    #     np.divide(cl_rbf(np.log(Reynolds.flatten()), Alpha.flatten()).reshape(len(reynolds), len(alphas)).T, np.exp(cd_rbf(np.log(Reynolds.flatten()), Alpha.flatten()).reshape(len(reynolds), len(alphas)).T)),
+    #     levels=50,
+    #     colors='black',
+    #     linewidths=0.7
+    # )
+    # ax.set_xscale("log")
+    # ax.set(xlabel="Reynolds Number", ylabel=r"$\alpha$ (angle)",
+    #        title=r"$C_l$/$C_d$ after RBF")
+    # plt.show()
+    # fig, ax = plt.subplots()
+    # plt.contourf(
+    #     reynolds,
+    #     alphas,
+    #     np.divide(cl_values, cd_values),
+    #     levels=50,
+    # )
+    # plt.contour(
+    #     reynolds,
+    #     alphas,
+    #     np.divide(cl_values, cd_values),
+    #     levels=50,
+    #     colors='black',
+    #     linewidths=0.7
+    # )
+    # ax.set_xscale("log")
+    # ax.set(xlabel="Reynolds Number", ylabel=r"$\alpha$ (angle)",
+    #        title=r"$C_l$/$C_d$ from Xfoil")
+    # plt.show()
 
     # fig, ax = plt.subplots()
     # ax.contour(reynolds, alpha, grid_cl2.T, levels=25, linewidths=0.5, colors='k')

@@ -1,4 +1,5 @@
 from repickle_airfoil import *
+import matplotlib.pyplot as plt
 
 # fig, ax = plt.subplots()
 # plt.tricontourf(
