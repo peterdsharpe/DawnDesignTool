@@ -225,10 +225,43 @@ def run_cm_plot(cm_grid):
            title=r"$C_m$ after RBF")
     plt.show()
 
+def run_cl_cd_plot(cl_grid, cd_grid):
+    fig, ax = plt.subplots()
+    alphas = np.arange(-15, 15, 0.1)
+    reynolds = np.geomspace(1000, 100000000, 200)
+    Reynolds, Alpha = np.meshgrid(reynolds[::8], alphas[::12], indexing="ij")
+    plt.contourf(
+        reynolds[::8],
+        alphas[::12],
+        np.divide(cl_grid.T, np.exp(cd_grid.T)),
+        levels=50,
+    )
+    plt.contour(
+        reynolds[::8],
+        alphas[::12],
+        np.divide(cl_grid.T, np.exp(cd_grid.T)),
+        levels=50,
+        colors='black',
+        linewidths=0.7
+    )
+    ax.set_xscale("log")
+    ax.set(xlabel="Reynolds Number", ylabel=r"$\alpha$ (angle)",
+           title=r"$C_l/C_d$ after RBF")
+    plt.show()
+
+
 # run_xfoil()
-# alpha_list, reynolds_list, cl_values, cd_values, cm_values = get_Xfoil_dat()
+alpha_list, reynolds_list, cl_values, cd_values, cm_values = get_Xfoil_dat()
 cl_grid = run_cl(alpha_list, reynolds_list, cl_values)
-# run_cl_plot(cl_grid)
+run_cl_plot(cl_grid)
+
+cd_grid = run_cl(alpha_list, reynolds_list, cd_values)
+run_cd_plot(cd_grid)
+
+cm_grid = run_cl(alpha_list, reynolds_list, cm_values)
+run_cm_plot(cm_grid)
+
+run_cl_cd_plot(cl_grid, cd_grid)
 
 
 
