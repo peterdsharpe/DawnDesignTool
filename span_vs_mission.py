@@ -1,11 +1,21 @@
 from design_opt import *
 from aerosandbox.tools.carpet_plot_utils import time_limit, patch_nans
 
-cache_suffix="_60kft"
+cache_suffix="_og_mission"
 
+# opti.set_value(latitude, 40)
+# opti.set_value(day_of_year, 190)
+# try:
+#     with time_limit(10):
+#         sol = opti.solve()
+#     opti.set_initial(opti.value_variables())
+#     opti.set_initial(opti.lam_g, sol.value(opti.lam_g))
+#     span_val = sol.value(wing_span)
+# except:
+#     pass
 ### Data acquisition
 def run_sweep():
-    latitudes = np.linspace(0, 80, 15)
+    latitudes = np.linspace(-80, 80, 15)
     day_of_years = np.linspace(0, 365, 30)
     spans = np.empty((
         len(latitudes),
@@ -51,7 +61,7 @@ def analyze():
     # Convert to 2D arrays
     Days, Lats = np.meshgrid(day_of_years, latitudes)
 
-    # Patch NaNs and smooth
+    # Patch NaNs and smoot
     Spans = patch_nans(Spans)
 
     #
@@ -133,7 +143,7 @@ def analyze():
     plt.suptitle("Minimum Wingspan Airplane by Mission", y=0.98)
     plt.title(
         "\n"
-        "30 kg payload, 60 kft min. alt., 450 Wh/kg cells, 89% batt. packing factor",
+        "30 kg payload, 60 kft min. alt., 450 Wh/kg cells, 89% batt. packing factor, station-keeping in 95% wind",
         fontsize = 10,
     )
     cbar = plt.colorbar()
@@ -143,5 +153,5 @@ def analyze():
     plt.show()
 
 
-# run_sweep()
-analyze()
+run_sweep()
+# analyze()

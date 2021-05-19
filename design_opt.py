@@ -41,18 +41,18 @@ minimize = "wing.span() / 50"  # any "eval-able" expression
 
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
-latitude = opti.parameter(value=49)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
-day_of_year = opti.parameter(value=244)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
+latitude = opti.parameter(value=60)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
+day_of_year = opti.parameter(value=153)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 min_cruise_altitude = opti.parameter(value=18288)  # meters. 19812 m = 65000 ft, 18288 m = 60000 ft.
 required_headway_per_day = 10e3  # meters
 allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
 make_plots = False
 mass_payload = opti.parameter(value=30)
-# wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
-def wind_speed_func(alt):
-    latitude_array = np.full(shape=alt.shape[0], fill_value=opti.value(latitude))
-    return lib_winds.wind_speed_world_95(alt, latitude_array, opti.value(day_of_year))
+wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
+# def wind_speed_func(alt):
+#     latitude_array = np.full(shape=alt.shape[0], fill_value=opti.value(latitude))
+#     return lib_winds.wind_speed_world_95(alt, latitude_array, opti.value(day_of_year))
 battery_specific_energy_Wh_kg = opti.parameter(value=450)
 battery_pack_cell_percentage = 0.89  # What percent of the battery pack consists of the module, by weight?
 variable_pitch = False
@@ -373,11 +373,11 @@ cd_array = np.load(path + '/cache/cd_function.npy')
 cm_array = np.load(path + '/cache/cm_function.npy')
 alpha_array = np.load(path + '/cache/alpha.npy')
 reynolds_array = np.load(path + '/cache/reynolds.npy')
-cl_function = InterpolatedModel({"alpha": alpha_array, "reynolds": reynolds_array,},
+cl_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(np.array(reynolds_array)),},
                                               cl_array, "bspline")
-cd_function = InterpolatedModel({"alpha": alpha_array, "reynolds": reynolds_array},
+cd_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(np.array(reynolds_array))},
                                               cd_array, "bspline")
-cm_function = InterpolatedModel({"alpha": alpha_array, "reynolds": reynolds_array},
+cm_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(np.array(reynolds_array))},
                                               cm_array, "bspline")
 
 wing_airfoil = asb.geometry.Airfoil(
@@ -578,12 +578,12 @@ def compute_wing_aerodynamics(
     surface.Re = rho / mu * airspeed * surface.mean_geometric_chord()
     surface.airfoil = surface.xsecs[0].airfoil
     try:
-        surface.Cl_inc = surface.airfoil.CL_function({'alpha': surface.alpha_eff, 'reynolds': surface.Re})  # Incompressible 2D lift coefficient
+        surface.Cl_inc = surface.airfoil.CL_function({'alpha': surface.alpha_eff, 'reynolds': np.log(surface.Re)})  # Incompressible 2D lift coefficient
         surface.CL = surface.Cl_inc * aero.CL_over_Cl(surface.aspect_ratio(), mach=mach,
                                                       sweep=surface.mean_sweep_angle())  # Compressible 3D lift coefficient
         surface.lift = surface.CL * q * surface.area()
 
-        surface.Cd_profile = surface.airfoil.CD_function({'alpha': surface.alpha_eff, 'reynolds': surface.Re})
+        surface.Cd_profile = np.exp(surface.airfoil.CD_function({'alpha': surface.alpha_eff, 'reynolds': np.log(surface.Re)}))
         surface.drag_profile = surface.Cd_profile * q * surface.area()
 
         surface.oswalds_efficiency = aero.oswalds_efficiency(
@@ -600,7 +600,7 @@ def compute_wing_aerodynamics(
 
         surface.drag = surface.drag_profile + surface.drag_induced
 
-        surface.Cm_inc = surface.airfoil.CM_function({'alpha':surface.alpha_eff, 'reynolds':surface.Re})  # Incompressible 2D moment coefficient
+        surface.Cm_inc = surface.airfoil.CM_function({'alpha':surface.alpha_eff, 'reynolds':np.log(surface.Re)})  # Incompressible 2D moment coefficient
         surface.CM = surface.Cm_inc * aero.CL_over_Cl(surface.aspect_ratio(), mach=mach,
                                                       sweep=surface.mean_sweep_angle())  # Compressible 3D moment coefficient
         surface.moment = surface.CM * q * surface.area() * surface.mean_geometric_chord()
