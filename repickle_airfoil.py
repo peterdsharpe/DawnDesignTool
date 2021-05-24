@@ -132,13 +132,13 @@ def plot_xfoil(alpha_list, reynolds_list, cl_values, cd_values, cm_values):
            title=r"$C_l$/$C_d$ from Xfoil")
     plt.show()
 
-def run_cl(alpha_list, reynolds_list, cl_values):
+def run_cl(alpha_list, reynolds_list, cl_values, smooth_val):
     cl_rbf = Rbf(
         np.log(np.array(reynolds_list)),
         np.array(alpha_list),
         np.array(cl_values),
         function='linear',
-        smooth=1,
+        smooth=smooth_val,
     )
     reynolds = np.geomspace(1000, 100000000, 200)
     alphas = np.arange(-15, 15, 0.1)
@@ -150,13 +150,13 @@ def run_cl(alpha_list, reynolds_list, cl_values):
     return cl_grid
 
 
-def run_cd(alpha_list, reynolds_list, cd_values):
+def run_cd(alpha_list, reynolds_list, cd_values, smooth_val):
     cd_rbf = Rbf(
         np.log(np.array(reynolds_list)),
         np.array(alpha_list),
         np.log(np.array(cd_values)),
         function='linear',
-        smooth=1,
+        smooth=smooth_val,
     )
     reynolds = np.geomspace(1000, 100000000, 200)
     alphas = np.arange(-15, 15, 0.1)
@@ -168,13 +168,13 @@ def run_cd(alpha_list, reynolds_list, cd_values):
     return cd_grid
 
 
-def run_cm(alpha_list, reynolds_list, cm_values):
+def run_cm(alpha_list, reynolds_list, cm_values, smooth_val):
     cm_rbf = Rbf(
         np.log(np.array(reynolds_list)),
         np.array(alpha_list),
         np.array(cm_values),
         function='linear',
-        smooth=1,
+        smooth=smooth_val,
     )
     reynolds = np.geomspace(1000, 100000000, 200)
     alphas = np.arange(-15, 15, 0.1)
@@ -288,25 +288,37 @@ def run_cl_cd_plot(cl_grid, cd_grid):
     fig.colorbar(clr, ax=ax)
     plt.show()
 
+path = str(
+    pathlib.Path(__file__).parent.absolute()
+)
 
 # run_xfoil()
 
 alpha_list, reynolds_list, cl_values, cd_values, cm_values = get_Xfoil_dat()
-plot_xfoil(alpha_list, reynolds_list, cl_values, cd_values, cm_values)
-sample_resolution = 6
+# plot_xfoil(alpha_list, reynolds_list, cl_values, cd_values, cm_values)
+sample_resolution = 3
+smooth_val = 10
 alpha_list = alpha_list[::sample_resolution]
 reynolds_list = reynolds_list[::sample_resolution]
 cl_values = cl_values[::sample_resolution]
 cd_values = cd_values[::sample_resolution]
 cm_values = cm_values[::sample_resolution]
 
-cl_grid = run_cl(alpha_list, reynolds_list, cl_values)
+alpha_array = np.load(path + '/cache/alpha.npy')
+reynolds_array = np.load(path + '/cache/reynolds.npy')
+cl_grid = run_cl(alpha_list, reynolds_list, cl_values, smooth_val)
 run_cl_plot(cl_grid)
+cl_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(reynolds_array)},
+                                              cl_grid, "bspline")
 
-cd_grid = run_cl(alpha_list, reynolds_list, cd_values)
+cd_grid = run_cd(alpha_list, reynolds_list, cd_values, smooth_val)
 run_cd_plot(cd_grid)
+cd_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(reynolds_array)},
+                                               cd_grid, "bspline")
 
-cm_grid = run_cl(alpha_list, reynolds_list, cm_values)
+cm_grid = run_cm(alpha_list, reynolds_list, cm_values, smooth_val)
 run_cm_plot(cm_grid)
+cm_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(reynolds_array)},
+                                               cm_grid, "bspline")
 
-run_cl_cd_plot(cl_grid, cd_grid)
+# run_cl_cd_plot(cl_grid, cd_grid)

@@ -13,25 +13,27 @@ cd_array = np.load(path + '/cache/cd_function.npy')
 cm_array = np.load(path + '/cache/cm_function.npy')
 alpha_array = np.load(path + '/cache/alpha.npy')
 reynolds_array = np.load(path + '/cache/reynolds.npy')
-cl_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(reynolds_array),},
+
+alphas = np.linspace(-15, 15, 100)
+reynolds = np.geomspace(1000, 100000000, 100)
+Reynolds, Alpha = np.meshgrid(reynolds, alphas, indexing="ij")
+
+cl_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(reynolds_array)},
                                               cl_array, "bspline")
+cl_values = cl_function({'alpha': Alpha.flatten(), 'reynolds': np.log(Reynolds.flatten())})
+
 cd_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(reynolds_array)},
                                               cd_array, "bspline")
+cd_values = cd_function({'alpha': Alpha.flatten(), 'reynolds': np.log(Reynolds.flatten())})
+
 cm_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(reynolds_array)},
                                               cm_array, "bspline")
-
-# alphas = np.linspace(-15, 15, 400)
-# reynolds = np.geomspace(1000, 100000000, 400)
-alphas = np.linspace(0, 10, 30)
-reynolds = np.geomspace(100000, 1000000, 30)
-Reynolds, Alpha = np.meshgrid(reynolds, alphas, indexing="ij")
-cl_values = cl_function({'alpha': Alpha.flatten(), 'reynolds': np.log(Reynolds.flatten())})
-cd_values = cd_function({'alpha': Alpha.flatten(), 'reynolds': np.log(Reynolds.flatten())})
 cm_values = cm_function({'alpha': Alpha.flatten(), 'reynolds': np.log(Reynolds.flatten())})
+
 
 fig, ax = plt.subplots()
 
-plt.contourf(
+clr = plt.contourf(
     reynolds,
     alphas,
     cl_values.reshape(len(reynolds), len(alphas)).T,
@@ -48,21 +50,22 @@ plt.contour(
 ax.set_xscale("log")
 ax.set(xlabel="Reynolds Number", ylabel=r"$\alpha$ (angle)",
        title=r"$C_l$ function outputs")
+fig.colorbar(clr, ax=ax)
 plt.show()
 
 fig, ax = plt.subplots()
 
-plt.contourf(
+clr = plt.contourf(
     reynolds,
     alphas,
-    cd_values.reshape(len(reynolds), len(alphas)).T,
+    np.exp(cd_values.reshape(len(reynolds), len(alphas)).T),
     levels = 50,
     # norm = LogNorm(),
 )
 plt.contour(
     reynolds,
     alphas,
-    cd_values.reshape(len(reynolds), len(alphas)).T,
+    np.exp(cd_values.reshape(len(reynolds), len(alphas)).T),
     levels=50,
     colors='black',
     linewidths=0.7
@@ -70,11 +73,12 @@ plt.contour(
 ax.set_xscale("log")
 ax.set(xlabel="Reynolds Number", ylabel=r"$\alpha$ (angle)",
        title=r"$C_d$ function outputs")
+fig.colorbar(clr, ax=ax)
 plt.show()
 
 fig, ax = plt.subplots()
 
-plt.contourf(
+clr = plt.contourf(
     reynolds,
     alphas,
     cm_values.reshape(len(reynolds), len(alphas)).T,
@@ -92,21 +96,22 @@ plt.contour(
 ax.set_xscale("log")
 ax.set(xlabel="Reynolds Number", ylabel=r"$\alpha$ (angle)",
        title=r"$C_m$ function outputs")
+fig.colorbar(clr, ax=ax)
 plt.show()
 
 fig, ax = plt.subplots()
 
-plt.contourf(
+clr = plt.contourf(
     reynolds,
     alphas,
-    np.divide(cl_values.reshape(len(reynolds), len(alphas)).T,cd_values.reshape(len(reynolds), len(alphas)).T) ,
+    np.divide(cl_values.reshape(len(reynolds), len(alphas)).T,np.exp(cd_values.reshape(len(reynolds), len(alphas)).T)) ,
     levels=50,
 )
 
 plt.contour(
     reynolds,
     alphas,
-    np.divide(cl_values.reshape(len(reynolds), len(alphas)).T,cd_values.reshape(len(reynolds), len(alphas)).T),
+    np.divide(cl_values.reshape(len(reynolds), len(alphas)).T,np.exp(cd_values.reshape(len(reynolds), len(alphas)).T)),
     levels=50,
     colors='black',
     linewidths=0.7
@@ -114,6 +119,7 @@ plt.contour(
 ax.set_xscale("log")
 ax.set(xlabel="Reynolds Number", ylabel=r"$\alpha$ (angle)",
        title=r"$C_l$/$C_d$ function outputs")
+fig.colorbar(clr, ax=ax)
 plt.show()
 
 # import plotly.graph_objects as go
