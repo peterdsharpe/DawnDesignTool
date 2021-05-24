@@ -24,16 +24,16 @@ sns.set(font_scale=1)
 
 # region Setup
 ##### Initialize Optimization
-# opti = asb.Opti(  # Normal mode - Design Optimization
-#     cache_filename="cache/optimization_solution.json",
-#     save_to_cache_on_solve=True
-# )
-opti = asb.Opti( # Alternate mode - Frozen Design Optimization
-    variable_categories_to_freeze=["des"],
+opti = asb.Opti(  # Normal mode - Design Optimization
     cache_filename="cache/optimization_solution.json",
-    load_frozen_variables_from_cache=True,
-    ignore_violated_parametric_constraints=True
+    save_to_cache_on_solve=True
 )
+# opti = asb.Opti( # Alternate mode - Frozen Design Optimization
+#     variable_categories_to_freeze=["des"],
+#     cache_filename="cache/optimization_solution.json",
+#     load_frozen_variables_from_cache=True,
+#     ignore_violated_parametric_constraints=True
+# )
 
 minimize = "wing.span() / 50"  # any "eval-able" expression
 # minimize = "max_mass_total / 300" # any "eval-able" expression
@@ -41,11 +41,11 @@ minimize = "wing.span() / 50"  # any "eval-able" expression
 
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
-latitude = opti.parameter(value=60)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
-day_of_year = opti.parameter(value=153)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
+latitude = opti.parameter(value=49)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
+day_of_year = opti.parameter(value=244)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 min_cruise_altitude = opti.parameter(value=18288)  # meters. 19812 m = 65000 ft, 18288 m = 60000 ft.
 required_headway_per_day = 10e3  # meters
-allow_trajectory_optimization = False
+allow_trajectory_optimization = True
 structural_load_factor = 3  # over static
 make_plots = False
 mass_payload = opti.parameter(value=30)
