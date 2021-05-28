@@ -14,8 +14,10 @@ cm_array = np.load(path + '/cache/cm_function.npy')
 alpha_array = np.load(path + '/cache/alpha.npy')
 reynolds_array = np.load(path + '/cache/reynolds.npy')
 
-alphas = np.linspace(-15, 15, 100)
-reynolds = np.geomspace(1000, 100000000, 100)
+alphas = np.linspace(-15, 15, 500)
+reynolds = np.geomspace(1000, 100000000, 500)
+# alphas = np.linspace(0, 5, 100)
+# reynolds = np.geomspace(10**5, 10**6, 100)
 Reynolds, Alpha = np.meshgrid(reynolds, alphas, indexing="ij")
 
 cl_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(reynolds_array)},
@@ -58,14 +60,14 @@ fig, ax = plt.subplots()
 clr = plt.contourf(
     reynolds,
     alphas,
-    np.exp(cd_values.reshape(len(reynolds), len(alphas)).T),
+    (cd_values.reshape(len(reynolds), len(alphas)).T),
     levels = 50,
     # norm = LogNorm(),
 )
 plt.contour(
     reynolds,
     alphas,
-    np.exp(cd_values.reshape(len(reynolds), len(alphas)).T),
+    (cd_values.reshape(len(reynolds), len(alphas)).T),
     levels=50,
     colors='black',
     linewidths=0.7

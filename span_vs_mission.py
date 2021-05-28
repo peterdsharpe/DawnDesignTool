@@ -1,7 +1,7 @@
 from design_opt import *
 from aerosandbox.tools.carpet_plot_utils import time_limit, patch_nans
 
-cache_suffix="_og_mission"
+cache_suffix="strat_model_test"
 
 # opti.set_value(latitude, 40)
 # opti.set_value(day_of_year, 190)
@@ -80,7 +80,7 @@ def analyze():
     levels = np.arange(20, 50.1, 2)
     # plt.contour(*args, levels=[34], colors="r", linewidths=3)
     CS = plt.contour(*args, levels=levels, linewidths=0.5, colors="k", alpha=0.7, extend='both')
-    CF = plt.contourf(*args, levels=levels, cmap="viridis", alpha=0.7, extend='both')
+    CF = plt.contourf(*args, levels=levels, cmap="viridis_r", alpha=0.7, extend='both')
     ax.clabel(CS, inline=1, fontsize=10, fmt="%.0f m")
     plt.plot(
         244,
@@ -101,11 +101,12 @@ def analyze():
         )
     )
     plt.annotate(
-        s="Insufficient\nSunlight",
+        s="Mission\nInfeasible",
         xy=(174, -55),
         xycoords="data",
         ha="center",
         fontsize=10,
+        color='w',
     )
 
     plt.xticks(
@@ -143,7 +144,7 @@ def analyze():
     plt.suptitle("Minimum Wingspan Airplane by Mission", y=0.98)
     plt.title(
         "\n"
-        "30 kg payload, 60 kft min. alt., 450 Wh/kg cells, 89% batt. packing factor, station-keeping in 95% wind",
+        "30 kg payload, min alt set by strat height, 450 Wh/kg cells,\n 89% batt. packing factor, station-keeping in 95% wind",
         fontsize = 10,
     )
     cbar = plt.colorbar()
@@ -154,4 +155,4 @@ def analyze():
 
 
 run_sweep()
-# analyze()
+analyze()
