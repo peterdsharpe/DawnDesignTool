@@ -3,24 +3,12 @@ from aerosandbox.tools.carpet_plot_utils import time_limit, patch_nans
 
 cache_suffix="strat_model_test"
 
-# opti.set_value(latitude, 40)
-# opti.set_value(day_of_year, 190)
-# try:
-#     with time_limit(10):
-#         sol = opti.solve()
-#     opti.set_initial(opti.value_variables())
-#     opti.set_initial(opti.lam_g, sol.value(opti.lam_g))
-#     span_val = sol.value(wing_span)
-# except:
-#     pass
-### Data acquisition
 def run_sweep():
     latitudes = np.linspace(-80, 80, 15)
     day_of_years = np.linspace(0, 365, 30)
-    spans = np.empty((
-        len(latitudes),
-        len(day_of_years)
-    ))
+    spans = []
+    days = []
+    lats = []
 
     for i, lat_val in enumerate(latitudes):
         for j, day_val in enumerate(day_of_years):
@@ -37,20 +25,23 @@ def run_sweep():
                 opti.set_initial(opti.value_variables())
                 opti.set_initial(opti.lam_g, sol.value(opti.lam_g))
                 span_val = sol.value(wing_span)
+                lats = lats.append(lat_val)
+                days = days.append(day_val)
+                spans = spans.append(span_val)
             except Exception as e:
                 print(e)
-                span_val = np.NaN
-            finally:
-                spans[i, j] = span_val
+                # span_val = np.NaN
 
-    np.save("cache/lats" + cache_suffix, latitudes)
-    np.save("cache/days" + cache_suffix, day_of_years)
+
+    np.save("cache/lats" + cache_suffix, lats)
+    np.save("cache/days" + cache_suffix, days)
     np.save("cache/spans" + cache_suffix, spans)
 
 
 def analyze():
     import matplotlib.pyplot as plt
     import seaborn as sns
+    from scipy.interpolate import Rbf
     sns.set(palette=sns.color_palette("viridis"))
 
     # Do raw imports
@@ -61,10 +52,19 @@ def analyze():
     # Convert to 2D arrays
     Days, Lats = np.meshgrid(day_of_years, latitudes)
 
-    # Patch NaNs and smoot
-    Spans = patch_nans(Spans)
-
+    rbf = Rbf(
+        (np.array(day_of_years)),
+        np.array(latitudes),
+        np.log(np.array(Spans)),
+        function='cubic',
+        smooth=5,
+    )
+    # Lats = zoom(Lats, 10, order=3)
+    # Spans = rbf(, , )
+    # # Patch NaNs and smooth
+    # Spans = patch_nans(Spans)
     #
+    # #
     from scipy.ndimage import zoom
     Days = zoom(Days, 10, order=3)
     Lats = zoom(Lats, 10, order=3)
@@ -154,5 +154,5 @@ def analyze():
     plt.show()
 
 
-run_sweep()
+# run_sweep()
 analyze()
