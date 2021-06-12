@@ -1,6 +1,7 @@
 # Imports
 import aerosandbox as asb
 import aerosandbox.library.aerodynamics as aero
+import datetime
 from aerosandbox.atmosphere import Atmosphere as atmo
 from aerosandbox.library import mass_structural as lib_mass_struct
 from aerosandbox.library import power_solar as lib_solar
@@ -46,17 +47,19 @@ minimize = "wing.span() / 50"  # any "eval-able" expression
 
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
-latitude = opti.parameter(value=-80)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
-day_of_year = opti.parameter(value=5)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
+latitude = opti.parameter(value=25)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
+day_of_year = opti.parameter(value=244)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 # set up strat_model
-strat_pd = pd.read_csv(path + '/cache/strat-height.csv')
-strat_data = strat_pd.values
-latitude_list = strat_pd.Latitude
-height = strat_pd.Altitude
-strat_model = InterpolatedModel({'latitude': latitude_list},
+height = np.genfromtxt(path + '/cache/strat-height-monthly.csv', delimiter=',')
+latitude_list = np.linspace(-80, 80, 50)
+months = np.linspace(1, 12, 12)
+strat_model = InterpolatedModel({'latitude': latitude_list, 'month':months},
                                               height, 'bspline')
-offset_value = 2500
-min_cruise_altitude = strat_model({'latitude': latitude}) * 1000 + offset_value
+day = opti.value(day_of_year)
+date = datetime.datetime(2020, 1, 1) + datetime.timedelta(day - 1)
+month = date.month
+offset_value = 1000
+min_cruise_altitude = strat_model({'latitude': opti.value(latitude), 'month':month}) * 1000 + offset_value
 # min_cruise_altitude = opti.parameter(value=18288)  # meters. 19812 m = 65000 ft, 18288 m = 60000 ft.
 required_headway_per_day = 0  # meters
 allow_trajectory_optimization = True

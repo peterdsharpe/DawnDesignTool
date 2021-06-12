@@ -295,30 +295,30 @@ path = str(
 # run_xfoil()
 
 alpha_list, reynolds_list, cl_values, cd_values, cm_values = get_Xfoil_dat()
-# plot_xfoil(alpha_list, reynolds_list, cl_values, cd_values, cm_values)
-sample_resolution = 3
-smooth_val = 10
-alpha_list = alpha_list[::sample_resolution]
-reynolds_list = reynolds_list[::sample_resolution]
-cl_values = cl_values[::sample_resolution]
-cd_values = cd_values[::sample_resolution]
-cm_values = cm_values[::sample_resolution]
-
-alpha_array = np.load(path + '/cache/alpha.npy')
-reynolds_array = np.load(path + '/cache/reynolds.npy')
-cl_grid = run_cl(alpha_list, reynolds_list, cl_values, smooth_val)
-run_cl_plot(cl_grid)
-cl_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(reynolds_array)},
-                                              cl_grid, "bspline")
-
-cd_grid = run_cd(alpha_list, reynolds_list, cd_values, smooth_val)
-run_cd_plot(cd_grid)
-cd_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(reynolds_array)},
-                                               cd_grid, "bspline")
-
-cm_grid = run_cm(alpha_list, reynolds_list, cm_values, smooth_val)
-run_cm_plot(cm_grid)
-cm_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(reynolds_array)},
-                                               cm_grid, "bspline")
-
-# run_cl_cd_plot(cl_grid, cd_grid)
+plot_xfoil(alpha_list, reynolds_list, cl_values, cd_values, cm_values)
+# sample_resolution = 3
+# smooth_val = 10
+# alpha_list = alpha_list[::sample_resolution]
+# reynolds_list = reynolds_list[::sample_resolution]
+# cl_values = cl_values[::sample_resolution]
+# cd_values = cd_values[::sample_resolution]
+# cm_values = cm_values[::sample_resolution]
+#
+# alpha_array = np.load(path + '/cache/alpha.npy')
+# reynolds_array = np.load(path + '/cache/reynolds.npy')
+# cl_grid = run_cl(alpha_list, reynolds_list, cl_values, smooth_val)
+# run_cl_plot(cl_grid)
+# cl_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(reynolds_array)},
+#                                               cl_grid, "bspline")
+#
+# cd_grid = run_cd(alpha_list, reynolds_list, cd_values, smooth_val)
+# run_cd_plot(cd_grid)
+# cd_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(reynolds_array)},
+#                                                cd_grid, "bspline")
+#
+# cm_grid = run_cm(alpha_list, reynolds_list, cm_values, smooth_val)
+# run_cm_plot(cm_grid)
+# cm_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(reynolds_array)},
+#                                                cm_grid, "bspline")
+#
+# # run_cl_cd_plot(cl_grid, cd_grid)

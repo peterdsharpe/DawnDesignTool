@@ -1,26 +1,34 @@
 import numpy as np
-
+import datetime
 from design_opt import *
 from aerosandbox.tools.carpet_plot_utils import time_limit, patch_nans
 
-cache_suffix = 'solar_test'
+cache_suffix = 'strat_height_test'
 
 def run_sweep():
-        latitudes = np.linspace(-80, 80, 15)
+        latitudes = np.linspace(-80, 80, 30)
         day_of_years = np.linspace(0, 365, 30)
         # altitudes = np.linspace(1000, 30000, 100)
         lats = []
         days = []
-        sun = []
+        altitude = []
 
         for i, lat_val in enumerate(latitudes):
             for j, day_val in enumerate(day_of_years):
                 #try:
                     latitude = lat_val
                     day_of_year = day_val
-                    solar_flux_on_horizontal = lib_solar.solar_flux_on_horizontal(
-                        latitude, day_of_year, time, scattering=True)
-                    sun.append(opti.value(np.sum(solar_flux_on_horizontal)))
+                    height = np.genfromtxt(path + '/cache/strat-height-monthly.csv', delimiter=',')
+                    latitude_list = np.linspace(-80, 80, 50)
+                    months = np.linspace(1, 12, 12)
+                    strat_model = InterpolatedModel({'latitude': latitude_list, 'month': months},
+                                                    height, 'bspline')
+                    day = opti.value(day_of_year)
+                    date = datetime.datetime(2020, 1, 1) + datetime.timedelta(day - 1)
+                    month = date.month
+                    offset_value = 1000
+                    min_cruise_altitude = strat_model({'latitude': opti.value(latitude), 'month': month}) * 1000 + offset_value
+                    altitude.append(opti.value(min_cruise_altitude))
                     lats.append(lat_val)
                     days.append(day_val)
                 # except:
@@ -28,7 +36,7 @@ def run_sweep():
 
         np.save("cache/lats" + cache_suffix, lats)
         np.save("cache/days" + cache_suffix, days)
-        np.save("cache/sun" + cache_suffix, sun, allow_pickle=True)
+        np.save("cache/altitude" + cache_suffix, altitude, allow_pickle=True)
 
 
 def analyze():
@@ -40,8 +48,9 @@ def analyze():
     # Do raw imports
     latitudes = np.load(f"cache/lats{cache_suffix}.npy")
     days = np.load(f"cache/days{cache_suffix}.npy")
-    sun = np.load(f"cache/sun{cache_suffix}.npy")
-    sun = np.divide(sun, 1000)
+    altitude = np.load(f"cache/altitude{cache_suffix}.npy")
+    altitude = altitude / 1000
+    #sun = np.divide(sun, 1000)
 
    #  Convert to 2D arrays
     Days, Lats = np.meshgrid(days, latitudes)
@@ -49,16 +58,16 @@ def analyze():
     rbf = Rbf(
         np.array(days),
         np.array(latitudes),
-        np.array(sun),
+        np.array(altitude),
         function='linear',
         smooth=5,
     )
     #
-    latitudes = np.linspace(-80, 80, 300)
-    day_of_years = np.linspace(0, 365, 300)
+    latitudes = np.linspace(-80, 80, 30)
+    day_of_years = np.linspace(0, 365, 30)
     Days, Lats = np.meshgrid(day_of_years, latitudes)
 
-    Sun = rbf(Days, Lats).reshape(300, 300)
+    Altitudes = rbf(Days, Lats).reshape(30, 30)
     # # Patch NaNs and smooth
     # winds = patch_nans(winds)
 
@@ -73,13 +82,13 @@ def analyze():
     args = [
         Days,
         Lats,
-        Sun,
+        Altitudes,
     ]
-    levels = np.arange(0, 90, 10)
+    levels = np.arange(10, 20, 1)
     # plt.contour(*args, levels=[34], colors="r", linewidths=3)
     CS = plt.contour(*args, levels=levels, linewidths=0.5, colors="k", alpha=0.7, extend='both')
-    CF = plt.contourf(*args, levels=levels, cmap="viridis", alpha=0.7, extend='both')
-    ax.clabel(CS, inline=1, fontsize=10, fmt="%.0f kj")
+    CF = plt.contourf(*args, levels=levels, cmap="viridis_r", alpha=0.7, extend='both')
+    ax.clabel(CS, inline=1, fontsize=10, fmt="%.0f km")
     # plt.plot(
     #     244,
     #     49,
@@ -140,14 +149,14 @@ def analyze():
 
     plt.xlabel(r"Day of Year")
     plt.ylabel(r"Latitude")
-    plt.suptitle("Total Solar Flux on Horizontal over Day", y=0.98)
+    plt.suptitle("Stratosphere Height Function Outputs", y=0.98)
     # plt.title(
     #     "\n"
     #     "30 kg payload, min alt set by strat height, 450 Wh/kg cells,\n 89% batt. packing factor, station-keeping in 95% wind",
     #     fontsize = 10,
     # )
     cbar = plt.colorbar()
-    cbar.set_label("Solar Flux on Horizontal [kj]")
+    cbar.set_label("Stratosphere Height [km]")
     # plt.legend(fontsize=10)
     plt.tight_layout()
     plt.show()

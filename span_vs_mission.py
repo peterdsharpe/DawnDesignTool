@@ -154,5 +154,5 @@ def analyze():
     plt.show()
 
 
-# run_sweep()
+run_sweep()
 analyze()
