@@ -1,7 +1,7 @@
 from design_opt import *
 from aerosandbox.tools.carpet_plot_utils import time_limit, patch_nans
-
-cache_suffix="strat_model_test"
+import matplotlib as mpl
+cache_suffix="_30kg_payload"
 
 def run_sweep():
     latitudes = np.linspace(-80, 80, 15)
@@ -25,13 +25,11 @@ def run_sweep():
                 opti.set_initial(opti.value_variables())
                 opti.set_initial(opti.lam_g, sol.value(opti.lam_g))
                 span_val = sol.value(wing_span)
-                lats = lats.append(lat_val)
-                days = days.append(day_val)
-                spans = spans.append(span_val)
+                lats.append(lat_val)
+                days.append(day_val)
+                spans.append(span_val)
             except Exception as e:
                 print(e)
-                # span_val = np.NaN
-
 
     np.save("cache/lats" + cache_suffix, lats)
     np.save("cache/days" + cache_suffix, days)
@@ -45,30 +43,22 @@ def analyze():
     sns.set(palette=sns.color_palette("viridis"))
 
     # Do raw imports
-    latitudes = np.load(f"cache/lats{cache_suffix}.npy")
-    day_of_years = np.load(f"cache/days{cache_suffix}.npy")
-    Spans = np.load(f"cache/spans{cache_suffix}.npy")
-
-    # Convert to 2D arrays
-    Days, Lats = np.meshgrid(day_of_years, latitudes)
+    latitudes = np.load(f"cache/lats{cache_suffix}.npy", allow_pickle=True)
+    day_of_years = np.load(f"cache/days{cache_suffix}.npy", allow_pickle=True)
+    Spans = np.load(f"cache/spans{cache_suffix}.npy", allow_pickle=True)
 
     rbf = Rbf(
-        (np.array(day_of_years)),
+        np.array(day_of_years),
         np.array(latitudes),
-        np.log(np.array(Spans)),
+        np.array(Spans),
         function='cubic',
         smooth=5,
     )
-    # Lats = zoom(Lats, 10, order=3)
-    # Spans = rbf(, , )
-    # # Patch NaNs and smooth
-    # Spans = patch_nans(Spans)
-    #
-    # #
-    from scipy.ndimage import zoom
-    Days = zoom(Days, 10, order=3)
-    Lats = zoom(Lats, 10, order=3)
-    Spans = zoom(Spans, 10, order=3)
+    day_of_years = np.linspace(0, 365, 300)
+    latitudes = np.linspace(-80, 80, 300)
+    # Convert to 2D arrays
+    Days, Lats = np.meshgrid(day_of_years, latitudes)
+    Spans = rbf(Days, Lats).reshape(300, 300)
 
     ### Payload plot
     fig, ax = plt.subplots(1, 1, figsize=(8, 6), dpi=200)
@@ -77,11 +67,17 @@ def analyze():
         Lats,
         Spans,
     ]
+
     levels = np.arange(20, 50.1, 2)
-    # plt.contour(*args, levels=[34], colors="r", linewidths=3)
+    viridis = mpl.cm.get_cmap('viridis_r', 256)
+    newcolors = viridis(np.linspace(0, 1, 256))
+    newcolors[-1, :] = np.array([0, 0, 0, 1])
+    newcmp = mpl.colors.ListedColormap(newcolors)
     CS = plt.contour(*args, levels=levels, linewidths=0.5, colors="k", alpha=0.7, extend='both')
-    CF = plt.contourf(*args, levels=levels, cmap="viridis_r", alpha=0.7, extend='both')
+    CF = plt.contourf(*args, levels=levels, cmap=newcmp, alpha=0.7, extend='both')
+    cbar = plt.colorbar()
     ax.clabel(CS, inline=1, fontsize=10, fmt="%.0f m")
+
     plt.plot(
         244,
         49,
@@ -101,7 +97,7 @@ def analyze():
         )
     )
     plt.annotate(
-        s="Mission\nInfeasible",
+        s="Infeasible",
         xy=(174, -55),
         xycoords="data",
         ha="center",

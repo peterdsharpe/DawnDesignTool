@@ -57,9 +57,9 @@ strat_model = InterpolatedModel({'latitude': latitude_list, 'month':months},
                                               height, 'bspline')
 day = opti.value(day_of_year)
 date = datetime.datetime(2020, 1, 1) + datetime.timedelta(day - 1)
-month = date.month
+month = np.array([date.month])
 offset_value = 1000
-min_cruise_altitude = strat_model({'latitude': opti.value(latitude), 'month':month}) * 1000 + offset_value
+min_cruise_altitude = strat_model({'latitude': latitude, 'month':month}) * 1000 + offset_value
 # min_cruise_altitude = opti.parameter(value=18288)  # meters. 19812 m = 65000 ft, 18288 m = 60000 ft.
 required_headway_per_day = 0  # meters
 allow_trajectory_optimization = True
