@@ -1,7 +1,7 @@
 from design_opt import *
 from aerosandbox.tools.carpet_plot_utils import time_limit, patch_nans
 import matplotlib as mpl
-cache_suffix="_30kg_payload"
+cache_suffix="_test"
 
 def run_sweep():
     latitudes = np.linspace(-80, 80, 15)
@@ -9,7 +9,8 @@ def run_sweep():
     spans = []
     days = []
     lats = []
-
+    alts = []
+    winds = []
     for i, lat_val in enumerate(latitudes):
         for j, day_val in enumerate(day_of_years):
             print("\n".join([
@@ -19,8 +20,10 @@ def run_sweep():
             ]))
             opti.set_value(latitude, lat_val)
             opti.set_value(day_of_year, day_val)
+            date = datetime.datetime(2020, 1, 1) + datetime.timedelta(day_val)
+            opti.set_value(month, date.month)
             try:
-                with time_limit(10):
+                with time_limit(25):
                     sol = opti.solve()
                 opti.set_initial(opti.value_variables())
                 opti.set_initial(opti.lam_g, sol.value(opti.lam_g))
@@ -28,12 +31,16 @@ def run_sweep():
                 lats.append(lat_val)
                 days.append(day_val)
                 spans.append(span_val)
+                alts.append(sol.value(min_cruise_altitude))
+                winds.append(sol.value(wind_speed_func(min_cruise_altitude)))
             except Exception as e:
                 print(e)
 
     np.save("cache/lats" + cache_suffix, lats)
     np.save("cache/days" + cache_suffix, days)
     np.save("cache/spans" + cache_suffix, spans)
+    np.save("cache/winds" + cache_suffix, winds)
+    np.save("cache/alts" + cache_suffix, alts)
 
 
 def analyze():
@@ -143,7 +150,7 @@ def analyze():
         "30 kg payload, min alt set by strat height, 450 Wh/kg cells,\n 89% batt. packing factor, station-keeping in 95% wind",
         fontsize = 10,
     )
-    cbar = plt.colorbar()
+    # cbar = plt.colorbar()
     cbar.set_label("Wing Span [m]")
     plt.legend(fontsize=10)
     plt.tight_layout()
