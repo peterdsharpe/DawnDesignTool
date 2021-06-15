@@ -1,7 +1,7 @@
 from design_opt import *
 from aerosandbox.tools.carpet_plot_utils import time_limit, patch_nans
 import matplotlib as mpl
-cache_suffix="_test"
+cache_suffix="_30kg_payload"
 
 def run_sweep():
     latitudes = np.linspace(-80, 80, 15)
@@ -23,7 +23,7 @@ def run_sweep():
             date = datetime.datetime(2020, 1, 1) + datetime.timedelta(day_val)
             opti.set_value(month, date.month)
             try:
-                with time_limit(25):
+                with time_limit(30):
                     sol = opti.solve()
                 opti.set_initial(opti.value_variables())
                 opti.set_initial(opti.lam_g, sol.value(opti.lam_g))
@@ -58,7 +58,7 @@ def analyze():
         np.array(day_of_years),
         np.array(latitudes),
         np.array(Spans),
-        function='cubic',
+        function='linear',
         smooth=5,
     )
     day_of_years = np.linspace(0, 365, 300)
@@ -147,7 +147,7 @@ def analyze():
     plt.suptitle("Minimum Wingspan Airplane by Mission", y=0.98)
     plt.title(
         "\n"
-        "30 kg payload, min alt set by strat height, 450 Wh/kg cells,\n 89% batt. packing factor, station-keeping in 95% wind",
+        "30 kg payload, min alt set by strat height, 450 Wh/kg cells,\n Microlink solar cells, station-keeping in 95% wind",
         fontsize = 10,
     )
     # cbar = plt.colorbar()
@@ -157,5 +157,5 @@ def analyze():
     plt.show()
 
 
-run_sweep()
+# run_sweep()
 analyze()

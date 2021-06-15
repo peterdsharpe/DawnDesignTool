@@ -47,8 +47,8 @@ minimize = "wing.span() / 50"  # any "eval-able" expression
 
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
-latitude = opti.parameter(value=30)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
-day_of_year = opti.parameter(value=244)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
+latitude = opti.parameter(value=34)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
+day_of_year = opti.parameter(value=75)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 # set up strat_model
 height = np.genfromtxt(path + '/cache/strat-height-monthly.csv', delimiter=',')
 latitude_list = np.linspace(-80, 80, 50)
@@ -64,7 +64,7 @@ min_cruise_altitude = strat_model({'latitude': latitude, 'month': month}) * 1000
 required_headway_per_day = 0  # meters
 allow_trajectory_optimization = True
 structural_load_factor = 3  # over static
-make_plots = False
+make_plots = True
 mass_payload = opti.parameter(value=30)
 # wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
 def wind_speed_func(alt):
@@ -888,8 +888,14 @@ battery_state_of_charge_percentage = 100 * (battery_stored_energy_nondim + (1 - 
 
 ### Solar calculations
 
-# solar_cell_efficiency = 0.21 # Sunpower
-solar_cell_efficiency = 0.25  # Microlink.
+solar_cell_efficiency = 0.285 * 0.9 # Microlink
+# solar_cell_efficiency = 0.243 * 0.9 # Sunpower
+# solar_cell_efficiency = 0.14 * 0.9 # Ascent Solar
+
+# Solar cell weight
+rho_solar_cells = 0.255 * 1.1 # kg/m^2, solar cell area density. Microlink.
+# rho_solar_cells = 0.425 * 1.1 # kg/m^2, solar cell area density. Sunpower.
+# rho_solar_cells = 0.300 * 1.1 # kg/m^2, solar cell area density. Ascent Solar
 # This figure should take into account all temperature factors,
 # spectral losses (different spectrum at altitude), multi-junction effects, etc.
 # Should not take into account MPPT losses.
@@ -902,9 +908,7 @@ solar_cell_efficiency = 0.25  # Microlink.
 # 4/21/20: Bjarni, Knock down SunPower Gen2 numbers to 18.6% due to mismatch, gaps, fingers & edges, covering, spectrum losses, temperature corrections.
 # 4/29/20: Bjarni, Config slack: SunPower cells can do 21% on a panel level. Area density may change; TBD
 
-# Solar cell weight
-# rho_solar_cells = 0.425  # kg/m^2, solar cell area density. Sunpower.
-rho_solar_cells = 0.350  # kg/m^2, solar cell area density. Microlink.
+
 # The solar_simple_demo model gives this as 0.27. Burton's model gives this as 0.30.
 # This paper (https://core.ac.uk/download/pdf/159146935.pdf) gives it as 0.42.
 # This paper (https://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=4144&context=facpub) effectively gives it as 0.3143.
@@ -1516,42 +1520,36 @@ if __name__ == "__main__":
 
 
     if make_plots:
-        # plot("hour", "y_km",
-        #      xlabel="Hours after Solar Noon",
-        #      ylabel="Altitude [km]",
-        #      title="Altitude over Simulation",
-        #      save_name="outputs/altitude.png"
-        #      )
-        # plot("hour", "airspeed",
-        #      xlabel="Hours after Solar Noon",
-        #      ylabel="True Airspeed [m/s]",
-        #      title="True Airspeed over Simulation",
-        #      save_name="outputs/airspeed.png"
-        #     )
+        plot("hour", "y_km",
+             xlabel="Hours after Solar Noon",
+             ylabel="Altitude [km]",
+             title="Altitude over Simulation",
+             save_name="outputs/altitude.png"
+             )
+        plot("hour", "airspeed",
+             xlabel="Hours after Solar Noon",
+             ylabel="True Airspeed [m/s]",
+             title="True Airspeed over Simulation",
+             save_name="outputs/airspeed.png"
+            )
         plot("hour", "net_power_to_battery",
              xlabel="Hours after Solar Noon",
              ylabel="Net Power [W] (positive is charging)",
              title="Net Power to Battery on July 15th",
              save_name="outputs/net_powerJuly15.png"
              )
-        plot("hour", "net_power_to_battery_pack",
+        plot("hour", "battery_state_of_charge_percentage",
              xlabel="Hours after Solar Noon",
-             ylabel="Net Power [W] (positive is charging)",
-             title="Net Power to Battery Pack on July 15th",
-             save_name="outputs/net_power_packJuly15.png"
+             ylabel="State of Charge [%]",
+             title="Battery Charge State over Simulation",
+             save_name="outputs/battery_charge.png"
              )
-        # plot("hour", "battery_state_of_charge_percentage",
-        #      xlabel="Hours after Solar Noon",
-        #      ylabel="State of Charge [%]",
-        #      title="Battery Charge State over Simulation",
-        #      save_name="outputs/battery_charge.png"
-        #      )
-        # plot("x_km", "y_km",
-        #      xlabel="Downrange Distance [km]",
-        #      ylabel="Altitude [km]",
-        #      title="Optimal Trajectory over Simulation",
-        #      save_name="outputs/trajectory.png"
-        #      )
+        plot("x_km", "y_km",
+             xlabel="Downrange Distance [km]",
+             ylabel="Altitude [km]",
+             title="Optimal Trajectory over Simulation",
+             save_name="outputs/trajectory.png"
+             )
 
         # Draw mass breakdown
         fig = plt.figure(figsize=(10, 8), dpi=plot_dpi)
