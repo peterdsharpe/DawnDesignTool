@@ -47,8 +47,8 @@ minimize = "wing.span() / 50"  # any "eval-able" expression
 
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
-latitude = opti.parameter(value=34)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
-day_of_year = opti.parameter(value=75)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
+latitude = opti.parameter(value=37)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
+day_of_year = opti.parameter(value=105)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 # set up strat_model
 height = np.genfromtxt(path + '/cache/strat-height-monthly.csv', delimiter=',')
 latitude_list = np.linspace(-80, 80, 50)
@@ -64,7 +64,7 @@ min_cruise_altitude = strat_model({'latitude': latitude, 'month': month}) * 1000
 required_headway_per_day = 0  # meters
 allow_trajectory_optimization = True
 structural_load_factor = 3  # over static
-make_plots = True
+make_plots = False
 mass_payload = opti.parameter(value=30)
 # wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
 def wind_speed_func(alt):
@@ -1535,7 +1535,7 @@ if __name__ == "__main__":
         plot("hour", "net_power_to_battery",
              xlabel="Hours after Solar Noon",
              ylabel="Net Power [W] (positive is charging)",
-             title="Net Power to Battery over Simulation,
+             title="Net Power to Battery over Simulation",
              save_name="outputs/net_powerJuly15.png"
              )
         plot("hour", "battery_state_of_charge_percentage",

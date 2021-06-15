@@ -1,7 +1,7 @@
 from design_opt import *
 from aerosandbox.tools.carpet_plot_utils import time_limit, patch_nans
 import matplotlib as mpl
-cache_suffix="_30kg_payload"
+cache_suffix="_test2"
 
 def run_sweep():
     latitudes = np.linspace(-80, 80, 15)
@@ -21,7 +21,10 @@ def run_sweep():
             opti.set_value(latitude, lat_val)
             opti.set_value(day_of_year, day_val)
             date = datetime.datetime(2020, 1, 1) + datetime.timedelta(day_val)
-            opti.set_value(month, date.month)
+            month = date.month
+            offset_value = 1000
+            min_alt = strat_model({'latitude': lat_val, 'month': month}) * 1000 + offset_value
+            opti.set_value(min_cruise_altitude, min_alt)
             try:
                 with time_limit(30):
                     sol = opti.solve()
@@ -32,7 +35,7 @@ def run_sweep():
                 days.append(day_val)
                 spans.append(span_val)
                 alts.append(sol.value(min_cruise_altitude))
-                winds.append(sol.value(wind_speed_func(min_cruise_altitude)))
+                winds.append(sol.value(wind_speed_func(y)).mean())
             except Exception as e:
                 print(e)
 
@@ -157,5 +160,5 @@ def analyze():
     plt.show()
 
 
-# run_sweep()
+run_sweep()
 analyze()
