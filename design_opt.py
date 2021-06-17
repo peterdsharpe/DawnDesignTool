@@ -1535,7 +1535,7 @@ if __name__ == "__main__":
         plot("hour", "net_power_to_battery",
              xlabel="Hours after Solar Noon",
              ylabel="Net Power [W] (positive is charging)",
-             title="Net Power to Battery over Simulation,
+             title="Net Power to Battery over Simulation",
              save_name="outputs/net_powerJuly15.png"
              )
         plot("hour", "battery_state_of_charge_percentage",
