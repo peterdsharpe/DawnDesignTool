@@ -1,16 +1,18 @@
 from design_opt import *
 from aerosandbox.tools.carpet_plot_utils import time_limit, patch_nans
 import matplotlib as mpl
-cache_suffix="_test2"
+import aerosandbox.numpy as np
+cache_suffix="_30kg_payload"
 
 def run_sweep():
     latitudes = np.linspace(-80, 80, 15)
-    day_of_years = np.linspace(0, 365, 30)
+    day_of_years = np.linspace(1, 365, 30)
     spans = []
     days = []
     lats = []
     alts = []
     winds = []
+    num = 0
     for i, lat_val in enumerate(latitudes):
         for j, day_val in enumerate(day_of_years):
             print("\n".join([
@@ -26,7 +28,10 @@ def run_sweep():
             min_alt = strat_model({'latitude': lat_val, 'month': month}) * 1000 + offset_value
             opti.set_value(min_cruise_altitude, min_alt)
             try:
-                with time_limit(30):
+                if num !=0:
+                    with time_limit(10):
+                        sol = opti.solve()
+                else:
                     sol = opti.solve()
                 opti.set_initial(opti.value_variables())
                 opti.set_initial(opti.lam_g, sol.value(opti.lam_g))
@@ -38,6 +43,8 @@ def run_sweep():
                 winds.append(sol.value(wind_speed_func(y)).mean())
             except Exception as e:
                 print(e)
+
+            num +=1
 
     np.save("cache/lats" + cache_suffix, lats)
     np.save("cache/days" + cache_suffix, days)
@@ -56,13 +63,19 @@ def analyze():
     latitudes = np.load(f"cache/lats{cache_suffix}.npy", allow_pickle=True)
     day_of_years = np.load(f"cache/days{cache_suffix}.npy", allow_pickle=True)
     Spans = np.load(f"cache/spans{cache_suffix}.npy", allow_pickle=True)
+    latitudes_array = np.append(np.flip(latitudes), latitudes)
+    latitudes_array = np.append(latitudes_array, np.flip(latitudes))
+    day_of_years_array = np.append(np.flip(day_of_years), day_of_years)
+    day_of_years_array = np.append(day_of_years_array, np.flip(day_of_years))
+    Spans_array = np.append(np.flip(Spans), Spans)
+    Spans_array = np.append(Spans_array, np.flip(Spans))
 
     rbf = Rbf(
-        np.array(day_of_years),
-        np.array(latitudes),
-        np.array(Spans),
+        np.array(day_of_years_array),
+        np.array(latitudes_array),
+        np.array(Spans_array),
         function='linear',
-        smooth=5,
+        smooth=20,
     )
     day_of_years = np.linspace(0, 365, 300)
     latitudes = np.linspace(-80, 80, 300)
