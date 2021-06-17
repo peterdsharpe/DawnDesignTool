@@ -21,6 +21,21 @@ from aerosandbox.modeling.interpolation import InterpolatedModel
 import pathlib
 import pandas as pd
 
+days = np.array([-365, -335., -305., -274., -244., -213., -182., -152., -121., -91.,
+                 -60., -32., 1., 32., 60., 91., 121., 152.,
+                 182., 213., 244., 274., 305., 335., 366., 397., 425.,
+                 456., 486., 517., 547., 578., 609., 639., 670., 700.])
+
+latitudes = np.load('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/latitudes.npy')
+latitudes = np.flip(latitudes)
+altitudes = np.load('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/altitudes.npy')
+altitudes = np.flip(altitudes)
+wind_data = np.load('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/wind_speed_array.npy')
+wind_data_array = np.dstack((np.flip(wind_data), wind_data))
+wind_data_array = np.dstack((wind_data_array, np.flip(wind_data)))
+wind_function_95th = InterpolatedModel({"altitudes": altitudes, "latitudes": latitudes, "day_of_year": days},
+                                       wind_data_array, "bspline")
+
 path = str(
     pathlib.Path(__file__).parent.absolute()
 )
@@ -47,8 +62,8 @@ minimize = "wing.span() / 50"  # any "eval-able" expression
 
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
-latitude = opti.parameter(value=-80)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
-day_of_year = opti.parameter(value=0)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
+latitude = opti.parameter(value=49)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
+day_of_year = opti.parameter(value=244)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 # set up strat_model
 height = np.genfromtxt(path + '/cache/strat-height-monthly.csv', delimiter=',')
 latitude_list = np.linspace(-80, 80, 50)
@@ -70,7 +85,8 @@ mass_payload = opti.parameter(value=30)
 def wind_speed_func(alt):
     day_array = np.full(shape=alt.shape[0], fill_value=1) * day_of_year
     latitude_array = np.full(shape=alt.shape[0], fill_value=1) * latitude
-    return lib_winds.wind_speed_world_95(alt, latitude_array, day_array)
+    speed_func = wind_function_95th({"altitudes": alt, "latitudes": latitude_array, "day_of_year": day_array})
+    return speed_func
 battery_specific_energy_Wh_kg = opti.parameter(value=450)
 battery_pack_cell_percentage = 0.89  # What percent of the battery pack consists of the module, by weight?
 variable_pitch = False
