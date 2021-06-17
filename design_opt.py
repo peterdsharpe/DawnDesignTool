@@ -47,8 +47,8 @@ minimize = "wing.span() / 50"  # any "eval-able" expression
 
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
-latitude = opti.parameter(value=34)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
-day_of_year = opti.parameter(value=75)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
+latitude = opti.parameter(value=-80)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
+day_of_year = opti.parameter(value=0)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 # set up strat_model
 height = np.genfromtxt(path + '/cache/strat-height-monthly.csv', delimiter=',')
 latitude_list = np.linspace(-80, 80, 50)
@@ -59,17 +59,18 @@ day = opti.value(day_of_year)
 date = datetime.datetime(2020, 1, 1) + datetime.timedelta(day)
 month = opti.parameter(value=date.month)
 offset_value = 1000
-min_cruise_altitude = strat_model({'latitude': latitude, 'month': month}) * 1000 + offset_value
-# min_cruise_altitude = opti.parameter(value=18288)  # meters. 19812 m = 65000 ft, 18288 m = 60000 ft.
+# min_cruise_altitude = strat_model({'latitude': latitude, 'month': month}) * 1000 + offset_value
+min_cruise_altitude = opti.parameter(value=18288)  # meters. 19812 m = 65000 ft, 18288 m = 60000 ft.
 required_headway_per_day = 0  # meters
 allow_trajectory_optimization = True
 structural_load_factor = 3  # over static
-make_plots = True
+make_plots = False
 mass_payload = opti.parameter(value=30)
 # wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
 def wind_speed_func(alt):
+    day_array = np.full(shape=alt.shape[0], fill_value=1) * day_of_year
     latitude_array = np.full(shape=alt.shape[0], fill_value=1) * latitude
-    return lib_winds.wind_speed_world_95(alt, latitude_array, day_of_year, opti)
+    return lib_winds.wind_speed_world_95(alt, latitude_array, day_array)
 battery_specific_energy_Wh_kg = opti.parameter(value=450)
 battery_pack_cell_percentage = 0.89  # What percent of the battery pack consists of the module, by weight?
 variable_pitch = False
