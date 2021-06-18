@@ -1,12 +1,39 @@
 import numpy as np
 import datetime
 from design_opt import *
-from aerosandbox.tools.carpet_plot_utils import time_limit, patch_nans
+from aerosandbox.visualization.carpet_plot_utils import time_limit, patch_nans
+from aerosandbox.modeling.interpolation import InterpolatedModel
 
 cache_suffix = '_wind_at_cruise'
 
+days = np.array([-365, -335., -305., -274., -244., -213., -182., -152., -121., -91.,
+                 -60., -32., 1., 32., 60., 91., 121., 152.,
+                 182., 213., 244., 274., 305., 335., 366., 397., 425.,
+                 456., 486., 517., 547., 578., 609., 639., 670., 700.])
+
+latitudes = np.load('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/latitudes.npy')
+latitudes = np.flip(latitudes)
+altitudes = np.load('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/altitudes.npy')
+altitudes = np.flip(altitudes)
+wind_data = np.load('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/wind_speed_array.npy')
+wind_data_array = np.dstack((np.flip(wind_data), wind_data))
+wind_data_array = np.dstack((wind_data_array, np.flip(wind_data)))
+wind_function_95th = InterpolatedModel({"altitudes": altitudes, "latitudes": latitudes, "day_of_year": days},
+                                       wind_data_array, "bspline")
+
+height = np.genfromtxt(path + '/cache/strat-height-monthly.csv', delimiter=',')
+latitude_list = np.linspace(-80, 80, 50)
+months = np.linspace(1, 12, 12)
+strat_model = InterpolatedModel({'latitude': latitude_list, 'month': months},
+                                height, 'bspline')
+# def wind_speed_func(alt):
+#     day_array = np.full(shape=alt.shape[0], fill_value=1) * day_of_year
+#     latitude_array = np.full(shape=alt.shape[0], fill_value=1) * latitude
+#     speed_func = wind_function_95th({"altitudes": alt, "latitudes": latitude_array, "day_of_year": day_array})
+#     return speed_func
+
 def run_sweep():
-        latitudes = np.linspace(-80, 80, 30)
+        latitudes = np.linspace(-80, 80, 15)
         day_of_years = np.linspace(0, 365, 30)
         # altitudes = np.linspace(1000, 30000, 100)
         lats = []
@@ -15,24 +42,20 @@ def run_sweep():
 
         for i, lat_val in enumerate(latitudes):
             for j, day_val in enumerate(day_of_years):
+                    print("\n".join([
+                        "-" * 50,
+                        f"latitude: {lat_val}",
+                        f"day of year: {day_val}",
+                    ]))
                 #try:
                     latitude = lat_val
                     day_of_year = day_val
-                    height = np.genfromtxt(path + '/cache/strat-height-monthly.csv', delimiter=',')
-                    latitude_list = np.linspace(-80, 80, 50)
-                    months = np.linspace(1, 12, 12)
-                    strat_model = InterpolatedModel({'latitude': latitude_list, 'month': months},
-                                                    height, 'bspline')
                     day = opti.value(day_of_year)
-                    date = datetime.datetime(2020, 1, 1) + datetime.timedelta(day - 1)
+                    date = datetime.datetime(2020, 1, 1) + datetime.timedelta(day)
                     month = date.month
                     offset_value = 1000
                     min_cruise_altitude = strat_model({'latitude': opti.value(latitude), 'month': month}) * 1000 + offset_value
-
-                    def wind_speed_func(alt):
-                        # latitude_array = np.full(shape=alt.shape[0], fill_value=1) * latitude
-                        return lib_winds.wind_speed_world_95(alt, latitude, day_of_year, opti)
-                    wind = wind_speed_func(min_cruise_altitude)
+                    wind = wind_function_95th({'altitudes':min_cruise_altitude, 'latitudes':lat_val, 'day_of_year':day_val})
                     winds.append(opti.value(wind))
                     lats.append(lat_val)
                     days.append(day_val)
@@ -41,7 +64,7 @@ def run_sweep():
 
         np.save("cache/lats" + cache_suffix, lats)
         np.save("cache/days" + cache_suffix, days)
-        np.save("cache/winds" + cache_suffix, winds, allow_pickle=True)
+        np.save("cache/winds" + cache_suffix, winds)
 
 
 def analyze():
