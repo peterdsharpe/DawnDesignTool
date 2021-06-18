@@ -1,7 +1,7 @@
 import numpy as np
 import datetime
 from design_opt import *
-from aerosandbox.tools.carpet_plot_utils import time_limit, patch_nans
+from aerosandbox.visualization.carpet_plot_utils import time_limit, patch_nans
 
 cache_suffix = 'strat_height_test'
 
