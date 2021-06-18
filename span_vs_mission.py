@@ -1,5 +1,5 @@
 from design_opt import *
-from aerosandbox.tools.carpet_plot_utils import time_limit, patch_nans
+from aerosandbox.visualization.carpet_plot_utils import time_limit, patch_nans
 import matplotlib as mpl
 import aerosandbox.numpy as np
 cache_suffix="_30kg_payload"
@@ -12,7 +12,7 @@ def run_sweep():
     lats = []
     alts = []
     winds = []
-    num = 0
+    num=0
     for i, lat_val in enumerate(latitudes):
         for j, day_val in enumerate(day_of_years):
             print("\n".join([
@@ -28,11 +28,12 @@ def run_sweep():
             min_alt = strat_model({'latitude': lat_val, 'month': month}) * 1000 + offset_value
             opti.set_value(min_cruise_altitude, min_alt)
             try:
-                if num !=0:
-                    with time_limit(10):
+                if num < 5:
+                    with time_limit(100):
                         sol = opti.solve()
                 else:
-                    sol = opti.solve()
+                    with time_limit(10):
+                        sol = opti.solve()
                 opti.set_initial(opti.value_variables())
                 opti.set_initial(opti.lam_g, sol.value(opti.lam_g))
                 span_val = sol.value(wing_span)
@@ -40,7 +41,8 @@ def run_sweep():
                 days.append(day_val)
                 spans.append(span_val)
                 alts.append(sol.value(min_cruise_altitude))
-                winds.append(sol.value(wind_speed_func(y)).mean())
+                winds.append(sol.value(wind_speed_func(np.array([14000]))))
+
             except Exception as e:
                 print(e)
 
@@ -63,18 +65,18 @@ def analyze():
     latitudes = np.load(f"cache/lats{cache_suffix}.npy", allow_pickle=True)
     day_of_years = np.load(f"cache/days{cache_suffix}.npy", allow_pickle=True)
     Spans = np.load(f"cache/spans{cache_suffix}.npy", allow_pickle=True)
-    latitudes_array = np.append(np.flip(latitudes), latitudes)
-    latitudes_array = np.append(latitudes_array, np.flip(latitudes))
-    day_of_years_array = np.append(np.flip(day_of_years), day_of_years)
-    day_of_years_array = np.append(day_of_years_array, np.flip(day_of_years))
-    Spans_array = np.append(np.flip(Spans), Spans)
-    Spans_array = np.append(Spans_array, np.flip(Spans))
+    # latitudes_array = np.append(np.flip(latitudes), latitudes)
+    # latitudes_array = np.append(latitudes_array, np.flip(latitudes))
+    # day_of_years_array = np.append(np.flip(day_of_years), day_of_years)
+    # day_of_years_array = np.append(day_of_years_array, np.flip(day_of_years))
+    # Spans_array = np.append(np.flip(Spans), Spans)
+    # Spans_array = np.append(Spans_array, np.flip(Spans))
 
     rbf = Rbf(
-        np.array(day_of_years_array),
-        np.array(latitudes_array),
-        np.array(Spans_array),
-        function='linear',
+        np.array(day_of_years),
+        np.array(latitudes),
+        np.array(Spans),
+        function='cubic',
         smooth=20,
     )
     day_of_years = np.linspace(0, 365, 300)
@@ -163,7 +165,7 @@ def analyze():
     plt.suptitle("Minimum Wingspan Airplane by Mission", y=0.98)
     plt.title(
         "\n"
-        "30 kg payload, min alt set by strat height, 450 Wh/kg cells,\n Microlink solar cells, station-keeping in 95% wind",
+        "30 kg payload, min alt set by strat height, 450 Wh/kg batteries,\n Microlink solar cells, station-keeping in 95% wind",
         fontsize = 10,
     )
     # cbar = plt.colorbar()
@@ -173,5 +175,5 @@ def analyze():
     plt.show()
 
 
-run_sweep()
+# run_sweep()
 analyze()
