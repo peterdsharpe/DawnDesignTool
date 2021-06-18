@@ -2,6 +2,7 @@
 import aerosandbox as asb
 import aerosandbox.library.aerodynamics as aero
 import datetime
+from aerosandbox.visualization.carpet_plot_utils import time_limit
 from aerosandbox.atmosphere import Atmosphere as atmo
 from aerosandbox.library import mass_structural as lib_mass_struct
 from aerosandbox.library import power_solar as lib_solar
@@ -21,20 +22,20 @@ from aerosandbox.modeling.interpolation import InterpolatedModel
 import pathlib
 import pandas as pd
 
-days = np.array([-365, -335., -305., -274., -244., -213., -182., -152., -121., -91.,
-                 -60., -32., 1., 32., 60., 91., 121., 152.,
-                 182., 213., 244., 274., 305., 335., 366., 397., 425.,
-                 456., 486., 517., 547., 578., 609., 639., 670., 700.])
-
-latitudes = np.load('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/latitudes.npy')
-latitudes = np.flip(latitudes)
-altitudes = np.load('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/altitudes.npy')
-altitudes = np.flip(altitudes)
-wind_data = np.load('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/wind_speed_array.npy')
-wind_data_array = np.dstack((np.flip(wind_data), wind_data))
-wind_data_array = np.dstack((wind_data_array, np.flip(wind_data)))
-wind_function_95th = InterpolatedModel({"altitudes": altitudes, "latitudes": latitudes, "day_of_year": days},
-                                       wind_data_array, "bspline")
+# days = np.array([-365, -335., -305., -274., -244., -213., -182., -152., -121., -91.,
+#                  -60., -32., 1., 32., 60., 91., 121., 152.,
+#                  182., 213., 244., 274., 305., 335., 366., 397., 425.,
+#                  456., 486., 517., 547., 578., 609., 639., 670., 700.])
+#
+# latitudes = np.load('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/latitudes.npy')
+# latitudes = np.flip(latitudes)
+# altitudes = np.load('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/altitudes.npy')
+# altitudes = np.flip(altitudes)
+# wind_data = np.load('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/wind_speed_array.npy')
+# wind_data_array = np.dstack((np.flip(wind_data), wind_data))
+# wind_data_array = np.dstack((wind_data_array, np.flip(wind_data)))
+# wind_function_95th = InterpolatedModel({"altitudes": altitudes, "latitudes": latitudes, "day_of_year": days},
+#                                        wind_data_array, "bspline")
 
 path = str(
     pathlib.Path(__file__).parent.absolute()
@@ -42,7 +43,7 @@ path = str(
 
 
 sns.set(font_scale=1)
-
+# def run_sizing(lat, day):
 # region Setup
 ##### Initialize Optimization
 opti = asb.Opti(  # Normal mode - Design Optimization
@@ -80,12 +81,12 @@ required_headway_per_day = 0  # meters
 allow_trajectory_optimization = True
 structural_load_factor = 3  # over static
 make_plots = False
-mass_payload = opti.parameter(value=30)
+mass_payload = opti.parameter(value=10)
 # wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
 def wind_speed_func(alt):
     day_array = np.full(shape=alt.shape[0], fill_value=1) * day_of_year
     latitude_array = np.full(shape=alt.shape[0], fill_value=1) * latitude
-    speed_func = wind_function_95th({"altitudes": alt, "latitudes": latitude_array, "day_of_year": day_array})
+    speed_func = lib_winds.wind_speed_world_95(alt, latitude_array, day_array)
     return speed_func
 battery_specific_energy_Wh_kg = opti.parameter(value=450)
 battery_pack_cell_percentage = 0.89  # What percent of the battery pack consists of the module, by weight?
@@ -906,12 +907,12 @@ battery_state_of_charge_percentage = 100 * (battery_stored_energy_nondim + (1 - 
 ### Solar calculations
 
 solar_cell_efficiency = 0.285 * 0.9 # Microlink
-# solar_cell_efficiency = 0.243 * 0.9 # Sunpower
+#solar_cell_efficiency = 0.243 * 0.9 # Sunpower
 # solar_cell_efficiency = 0.14 * 0.9 # Ascent Solar
 
 # Solar cell weight
 rho_solar_cells = 0.255 * 1.1 # kg/m^2, solar cell area density. Microlink.
-# rho_solar_cells = 0.425 * 1.1 # kg/m^2, solar cell area density. Sunpower.
+#rho_solar_cells = 0.425 * 1.1 # kg/m^2, solar cell area density. Sunpower.
 # rho_solar_cells = 0.300 * 1.1 # kg/m^2, solar cell area density. Ascent Solar
 # This figure should take into account all temperature factors,
 # spectral losses (different spectrum at altitude), multi-junction effects, etc.
@@ -1392,7 +1393,8 @@ opti.minimize(
 
 if __name__ == "__main__":
     # Solve
-    sol = opti.solve()
+    # with time_limit(60):
+    sol = opti.solve(max_iter=300)
 
     # Print a warning if the penalty term is unreasonably high
     penalty_objective_ratio = np.abs(sol.value(penalty / objective))
@@ -1763,3 +1765,29 @@ if __name__ == "__main__":
     opti.value(net_power_to_battery)
     opti.value(net_power_to_battery_pack)
     opti.value(time)
+    # return sol.value(wing_span)
+
+# latitudes = np.linspace(-80, 80, 15)
+# day_of_years = np.linspace(0, 365, 30)
+# cache_suffix="_10kg_payload"
+#
+# solved_lats = []
+# solved_days = []
+# spans = []
+# for lat in latitudes:
+#     for day in day_of_years:
+#             print("\n".join([
+#                 "-" * 50,
+#                 f"latitude: {lat}",
+#                 f"day of year: {day}",
+#             ]))
+#             try:
+#                 span_val = run_sizing(lat, day)
+#                 solved_lats.append(lat)
+#                 solved_days.append(day)
+#                 spans.append(span_val)
+#             except Exception as e:
+#                 print(e)
+# np.save("cache/lats" + cache_suffix, solved_lats)
+# np.save("cache/days" + cache_suffix, solved_days)
+# np.save("cache/spans" + cache_suffix, spans)
