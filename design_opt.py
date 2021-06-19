@@ -51,9 +51,8 @@ minimize = "wing.span() / 50"  # any "eval-able" expression
 climb_opt = False  # are we optimizing for the climb as well?
 latitude = opti.parameter(value=49)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
 day_of_year = opti.parameter(value=244)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
-offset_value = 1000
-min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + offset_value
-min_cruise_altitude = opti.parameter(value=18288)  # meters. 19812 m = 65000 ft, 18288 m = 60000 ft.
+strat_offset_value = opti.parameter(value=1000)
+min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 required_headway_per_day = 0  # meters
 allow_trajectory_optimization = True
 structural_load_factor = 3  # over static
