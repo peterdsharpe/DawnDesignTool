@@ -2,7 +2,9 @@ from design_opt import *
 from aerosandbox.visualization.carpet_plot_utils import time_limit, patch_nans
 import matplotlib as mpl
 import aerosandbox.numpy as np
-cache_suffix="_10kg_payload"
+
+cache_suffix = "_10kg_payload"
+
 
 def run_sweep():
     latitudes = np.linspace(-80, 80, 15)
@@ -12,7 +14,7 @@ def run_sweep():
     lats = []
     alts = []
     winds = []
-    num=0
+    num = 0
     for i, lat_val in enumerate(latitudes):
         for j, day_val in enumerate(day_of_years):
             print("\n".join([
@@ -22,13 +24,10 @@ def run_sweep():
             ]))
             opti.set_value(latitude, lat_val)
             opti.set_value(day_of_year, day_val)
+
             try:
-                if num < 5:
-                    with time_limit(120):
-                        sol = opti.solve()
-                else:
-                    with time_limit(60):
-                        sol = opti.solve()
+                with time_limit(60 if num < 5 else 10):
+                    sol = opti.solve()
                 opti.set_initial(opti.value_variables())
                 opti.set_initial(opti.lam_g, sol.value(opti.lam_g))
                 span_val = sol.value(wing_span)
@@ -41,7 +40,7 @@ def run_sweep():
             except Exception as e:
                 print(e)
 
-            num +=1
+            num += 1
 
     np.save("cache/lats" + cache_suffix, lats)
     np.save("cache/days" + cache_suffix, days)
@@ -161,7 +160,7 @@ def analyze():
     plt.title(
         "\n"
         "10 kg payload, min alt set by strat height, 450 Wh/kg batteries,\n Sunpower solar cells, station-keeping in 95% wind",
-        fontsize = 10,
+        fontsize=10,
     )
     # cbar = plt.colorbar()
     cbar.set_label("Wing Span [m]")
