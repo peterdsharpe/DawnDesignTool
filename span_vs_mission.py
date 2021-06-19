@@ -6,7 +6,7 @@ cache_suffix="_10kg_payload"
 
 def run_sweep():
     latitudes = np.linspace(-80, 80, 15)
-    day_of_years = np.linspace(1, 365, 30)
+    day_of_years = np.linspace(0, 365, 30)
     spans = []
     days = []
     lats = []
@@ -24,10 +24,10 @@ def run_sweep():
             opti.set_value(day_of_year, day_val)
             try:
                 if num < 5:
-                    with time_limit(100):
+                    with time_limit(120):
                         sol = opti.solve()
                 else:
-                    with time_limit(10):
+                    with time_limit(60):
                         sol = opti.solve()
                 opti.set_initial(opti.value_variables())
                 opti.set_initial(opti.lam_g, sol.value(opti.lam_g))
