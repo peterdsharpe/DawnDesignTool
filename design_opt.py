@@ -22,20 +22,6 @@ from aerosandbox.modeling.interpolation import InterpolatedModel
 import pathlib
 import pandas as pd
 
-# days = np.array([-365, -335., -305., -274., -244., -213., -182., -152., -121., -91.,
-#                  -60., -32., 1., 32., 60., 91., 121., 152.,
-#                  182., 213., 244., 274., 305., 335., 366., 397., 425.,
-#                  456., 486., 517., 547., 578., 609., 639., 670., 700.])
-#
-# latitudes = np.load('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/latitudes.npy')
-# latitudes = np.flip(latitudes)
-# altitudes = np.load('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/altitudes.npy')
-# altitudes = np.flip(altitudes)
-# wind_data = np.load('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/wind_speed_array.npy')
-# wind_data_array = np.dstack((np.flip(wind_data), wind_data))
-# wind_data_array = np.dstack((wind_data_array, np.flip(wind_data)))
-# wind_function_95th = InterpolatedModel({"altitudes": altitudes, "latitudes": latitudes, "day_of_year": days},
-#                                        wind_data_array, "bspline")
 
 path = str(
     pathlib.Path(__file__).parent.absolute()
@@ -65,17 +51,8 @@ minimize = "wing.span() / 50"  # any "eval-able" expression
 climb_opt = False  # are we optimizing for the climb as well?
 latitude = opti.parameter(value=49)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
 day_of_year = opti.parameter(value=244)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
-# set up strat_model
-height = np.genfromtxt(path + '/cache/strat-height-monthly.csv', delimiter=',')
-latitude_list = np.linspace(-80, 80, 50)
-months = np.linspace(1, 12, 12)
-strat_model = InterpolatedModel({'latitude': latitude_list, 'month':months},
-                                              height, 'bspline')
-day = opti.value(day_of_year)
-date = datetime.datetime(2020, 1, 1) + datetime.timedelta(day)
-month = opti.parameter(value=date.month)
 offset_value = 1000
-# min_cruise_altitude = strat_model({'latitude': latitude, 'month': month}) * 1000 + offset_value
+min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + offset_value
 min_cruise_altitude = opti.parameter(value=18288)  # meters. 19812 m = 65000 ft, 18288 m = 60000 ft.
 required_headway_per_day = 0  # meters
 allow_trajectory_optimization = True
@@ -907,12 +884,12 @@ battery_state_of_charge_percentage = 100 * (battery_stored_energy_nondim + (1 - 
 ### Solar calculations
 
 solar_cell_efficiency = 0.285 * 0.9 # Microlink
-#solar_cell_efficiency = 0.243 * 0.9 # Sunpower
+# solar_cell_efficiency = 0.243 * 0.9 # Sunpower
 # solar_cell_efficiency = 0.14 * 0.9 # Ascent Solar
 
 # Solar cell weight
 rho_solar_cells = 0.255 * 1.1 # kg/m^2, solar cell area density. Microlink.
-#rho_solar_cells = 0.425 * 1.1 # kg/m^2, solar cell area density. Sunpower.
+# rho_solar_cells = 0.425 * 1.1 # kg/m^2, solar cell area density. Sunpower.
 # rho_solar_cells = 0.300 * 1.1 # kg/m^2, solar cell area density. Ascent Solar
 # This figure should take into account all temperature factors,
 # spectral losses (different spectrum at altitude), multi-junction effects, etc.
@@ -1765,29 +1742,3 @@ if __name__ == "__main__":
     opti.value(net_power_to_battery)
     opti.value(net_power_to_battery_pack)
     opti.value(time)
-    # return sol.value(wing_span)
-
-# latitudes = np.linspace(-80, 80, 15)
-# day_of_years = np.linspace(0, 365, 30)
-# cache_suffix="_10kg_payload"
-#
-# solved_lats = []
-# solved_days = []
-# spans = []
-# for lat in latitudes:
-#     for day in day_of_years:
-#             print("\n".join([
-#                 "-" * 50,
-#                 f"latitude: {lat}",
-#                 f"day of year: {day}",
-#             ]))
-#             try:
-#                 span_val = run_sizing(lat, day)
-#                 solved_lats.append(lat)
-#                 solved_days.append(day)
-#                 spans.append(span_val)
-#             except Exception as e:
-#                 print(e)
-# np.save("cache/lats" + cache_suffix, solved_lats)
-# np.save("cache/days" + cache_suffix, solved_days)
-# np.save("cache/spans" + cache_suffix, spans)
