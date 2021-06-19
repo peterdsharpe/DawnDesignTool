@@ -2,7 +2,7 @@ from design_opt import *
 from aerosandbox.visualization.carpet_plot_utils import time_limit, patch_nans
 import matplotlib as mpl
 import aerosandbox.numpy as np
-cache_suffix="_30kg_payload"
+cache_suffix="_10kg_payload"
 
 def run_sweep():
     latitudes = np.linspace(-80, 80, 15)
@@ -22,11 +22,6 @@ def run_sweep():
             ]))
             opti.set_value(latitude, lat_val)
             opti.set_value(day_of_year, day_val)
-            date = datetime.datetime(2020, 1, 1) + datetime.timedelta(day_val)
-            month = date.month
-            offset_value = 1000
-            min_alt = strat_model({'latitude': lat_val, 'month': month}) * 1000 + offset_value
-            opti.set_value(min_cruise_altitude, min_alt)
             try:
                 if num < 5:
                     with time_limit(100):
@@ -40,8 +35,8 @@ def run_sweep():
                 lats.append(lat_val)
                 days.append(day_val)
                 spans.append(span_val)
-                alts.append(sol.value(min_cruise_altitude))
-                winds.append(sol.value(wind_speed_func(np.array([14000]))))
+                # alts.append(sol.value(min_cruise_altitude))
+                # winds.append(sol.value(wind_speed_func(np.array([14000]))))
 
             except Exception as e:
                 print(e)
@@ -51,8 +46,8 @@ def run_sweep():
     np.save("cache/lats" + cache_suffix, lats)
     np.save("cache/days" + cache_suffix, days)
     np.save("cache/spans" + cache_suffix, spans)
-    np.save("cache/winds" + cache_suffix, winds)
-    np.save("cache/alts" + cache_suffix, alts)
+    # np.save("cache/winds" + cache_suffix, winds)
+    # np.save("cache/alts" + cache_suffix, alts)
 
 
 def analyze():
@@ -65,12 +60,12 @@ def analyze():
     latitudes = np.load(f"cache/lats{cache_suffix}.npy", allow_pickle=True)
     day_of_years = np.load(f"cache/days{cache_suffix}.npy", allow_pickle=True)
     Spans = np.load(f"cache/spans{cache_suffix}.npy", allow_pickle=True)
-    # latitudes_array = np.append(np.flip(latitudes), latitudes)
-    # latitudes_array = np.append(latitudes_array, np.flip(latitudes))
-    # day_of_years_array = np.append(np.flip(day_of_years), day_of_years)
-    # day_of_years_array = np.append(day_of_years_array, np.flip(day_of_years))
-    # Spans_array = np.append(np.flip(Spans), Spans)
-    # Spans_array = np.append(Spans_array, np.flip(Spans))
+    latitudes_array = np.append(np.flip(latitudes), latitudes)
+    latitudes_array = np.append(latitudes_array, np.flip(latitudes))
+    day_of_years_array = np.append(np.flip(day_of_years), day_of_years)
+    day_of_years_array = np.append(day_of_years_array, np.flip(day_of_years))
+    Spans_array = np.append(np.flip(Spans), Spans)
+    Spans_array = np.append(Spans_array, np.flip(Spans))
 
     rbf = Rbf(
         np.array(day_of_years),
@@ -103,24 +98,24 @@ def analyze():
     cbar = plt.colorbar()
     ax.clabel(CS, inline=1, fontsize=10, fmt="%.0f m")
 
-    plt.plot(
-        244,
-        49,
-        ".--k",
-        label="Region of Interest\n& Sizing Case",
-    )
-    ax.add_patch(
-        plt.Rectangle(
-            (152, 26),
-            width=(244 - 152),
-            height=(49 - 26),
-            linestyle="--",
-            color="k",
-            edgecolor="k",
-            linewidth=0.5,
-            fill=False
-        )
-    )
+    # plt.plot(
+    #     244,
+    #     49,
+    #     ".--k",
+    #     label="Region of Interest\n& Sizing Case",
+    # )
+    # ax.add_patch(
+    #     plt.Rectangle(
+    #         (152, 26),
+    #         width=(244 - 152),
+    #         height=(49 - 26),
+    #         linestyle="--",
+    #         color="k",
+    #         edgecolor="k",
+    #         linewidth=0.5,
+    #         fill=False
+    #     )
+    # )
     plt.annotate(
         s="Infeasible",
         xy=(174, -55),
@@ -165,15 +160,15 @@ def analyze():
     plt.suptitle("Minimum Wingspan Airplane by Mission", y=0.98)
     plt.title(
         "\n"
-        "30 kg payload, min alt set by strat height, 450 Wh/kg batteries,\n Microlink solar cells, station-keeping in 95% wind",
+        "10 kg payload, min alt set by strat height, 450 Wh/kg batteries,\n Sunpower solar cells, station-keeping in 95% wind",
         fontsize = 10,
     )
     # cbar = plt.colorbar()
     cbar.set_label("Wing Span [m]")
-    plt.legend(fontsize=10)
+    # plt.legend(fontsize=10)
     plt.tight_layout()
     plt.show()
 
 
-# run_sweep()
+run_sweep()
 analyze()
