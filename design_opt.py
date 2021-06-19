@@ -1562,7 +1562,7 @@ if __name__ == "__main__":
             s(mass_payload),
             s(mass_structural),
             s(mass_propulsion),
-            s(np.max(mass_power_systems)),
+            np.max(s(mass_power_systems)),
             s(mass_avionics),
         ]
         colors = plt.cm.Set2(np.arange(5))
