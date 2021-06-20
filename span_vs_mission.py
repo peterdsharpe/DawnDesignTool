@@ -26,7 +26,7 @@ def run_sweep():
             opti.set_value(day_of_year, day_val)
 
             try:
-                with time_limit(60 if num < 5 else 10):
+                with time_limit(60 if num < 5 else 20):
                     sol = opti.solve()
                 opti.set_initial(opti.value_variables())
                 opti.set_initial(opti.lam_g, sol.value(opti.lam_g))
