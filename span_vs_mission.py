@@ -56,20 +56,20 @@ def analyze():
     sns.set(palette=sns.color_palette("viridis"))
 
     # Do raw imports
-    latitudes = np.load(f"cache/lats{cache_suffix}.npy", allow_pickle=True)
-    day_of_years = np.load(f"cache/days{cache_suffix}.npy", allow_pickle=True)
-    Spans = np.load(f"cache/spans{cache_suffix}.npy", allow_pickle=True)
-    latitudes_array = np.append(np.flip(latitudes), latitudes)
-    latitudes_array = np.append(latitudes_array, np.flip(latitudes))
-    day_of_years_array = np.append(np.flip(day_of_years), day_of_years)
-    day_of_years_array = np.append(day_of_years_array, np.flip(day_of_years))
-    Spans_array = np.append(np.flip(Spans), Spans)
-    Spans_array = np.append(Spans_array, np.flip(Spans))
+    latitudes_raw = np.load(f"cache/lats{cache_suffix}.npy", allow_pickle=True)
+    day_of_years_raw = np.load(f"cache/days{cache_suffix}.npy", allow_pickle=True)
+    Spans_raw = np.load(f"cache/spans{cache_suffix}.npy", allow_pickle=True)
+    # latitudes_array = np.append(np.flip(latitudes), latitudes)
+    # latitudes_array = np.append(latitudes_array, np.flip(latitudes))
+    # day_of_years_array = np.append(np.flip(day_of_years), day_of_years)
+    # day_of_years_array = np.append(day_of_years_array, np.flip(day_of_years))
+    # Spans_array = np.append(np.flip(Spans), Spans)
+    # Spans_array = np.append(Spans_array, np.flip(Spans))
 
     rbf = Rbf(
-        np.array(day_of_years),
-        np.array(latitudes),
-        np.array(Spans),
+        np.array(day_of_years_raw),
+        np.array(latitudes_raw),
+        np.array(Spans_raw),
         function='cubic',
         smooth=20,
     )
@@ -86,16 +86,41 @@ def analyze():
         Lats,
         Spans,
     ]
+    kwargs = {
+        "levels": np.arange(20, 50.1, 2),
+        "alpha" : 0.7,
+        "extend": "both",
+    }
 
-    levels = np.arange(20, 50.1, 2)
     viridis = mpl.cm.get_cmap('viridis_r', 256)
     newcolors = viridis(np.linspace(0, 1, 256))
     newcolors[-1, :] = np.array([0, 0, 0, 1])
     newcmp = mpl.colors.ListedColormap(newcolors)
-    CS = plt.contour(*args, levels=levels, linewidths=0.5, colors="k", alpha=0.7, extend='both')
-    CF = plt.contourf(*args, levels=levels, cmap=newcmp, alpha=0.7, extend='both')
+
+    CS = plt.contour(*args, **kwargs, colors="k", linewidths=0.5)
+    CF = plt.contourf(*args, **kwargs, cmap=newcmp)
     cbar = plt.colorbar()
     ax.clabel(CS, inline=1, fontsize=10, fmt="%.0f m")
+
+    ### Does unstructured linear interpolation; useful for checking RBF accuracy.
+    # args = [
+    #     day_of_years_raw,
+    #     latitudes_raw,
+    #     Spans_raw
+    # ]
+    # CS = plt.tricontour(*args, **kwargs, colors="k", linewidths=0.5)
+    # CF = plt.tricontourf(*args, **kwargs, cmap=newcmp)
+    # cbar = plt.colorbar()
+    # ax.clabel(CS, inline=1, fontsize=10, fmt="%.0f m")
+
+    ### Plots the location of raw data points. Useful for debugging.
+    # plt.plot(
+    #     day_of_years_raw,
+    #     latitudes_raw,
+    #     ".",
+    #     color="r",
+    #     markeredgecolor="w"
+    # )
 
     # plt.plot(
     #     244,
@@ -115,6 +140,7 @@ def analyze():
     #         fill=False
     #     )
     # )
+
     plt.annotate(
         s="Infeasible",
         xy=(174, -55),
