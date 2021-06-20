@@ -11,11 +11,11 @@ days = np.array([-365, -335., -305., -274., -244., -213., -182., -152., -121., -
                  182., 213., 244., 274., 305., 335., 366., 397., 425.,
                  456., 486., 517., 547., 578., 609., 639., 670., 700.])
 
-latitudes = np.load('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/latitudes.npy')
+latitudes = np.load('./cache/latitudes.npy')
 latitudes = np.flip(latitudes)
-altitudes = np.load('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/altitudes.npy')
+altitudes = np.load('./cache/altitudes.npy')
 altitudes = np.flip(altitudes)
-wind_data = np.load('/Users/annickdewald/Desktop/Thesis/DawnDesignTool/cache/wind_speed_array.npy')
+wind_data = np.load('./cache/wind_speed_array.npy')
 wind_data_array = np.dstack((np.flip(wind_data), wind_data))
 wind_data_array = np.dstack((wind_data_array, np.flip(wind_data)))
 wind_function_95th = InterpolatedModel({"altitudes": altitudes, "latitudes": latitudes, "day_of_year": days},
