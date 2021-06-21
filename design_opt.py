@@ -658,7 +658,7 @@ strut_y_location = opti.variable(
 )
 opti.subject_to([
     strut_y_location > 3,
-    strut_y_location <= wing_span / 6  # TODO review why this constraint is here, taken from Jamie DDT 12/30/20
+    strut_y_location < wing_span
 ])
 
 strut_span = (strut_y_location ** 2 + (propeller_diameter / 2 + 0.25) ** 2) ** 0.5  # Formula from Jamie
