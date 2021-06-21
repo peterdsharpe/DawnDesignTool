@@ -78,7 +78,7 @@ structural_mass_margin_multiplier = opti.parameter(value=1.25)  # TODO Jamie dro
 energy_generation_margin = opti.parameter(value=1.05)
 allowable_battery_depth_of_discharge = opti.parameter(
     value=0.85)  # How much of the battery can you actually use? # Reviewed w/ Annick & Bjarni 4/30/2020
-q_ne_over_q_max = opti.parameter(value=2) # Chosen on the basis of a paper read by Trevor Long about Helios, 1/16/20
+q_ne_over_q_max = opti.parameter(value=2) # Chosen on the basis of a paper read by Trevor Long about Helios, 1/16/21
 
 ##### Simulation Parameters
 n_timesteps_per_segment = 180  # Only relevant if allow_trajectory_optimization is True.
@@ -277,7 +277,7 @@ center_hstab_chord = opti.variable(
     scale=2,
     category="des"
 )
-opti.subject_to([center_hstab_chord > 0.1])
+opti.subject_to(center_hstab_chord > 0.1)
 
 center_hstab_twist_angle = opti.variable(
     n_vars=n_timesteps,
