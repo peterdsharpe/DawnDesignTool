@@ -1,6 +1,7 @@
 from design_opt import *
 from aerosandbox.visualization.carpet_plot_utils import time_limit, patch_nans
 import aerosandbox.numpy as np
+import multiprocessing as mp
 
 ### Set the run ID
 cache_suffix = "_10kg_payload"
