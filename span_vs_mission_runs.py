@@ -7,7 +7,7 @@ import aerosandbox.numpy as np
 cache_suffix = "_10kg_payload"
 
 ### Turn parallelization on/off.
-parallel = False
+parallel = True
 
 
 def run(lat_val, day_val):
@@ -21,15 +21,16 @@ def run(lat_val, day_val):
     opti.set_value(day_of_year, day_val)
 
     try:
-        # with time_limit(60):
-        # sol = opti.solve(verbose=False)
         sol = func_timeout(
-            timeout=5,
+            timeout=60,
             func=opti.solve,
             args=(),
             kwargs={
-                "max_iter": 200
-                # "verbose": False
+                "max_iter": 200,
+                "options": {
+                    "ipopt.max_cpu_time": 60
+                },
+                "verbose": False
             }
         )
         print("Success!")
