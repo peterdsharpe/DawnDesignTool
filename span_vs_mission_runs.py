@@ -2,7 +2,12 @@ from design_opt import *
 from aerosandbox.visualization.carpet_plot_utils import time_limit, patch_nans
 import aerosandbox.numpy as np
 
+### Set the run ID
 cache_suffix = "_10kg_payload"
+
+### Turn parallelization on/off.
+parallel = True
+
 
 
 def run(lat_val, day_val):
@@ -32,6 +37,8 @@ def run(lat_val, day_val):
 
 if __name__ == '__main__':
 
+
+
     ### Define sweep space
     latitudes = np.linspace(-80, 80, 15)
     day_of_years = np.linspace(0, 365, 30)
@@ -45,10 +52,18 @@ if __name__ == '__main__':
         for lat, day in zip(lats, days)
     ]
 
-    ### Crunch the numbers, in serial
-    spans = np.array([
-        run(*input) for input in inputs
-    ])
+    ### Crunch the numbers
+    if parallel:
+        with mp.Pool(mp.cpu_count()) as p:
+            spans = p.starmap(
+                run,
+                inputs,
+            )
+    else:
+        spans = np.array([
+            run(*input) for input in inputs
+        ])
+
 
     ### Save the data
     np.save("cache/lats" + cache_suffix, lats)

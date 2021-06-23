@@ -53,7 +53,7 @@ def run_xfoil():
         path = str(
                 pathlib.Path(__file__).parent.absolute()
         )
-        with open(path + f"/cache/airfoil_xfoil_results/airfoil_{Re}.cache", "wb+") as f:
+        with open(path + f"/data/airfoil_xfoil_results/airfoil_{Re}.cache", "wb+") as f:
             pickle.dump(result, f)
 
 def get_Xfoil_dat():
@@ -70,7 +70,7 @@ def get_Xfoil_dat():
         xfoil_function = {}
         path = str(pathlib.Path(__file__).parent.absolute())
         try:
-            with open(path + f"/cache/airfoil_xfoil_results/airfoil_{Re}.cache", "rb") as f:
+            with open(path + f"/data/airfoil_xfoil_results/airfoil_{Re}.cache", "rb") as f:
                 unpickle = pickle.Unpickler(f)
                 xfoil_function = unpickle.load()
 
@@ -144,9 +144,9 @@ def run_cl(alpha_list, reynolds_list, cl_values, smooth_val):
     alphas = np.arange(-15, 15, 0.1)
     Reynolds, Alpha = np.meshgrid(reynolds[::8], alphas[::12], indexing="ij")
     cl_grid = cl_rbf(np.log(Reynolds.flatten()), Alpha.flatten()).reshape(len(reynolds[::8]), len(alphas[::12])).T
-    np.save('./cache/cl_function.npy', cl_grid)
-    np.save('./cache/alpha.npy', alphas[::12])
-    np.save('./cache/reynolds.npy', reynolds[::8])
+    np.save('data/cl_function.npy', cl_grid)
+    np.save('data/alpha.npy', alphas[::12])
+    np.save('data/reynolds.npy', reynolds[::8])
     return cl_grid
 
 
@@ -162,9 +162,9 @@ def run_cd(alpha_list, reynolds_list, cd_values, smooth_val):
     alphas = np.arange(-15, 15, 0.1)
     Reynolds, Alpha = np.meshgrid(reynolds[::8], alphas[::12], indexing="ij")
     cd_grid = cd_rbf(np.log(Reynolds.flatten()), Alpha.flatten()).reshape(len(reynolds[::8]), len(alphas[::12])).T
-    np.save('./cache/cd_function.npy', cd_grid)
-    np.save('./cache/alpha.npy', alphas[::12])
-    np.save('./cache/reynolds.npy', reynolds[::8])
+    np.save('data/cd_function.npy', cd_grid)
+    np.save('data/alpha.npy', alphas[::12])
+    np.save('data/reynolds.npy', reynolds[::8])
     return cd_grid
 
 
@@ -180,9 +180,9 @@ def run_cm(alpha_list, reynolds_list, cm_values, smooth_val):
     alphas = np.arange(-15, 15, 0.1)
     Reynolds, Alpha = np.meshgrid(reynolds[::8], alphas[::12], indexing="ij")
     cm_grid = cm_rbf(np.log(Reynolds.flatten()), Alpha.flatten()).reshape(len(reynolds[::8]), len(alphas[::12])).T
-    np.save('./cache/cm_function.npy', cm_grid)
-    np.save('./cache/alpha.npy', alphas[::12])
-    np.save('./cache/reynolds.npy', reynolds[::8])
+    np.save('data/cm_function.npy', cm_grid)
+    np.save('data/alpha.npy', alphas[::12])
+    np.save('data/reynolds.npy', reynolds[::8])
     return cm_grid
 
 

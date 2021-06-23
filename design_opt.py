@@ -57,7 +57,7 @@ required_headway_per_day = 0  # meters
 allow_trajectory_optimization = True
 structural_load_factor = 3  # over static
 make_plots = False
-mass_payload = opti.parameter(value=10)
+mass_payload = opti.parameter(value=30)
 # wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
 def wind_speed_func(alt):
     day_array = np.full(shape=alt.shape[0], fill_value=1) * day_of_year
@@ -373,11 +373,11 @@ import dill as pickle
 
 
 # wing_airfoil = wing_airfoil.repanel()
-cl_array = np.load(path + '/cache/cl_function.npy')
-cd_array = np.load(path + '/cache/cd_function.npy')
-cm_array = np.load(path + '/cache/cm_function.npy')
-alpha_array = np.load(path + '/cache/alpha.npy')
-reynolds_array = np.load(path + '/cache/reynolds.npy')
+cl_array = np.load(path + '/data/cl_function.npy')
+cd_array = np.load(path + '/data/cd_function.npy')
+cm_array = np.load(path + '/data/cm_function.npy')
+alpha_array = np.load(path + '/data/alpha.npy')
+reynolds_array = np.load(path + '/data/reynolds.npy')
 cl_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(np.array(reynolds_array)),},
                                               cl_array, "bspline")
 cd_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(np.array(reynolds_array))},
