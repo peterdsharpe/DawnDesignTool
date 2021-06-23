@@ -6,8 +6,7 @@ import aerosandbox.numpy as np
 cache_suffix = "_10kg_payload"
 
 ### Turn parallelization on/off.
-parallel = True
-
+parallel = False
 
 
 def run(lat_val, day_val):
@@ -24,8 +23,9 @@ def run(lat_val, day_val):
         with time_limit(60):
             sol = opti.solve(verbose=False)
             print("Success!")
-        opti.set_initial(opti.value_variables())
-        opti.set_initial(opti.lam_g, sol.value(opti.lam_g))
+        if not parallel:
+            opti.set_initial(opti.value_variables())
+            opti.set_initial(opti.lam_g, sol.value(opti.lam_g))
 
         return sol.value(wing_span)
     except Exception as e:
@@ -36,8 +36,6 @@ def run(lat_val, day_val):
 
 
 if __name__ == '__main__':
-
-
 
     ### Define sweep space
     latitudes = np.linspace(-80, 80, 15)
@@ -63,7 +61,6 @@ if __name__ == '__main__':
         spans = np.array([
             run(*input) for input in inputs
         ])
-
 
     ### Save the data
     np.save("cache/lats" + cache_suffix, lats)
