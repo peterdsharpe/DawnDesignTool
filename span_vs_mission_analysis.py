@@ -24,39 +24,9 @@ bridge_nans(spans_grid)
 
 # Filter by nan
 nan = np.isnan(spans_raw)
-# latitudes_raw = latitudes_raw[~nan]
-# day_of_years_raw = day_of_years_raw[~nan]
-# Spans_raw = Spans_raw[~nan]
-spans_raw[nan] = 55
-
-# def annual_cylindrical_distance_metric(
-#         a: np.ndarray,
-#         b: np.ndarray,
-# ) -> np.ndarray:
-#     a = np.array([
-#         np.cos(a[0] / 365 * 2 * np.pi),
-#         np.sin(a[0] / 365 * 2 * np.pi),
-#         a[1] / 160 * 2 * np.pi,
-#     ])
-#     b = np.array([
-#         np.cos(b[0] / 365 * 2 * np.pi),
-#         np.sin(b[0] / 365 * 2 * np.pi),
-#         b[1] / 160 * 2 * np.pi,
-#     ])
-#     return np.sqrt(
-#         np.sum((a - b) ** 2)
-#     )
-#
-#
-
-# rbf = interpolate.Rbf(  # Old RBF implementation
-#     np.array(day_of_years_raw),
-#     np.array(latitudes_raw),
-#     np.array(Spans_raw),
-#     # norm=annual_cylindrical_distance_metric,
-#     # function='linear',
-#     # smooth=0,
-# )
+infeasible_value = 55  # Value to assign to NaNs and worse-than-this points
+spans_raw[nan] = infeasible_value
+spans_raw[spans_raw > infeasible_value] = infeasible_value
 
 rbf = interpolate.RBFInterpolator(
     np.vstack((
@@ -114,13 +84,15 @@ ax.clabel(CS, inline=1, fontsize=10, fmt="%.0f m")
 # ax.clabel(CS, inline=1, fontsize=10, fmt="%.0f m")
 
 ### Plots the location of raw data points. Useful for debugging.
-# plt.plot(
-#     days_raw[~nan],
-#     lats_raw[~nan],
-#     ".",
-#     color="r",
-#     markeredgecolor="w"
-# )
+plt.scatter(
+    days_raw[~nan],
+    lats_raw[~nan],
+    c=spans_raw[~nan],
+    cmap=newcmp,
+    edgecolor="w",
+    zorder=4
+)
+plt.clim(*CS.get_clim())
 
 ### Plots the region of interest (CONUS)
 # plt.plot(
