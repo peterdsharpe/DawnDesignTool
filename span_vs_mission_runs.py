@@ -1,13 +1,13 @@
 import multiprocessing as mp
 from design_opt import *
-from aerosandbox.visualization.carpet_plot_utils import time_limit
+from func_timeout import func_timeout
 import aerosandbox.numpy as np
 
 ### Set the run ID
 cache_suffix = "_10kg_payload"
 
 ### Turn parallelization on/off.
-parallel = True
+parallel = False
 
 
 def run(lat_val, day_val):
@@ -21,9 +21,18 @@ def run(lat_val, day_val):
     opti.set_value(day_of_year, day_val)
 
     try:
-        with time_limit(60):
-            sol = opti.solve(verbose=False)
-            print("Success!")
+        # with time_limit(60):
+        # sol = opti.solve(verbose=False)
+        sol = func_timeout(
+            timeout=5,
+            func=opti.solve,
+            args=(),
+            kwargs={
+                "max_iter": 200
+                # "verbose": False
+            }
+        )
+        print("Success!")
         if not parallel:
             opti.set_initial(opti.value_variables())
             opti.set_initial(opti.lam_g, sol.value(opti.lam_g))
