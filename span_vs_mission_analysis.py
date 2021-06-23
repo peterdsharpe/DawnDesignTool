@@ -84,15 +84,15 @@ ax.clabel(CS, inline=1, fontsize=10, fmt="%.0f m")
 # ax.clabel(CS, inline=1, fontsize=10, fmt="%.0f m")
 
 ### Plots the location of raw data points. Useful for debugging.
-plt.scatter(
-    days_raw[~nan],
-    lats_raw[~nan],
-    c=spans_raw[~nan],
-    cmap=newcmp,
-    edgecolor="w",
-    zorder=4
-)
-plt.clim(*CS.get_clim())
+# plt.scatter(
+#     days_raw[~nan],
+#     lats_raw[~nan],
+#     c=spans_raw[~nan],
+#     cmap=newcmp,
+#     edgecolor="w",
+#     zorder=4
+# )
+# plt.clim(*CS.get_clim())
 
 ### Plots the region of interest (CONUS)
 # plt.plot(
