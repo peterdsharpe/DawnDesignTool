@@ -27,38 +27,6 @@ def run(lat_val, day_val):
         return np.NaN
 
 
-# latitudes = np.linspace(-80, 80, 15)
-# day_of_years = np.linspace(0, 365, 30)
-# spans = []
-# days = []
-# lats = []
-# num = 0
-# for lat_val in latitudes:
-#     for day_val in day_of_years:
-#         print("\n".join([
-#             "-" * 50,
-#             f"latitude: {lat_val}",
-#             f"day of year: {day_val}",
-#         ]))
-#         opti.set_value(latitude, lat_val)
-#         opti.set_value(day_of_year, day_val)
-#
-#         try:
-#             with time_limit(60 if num < 5 else 20):
-#                 sol = opti.solve()
-#             opti.set_initial(opti.value_variables())
-#             opti.set_initial(opti.lam_g, sol.value(opti.lam_g))
-#
-#             lats.append(lat_val)
-#             days.append(day_val)
-#             spans.append(sol.value(wing_span))
-#
-#         except Exception as e:
-#             print(e)
-#
-#         num += 1
-
-
 if __name__ == '__main__':
 
     ### Define sweep range
