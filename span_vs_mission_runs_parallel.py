@@ -19,9 +19,11 @@ def run(lat_val, day_val):
     try:
         with time_limit(60):
             sol = opti.solve(verbose=False)
+            print("Success!")
 
         return sol.value(wing_span)
     except Exception as e:
+        print("Fail!")
         print(e)
 
         return np.NaN

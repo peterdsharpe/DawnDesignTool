@@ -24,6 +24,7 @@ def run(lat_val, day_val):
 
         return sol.value(wing_span)
     except Exception as e:
+        print("Fail!")
         print(e)
 
         return np.NaN
