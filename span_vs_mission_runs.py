@@ -1,6 +1,6 @@
 import multiprocessing as mp
 from design_opt import *
-from aerosandbox.visualization.carpet_plot_utils import time_limit, patch_nans
+from aerosandbox.visualization.carpet_plot_utils import time_limit
 import aerosandbox.numpy as np
 
 ### Set the run ID
