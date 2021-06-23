@@ -28,7 +28,7 @@ def run(lat_val, day_val):
             kwargs={
                 "max_iter": 200,
                 "options": {
-                    "ipopt.max_cpu_time": 60
+                    "ipopt.max_cpu_time": 60,
                 },
                 "verbose": False
             }
