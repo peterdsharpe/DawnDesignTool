@@ -2,12 +2,32 @@ from aerosandbox.tools.pretty_plots import plt, sns, mpl, show_plot
 import aerosandbox.numpy as np
 from scipy import interpolate
 
-cache_suffix = "_10kg_payload_no_cycling"
+cache_suffix = "_10kg_payload"
 
 # Do raw imports
-latitudes_raw = np.load(f"cache/lats{cache_suffix}.npy", allow_pickle=True)
-day_of_years_raw = np.load(f"cache/days{cache_suffix}.npy", allow_pickle=True)
-Spans_raw = np.load(f"cache/spans{cache_suffix}.npy", allow_pickle=True)
+lats_raw = np.load(f"cache/lats{cache_suffix}.npy", allow_pickle=True)
+days_raw = np.load(f"cache/days{cache_suffix}.npy", allow_pickle=True)
+spans_raw = np.load(f"cache/spans{cache_suffix}.npy", allow_pickle=True)
+
+# Transfer to a grid
+res_y = np.sum(np.diff(lats_raw) < 0) + 1
+res_x = len(lats_raw) // res_y
+lats_grid = lats_raw[:res_x]
+days_grid = days_raw[::res_x]
+spans_grid = spans_raw.reshape((res_y, res_x)).T
+assert len(lats_grid) * len(days_grid) == np.product(spans_raw.shape)
+
+# Patch NaNs
+from interpolate_utils import bridge_nans
+
+bridge_nans(spans_grid)
+
+# Filter by nan
+nan = np.isnan(spans_raw)
+# latitudes_raw = latitudes_raw[~nan]
+# day_of_years_raw = day_of_years_raw[~nan]
+# Spans_raw = Spans_raw[~nan]
+spans_raw[nan] = 55
 
 # def annual_cylindrical_distance_metric(
 #         a: np.ndarray,
@@ -28,42 +48,42 @@ Spans_raw = np.load(f"cache/spans{cache_suffix}.npy", allow_pickle=True)
 #     )
 #
 #
+
 # rbf = interpolate.Rbf(  # Old RBF implementation
 #     np.array(day_of_years_raw),
 #     np.array(latitudes_raw),
 #     np.array(Spans_raw),
-#     norm=annual_cylindrical_distance_metric,
-#     function='linear',
-#     smooth=0,
+#     # norm=annual_cylindrical_distance_metric,
+#     # function='linear',
+#     # smooth=0,
 # )
 
 rbf = interpolate.RBFInterpolator(
-    y=np.vstack((
-        np.array(day_of_years_raw),
-        np.array(latitudes_raw),
+    np.vstack((
+        days_raw,
+        lats_raw,
     )).T,
-    d=np.array(Spans_raw),
-    smoothing=50,
-    degree=4
+    spans_grid.flatten(order="F"),
+    smoothing=200,
 )
-day_of_years = np.linspace(0, 365, 300)
-latitudes = np.linspace(-80, 80, 200)
+
+days_plot = np.linspace(0, 365, 300)
+lats_plot = np.linspace(-80, 80, 200)
 # Convert to 2D arrays
-Days, Lats = np.meshgrid(day_of_years, latitudes)
-# Spans = rbf(Days, Lats).reshape(Days.shape)  # Used for old RBF implementation
+Days_plot, Lats_plot = np.meshgrid(days_plot, lats_plot)
 
 Spans = rbf(
     np.vstack((
-        Days.flatten(),
-        Lats.flatten()
+        Days_plot.flatten(),
+        Lats_plot.flatten()
     )).T
-).reshape(Days.shape)
+).reshape(Days_plot.shape)
 
 ### Payload plot
 fig, ax = plt.subplots(1, 1, figsize=(8, 6), dpi=200)
 args = [
-    Days,
-    Lats,
+    Days_plot,
+    Lats_plot,
     Spans,
 ]
 kwargs = {
@@ -94,13 +114,13 @@ ax.clabel(CS, inline=1, fontsize=10, fmt="%.0f m")
 # ax.clabel(CS, inline=1, fontsize=10, fmt="%.0f m")
 
 ### Plots the location of raw data points. Useful for debugging.
-# plt.plot(
-#     day_of_years_raw,
-#     latitudes_raw,
-#     ".",
-#     color="r",
-#     markeredgecolor="w"
-# )
+plt.plot(
+    days_raw[~nan],
+    lats_raw[~nan],
+    ".",
+    color="r",
+    markeredgecolor="w"
+)
 
 ## Plots the region of interest (CONUS)
 plt.plot(
@@ -116,14 +136,13 @@ ax.add_patch(
         height=(49 - 26),
         linestyle="--",
         color="k",
-        edgecolor="k",
         linewidth=0.5,
         fill=False
     )
 )
 
 plt.annotate(
-    s="Infeasible",
+    text="Infeasible",
     xy=(174, -55),
     xycoords="data",
     ha="center",
