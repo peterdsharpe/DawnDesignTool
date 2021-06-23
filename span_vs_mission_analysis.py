@@ -114,32 +114,32 @@ ax.clabel(CS, inline=1, fontsize=10, fmt="%.0f m")
 # ax.clabel(CS, inline=1, fontsize=10, fmt="%.0f m")
 
 ### Plots the location of raw data points. Useful for debugging.
-plt.plot(
-    days_raw[~nan],
-    lats_raw[~nan],
-    ".",
-    color="r",
-    markeredgecolor="w"
-)
+# plt.plot(
+#     days_raw[~nan],
+#     lats_raw[~nan],
+#     ".",
+#     color="r",
+#     markeredgecolor="w"
+# )
 
-## Plots the region of interest (CONUS)
-plt.plot(
-    244,
-    26,
-    ".--k",
-    label="Region of Interest\n& Sizing Case",
-)
-ax.add_patch(
-    plt.Rectangle(
-        (152, 26),
-        width=(244 - 152),
-        height=(49 - 26),
-        linestyle="--",
-        color="k",
-        linewidth=0.5,
-        fill=False
-    )
-)
+### Plots the region of interest (CONUS)
+# plt.plot(
+#     244,
+#     26,
+#     ".--k",
+#     label="Region of Interest\n& Sizing Case",
+# )
+# ax.add_patch(
+#     plt.Rectangle(
+#         (152, 26),
+#         width=(244 - 152),
+#         height=(49 - 26),
+#         linestyle="--",
+#         color="k",
+#         linewidth=0.5,
+#         fill=False
+#     )
+# )
 
 plt.annotate(
     text="Infeasible",
