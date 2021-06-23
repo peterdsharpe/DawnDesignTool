@@ -2,8 +2,7 @@ from design_opt import *
 from aerosandbox.visualization.carpet_plot_utils import time_limit, patch_nans
 import aerosandbox.numpy as np
 
-cache_suffix = "_10kg_payload"
-
+cache_suffix = "_10kg_payload_no_cycling"
 
 def run_sweep():
     latitudes = np.linspace(-80, 80, 15)
@@ -40,3 +39,5 @@ def run_sweep():
     np.save("cache/lats" + cache_suffix, lats)
     np.save("cache/days" + cache_suffix, days)
     np.save("cache/spans" + cache_suffix, spans)
+
+run_sweep()

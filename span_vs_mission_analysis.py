@@ -2,7 +2,7 @@ from aerosandbox.tools.pretty_plots import plt, sns, mpl, show_plot
 import aerosandbox.numpy as np
 from scipy import interpolate
 
-cache_suffix = "_10kg_payload"
+cache_suffix = "_10kg_payload_no_cycling"
 
 # Do raw imports
 latitudes_raw = np.load(f"cache/lats{cache_suffix}.npy", allow_pickle=True)
@@ -102,25 +102,25 @@ ax.clabel(CS, inline=1, fontsize=10, fmt="%.0f m")
 #     markeredgecolor="w"
 # )
 
-### Plots the region of interest (CONUS)
-# plt.plot(
-#     244,
-#     49,
-#     ".--k",
-#     label="Region of Interest\n& Sizing Case",
-# )
-# ax.add_patch(
-#     plt.Rectangle(
-#         (152, 26),
-#         width=(244 - 152),
-#         height=(49 - 26),
-#         linestyle="--",
-#         color="k",
-#         edgecolor="k",
-#         linewidth=0.5,
-#         fill=False
-#     )
-# )
+## Plots the region of interest (CONUS)
+plt.plot(
+    244,
+    26,
+    ".--k",
+    label="Region of Interest\n& Sizing Case",
+)
+ax.add_patch(
+    plt.Rectangle(
+        (152, 26),
+        width=(244 - 152),
+        height=(49 - 26),
+        linestyle="--",
+        color="k",
+        edgecolor="k",
+        linewidth=0.5,
+        fill=False
+    )
+)
 
 plt.annotate(
     s="Infeasible",
@@ -166,7 +166,7 @@ plt.ylabel(r"Latitude")
 plt.suptitle("Minimum Wingspan Airplane by Mission", y=0.98)
 plt.title(
     "\n"
-    "10 kg payload, min alt set by strat height, 450 Wh/kg batteries,\n Sunpower solar cells, station-keeping in 95% wind",
+    "10 kg payload, min alt set by strat height, 450 Wh/kg batteries,\n Microlink solar cells, station-keeping in 95% wind, no alt. cycling",
     fontsize=10,
 )
 plt.tight_layout()
