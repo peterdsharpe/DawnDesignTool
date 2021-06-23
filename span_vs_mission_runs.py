@@ -7,7 +7,7 @@ import aerosandbox.numpy as np
 cache_suffix = "_10kg_payload"
 
 ### Turn parallelization on/off.
-parallel = False
+parallel = True
 
 
 def run(lat_val, day_val):

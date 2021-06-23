@@ -20,7 +20,7 @@ assert len(lats_grid) * len(days_grid) == np.product(spans_raw.shape)
 # Patch NaNs
 from interpolate_utils import bridge_nans
 
-bridge_nans(spans_grid)
+bridge_nans(spans_grid, depth=2)
 
 # Filter by nan
 nan = np.isnan(spans_raw)

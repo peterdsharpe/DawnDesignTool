@@ -1,2 +1,2 @@
 module load anaconda/2021a
-python span_vs_mission_runs_parallel.py
+python span_vs_mission_runs.py
