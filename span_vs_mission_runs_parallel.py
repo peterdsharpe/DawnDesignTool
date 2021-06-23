@@ -18,7 +18,7 @@ def run(lat_val, day_val):
 
     try:
         with time_limit(60):
-            sol = opti.solve(verbose=False)
+            sol = opti.solve(verbose=False, max_iter=300)
             print("Success!")
 
         return sol.value(wing_span)
