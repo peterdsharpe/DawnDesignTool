@@ -44,12 +44,14 @@ if __name__ == '__main__':
         for lat, day in zip(lats, days)
     ]
 
+    ### Crunch the numbers, in parallel
     with mp.Pool(mp.cpu_count()) as p:
         spans = p.starmap(
             run,
             inputs,
         )
 
+    ### Save the data
     np.save("cache/lats" + cache_suffix, lats)
     np.save("cache/days" + cache_suffix, days)
     np.save("cache/spans" + cache_suffix, spans)
