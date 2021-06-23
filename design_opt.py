@@ -54,7 +54,7 @@ day_of_year = opti.parameter(value=244)  # Julian day. June 1 is 153, June 22 is
 strat_offset_value = opti.parameter(value=1000)
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 required_headway_per_day = 0  # meters
-allow_trajectory_optimization = False
+allow_trajectory_optimization = True
 structural_load_factor = 3  # over static
 make_plots = False
 mass_payload = opti.parameter(value=10)
