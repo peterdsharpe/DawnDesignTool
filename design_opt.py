@@ -1366,8 +1366,12 @@ opti.minimize(
 
 if __name__ == "__main__":
     # Solve
-    # with time_limit(60):
-    sol = opti.solve(max_iter=300)
+    sol = opti.solve(
+        max_iter=300,
+        options={
+            "ipopt.max_cpu_time": 600
+        }
+    )
 
     # Print a warning if the penalty term is unreasonably high
     penalty_objective_ratio = np.abs(sol.value(penalty / objective))
