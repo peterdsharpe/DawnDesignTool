@@ -3,7 +3,9 @@ import aerosandbox.numpy as np
 from scipy import interpolate
 import pandas as pd
 
-run_name = "10kg_payload_continuous_power"
+run_name = "10kg_payload_no_cycling"
+
+debug_mode = False
 
 # Do raw imports
 data = pd.read_csv(f"cache/{run_name}.csv")
@@ -88,15 +90,16 @@ ax.clabel(CS, inline=1, fontsize=10, fmt="%.0f m")
 # ax.clabel(CS, inline=1, fontsize=10, fmt="%.0f m")
 
 ### Plots the location of raw data points. Useful for debugging.
-# plt.scatter(
-#     days_raw[~nan],
-#     lats_raw[~nan],
-#     c=spans_raw[~nan],
-#     cmap=newcmp,
-#     edgecolor="w",
-#     zorder=4
-# )
-# plt.clim(*CS.get_clim())
+if debug_mode:
+    plt.scatter(
+        days_raw[~nan],
+        lats_raw[~nan],
+        c=spans_raw[~nan],
+        cmap=newcmp,
+        edgecolor="w",
+        zorder=4
+    )
+    plt.clim(*CS.get_clim())
 
 ### Plots the region of interest (CONUS)
 # plt.plot(
