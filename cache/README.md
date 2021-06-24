@@ -6,3 +6,4 @@
 4. `10kg_payload_no_cycling`: 10 kg payload with no altitude cycling (i.e. `allow_trajectory_optimization=False`)
 5. `10kg_payload_sunpower`: 10 kg payload w/ Sunpower cell assumptions (changed `solar_cell_efficiency`, `rho_solar_cells`, and set `solar_area_fraction < 0.60`.)
 6. `10kg_payload_ascent`: 10 kg payload w/ Ascent cell assumptions (changed `solar_cell_efficiency`, `rho_solar_cells`, and set `solar_area_fraction < 0.80`.)
+7. `10kg_payload_x_batteries`: 10 kg payload with batteries at `x` Wh/kg (instead of the baseline 450). Reverted back to baseline Microlink cells for this.
