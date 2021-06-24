@@ -830,8 +830,8 @@ mass_propulsion = mass_motor_mounted + mass_propellers + mass_ESC
 # Account for payload power
 power_out_payload = np.where(
     solar_flux_on_horizontal > 1,
-    100,
-    100
+    500,
+    150
 )
 
 # Account for avionics power
