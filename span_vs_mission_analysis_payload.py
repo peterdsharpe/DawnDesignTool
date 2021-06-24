@@ -64,7 +64,7 @@ args = [
     Payloads,
 ]
 kwargs = {
-    "levels": np.arange(0, 300.1, 30),
+    "levels": np.arange(0, 50.1, 5),
     "alpha" : 0.7,
     "extend": "both",
 }
