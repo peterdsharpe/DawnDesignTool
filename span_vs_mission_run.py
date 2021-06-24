@@ -4,7 +4,7 @@ from func_timeout import func_timeout
 import aerosandbox.numpy as np
 
 ### Set the run ID
-run_name = "10kg_payload_sunpower"
+run_name = "10kg_payload_500_batteries"
 
 ### Turn parallelization on/off.
 parallel = True

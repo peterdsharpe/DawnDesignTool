@@ -7,7 +7,11 @@ import pandas as pd
 # run_name = "10kg_payload"
 # run_name = "10kg_payload_continuous_power"
 # run_name = "10kg_payload_no_cycling"
-run_name = "10kg_payload_sunpower"
+# run_name = "10kg_payload_sunpower"
+# run_name = "10kg_payload_ascent"
+# run_name = "10kg_payload_350_batteries"
+# run_name = "10kg_payload_400_batteries"
+run_name = "10kg_payload_500_batteries"
 
 debug_mode = False
 
