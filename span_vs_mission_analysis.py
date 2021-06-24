@@ -27,11 +27,23 @@ spans_raw = np.array(data['Spans'], dtype=float)
 #
 # bridge_nans(spans_grid, depth=2)
 #
+
+# Add dummy points
+bad_points = [
+    (0, 80),
+    (365, 80),
+    (365/2, -80)
+]
+for p in bad_points:
+    days_raw = np.append(days_raw, p[0])
+    lats_raw = np.append(lats_raw, p[1])
+    spans_raw = np.append(spans_raw, 1000)
+
 # # Filter by nan
 nan = np.isnan(spans_raw)
-infeasible_value = 100  # Value to assign to NaNs and worse-than-this points
+# infeasible_value = 100  # Value to assign to NaNs and worse-than-this points
 # spans_raw[nan] = infeasible_value
-spans_raw[spans_raw > infeasible_value] = infeasible_value
+# spans_raw[spans_raw > infeasible_value] = infeasible_value
 # nan = np.isnan(spans_raw)
 
 rbf = interpolate.RBFInterpolator(
@@ -159,13 +171,19 @@ plt.yticks(
     lat_labels
 )
 
-plt.xlabel(r"Time of Year")
-plt.ylabel(r"Latitude")
-plt.suptitle("Minimum Wingspan Airplane by Mission", y=0.98)
-plt.title(
-    "\n"
-    "10 kg payload, min alt set by strat height, 450 Wh/kg batteries,\n Microlink solar cells, station-keeping in 95% wind, no alt. cycling",
-    fontsize=10,
+plt.suptitle(
+    "Minimum Wingspan Airplane by Mission",
+    y=0.98
 )
-plt.tight_layout()
-plt.show()
+plt.title(
+    "\n".join([
+        "10 kg payload, min alt set by strat height, 450 Wh/kg batteries,",
+        "Microlink solar cells, station-keeping in 95% wind, no alt. cycling"
+    ]),
+    fontsize=10
+)
+
+show_plot(
+    xlabel="Time of Year",
+    ylabel="Latitude"
+)
