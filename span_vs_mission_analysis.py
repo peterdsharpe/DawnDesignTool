@@ -39,8 +39,11 @@ spans_raw = np.array(data['Spans'], dtype=float)
 # Add dummy points
 bad_points = [
     (0, 80),
+    (0, 70),
     (365, 80),
-    (365/2, -80)
+    (365, 70),
+    (244, -80),
+    (244, -70),
 ]
 for p in bad_points:
     days_raw = np.append(days_raw, p[0])
