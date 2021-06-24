@@ -3,7 +3,7 @@ import aerosandbox.numpy as np
 from scipy import interpolate
 import pandas as pd
 
-run_name = "10kg_payload"
+run_name = "10kg_payload_continuous_power"
 
 # Do raw imports
 data = pd.read_csv(f"cache/{run_name}.csv")
@@ -38,7 +38,7 @@ rbf = interpolate.RBFInterpolator(
         lats_raw[~nan],
     )).T,
     spans_raw[~nan],
-    smoothing=200,
+    smoothing=50,
 )
 
 days_plot = np.linspace(0, 365, 300)
