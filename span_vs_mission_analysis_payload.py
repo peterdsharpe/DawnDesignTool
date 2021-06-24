@@ -64,7 +64,7 @@ args = [
     Payloads,
 ]
 kwargs = {
-    "levels": np.arange(0, 100.1, 10),
+    "levels": np.arange(0, 240.1, 20),
     "alpha" : 0.7,
     "extend": "both",
 }
@@ -77,7 +77,7 @@ newcmp = mpl.colors.ListedColormap(newcolors)
 CS = plt.contour(*args, **kwargs, colors="k", linewidths=0.5)
 CF = plt.contourf(*args, **kwargs, cmap=newcmp)
 cbar = plt.colorbar(label="Payload [kg]", extendrect=True)
-ax.clabel(CS, inline=1, fontsize=10, fmt="%.0f kg")
+ax.clabel(CS, inline=1, fontsize=9, fmt="%.0f kg")
 
 ### Does unstructured linear interpolation; useful for checking RBF accuracy.
 # args = [
