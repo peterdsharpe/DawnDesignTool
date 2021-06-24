@@ -3,7 +3,11 @@ import aerosandbox.numpy as np
 from scipy import interpolate
 import pandas as pd
 
-run_name = "10kg_payload_no_cycling"
+# run_name = "30kg_payload"
+# run_name = "10kg_payload"
+# run_name = "10kg_payload_continuous_power"
+# run_name = "10kg_payload_no_cycling"
+run_name = "10kg_payload_sunpower"
 
 debug_mode = False
 
