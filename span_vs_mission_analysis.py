@@ -3,7 +3,7 @@ import aerosandbox.numpy as np
 from scipy import interpolate
 import pandas as pd
 
-run_name = "30kg_payload"
+run_name = "10kg_payload"
 
 # Do raw imports
 data = pd.read_csv(f"cache/{run_name}.csv")
@@ -30,6 +30,7 @@ nan = np.isnan(spans_raw)
 infeasible_value = 100  # Value to assign to NaNs and worse-than-this points
 # spans_raw[nan] = infeasible_value
 spans_raw[spans_raw > infeasible_value] = infeasible_value
+# nan = np.isnan(spans_raw)
 
 rbf = interpolate.RBFInterpolator(
     np.vstack((
