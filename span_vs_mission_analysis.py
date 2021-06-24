@@ -1,39 +1,42 @@
 from aerosandbox.tools.pretty_plots import plt, sns, mpl, show_plot
 import aerosandbox.numpy as np
 from scipy import interpolate
+import pandas as pd
 
-cache_suffix = "_10kg_payload"
+run_name = "30kg_payload"
 
 # Do raw imports
-lats_raw = np.load(f"cache/lats{cache_suffix}.npy", allow_pickle=True)
-days_raw = np.load(f"cache/days{cache_suffix}.npy", allow_pickle=True)
-spans_raw = np.load(f"cache/spans{cache_suffix}.npy", allow_pickle=True)
+data = pd.read_csv(f"cache/{run_name}.csv")
+data.columns = data.columns.str.strip()
+days_raw = np.array(data['Days'], dtype=float)
+lats_raw = np.array(data['Latitudes'], dtype=float)
+spans_raw = np.array(data['Spans'], dtype=float)
 
-# Transfer to a grid
-res_y = np.sum(np.diff(lats_raw) < 0) + 1
-res_x = len(lats_raw) // res_y
-lats_grid = lats_raw[:res_x]
-days_grid = days_raw[::res_x]
-spans_grid = spans_raw.reshape((res_y, res_x)).T
-assert len(lats_grid) * len(days_grid) == np.product(spans_raw.shape)
-
-# Patch NaNs
-from interpolate_utils import bridge_nans
-
-bridge_nans(spans_grid, depth=2)
-
-# Filter by nan
+# # Transfer to a grid
+# res_y = np.sum(np.diff(lats_raw) < 0) + 1
+# res_x = len(lats_raw) // res_y
+# lats_grid = lats_raw[:res_x]
+# days_grid = days_raw[::res_x]
+# spans_grid = spans_raw.reshape((res_y, res_x)).T
+# assert len(lats_grid) * len(days_grid) == np.product(spans_raw.shape)
+#
+# # Patch NaNs
+# from interpolate_utils import bridge_nans
+#
+# bridge_nans(spans_grid, depth=2)
+#
+# # Filter by nan
 nan = np.isnan(spans_raw)
-infeasible_value = 55  # Value to assign to NaNs and worse-than-this points
-spans_raw[nan] = infeasible_value
+infeasible_value = 100  # Value to assign to NaNs and worse-than-this points
+# spans_raw[nan] = infeasible_value
 spans_raw[spans_raw > infeasible_value] = infeasible_value
 
 rbf = interpolate.RBFInterpolator(
     np.vstack((
-        days_raw,
-        lats_raw,
+        days_raw[~nan],
+        lats_raw[~nan],
     )).T,
-    spans_grid.flatten(order="F"),
+    spans_raw[~nan],
     smoothing=200,
 )
 
@@ -74,9 +77,9 @@ ax.clabel(CS, inline=1, fontsize=10, fmt="%.0f m")
 
 ### Does unstructured linear interpolation; useful for checking RBF accuracy.
 # args = [
-#     day_of_years_raw,
-#     latitudes_raw,
-#     Spans_raw
+#     days_raw[~nan],
+#     lats_raw[~nan],
+#     spans_raw[~nan]
 # ]
 # CS = plt.tricontour(*args, **kwargs, colors="k", linewidths=0.5)
 # CF = plt.tricontourf(*args, **kwargs, cmap=newcmp)
