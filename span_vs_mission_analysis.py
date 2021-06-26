@@ -11,7 +11,8 @@ import pandas as pd
 # run_name = "10kg_payload_ascent"
 # run_name = "10kg_payload_350_batteries"
 # run_name = "10kg_payload_400_batteries"
-run_name = "10kg_payload_500_batteries"
+# run_name = "10kg_payload_500_batteries"
+run_name = "6kg_payload_100W"
 
 debug_mode = False
 
@@ -124,6 +125,48 @@ if debug_mode:
     )
     plt.clim(*CS.get_clim())
 
+### Plots the region of interest (arctic ice)
+# plt.plot(
+#     244,
+#     26,
+#     ".--k",
+#     label="Region of Interest\n& Sizing Case",
+# )
+ax.add_patch(
+    plt.Rectangle(
+        (1, -80),
+        width=(55),
+        height=(20),
+        linestyle="--",
+        color="k",
+        linewidth=1,
+        fill=False
+    )
+)
+ax.add_patch(
+    plt.Rectangle(
+        (365-22, -80),
+        width=(20),
+        height=(20),
+        linestyle="--",
+        color="k",
+        linewidth=1,
+        fill=False
+    )
+)
+
+ax.add_patch(
+    plt.Rectangle(
+        (115, 50),
+        width=(130),
+        height=(30),
+        linestyle="--",
+        color="k",
+        linewidth=1,
+        fill=False
+    )
+)
+
 ### Plots the region of interest (CONUS)
 # plt.plot(
 #     244,
@@ -188,13 +231,16 @@ plt.suptitle(
 )
 plt.title(
     "\n".join([
-        "10 kg payload, min alt set by strat height, 450 Wh/kg batteries,",
-        "Microlink solar cells, station-keeping in 95% wind, no alt. cycling"
+        "6 kg payload, min alt set by strat height, 450 Wh/kg batteries,",
+        "Microlink solar cells, station-keeping in 95% wind, 100W continuous payload power"
     ]),
     fontsize=10
 )
 
 show_plot(
     xlabel="Time of Year",
-    ylabel="Latitude"
+    ylabel="Latitude",
+    show=False,
 )
+plt.savefig('/Users/annickdewald/Desktop/Thesis/Photos/'+run_name+'w_mission', dpi=300)
+plt.show()
