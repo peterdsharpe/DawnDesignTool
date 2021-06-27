@@ -5,16 +5,16 @@ import aerosandbox.numpy as np
 import pandas as pd
 
 ### Set the run ID
-run_name = "batt_spec"
+run_name = "solar_eff"
 
 
-def run(batt_val):
+def run(eff_val):
     print("\n".join([
         "-" * 50,
-        f"battery specific energy: {batt_val}",
+        f"Solar Cell Efficiency: {batt_val}",
     ]))
 
-    opti.set_value(battery_specific_energy_Wh_kg, batt_val)
+    opti.set_value(solar_cell_efficiency, eff_val)
 
     try:
         sol = func_timeout(
@@ -41,7 +41,7 @@ def run(batt_val):
 
         span = np.NaN
 
-    return batt_val, span
+    return eff_val, span
 
 def plot_results(run_name):
     import matplotlib.pyplot as plt
@@ -57,11 +57,11 @@ def plot_results(run_name):
     sns.set(font_scale=1)
 
     plt.plot(batt_specs, spans, ".-")
-    plt.xlabel(r"Battery Specific Energy [Wh/kg]")
+    plt.xlabel(r"Solar Panel Level Efficiency")
     plt.ylabel(r"Wing Span [m]")
-    plt.title(r"Effect of Battery Specific Energy on Wingspan")
+    plt.title(r"Effect of Solar Efficiency on Wingspan")
     plt.tight_layout()
-    plt.legend()
+    plt.savefig('/Users/annickdewald/Desktop/Thesis/Photos/' + run_name, dpi=300)
     plt.show()
 
 if __name__ == '__main__':
@@ -76,14 +76,14 @@ if __name__ == '__main__':
         )
 
     ### Define sweep space
-    battery_energies = np.linspace(300, 600, 50)
+    solar_efficiencies = np.linspace(0.10, 0.30, 50)
 
     ### Crunch the numbers
-    for batt_val in battery_energies:
-            batt_val, span_val = run(batt_val)
+    for eff in solar_efficiencies:
+            eff, span_val = run(eff)
             with open(filename, "a") as f:
                 f.write(
-                    f"{str(batt_val).ljust(l)},"
+                    f"{str(eff).ljust(l)},"
                     f"{str(span_val).ljust(l)}\n"
                 )
 
