@@ -71,7 +71,7 @@ if __name__ == '__main__':
     l = 20
     with open(filename, "w+") as f:
         f.write(
-            f"{'BattSpec'.ljust(l)}\n"
+            f"{'BattSpec'.ljust(l)},"
             f"{'Spans'.ljust(l)}\n"
         )
 
