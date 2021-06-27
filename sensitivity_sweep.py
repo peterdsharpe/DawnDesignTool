@@ -5,16 +5,16 @@ import aerosandbox.numpy as np
 import pandas as pd
 
 ### Set the run ID
-run_name = "solar_eff"
+run_name = "min_cruise_altitude"
 
 
-def run(eff_val):
+def run(alt_val):
     print("\n".join([
         "-" * 50,
-        f"Solar Cell Efficiency: {eff_val}",
+        f"Minimum Cruise Altitude: {alt_val}",
     ]))
 
-    opti.set_value(solar_cell_efficiency, eff_val)
+    opti.set_value(min_cruise_altitude, alt_val)
 
     try:
         sol = func_timeout(
@@ -41,7 +41,7 @@ def run(eff_val):
 
         span = np.NaN
 
-    return eff_val, span
+    return alt_val, span
 
 def plot_results(run_name):
     import matplotlib.pyplot as plt
@@ -51,15 +51,16 @@ def plot_results(run_name):
     # Do raw imports
     data = pd.read_csv(f"cache/{run_name}.csv")
     data.columns = data.columns.str.strip()
-    batt_specs = np.array(data['BattSpec'], dtype=float)
+    altitude = np.array(data['Altitude'], dtype=float)
+    altitude = np.divide(altitude, 1000)
     spans = np.array(data['Spans'], dtype=float)
 
     sns.set(font_scale=1)
 
-    plt.plot(batt_specs, spans, ".-")
-    plt.xlabel(r"Solar Panel Level Efficiency")
+    plt.plot(altitude, spans, ".-")
+    plt.xlabel(r"Minimum Cruise Altitude [km]")
     plt.ylabel(r"Wing Span [m]")
-    plt.title(r"Effect of Solar Efficiency on Wingspan")
+    plt.title(r"Effect of Minimum Cruise Altitude on Wingspan")
     plt.tight_layout()
     plt.savefig('/Users/annickdewald/Desktop/Thesis/Photos/' + run_name, dpi=300)
     plt.show()
@@ -71,19 +72,19 @@ if __name__ == '__main__':
     l = 20
     with open(filename, "w+") as f:
         f.write(
-            f"{'BattSpec'.ljust(l)},"
+            f"{'Altitude'.ljust(l)},"
             f"{'Spans'.ljust(l)}\n"
         )
 
     ### Define sweep space
-    solar_efficiencies = np.linspace(0.10, 0.30, 50)
+    altitudes = np.linspace(12000, 20000, 50)
 
     ### Crunch the numbers
-    for eff in solar_efficiencies:
-            eff, span_val = run(eff)
+    for alt_val in altitudes:
+            alt_val, span_val = run(alt_val)
             with open(filename, "a") as f:
                 f.write(
-                    f"{str(eff).ljust(l)},"
+                    f"{str(alt_val).ljust(l)},"
                     f"{str(span_val).ljust(l)}\n"
                 )
 
