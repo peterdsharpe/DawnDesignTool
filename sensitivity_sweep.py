@@ -57,13 +57,16 @@ def plot_results(run_name):
 
     sns.set(font_scale=1)
 
-    plt.plot(altitude, spans, ".-")
+    plt.plot(altitude, spans, ".-", label='Feasible Aircraft')
+    plt.scatter(altitude[43], spans[43], marker = "o", color='r', label='Baseline Design')
     plt.xlabel(r"Minimum Cruise Altitude [km]")
     plt.ylabel(r"Wing Span [m]")
     plt.title(r"Effect of Minimum Cruise Altitude on Wingspan")
     plt.tight_layout()
+    plt.legend()
     plt.savefig('/Users/annickdewald/Desktop/Thesis/Photos/' + run_name, dpi=300)
     plt.show()
+
 
 if __name__ == '__main__':
 
