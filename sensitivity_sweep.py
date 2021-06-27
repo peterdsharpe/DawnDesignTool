@@ -11,7 +11,7 @@ run_name = "solar_eff"
 def run(eff_val):
     print("\n".join([
         "-" * 50,
-        f"Solar Cell Efficiency: {batt_val}",
+        f"Solar Cell Efficiency: {eff_val}",
     ]))
 
     opti.set_value(solar_cell_efficiency, eff_val)
