@@ -3,7 +3,7 @@ import aerosandbox.numpy as np
 from scipy import interpolate
 import pandas as pd
 
-# run_name = "30kg_payload"
+run_name = "30kg_payload"
 # run_name = "10kg_payload"
 # run_name = "10kg_payload_continuous_power"
 # run_name = "10kg_payload_no_cycling"
@@ -12,7 +12,7 @@ import pandas as pd
 # run_name = "10kg_payload_350_batteries"
 # run_name = "10kg_payload_400_batteries"
 # run_name = "10kg_payload_500_batteries"
-run_name = "6kg_payload_100W"
+# run_name = "6kg_payload_100W"
 
 debug_mode = False
 
@@ -126,74 +126,82 @@ if debug_mode:
     plt.clim(*CS.get_clim())
 
 ### Plots the region of interest (arctic ice)
-# plt.plot(
-#     244,
-#     26,
-#     ".--k",
-#     label="Region of Interest\n& Sizing Case",
-# )
-ax.add_patch(
-    plt.Rectangle(
-        (1, -80),
-        width=(55),
-        height=(20),
-        linestyle="--",
-        color="k",
-        linewidth=1,
-        fill=False
-    )
-)
-ax.add_patch(
-    plt.Rectangle(
-        (365-22, -80),
-        width=(20),
-        height=(20),
-        linestyle="--",
-        color="k",
-        linewidth=1,
-        fill=False
-    )
-)
 
-ax.add_patch(
-    plt.Rectangle(
-        (115, 50),
-        width=(130),
-        height=(30),
-        linestyle="--",
-        color="k",
-        linewidth=1,
-        fill=False
-    )
-)
-
-### Plots the region of interest (CONUS)
-# plt.plot(
-#     244,
-#     26,
-#     ".--k",
-#     label="Region of Interest\n& Sizing Case",
+# ax.add_patch(
+#     plt.Rectangle(
+#         (1, -80),
+#         width=(55),
+#         height=(20),
+#         linestyle="--",
+#         color="k",
+#         linewidth=1,
+#         fill=False
+#     )
 # )
 # ax.add_patch(
 #     plt.Rectangle(
-#         (152, 26),
-#         width=(244 - 152),
-#         height=(49 - 26),
+#         (365-22, -80),
+#         width=(20),
+#         height=(20),
 #         linestyle="--",
 #         color="k",
-#         linewidth=0.5,
+#         linewidth=1,
+#         fill=False
+#     )
+# )
+#
+# ax.add_patch(
+#     plt.Rectangle(
+#         (115, 60),
+#         width=(130),
+#         height=(20),
+#         linestyle="--",
+#         color="k",
+#         linewidth=1,
 #         fill=False
 #     )
 # )
 
-plt.annotate(
-    text="Infeasible",
-    xy=(174, -55),
-    xycoords="data",
-    ha="center",
-    fontsize=10,
-    color='w',
+### Plots the region of interest (CONUS)
+plt.plot(
+    244,
+    26,
+    ".--k",
+    label="Region of Interest\n& Sizing Case",
 )
+ax.add_patch(
+    plt.Rectangle(
+        (152, 26),
+        width=(244 - 152),
+        height=(49 - 26),
+        linestyle="--",
+        color="k",
+        linewidth=1,
+        fill=False
+    )
+)
+
+# ### Plot the region of interest (hurricane)
+# ax.add_patch(
+#     plt.Rectangle(
+#         (212, 5),
+#         width=(90),
+#         height=(45),
+#         linestyle="--",
+#         color="k",
+#         linewidth=1,
+#         fill=False
+#     )
+# )
+#
+# plt.annotate(
+#     text="Infeasible",
+#     xy=(174, -55),
+#     xycoords="data",
+#     ha="center",
+#     fontsize=10,
+#     color='w',
+# )
 
 plt.xticks(
     np.linspace(0, 365, 13)[:-1],
@@ -231,8 +239,8 @@ plt.suptitle(
 )
 plt.title(
     "\n".join([
-        "6 kg payload, min alt set by strat height, 450 Wh/kg batteries,",
-        "Microlink solar cells, station-keeping in 95% wind, 100W continuous payload power"
+        "30 kg payload, min alt set by strat height, 450 Wh/kg batteries,",
+        "Microlink solar cells, station-keeping in 95% wind"
     ]),
     fontsize=10
 )
