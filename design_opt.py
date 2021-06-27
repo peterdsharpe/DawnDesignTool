@@ -46,7 +46,7 @@ minimize = "wing.span() / 50"  # any "eval-able" expression
 
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
-latitude = opti.parameter(value=49)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
+latitude = opti.parameter(value=25)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
 day_of_year = opti.parameter(value=244)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 strat_offset_value = opti.parameter(value=1000)
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
@@ -1690,7 +1690,7 @@ if __name__ == "__main__":
         )
 
         plt.savefig("outputs/mass_pie_chart.png")
-        # plt.show() if make_plots else plt.close(fig)
+        plt.show() if make_plots else plt.close(fig)
 
     # Write a mass budget
     with open("outputs/mass_budget.csv", "w+") as f:
