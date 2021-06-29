@@ -6,3 +6,4 @@ casadi
 tqdm
 scipy
 seaborn
+func_timeout

@@ -1,5 +1,5 @@
-import numpy as np
 import aerosandbox as asb
+import aerosandbox.numpy as np
 
 
 def make_fuselage(
