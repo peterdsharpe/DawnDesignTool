@@ -248,7 +248,5 @@ plt.title(
 show_plot(
     xlabel="Time of Year",
     ylabel="Latitude",
-    show=False,
+    show=True,
 )
-plt.savefig('/Users/annickdewald/Desktop/Thesis/Photos/'+run_name+'w_mission', dpi=300)
-plt.show()

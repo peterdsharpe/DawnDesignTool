@@ -53,8 +53,8 @@ min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + str
 required_headway_per_day = 0  # meters
 allow_trajectory_optimization = True
 structural_load_factor = 3  # over static
-make_plots = False
-mass_payload = opti.parameter(value=10)
+make_plots = True
+mass_payload = opti.parameter(value=30)
 # wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
 def wind_speed_func(alt):
     day_array = np.full(shape=alt.shape[0], fill_value=1) * day_of_year
