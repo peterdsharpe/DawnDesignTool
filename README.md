@@ -1,5 +1,5 @@
-# Design_Opt_HALE
-by Peter Sharpe
+# Dawn Design Tool
+by Peter Sharpe and Annick Dewald
 
 ## Description
 
