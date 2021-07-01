@@ -46,7 +46,7 @@ minimize = "wing.span() / 50"  # any "eval-able" expression
 
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
-latitude = opti.parameter(value=25)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
+latitude = opti.parameter(value=60)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
 day_of_year = opti.parameter(value=244)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 strat_offset_value = opti.parameter(value=1000)
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
@@ -55,7 +55,7 @@ allow_trajectory_optimization = True
 structural_load_factor = 3  # over static
 make_plots = True
 mass_payload = opti.parameter(value=30)
-tail_panels = True
+tail_panels = False
 # wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
 def wind_speed_func(alt):
     day_array = np.full(shape=alt.shape[0], fill_value=1) * day_of_year
@@ -893,7 +893,7 @@ rho_solar_cells = 0.255 * 1.1 # kg/m^2, solar cell area density. Microlink.
 
 #solar usable area fraction assumed consistent on tail surfaces when active
 max_solar_area_fraction = opti.parameter(value=0.80) # for microlink and ascent solar
-max_solar_area_fraction = opti.parameter(value=0.60) # for sunpower
+# max_solar_area_fraction = opti.parameter(value=0.60) # for sunpower
 
 # This figure should take into account all temperature factors,
 # spectral losses (different spectrum at altitude), multi-junction effects, etc.
@@ -921,31 +921,47 @@ MPPT_efficiency = 1 / 1.04
 
 
 solar_area_fraction = opti.variable(  # TODO log-transform?
-    init_guess=max_solar_area_fraction,
+    init_guess=0.8,
     scale=0.5,
     category="des"
 )
 vtail_solar_area_fraction = opti.variable(
-    init_guess=max_solar_area_fraction,
+    init_guess=0.8,
     scale=0.5,
     category='des'
 )
-htail_solar_area_fraction = opti.variable
-opti.subject_to([
-    solar_area_fraction > 0,
-    solar_area_fraction < 0.80,  # TODO check
-])
+htail_solar_area_fraction = opti.variable(
+    init_guess=0.8,
+    scale=0.5,
+    category='des'
+)
+if tail_panels == True:
+    opti.subject_to([
+        solar_area_fraction > 0,
+        solar_area_fraction < max_solar_area_fraction,  # TODO check
+        htail_solar_area_fraction > 0,
+        htail_solar_area_fraction < max_solar_area_fraction,
+        vtail_solar_area_fraction > 0,
+        vtail_solar_area_fraction < max_solar_area_fraction,
+    ])
+if tail_panels == False:
+    opti.subject_to([
+        solar_area_fraction > 0,
+        solar_area_fraction < max_solar_area_fraction,  # TODO check
+        htail_solar_area_fraction == 0,
+        vtail_solar_area_fraction == 0,
+    ])
 
-area_solar = (
-                 wing.area()
-             ) * solar_area_fraction
-
+area_solar_horz = wing.area() * solar_area_fraction + center_hstab.area() * htail_solar_area_fraction
+area_solar_vert = center_vstab.area() * vtail_solar_area_fraction
 # Energy generation cascade
-power_in_from_sun = solar_flux_on_horizontal * area_solar / energy_generation_margin
+power_in_from_sun_horz = solar_flux_on_horizontal * area_solar_horz
+power_in_from_sun_vert = solar_flux_on_vertical * area_solar_vert
+power_in_from_sun = (power_in_from_sun_horz + power_in_from_sun_vert) / energy_generation_margin
 power_in_after_panels = power_in_from_sun * solar_cell_efficiency
 power_in = power_in_after_panels * MPPT_efficiency
 
-mass_solar_cells = rho_solar_cells * area_solar
+mass_solar_cells = rho_solar_cells * (area_solar_horz + area_solar_vert)
 
 ### Battery calculations
 
@@ -1382,7 +1398,7 @@ opti.minimize(
 if __name__ == "__main__":
     # Solve
     sol = opti.solve(
-        max_iter=300,
+        max_iter=2000,
         options={
             "ipopt.max_cpu_time": 600
         }
