@@ -55,6 +55,7 @@ allow_trajectory_optimization = True
 structural_load_factor = 3  # over static
 make_plots = True
 mass_payload = opti.parameter(value=30)
+tail_panels = True
 # wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
 def wind_speed_func(alt):
     day_array = np.full(shape=alt.shape[0], fill_value=1) * day_of_year
@@ -545,7 +546,9 @@ q = 1 / 2 * rho * airspeed ** 2  # Solar calculations
 solar_flux_on_horizontal = lib_solar.solar_flux_on_horizontal(
     latitude, day_of_year, time, scattering=True
 )
-
+solar_flux_on_vertical = lib_solar.solar_flux_on_vertical(
+    latitude, day_of_year, time, scattering=True
+)
 
 # endregion
 
@@ -887,6 +890,11 @@ solar_cell_efficiency = 0.285 * 0.9 # Microlink
 rho_solar_cells = 0.255 * 1.1 # kg/m^2, solar cell area density. Microlink.
 # rho_solar_cells = 0.425 * 1.1 # kg/m^2, solar cell area density. Sunpower.
 # rho_solar_cells = 0.300 * 1.1 # kg/m^2, solar cell area density. Ascent Solar
+
+#solar usable area fraction assumed consistent on tail surfaces when active
+max_solar_area_fraction = opti.parameter(value=0.80) # for microlink and ascent solar
+max_solar_area_fraction = opti.parameter(value=0.60) # for sunpower
+
 # This figure should take into account all temperature factors,
 # spectral losses (different spectrum at altitude), multi-junction effects, etc.
 # Should not take into account MPPT losses.
@@ -911,11 +919,18 @@ rho_solar_cells = 0.255 * 1.1 # kg/m^2, solar cell area density. Microlink.
 MPPT_efficiency = 1 / 1.04
 # Bjarni, 4/17/20 in #powermanagement Slack.
 
+
 solar_area_fraction = opti.variable(  # TODO log-transform?
-    init_guess=0.80,
+    init_guess=max_solar_area_fraction,
     scale=0.5,
     category="des"
 )
+vtail_solar_area_fraction = opti.variable(
+    init_guess=max_solar_area_fraction,
+    scale=0.5,
+    category='des'
+)
+htail_solar_area_fraction = opti.variable
 opti.subject_to([
     solar_area_fraction > 0,
     solar_area_fraction < 0.80,  # TODO check
