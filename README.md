@@ -7,7 +7,7 @@ Automatic-differentiation-accelerated multidisciplinary design optimization for 
 
 Developed for MIT 16.82 Spring 2020.
 
-For more documentation, see [the memo in this repository](memo.pdf).
+For more documentation, see [the memo in this repository](docs/memo.pdf).
 
 ## Installation
 
