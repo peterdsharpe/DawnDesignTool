@@ -5,9 +5,13 @@ by Peter Sharpe and Annick Dewald
 
 Automatic-differentiation-accelerated multidisciplinary design optimization for high-altitude long-endurance (HALE) aircraft.
 
-Developed for MIT 16.82 Spring 2020.
+Related publication: [An Optimization Approach to Mapping the Feasible Mission Space of a High-Altitude Long-Endurance Solar Aircraft](docs/AIAA%20Solar%20Airplane%20Paper.pdf)
 
 For more documentation, see [the memo in this repository](docs/memo.pdf).
+
+Example feasibility chart outputs:
+
+![Feasible Mission Space](docs/30kg_payload.svg)
 
 ## Installation
 
