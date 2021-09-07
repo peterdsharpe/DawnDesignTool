@@ -1,7 +1,5 @@
-# Design_Opt_HALE
-by Peter Sharpe
-
-*Please do not share this repository outside of MIT AeroAstro for the time being.*
+# Dawn Design Tool
+by Peter Sharpe and Annick Dewald
 
 ## Description
 
