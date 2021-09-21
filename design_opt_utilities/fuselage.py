@@ -59,13 +59,10 @@ def make_fuselage(
 
     fuse = asb.Fuselage(
         name="Fuselage",
-        x_le=0,
-        y_le=0,
-        z_le=0,
+        xyz_le=[0,0,0],
         xsecs=[
             asb.FuselageXSec(
-                x_c=fuse_x_c[i],
-                z_c=fuse_z_c[i],
+                xyz_c=[fuse_x_c[i],0,fuse_z_c[i]],
                 radius=fuse_radius[i]
             ) for i in range(len(fuse_x_c))
         ]

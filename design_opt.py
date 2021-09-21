@@ -276,7 +276,7 @@ center_hstab_chord = opti.variable(
 )
 opti.subject_to(center_hstab_chord > 0.1)
 
-center_hstab_twist_angle = opti.variable(
+center_hstab_twist = opti.variable(
     n_vars=n_timesteps,
     init_guess=-3,
     scale=2,
@@ -303,7 +303,7 @@ opti.subject_to([
     outboard_hstab_chord > 0.8,  # TODO review this, driven by Trevor's ASWing findings on turn radius sizing, 8/16/20
 ])
 
-outboard_hstab_twist_angle = opti.variable(
+outboard_hstab_twist = opti.variable(
     n_vars=n_timesteps,
     init_guess=-3,
     scale=2,
@@ -399,7 +399,7 @@ wing = asb.Wing(
         asb.WingXSec(  # Root
             xyz_le = np.array([-wing_root_chord/4, 0, 0]),
             chord=wing_root_chord,
-            twist_angle=0,  # degrees
+            twist=0,  # degrees
             airfoil=wing_airfoil,  # Airfoils are blended between a given XSec and the next one.
             control_surface_is_symmetric=True,
             # Flap # Control surfaces are applied between a given XSec and the next one.
@@ -408,13 +408,13 @@ wing = asb.Wing(
         asb.WingXSec(  # Break
             xyz_le = np.array([-wing_root_chord/4, wing_y_taper_break, 0]),
             chord=wing_root_chord,
-            twist_angle=0,
+            twist=0,
             airfoil=wing_airfoil,
         ),
         asb.WingXSec(  # Tip
             xyz_le = np.array([-wing_root_chord * wing_taper_ratio / 4, wing_span / 2, 0]),
             chord=wing_root_chord * wing_taper_ratio,
-            twist_angle=0,
+            twist=0,
             airfoil=wing_airfoil,
         ),
     ]
@@ -428,7 +428,7 @@ center_hstab = asb.Wing(
         asb.WingXSec(  # Root
             xyz_le=np.array([0, 0, 0]),
             chord=center_hstab_chord,
-            twist_angle=-3,  # degrees
+            twist=-3,  # degrees
             airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
             control_surface_is_symmetric = True,
             # Flap # Control surfaces are applied between a given XSec and the next one.
@@ -437,7 +437,7 @@ center_hstab = asb.Wing(
         asb.WingXSec(  # Tip
             xyz_le=np.array([0, center_hstab_span / 2, 0]),
             chord=center_hstab_chord,
-            twist_angle=-3,
+            twist=-3,
             airfoil=tail_airfoil,
         ),
     ]
@@ -445,13 +445,12 @@ center_hstab = asb.Wing(
 
 right_hstab = asb.Wing(
     name="Horizontal Stabilizer",
-    xyz_le=np.array([outboard_boom_length - outboard_hstab_chord * 0.75, boom_location * wing_span / 2, 0.1]),
     symmetric=True,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
             xyz_le=np.array([0, 0, 0]),
             chord=outboard_hstab_chord,
-            twist_angle=-3,  # degrees
+            twist=-3,  # degrees
             airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
             control_surface_is_symmetric = True,
             # Flap # Control surfaces are applied between a given XSec and the next one.
@@ -460,14 +459,33 @@ right_hstab = asb.Wing(
         asb.WingXSec(  # Tip
             xyz_le=np.array([0, outboard_hstab_span / 2, 0]),
             chord=outboard_hstab_chord,
-            twist_angle=-3,
+            twist=-3,
             airfoil=tail_airfoil,
         ),
     ]
-)
+).translate([outboard_boom_length - outboard_hstab_chord * 0.75, boom_location * wing_span / 2, 0.1])
 
-left_hstab = copy.deepcopy(right_hstab)
-left_hstab.xyz_le[1] *= -1
+left_hstab = asb.Wing(
+    name="Horizontal Stabilizer",
+    symmetric=True,
+    xsecs=[  # The wing's cross ("X") sections
+        asb.WingXSec(  # Root
+            xyz_le=np.array([0, 0, 0]),
+            chord=outboard_hstab_chord,
+            twist=-3,  # degrees
+            airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
+            control_surface_is_symmetric = True,
+            # Flap # Control surfaces are applied between a given XSec and the next one.
+            control_surface_deflection=0,  # degrees
+        ),
+        asb.WingXSec(  # Tip
+            xyz_le=np.array([0, outboard_hstab_span / 2, 0]),
+            chord=outboard_hstab_chord,
+            twist=-3,
+            airfoil=tail_airfoil,
+        ),
+    ]
+).translate([outboard_boom_length - outboard_hstab_chord * 0.75, -boom_location * wing_span / 2, 0.1])
 
 center_vstab = asb.Wing(
     name="Vertical Stabilizer",
@@ -477,7 +495,7 @@ center_vstab = asb.Wing(
         asb.WingXSec(  # Root
             xyz_le=np.array([0, 0, 0]),
             chord=center_vstab_chord,
-            twist_angle=0,  # degrees
+            twist=0,  # degrees
             airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
             control_surface_is_symmetric = True,
             # Flap # Control surfaces are applied between a given XSec and the next one.
@@ -486,7 +504,7 @@ center_vstab = asb.Wing(
         asb.WingXSec(  # Tip
             xyz_le=np.array([0, 0, center_vstab_span]),
             chord=center_vstab_chord,
-            twist_angle=0,
+            twist=0,
             airfoil=tail_airfoil,
         ),
     ]
@@ -504,12 +522,14 @@ right_fuse = make_fuselage(
     nose_length=0.5,  # Review this for fit
     fuse_diameter=boom_diameter,
     boom_diameter=boom_diameter,
-)
+).translate([0, boom_location * wing_span / 2, 0])
 
-right_fuse.xyz_le += np.concatenate((0, boom_location * wing_span / 2, 0))
-
-left_fuse = copy.deepcopy(right_fuse)
-left_fuse.xyz_le[1] *= -1
+left_fuse = make_fuselage(
+    boom_length=outboard_boom_length,
+    nose_length=0.5,  # Review this for fit
+    fuse_diameter=boom_diameter,
+    boom_diameter=boom_diameter,
+).translate([0, -boom_location * wing_span / 2, 0])
 
 # Assemble the airplane
 airplane = asb.Airplane(
@@ -638,9 +658,9 @@ def compute_wing_aerodynamics(
 
 
 compute_wing_aerodynamics(wing)
-compute_wing_aerodynamics(center_hstab, incidence_angle=center_hstab_twist_angle)
-compute_wing_aerodynamics(right_hstab, incidence_angle=outboard_hstab_twist_angle)
-compute_wing_aerodynamics(left_hstab, incidence_angle=outboard_hstab_twist_angle)
+compute_wing_aerodynamics(center_hstab, incidence_angle=center_hstab_twist)
+compute_wing_aerodynamics(right_hstab, incidence_angle=outboard_hstab_twist)
+compute_wing_aerodynamics(left_hstab, incidence_angle=outboard_hstab_twist)
 compute_wing_aerodynamics(center_vstab, is_horizontal_surface=False)
 
 # Increase the wing drag due to tripped flow (8/17/20)
@@ -1313,10 +1333,10 @@ objective = eval(minimize)
 opti.subject_to([
     center_hstab_span == outboard_hstab_span,
     center_hstab_chord == outboard_hstab_chord,
-    # center_hstab_twist_angle == outboard_hstab_twist_angle,
+    # center_hstab_twist == outboard_hstab_twist,
     # center_boom_length == outboard_boom_length,
-    center_hstab_twist_angle <= 0,  # essentially enforces downforce, prevents hstab from lifting and exploiting config.
-    outboard_hstab_twist_angle <= 0,
+    center_hstab_twist <= 0,  # essentially enforces downforce, prevents hstab from lifting and exploiting config.
+    outboard_hstab_twist <= 0,
     # essentially enforces downforce, prevents hstab from lifting and exploiting config.
 ])
 
