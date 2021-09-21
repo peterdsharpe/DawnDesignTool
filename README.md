@@ -62,3 +62,7 @@ Follow this decision tree:
     
 ## Contact Info
 If you run into issues, please use the following options, starting with the first and proceeding if I don't respond: DM me on the 16.82 Slack, open an issue ticket, email me at pds@mit.edu, send carrier pigeon.
+
+## Licence
+
+[MIT License, full terms here](LICENSE.txt).
