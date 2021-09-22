@@ -393,7 +393,6 @@ tail_airfoil = naca0008  # TODO remove this and use fits?
 
 wing = asb.Wing(
     name="Main Wing",
-    xyz_le = np.array([wing_x_quarter_chord, 0, 0]),
     symmetric=True,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
@@ -418,11 +417,10 @@ wing = asb.Wing(
             airfoil=wing_airfoil,
         ),
     ]
-)
+).translate([wing_x_quarter_chord, 0, 0])
 
 center_hstab = asb.Wing(
     name="Horizontal Stabilizer",
-    xyz_le=np.array([center_boom_length - center_vstab_chord * 0.75 - center_hstab_chord, 0, 0.1]),
     symmetric=True,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
@@ -441,7 +439,7 @@ center_hstab = asb.Wing(
             airfoil=tail_airfoil,
         ),
     ]
-)
+).translate([center_boom_length - center_vstab_chord * 0.75 - center_hstab_chord, 0, 0.1])
 
 right_hstab = asb.Wing(
     name="Horizontal Stabilizer",
@@ -489,7 +487,6 @@ left_hstab = asb.Wing(
 
 center_vstab = asb.Wing(
     name="Vertical Stabilizer",
-    xyz_le=np.array([center_boom_length - center_vstab_chord * 0.75, 0, -center_vstab_span / 2 + center_vstab_span * 0.15]),
     symmetric=False,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
@@ -508,7 +505,7 @@ center_vstab = asb.Wing(
             airfoil=tail_airfoil,
         ),
     ]
-)
+).translate([center_boom_length - center_vstab_chord * 0.75, 0, -center_vstab_span / 2 + center_vstab_span * 0.15])
 
 center_fuse = make_fuselage(
     boom_length=center_boom_length,
