@@ -56,6 +56,10 @@ structural_load_factor = 3  # over static
 make_plots = True
 mass_payload = opti.parameter(value=6)
 tail_panels = True
+wing_cells = "ascent_solar" # select cells for wing, options include ascent_solar, sunpower, and microlink
+vertical_cells = "ascent_solar" # select cells for vtail, options include ascent_solar, sunpower, and microlink
+# vertical cells only mounted when tail_panels is True
+
 # wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
 def wind_speed_func(alt):
     day_array = np.full(shape=alt.shape[0], fill_value=1) * day_of_year
@@ -881,19 +885,35 @@ battery_stored_energy = battery_stored_energy_nondim * battery_capacity
 battery_state_of_charge_percentage = 100 * (battery_stored_energy_nondim + (1 - allowable_battery_depth_of_discharge))
 
 ### Solar calculations
+if vertical_cells == "microlink":
+    vert_solar_cell_efficiency = 0.285 * 0.9  # Microlink
+    vert_rho_solar_cells = 0.255 * 1.1  # kg/m^2, solar cell area density. Microlink.
+    max_solar_area_fraction_vert = opti.parameter(value=0.80)  # for microlink and ascent solar
 
-# solar_cell_efficiency = 0.285 * 0.9 # Microlink
-# solar_cell_efficiency = 0.243 * 0.9 # Sunpower
-solar_cell_efficiency = 0.14 * 0.9 # Ascent Solar
+if vertical_cells == "sunpower":
+    vert_solar_cell_efficiency = 0.243 * 0.9 # Sunpower
+    vert_rho_solar_cells = 0.425 * 1.1  # kg/m^2, solar cell area density. Sunpower.
+    max_solar_area_fraction_vert = opti.parameter(value=0.60) # for sunpower
 
-# Solar cell weight
-# rho_solar_cells = 0.255 * 1.1 # kg/m^2, solar cell area density. Microlink.
-# rho_solar_cells = 0.425 * 1.1 # kg/m^2, solar cell area density. Sunpower.
-rho_solar_cells = 0.300 * 1.1 # kg/m^2, solar cell area density. Ascent Solar
+if vertical_cells == "ascent_solar":
+    vert_solar_cell_efficiency = 0.14 * 0.9  # Ascent Solar
+    vert_rho_solar_cells = 0.300 * 1.1  # kg/m^2, solar cell area density. Ascent Solar
+    max_solar_area_fraction_vert = opti.parameter(value=0.80)  # for microlink and ascent solar
 
-#solar usable area fraction assumed consistent on tail surfaces when active
-max_solar_area_fraction = opti.parameter(value=0.80) # for microlink and ascent solar
-# max_solar_area_fraction = opti.parameter(value=0.60) # for sunpower
+if wing_cells == "microlink":
+    horz_solar_cell_efficiency = 0.285 * 0.9  # Microlink
+    horz_rho_solar_cells = 0.255 * 1.1  # kg/m^2, solar cell area density. Microlink.
+    max_solar_area_fraction_horz = opti.parameter(value=0.80)  # for microlink and ascent solar
+
+if wing_cells == "sunpower":
+    horz_solar_cell_efficiency = 0.243 * 0.9  # Sunpower
+    horz_rho_solar_cells = 0.425 * 1.1  # kg/m^2, solar cell area density. Sunpower.
+    max_solar_area_fraction_horz = opti.parameter(value=0.60)  # for sunpower
+
+if wing_cells == "ascent_solar":
+    horz_solar_cell_efficiency = 0.14 * 0.9  # Ascent Solar
+    horz_rho_solar_cells = 0.300 * 1.1  # kg/m^2, solar cell area density. Ascent Solar
+    max_solar_area_fraction_horz = opti.parameter(value=0.80)  # for microlink and ascent solar
 
 # This figure should take into account all temperature factors,
 # spectral losses (different spectrum at altitude), multi-junction effects, etc.
@@ -930,35 +950,34 @@ vtail_solar_area_fraction = opti.variable(
     scale=0.5,
     category='des'
 )
-htail_solar_area_fraction = opti.variable(
-    init_guess=0.8,
-    scale=0.5,
-    category='des'
-)
+
 if tail_panels == True:
     opti.subject_to([
         solar_area_fraction > 0,
-        solar_area_fraction < max_solar_area_fraction,  # TODO check
+        solar_area_fraction < max_solar_area_fraction_horz,  # TODO check
         vtail_solar_area_fraction > 0,
-        vtail_solar_area_fraction < max_solar_area_fraction,
+        vtail_solar_area_fraction < max_solar_area_fraction_vert,
     ])
 if tail_panels == False:
     opti.subject_to([
         solar_area_fraction > 0,
-        solar_area_fraction < max_solar_area_fraction,  # TODO check
+        solar_area_fraction < max_solar_area_fraction_horz,  # TODO check
         vtail_solar_area_fraction == 0,
     ])
 
 area_solar_horz = wing.area() * solar_area_fraction
 area_solar_vert = center_vstab.area() * vtail_solar_area_fraction
-# Energy generation cascade
+# Energy generation cascade accounting for different horizontal and vertical cell assumptions
 power_in_from_sun_horz = solar_flux_on_horizontal * area_solar_horz
 power_in_from_sun_vert = solar_flux_on_vertical * area_solar_vert
-power_in_from_sun = (power_in_from_sun_horz + power_in_from_sun_vert) / energy_generation_margin
-power_in_after_panels = power_in_from_sun * solar_cell_efficiency
-power_in = power_in_after_panels * MPPT_efficiency
+power_in_from_sun_horz = power_in_from_sun_horz / energy_generation_margin
+power_in_from_sun_vert = power_in_from_sun_vert / energy_generation_margin
+power_in_after_panels_horz = power_in_from_sun_horz * horz_solar_cell_efficiency
+power_in_after_panels_vert = power_in_from_sun_vert * vert_solar_cell_efficiency
+power_in_after_panels_tot = power_in_after_panels_horz + power_in_after_panels_vert
+power_in = (power_in_after_panels_horz + power_in_after_panels_vert) * MPPT_efficiency
 
-mass_solar_cells = rho_solar_cells * (area_solar_horz + area_solar_vert)
+mass_solar_cells = (vert_rho_solar_cells * area_solar_vert) + (horz_rho_solar_cells * area_solar_horz)
 
 ### Battery calculations
 
@@ -989,7 +1008,7 @@ power_in_after_panels_max = opti.variable(
     category="des"
 )
 opti.subject_to([
-    power_in_after_panels_max > power_in_after_panels,
+    power_in_after_panels_max > power_in_after_panels_tot,
     power_in_after_panels_max > 0
 ])
 
