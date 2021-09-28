@@ -3,7 +3,7 @@ from design_opt import *
 import aerosandbox.numpy as np
 
 ### Set the run ID
-run_name = "10kg_payload_500_batteries"
+run_name = "6kg_payload_100W_CIGS_300whr_pack"
 
 ### Turn parallelization on/off.
 parallel = True

@@ -51,11 +51,11 @@ day_of_year = opti.parameter(value=244)  # Julian day. June 1 is 153, June 22 is
 strat_offset_value = opti.parameter(value=1000)
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 required_headway_per_day = 0  # meters
-allow_trajectory_optimization = True
+allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
 make_plots = True
-mass_payload = opti.parameter(value=30)
-tail_panels = False
+mass_payload = opti.parameter(value=6)
+tail_panels = True
 # wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
 def wind_speed_func(alt):
     day_array = np.full(shape=alt.shape[0], fill_value=1) * day_of_year
@@ -833,8 +833,8 @@ mass_propulsion = mass_motor_mounted + mass_propellers + mass_ESC
 # Account for payload power
 power_out_payload = np.where(
     solar_flux_on_horizontal > 1,
-    500,
-    150
+    100,
+    100
 )
 
 # Account for avionics power
@@ -882,14 +882,14 @@ battery_state_of_charge_percentage = 100 * (battery_stored_energy_nondim + (1 - 
 
 ### Solar calculations
 
-solar_cell_efficiency = 0.285 * 0.9 # Microlink
+# solar_cell_efficiency = 0.285 * 0.9 # Microlink
 # solar_cell_efficiency = 0.243 * 0.9 # Sunpower
-# solar_cell_efficiency = 0.14 * 0.9 # Ascent Solar
+solar_cell_efficiency = 0.14 * 0.9 # Ascent Solar
 
 # Solar cell weight
-rho_solar_cells = 0.255 * 1.1 # kg/m^2, solar cell area density. Microlink.
+# rho_solar_cells = 0.255 * 1.1 # kg/m^2, solar cell area density. Microlink.
 # rho_solar_cells = 0.425 * 1.1 # kg/m^2, solar cell area density. Sunpower.
-# rho_solar_cells = 0.300 * 1.1 # kg/m^2, solar cell area density. Ascent Solar
+rho_solar_cells = 0.300 * 1.1 # kg/m^2, solar cell area density. Ascent Solar
 
 #solar usable area fraction assumed consistent on tail surfaces when active
 max_solar_area_fraction = opti.parameter(value=0.80) # for microlink and ascent solar
@@ -939,8 +939,6 @@ if tail_panels == True:
     opti.subject_to([
         solar_area_fraction > 0,
         solar_area_fraction < max_solar_area_fraction,  # TODO check
-        htail_solar_area_fraction > 0,
-        htail_solar_area_fraction < max_solar_area_fraction,
         vtail_solar_area_fraction > 0,
         vtail_solar_area_fraction < max_solar_area_fraction,
     ])
@@ -948,11 +946,10 @@ if tail_panels == False:
     opti.subject_to([
         solar_area_fraction > 0,
         solar_area_fraction < max_solar_area_fraction,  # TODO check
-        htail_solar_area_fraction == 0,
         vtail_solar_area_fraction == 0,
     ])
 
-area_solar_horz = wing.area() * solar_area_fraction + center_hstab.area() * htail_solar_area_fraction
+area_solar_horz = wing.area() * solar_area_fraction
 area_solar_vert = center_vstab.area() * vtail_solar_area_fraction
 # Energy generation cascade
 power_in_from_sun_horz = solar_flux_on_horizontal * area_solar_horz
