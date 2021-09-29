@@ -56,9 +56,9 @@ structural_load_factor = 3  # over static
 make_plots = True
 mass_payload = opti.parameter(value=6)
 tail_panels = True
-fuselage_billboard = False # TODO account for added weight of this structure (and added drag?)
+fuselage_billboard = True # TODO account for added weight of this structure (and added drag?)
 wing_cells = "ascent_solar" # select cells for wing, options include ascent_solar, sunpower, and microlink
-vertical_cells = "sunpower" # select cells for vtail, options include ascent_solar, sunpower, and microlink
+vertical_cells = "microlink" # select cells for vtail, options include ascent_solar, sunpower, and microlink
 # vertical cells only mounted when tail_panels is True
 billboard_cells = "sunpower" # select cells for billboard, options include ascent_solar, sunpower, and microlink
 # vertical cells only mounted when fuselage_billboard is True
@@ -557,7 +557,10 @@ solar_flux_on_horizontal = lib_solar.solar_flux_on_horizontal(
 solar_flux_on_vertical = lib_solar.solar_flux_on_vertical(
     latitude, day_of_year, time, scattering=True
 )
-billboard_angle = np.arctan2(boom_diameter * 3, boom_diameter / 2) * 180 / np.pi
+billboard_angle = opti.variable(
+    init_guess=10,
+    scale=1,
+    category="ops")
 solar_flux_on_billboard = lib_solar.solar_flux_on_angle(
     billboard_angle, latitude, day_of_year, time, scattering=True
 )
@@ -983,6 +986,7 @@ if tail_panels == True:
         vtail_solar_area_fraction > 0,
         vtail_solar_area_fraction < max_solar_area_fraction_vert,
     ])
+
 if tail_panels == False:
     opti.subject_to([
         solar_area_fraction > 0,
@@ -993,17 +997,30 @@ if tail_panels == False:
 if fuselage_billboard == True:
     opti.subject_to([
         billboard_solar_area_fraction == 1,
+        billboard_angle == np.arctan2(boom_diameter * 3, boom_diameter / 2) * 180 / np.pi,
     ])
+    # Billboard geometry is 3 times the height of the boom diameter and fixed
+    billboard_area = boom_diameter * 3 * center_boom_length # TODO make billboard height a optimization variable
+    billboard_volume = (boom_diameter * 3 * boom_diameter / 2) * 0.5 * center_boom_length
+    foam_density = 16.0185
+    mass_billboard = billboard_volume * foam_density
+    area_solar_fuselage = billboard_area * billboard_solar_area_fraction
+
 if fuselage_billboard == False:
     opti.subject_to([
         billboard_solar_area_fraction == 0,
+        billboard_angle == np.arctan2(boom_diameter * 3, boom_diameter / 2) * 180 / np.pi,
     ])
-# Billboard geometry is 3 times the height of the boom diameter and fixed
-billboard_area = boom_diameter * 3 * center_boom_length # TODO make billboard height a optimization variable
+    area_solar_fuselage = 0
+
+    billboard_volume = (boom_diameter * 3 * boom_diameter / 2) * 0.5 * center_boom_length
+    billboard_area = 0
+    mass_billboard = 0
+
 
 area_solar_horz = wing.area() * solar_area_fraction
 area_solar_vert = center_vstab.area() * vtail_solar_area_fraction
-area_solar_fuselage = billboard_area * billboard_solar_area_fraction
+
 # Energy generation cascade accounting for different horizontal and vertical cell assumptions
 power_in_from_sun_horz = solar_flux_on_horizontal * area_solar_horz
 power_in_from_sun_vert = solar_flux_on_vertical * area_solar_vert
@@ -1255,7 +1272,7 @@ mass_fairings = 2.067 * max_mass_total / mass_daedalus  # Scale fairing mass to 
 mass_landing_gear = 0.728 * max_mass_total / mass_daedalus  # Scale landing gear mass to same mass fraction as Daedalus
 mass_strut = 661 / 2 * (strut_chord / 10) ** 2 * strut_span  # mass per strut, formula from Jamie
 
-mass_center_fuse = mass_center_boom + mass_fairings + mass_landing_gear  # per fuselage
+mass_center_fuse = mass_center_boom + mass_fairings + mass_landing_gear + mass_billboard  # per fuselage
 mass_right_fuse = mass_right_boom
 mass_left_fuse = mass_left_boom
 
