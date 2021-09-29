@@ -56,9 +56,12 @@ structural_load_factor = 3  # over static
 make_plots = True
 mass_payload = opti.parameter(value=6)
 tail_panels = True
+fuselage_billboard = False # TODO account for added weight of this structure (and added drag?)
 wing_cells = "ascent_solar" # select cells for wing, options include ascent_solar, sunpower, and microlink
-vertical_cells = "ascent_solar" # select cells for vtail, options include ascent_solar, sunpower, and microlink
+vertical_cells = "sunpower" # select cells for vtail, options include ascent_solar, sunpower, and microlink
 # vertical cells only mounted when tail_panels is True
+billboard_cells = "sunpower" # select cells for billboard, options include ascent_solar, sunpower, and microlink
+# vertical cells only mounted when fuselage_billboard is True
 
 # wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
 def wind_speed_func(alt):
@@ -66,8 +69,9 @@ def wind_speed_func(alt):
     latitude_array = np.full(shape=alt.shape[0], fill_value=1) * latitude
     speed_func = lib_winds.wind_speed_world_95(alt, latitude_array, day_array)
     return speed_func
-battery_specific_energy_Wh_kg = opti.parameter(value=450)
-battery_pack_cell_percentage = 0.89  # What percent of the battery pack consists of the module, by weight?
+
+battery_specific_energy_Wh_kg = opti.parameter(value=300)
+battery_pack_cell_percentage = 1.0  # What percent of the battery pack consists of the module, by weight?
 variable_pitch = False
 use_propulsion_fits_from_FL2020_1682_undergrads = True # Warning: Fits not yet validated
 # Accounts for module HW, BMS, pack installation, etc.
@@ -553,6 +557,10 @@ solar_flux_on_horizontal = lib_solar.solar_flux_on_horizontal(
 solar_flux_on_vertical = lib_solar.solar_flux_on_vertical(
     latitude, day_of_year, time, scattering=True
 )
+billboard_angle = np.arctan2(boom_diameter * 3, boom_diameter / 2) * 180 / np.pi
+solar_flux_on_billboard = lib_solar.solar_flux_on_angle(
+    billboard_angle, latitude, day_of_year, time, scattering=True
+)
 
 # endregion
 
@@ -915,6 +923,18 @@ if wing_cells == "ascent_solar":
     horz_rho_solar_cells = 0.300 * 1.1  # kg/m^2, solar cell area density. Ascent Solar
     max_solar_area_fraction_horz = opti.parameter(value=0.80)  # for microlink and ascent solar
 
+if billboard_cells == "microlink":
+    fuselage_solar_cell_efficiency = 0.285 * 0.9  # Microlink
+    fuselage_rho_solar_cells = 0.255 * 1.1  # kg/m^2, solar cell area density. Microlink.
+
+if billboard_cells == "sunpower":
+    fuselage_solar_cell_efficiency = 0.243 * 0.9  # Sunpower
+    fuselage_rho_solar_cells = 0.425 * 1.1  # kg/m^2, solar cell area density. Sunpower.
+
+if billboard_cells == "ascent_solar":
+    fuselage_solar_cell_efficiency = 0.14 * 0.9  # Ascent Solar
+    fuselage_rho_solar_cells = 0.300 * 1.1  # kg/m^2, solar cell area density. Ascent Solar
+
 # This figure should take into account all temperature factors,
 # spectral losses (different spectrum at altitude), multi-junction effects, etc.
 # Should not take into account MPPT losses.
@@ -950,6 +970,11 @@ vtail_solar_area_fraction = opti.variable(
     scale=0.5,
     category='des'
 )
+billboard_solar_area_fraction = opti.variable(
+    init_guess=1,
+    scale=0.5,
+    category='des'
+)
 
 if tail_panels == True:
     opti.subject_to([
@@ -965,19 +990,34 @@ if tail_panels == False:
         vtail_solar_area_fraction == 0,
     ])
 
+if fuselage_billboard == True:
+    opti.subject_to([
+        billboard_solar_area_fraction == 1,
+    ])
+if fuselage_billboard == False:
+    opti.subject_to([
+        billboard_solar_area_fraction == 0,
+    ])
+# Billboard geometry is 3 times the height of the boom diameter and fixed
+billboard_area = boom_diameter * 3 * center_boom_length # TODO make billboard height a optimization variable
+
 area_solar_horz = wing.area() * solar_area_fraction
 area_solar_vert = center_vstab.area() * vtail_solar_area_fraction
+area_solar_fuselage = billboard_area * billboard_solar_area_fraction
 # Energy generation cascade accounting for different horizontal and vertical cell assumptions
 power_in_from_sun_horz = solar_flux_on_horizontal * area_solar_horz
 power_in_from_sun_vert = solar_flux_on_vertical * area_solar_vert
+power_in_from_sun_fuselage = solar_flux_on_billboard * billboard_area
 power_in_from_sun_horz = power_in_from_sun_horz / energy_generation_margin
 power_in_from_sun_vert = power_in_from_sun_vert / energy_generation_margin
+power_in_from_sun_fuselage = power_in_from_sun_fuselage / energy_generation_margin
 power_in_after_panels_horz = power_in_from_sun_horz * horz_solar_cell_efficiency
 power_in_after_panels_vert = power_in_from_sun_vert * vert_solar_cell_efficiency
-power_in_after_panels_tot = power_in_after_panels_horz + power_in_after_panels_vert
-power_in = (power_in_after_panels_horz + power_in_after_panels_vert) * MPPT_efficiency
+power_in_after_panels_fuselage = power_in_from_sun_fuselage * fuselage_solar_cell_efficiency
+power_in_after_panels_tot = power_in_after_panels_horz + power_in_after_panels_vert + power_in_after_panels_fuselage
+power_in = (power_in_after_panels_tot) * MPPT_efficiency
 
-mass_solar_cells = (vert_rho_solar_cells * area_solar_vert) + (horz_rho_solar_cells * area_solar_horz)
+mass_solar_cells = (vert_rho_solar_cells * area_solar_vert) + (horz_rho_solar_cells * area_solar_horz) + (fuselage_rho_solar_cells * area_solar_fuselage)
 
 ### Battery calculations
 

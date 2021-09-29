@@ -3,16 +3,7 @@ import aerosandbox.numpy as np
 from scipy import interpolate
 import pandas as pd
 
-run_name = "6kg_payload_100W_CIGS_300whr_pack"
-# run_name = "10kg_payload"
-# run_name = "10kg_payload_continuous_power"
-# run_name = "10kg_payload_no_cycling"
-# run_name = "10kg_payload_sunpower"
-# run_name = "10kg_payload_ascent"
-# run_name = "10kg_payload_350_batteries"
-# run_name = "10kg_payload_400_batteries"
-# run_name = "10kg_payload_500_batteries"
-# run_name = "6kg_payload_100W"
+run_name = "6kg_payload_100W_CIGS&microlink_300whr_pack"
 
 debug_mode = False
 
@@ -251,8 +242,8 @@ plt.suptitle(
 )
 plt.title(
     "\n".join([
-        "6 kg payload, min alt set by strat height, no alt. cycling, 300 Wh/kg battery pack,",
-        "100W continuous payload power, CIGS solar cells, station-keeping in 95% wind"
+        "6 kg payload, min alt set by strat height, no alt. cycling, 300 Wh/kg batteries,",
+        "100W continuous payload power, CIGS solar cells on wing and Microlink on v-tail, station-keeping in 95% wind"
     ]),
     fontsize=10
 )
