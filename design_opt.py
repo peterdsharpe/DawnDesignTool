@@ -56,7 +56,7 @@ structural_load_factor = 3  # over static
 make_plots = True
 mass_payload = opti.parameter(value=6)
 tail_panels = True
-fuselage_billboard = True # TODO account for added weight of this structure (and added drag?)
+fuselage_billboard = False
 wing_cells = "ascent_solar" # select cells for wing, options include ascent_solar, sunpower, and microlink
 vertical_cells = "microlink" # select cells for vtail, options include ascent_solar, sunpower, and microlink
 # vertical cells only mounted when tail_panels is True
@@ -978,6 +978,11 @@ billboard_solar_area_fraction = opti.variable(
     scale=0.5,
     category='des'
 )
+billboard_height = opti.variable(
+    init_guess = boom_diameter * 3,
+    scale = 0.1,
+    category = 'des'
+)
 
 if tail_panels == True:
     opti.subject_to([
@@ -998,10 +1003,12 @@ if fuselage_billboard == True:
     opti.subject_to([
         billboard_solar_area_fraction == 1,
         billboard_angle == np.arctan2(boom_diameter * 3, boom_diameter / 2) * 180 / np.pi,
+        billboard_height <= boom_diameter * 3,
+        billboard_height >= 0,
     ])
     # Billboard geometry is 3 times the height of the boom diameter and fixed
-    billboard_area = boom_diameter * 3 * center_boom_length # TODO make billboard height a optimization variable
-    billboard_volume = (boom_diameter * 3 * boom_diameter / 2) * 0.5 * center_boom_length
+    billboard_area = billboard_height * center_boom_length # TODO make billboard height a optimization variable
+    billboard_volume = (billboard_height * boom_diameter / 2) * 0.5 * center_boom_length
     foam_density = 16.0185
     mass_billboard = billboard_volume * foam_density
     area_solar_fuselage = billboard_area * billboard_solar_area_fraction
@@ -1010,10 +1017,10 @@ if fuselage_billboard == False:
     opti.subject_to([
         billboard_solar_area_fraction == 0,
         billboard_angle == np.arctan2(boom_diameter * 3, boom_diameter / 2) * 180 / np.pi,
+        billboard_height == 0,
     ])
     area_solar_fuselage = 0
-
-    billboard_volume = (boom_diameter * 3 * boom_diameter / 2) * 0.5 * center_boom_length
+    billboard_volume = (billboard_height * boom_diameter / 2) * 0.5 * center_boom_length
     billboard_area = 0
     mass_billboard = 0
 
