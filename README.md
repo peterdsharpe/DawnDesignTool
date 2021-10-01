@@ -84,7 +84,8 @@ All of the other files in this repository are one-off experiments that I ran at 
     
 ## Troubleshooting
 Follow this decision tree:
-* Before doing anything, try updating AeroSandbox by running this in your command line: `pip install --upgrade aerosandbox`
+* IF using_poetry == true THEN run `poetry install` inside of the repository directory
+* ELSE try updating AeroSandbox by running this in your command line: `pip install --upgrade aerosandbox`
 * For all other problems, notify Peter.
     
 ## Contact Info
