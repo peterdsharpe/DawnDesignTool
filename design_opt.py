@@ -50,7 +50,7 @@ latitude = opti.parameter(value=60)  # degrees (49 deg is top of CONUS, 26 deg i
 day_of_year = opti.parameter(value=244)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 strat_offset_value = opti.parameter(value=1000)
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
-required_headway_per_day = 0  # meters
+required_headway_per_day = 50000  # meters
 allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
 make_plots = True
@@ -87,7 +87,7 @@ allowable_battery_depth_of_discharge = opti.parameter(
 q_ne_over_q_max = opti.parameter(value=2) # Chosen on the basis of a paper read by Trevor Long about Helios, 1/16/21
 
 ##### Simulation Parameters
-n_timesteps_per_segment = 180  # Only relevant if allow_trajectory_optimization is True.
+n_timesteps_per_segment = 500  # Only relevant if allow_trajectory_optimization is True.
 # Quick convergence testing indicates you can get bad analyses below 150 or so...
 
 ##### Optimization bounds
@@ -170,7 +170,7 @@ airspeed = opti.variable(
     category="ops"
 )
 opti.subject_to([
-    airspeed / min_speed > 1
+    airspeed / min_speed > 1,
 ])
 
 flight_path_angle = opti.variable(
@@ -554,15 +554,21 @@ q = 1 / 2 * rho * airspeed ** 2  # Solar calculations
 solar_flux_on_horizontal = lib_solar.solar_flux_on_horizontal(
     latitude, day_of_year, time, scattering=True
 )
-solar_flux_on_vertical = lib_solar.solar_flux_on_vertical(
-    latitude, day_of_year, time, scattering=True
+solar_flux_on_vertical_left = lib_solar.solar_flux_circlular_flight_path(
+    latitude, day_of_year, time, 90, 50000, x, scattering=True
+)
+solar_flux_on_vertical_right = lib_solar.solar_flux_circlular_flight_path(
+    latitude, day_of_year, time, -90, 50000, x, scattering=True
 )
 billboard_angle = opti.variable(
     init_guess=10,
     scale=1,
     category="ops")
-solar_flux_on_billboard = lib_solar.solar_flux_on_angle(
-    billboard_angle, latitude, day_of_year, time, scattering=True
+solar_flux_on_billboard_left = lib_solar.solar_flux_circlular_flight_path(
+    latitude, day_of_year, time, billboard_angle, 50000, x, scattering=True,
+)
+solar_flux_on_billboard_right = lib_solar.solar_flux_circlular_flight_path(
+    latitude, day_of_year, time, -billboard_angle, 50000, x, scattering=True,
 )
 
 # endregion
@@ -1030,8 +1036,8 @@ area_solar_vert = center_vstab.area() * vtail_solar_area_fraction
 
 # Energy generation cascade accounting for different horizontal and vertical cell assumptions
 power_in_from_sun_horz = solar_flux_on_horizontal * area_solar_horz
-power_in_from_sun_vert = solar_flux_on_vertical * area_solar_vert
-power_in_from_sun_fuselage = solar_flux_on_billboard * billboard_area
+power_in_from_sun_vert = solar_flux_on_vertical_left * area_solar_vert + solar_flux_on_vertical_right * area_solar_vert
+power_in_from_sun_fuselage = solar_flux_on_billboard_left * billboard_area + solar_flux_on_billboard_right * area_solar_vert
 power_in_from_sun_horz = power_in_from_sun_horz / energy_generation_margin
 power_in_from_sun_vert = power_in_from_sun_vert / energy_generation_margin
 power_in_from_sun_fuselage = power_in_from_sun_fuselage / energy_generation_margin
@@ -1041,7 +1047,7 @@ power_in_after_panels_fuselage = power_in_from_sun_fuselage * fuselage_solar_cel
 power_in_after_panels_tot = power_in_after_panels_horz + power_in_after_panels_vert + power_in_after_panels_fuselage
 power_in = (power_in_after_panels_tot) * MPPT_efficiency
 
-mass_solar_cells = (vert_rho_solar_cells * area_solar_vert) + (horz_rho_solar_cells * area_solar_horz) + (fuselage_rho_solar_cells * area_solar_fuselage)
+mass_solar_cells = (vert_rho_solar_cells * area_solar_vert * 2) + (horz_rho_solar_cells * area_solar_horz) + (fuselage_rho_solar_cells * area_solar_fuselage * 2)
 
 ### Battery calculations
 
@@ -1255,7 +1261,7 @@ opti.subject_to(n_ribs_vstab > 0)
 mass_center_vstab = mass_vstab(center_vstab, n_ribs_vstab)
 
 # Fuselage & Boom
-mass_center_boom = lib_mass_struct.mass_hpa_tail_boom(
+mass_center_boom = lib_mass_struct.mass_hpa_tail_boom( #TODO add gravitational load for solar cells
     length_tail_boom=center_boom_length - wing_x_quarter_chord,  # support up to the quarter-chord
     dynamic_pressure_at_manuever_speed=q_ne,
     # mean_tail_surface_area=cas.fmax(center_hstab.area(), center_vstab.area()), # most optimistic
