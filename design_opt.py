@@ -57,7 +57,7 @@ make_plots = True
 mass_payload = opti.parameter(value=6)
 tail_panels = True
 fuselage_billboard = False
-wing_cells = "ascent_solar" # select cells for wing, options include ascent_solar, sunpower, and microlink
+wing_cells = "sunpower" # select cells for wing, options include ascent_solar, sunpower, and microlink
 vertical_cells = "microlink" # select cells for vtail, options include ascent_solar, sunpower, and microlink
 # vertical cells only mounted when tail_panels is True
 billboard_cells = "sunpower" # select cells for billboard, options include ascent_solar, sunpower, and microlink
@@ -1412,7 +1412,7 @@ if not allow_trajectory_optimization:
     ])
     # Prevent groundspeed loss
     opti.subject_to([
-        airspeed / 20 > wind_speed / 20
+        airspeed / 20 > ((wind_speed + 5) / 20),
     ])
 
 ###### Climb Optimization Constraints
@@ -1657,9 +1657,9 @@ if __name__ == "__main__":
              title="Battery Charge State over Simulation",
              save_name="outputs/battery_charge.png"
              )
-        plot("x_km", "y_km",
-             xlabel="Downrange Distance [km]",
-             ylabel="Altitude [km]",
+        plot("hour", "x_km",
+             xlabel="hours after Solar Noon",
+             ylabel="Downrange Distance [km]",
              title="Optimal Trajectory over Simulation",
              save_name="outputs/trajectory.png"
              )
