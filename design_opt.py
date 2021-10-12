@@ -1421,6 +1421,8 @@ if __name__ == "__main__":
         "wing_root_chord"
     ])
 
+    import plotly.io as pio
+    pio.renderers.default="browser"
 
     def qp(*args: List[str]):
         """
