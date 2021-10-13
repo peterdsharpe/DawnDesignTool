@@ -57,7 +57,7 @@ make_plots = True
 mass_payload = opti.parameter(value=6)
 tail_panels = True
 fuselage_billboard = False
-wing_cells = "sunpower" # select cells for wing, options include ascent_solar, sunpower, and microlink
+wing_cells = "ascent_solar" # select cells for wing, options include ascent_solar, sunpower, and microlink
 vertical_cells = "microlink" # select cells for vtail, options include ascent_solar, sunpower, and microlink
 # vertical cells only mounted when tail_panels is True
 billboard_cells = "sunpower" # select cells for billboard, options include ascent_solar, sunpower, and microlink
@@ -87,7 +87,7 @@ allowable_battery_depth_of_discharge = opti.parameter(
 q_ne_over_q_max = opti.parameter(value=2) # Chosen on the basis of a paper read by Trevor Long about Helios, 1/16/21
 
 ##### Simulation Parameters
-n_timesteps_per_segment = 500  # Only relevant if allow_trajectory_optimization is True.
+n_timesteps_per_segment = 180  # Only relevant if allow_trajectory_optimization is True.
 # Quick convergence testing indicates you can get bad analyses below 150 or so...
 
 ##### Optimization bounds
@@ -159,6 +159,7 @@ y_ft = y / 0.3048
 
 opti.subject_to([
     y[time_periodic_start_index:] / min_cruise_altitude > 1,
+    # y[time_periodic_start_index:] == 16000,
     y / 40000 > 0,  # stay above ground
     y / 40000 < 1,  # models break down
 ])
@@ -551,24 +552,42 @@ a = my_atmosphere.speed_of_sound()
 mach = airspeed / a
 g = 9.81  # gravitational acceleration, m/s^2
 q = 1 / 2 * rho * airspeed ** 2  # Solar calculations
+wind_speed = wind_speed_func(y)
+wind_direction = 90
+flight_path_radius = 50000
+
+# groundspeed = opti.variable(
+#     n_vars=n_timesteps,
+#     init_guess=20,
+#     scale=20,
+#     category="ops"
+# )
+
+vehicle_direction = x / (np.pi / 180) / flight_path_radius + 90 # direction the vehicle must fly on to remain in the circular trajectory
+heading_x = airspeed * np.sind(vehicle_direction) - wind_speed * np.sind(wind_direction)  # x component of heading vector
+heading_y = airspeed * np.cosd(vehicle_direction) - wind_speed * np.cosd(wind_direction)  # y component of heading vector
+# groundspeed = np.sqrt(heading_x ** 2 + heading_y ** 2) # speed of aircraft as measured from observer on the ground
+vehicle_heading = np.arctan2d(heading_y, heading_x) # actual directionality of the vehicle as modified by the wind speed and direction
+panel_heading = vehicle_heading - 90 # actual directionality of the solar panel
+
 solar_flux_on_horizontal = lib_solar.solar_flux_on_horizontal(
     latitude, day_of_year, time, scattering=True
 )
-solar_flux_on_vertical_left = lib_solar.solar_flux_circlular_flight_path(
-    latitude, day_of_year, time, 90, 50000, x, scattering=True
+solar_flux_on_vertical_left = lib_solar.solar_flux_circular_flight_path(
+    latitude, day_of_year, time, 90, panel_heading, scattering=True,
 )
-solar_flux_on_vertical_right = lib_solar.solar_flux_circlular_flight_path(
-    latitude, day_of_year, time, -90, 50000, x, scattering=True
+solar_flux_on_vertical_right= lib_solar.solar_flux_circular_flight_path(
+    latitude, day_of_year, time, -90, panel_heading, scattering=True,
 )
 billboard_angle = opti.variable(
     init_guess=10,
     scale=1,
     category="ops")
-solar_flux_on_billboard_left = lib_solar.solar_flux_circlular_flight_path(
-    latitude, day_of_year, time, billboard_angle, 50000, x, scattering=True,
+solar_flux_on_billboard_left = lib_solar.solar_flux_circular_flight_path(
+    latitude, day_of_year, time, billboard_angle, panel_heading, scattering=True,
 )
-solar_flux_on_billboard_right = lib_solar.solar_flux_circlular_flight_path(
-    latitude, day_of_year, time, -billboard_angle, 50000, x, scattering=True,
+solar_flux_on_billboard_right = lib_solar.solar_flux_circular_flight_path(
+    latitude, day_of_year, time, -billboard_angle, panel_heading, scattering=True,
 )
 
 # endregion
@@ -760,6 +779,7 @@ opti.subject_to([
     # Vv < 0.05,
     # Vv == 0.035,
     center_vstab.aspect_ratio() == 2.5,  # TODO review this
+    # center_vstab.area() < 0.1 * wing.area(),
     # center_vstab.aspect_ratio() > 1.9, # from Jamie, based on ASWing
     # center_vstab.aspect_ratio() < 2.5 # from Jamie, based on ASWing
 ])
@@ -1353,12 +1373,10 @@ gammadot_trapz = trapz(gammadot)
 
 ##### Winds
 
-wind_speed = wind_speed_func(y)
 wind_speed_midpoints = wind_speed_func(trapz(y))
-
 # Total
 opti.subject_to([
-    dx / 1e4 == (xdot_trapz - wind_speed_midpoints) * dt / 1e4,
+    # dx / 1e4 == (xdot_trapz - wind_speed_midpoints) * dt / 1e4,
     dy / 1e2 == ydot_trapz * dt / 1e2,
     dspeed / 1e-1 == speeddot_trapz * dt / 1e-1,
     dgamma / 1e-2 == gammadot_trapz * dt / 1e-2,
@@ -1412,7 +1430,8 @@ if not allow_trajectory_optimization:
     ])
     # Prevent groundspeed loss
     opti.subject_to([
-        airspeed / 20 > ((wind_speed + 5) / 20),
+        airspeed / 20 > ((wind_speed) / 20),
+
     ])
 
 ###### Climb Optimization Constraints
