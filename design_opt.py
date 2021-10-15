@@ -50,14 +50,14 @@ latitude = opti.parameter(value=60)  # degrees (49 deg is top of CONUS, 26 deg i
 day_of_year = opti.parameter(value=244)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 strat_offset_value = opti.parameter(value=1000)
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
-required_headway_per_day = 50000  # meters
+required_headway_per_day = 0  # meters
 allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
 make_plots = True
 mass_payload = opti.parameter(value=6)
 tail_panels = True
 fuselage_billboard = False
-wing_cells = "ascent_solar" # select cells for wing, options include ascent_solar, sunpower, and microlink
+wing_cells = "microlink" # select cells for wing, options include ascent_solar, sunpower, and microlink
 vertical_cells = "microlink" # select cells for vtail, options include ascent_solar, sunpower, and microlink
 # vertical cells only mounted when tail_panels is True
 billboard_cells = "sunpower" # select cells for billboard, options include ascent_solar, sunpower, and microlink
@@ -166,7 +166,7 @@ opti.subject_to([
 
 airspeed = opti.variable(
     n_vars=n_timesteps,
-    init_guess=20,
+    init_guess=35,
     scale=20,
     category="ops"
 )
@@ -553,21 +553,43 @@ mach = airspeed / a
 g = 9.81  # gravitational acceleration, m/s^2
 q = 1 / 2 * rho * airspeed ** 2  # Solar calculations
 wind_speed = wind_speed_func(y)
-wind_direction = 90
+wind_direction = -90
 flight_path_radius = 50000
 
-# groundspeed = opti.variable(
-#     n_vars=n_timesteps,
-#     init_guess=20,
-#     scale=20,
-#     category="ops"
-# )
+heading_x = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=25,
+    scale=20,
+    category="ops"
+)
+heading_y = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=1,
+    scale=20,
+    category="ops"
+)
+vehicle_heading = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=90,
+    scale=20,
+    category="ops"
+)
+groundspeed = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=1,
+    scale=1,
+    category="ops"
+)
 
-vehicle_direction = x / (np.pi / 180) / flight_path_radius + 90 # direction the vehicle must fly on to remain in the circular trajectory
+vehicle_direction = x / (np.pi / 180) / flight_path_radius + 90  # direction the vehicle must fly on to remain in the circular trajectory
 heading_x = airspeed * np.sind(vehicle_direction) - wind_speed * np.sind(wind_direction)  # x component of heading vector
 heading_y = airspeed * np.cosd(vehicle_direction) - wind_speed * np.cosd(wind_direction)  # y component of heading vector
-# groundspeed = np.sqrt(heading_x ** 2 + heading_y ** 2) # speed of aircraft as measured from observer on the ground
-vehicle_heading = np.arctan2d(heading_y, heading_x) # actual directionality of the vehicle as modified by the wind speed and direction
+vehicle_heading = np.arctan2d(heading_y, heading_x)  # actual directionality of the vehicle as modified by the wind speed and direction
+opti.subject_to([
+    groundspeed ** 2 == heading_x ** 2 + heading_y ** 2, # speed of aircraft as measured from observer on the ground
+    groundspeed >= 0,
+    vehicle_heading >= 0,
+])
 panel_heading = vehicle_heading - 90 # actual directionality of the solar panel
 
 solar_flux_on_horizontal = lib_solar.solar_flux_on_horizontal(
@@ -1376,7 +1398,7 @@ gammadot_trapz = trapz(gammadot)
 wind_speed_midpoints = wind_speed_func(trapz(y))
 # Total
 opti.subject_to([
-    # dx / 1e4 == (xdot_trapz - wind_speed_midpoints) * dt / 1e4,
+    dx / 1e2 == trapz(groundspeed) * dt / 1e2,
     dy / 1e2 == ydot_trapz * dt / 1e2,
     dspeed / 1e-1 == speeddot_trapz * dt / 1e-1,
     dgamma / 1e-2 == gammadot_trapz * dt / 1e-2,
@@ -1429,10 +1451,10 @@ if not allow_trajectory_optimization:
         flight_path_angle / 100 == 0
     ])
     # Prevent groundspeed loss
-    opti.subject_to([
-        airspeed / 20 > ((wind_speed) / 20),
-
-    ])
+    # opti.subject_to([
+    #     airspeed / 20 > ((wind_speed) / 20),
+    #
+    # ])
 
 ###### Climb Optimization Constraints
 if climb_opt:
