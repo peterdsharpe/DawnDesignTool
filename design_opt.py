@@ -50,12 +50,12 @@ latitude = opti.parameter(value=60)  # degrees (49 deg is top of CONUS, 26 deg i
 day_of_year = opti.parameter(value=244)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 strat_offset_value = opti.parameter(value=1000)
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
-required_headway_per_day = 0  # meters
+required_headway_per_day = 1000 # meters
 allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
 make_plots = False
 mass_payload = opti.parameter(value=6)
-tail_panels = True
+tail_panels = False
 fuselage_billboard = False
 wing_cells = "microlink" # select cells for wing, options include ascent_solar, sunpower, and microlink
 vertical_cells = "microlink" # select cells for vtail, options include ascent_solar, sunpower, and microlink
@@ -83,7 +83,7 @@ use_propulsion_fits_from_FL2020_1682_undergrads = True # Warning: Fits not yet v
 structural_mass_margin_multiplier = opti.parameter(value=1.25)  # TODO Jamie dropped to 1.215 - why?
 energy_generation_margin = opti.parameter(value=1.05)
 allowable_battery_depth_of_discharge = opti.parameter(
-    value=0.85)  # How much of the battery can you actually use? # Reviewed w/ Annick & Bjarni 4/30/2020
+    value=0.95)  # How much of the battery can you actually use? # updated according to Matthew Berk discussion 10/21/21
 q_ne_over_q_max = opti.parameter(value=2) # Chosen on the basis of a paper read by Trevor Long about Helios, 1/16/21
 
 ##### Simulation Parameters
@@ -558,19 +558,19 @@ flight_path_radius = 50000
 
 vehicle_direction = opti.variable(
     n_vars=n_timesteps,
-    init_guess=5,
+    init_guess=90,
     scale=20,
     category="ops"
 )
 heading_x = opti.variable(
     n_vars=n_timesteps,
-    init_guess=90,
+    init_guess=25,
     scale=20,
     category="ops"
 )
 heading_y = opti.variable(
     n_vars=n_timesteps,
-    init_guess=180,
+    init_guess=3,
     scale=20,
     category="ops"
 )
@@ -582,21 +582,20 @@ vehicle_heading = opti.variable(
 )
 groundspeed = opti.variable(
     n_vars=n_timesteps,
-    init_guess=2,
+    init_guess=5,
     scale=1,
     category="ops"
 )
 
 opti.subject_to([
-    vehicle_direction == x / (np.pi / 180) / flight_path_radius + 90 , # direction the vehicle must fly on to remain in the circular trajectory
+    vehicle_direction == x / (np.pi / 180) / flight_path_radius + 90, # direction the vehicle must fly on to remain in the circular trajectory
     # vehicle_direction >= 0,
     heading_x == airspeed * np.sind(vehicle_direction) - wind_speed * np.sind(wind_direction),  # x component of heading vector
     heading_y == airspeed * np.cosd(vehicle_direction) - wind_speed * np.cosd(wind_direction) , # y component of heading vector
     vehicle_heading == np.arctan2d(heading_y, heading_x), # actual directionality of the vehicle as modified by the wind speed and direction
     # vehicle_heading >= 0,
     groundspeed ** 2 == heading_x ** 2 + heading_y ** 2, # speed of aircraft as measured from observer on the ground
-    groundspeed >= 2,
-    airspeed >= 0,
+    groundspeed >= 0.2,
 ])
 panel_heading = vehicle_heading - 90 # actual directionality of the solar panel
 
@@ -1396,7 +1395,8 @@ dy = np.diff(y)
 dspeed = np.diff(airspeed)
 dgamma = np.diff(flight_path_angle)
 
-xdot_trapz = trapz(airspeed * np.cosd(flight_path_angle))
+wind_speed_midpoints = wind_speed_func(trapz(y))
+xdot_trapz = trapz(groundspeed * np.cosd(flight_path_angle))
 ydot_trapz = trapz(airspeed * np.sind(flight_path_angle))
 speeddot_trapz = trapz(speeddot)
 gammadot_trapz = trapz(gammadot)
@@ -1406,7 +1406,7 @@ gammadot_trapz = trapz(gammadot)
 wind_speed_midpoints = wind_speed_func(trapz(y))
 # Total
 opti.subject_to([
-    dx / 1e4 == trapz(groundspeed) * dt / 1e4,
+    dx / 1e4 == xdot_trapz * dt / 1e4,
     dy / 1e2 == ydot_trapz * dt / 1e2,
     dspeed / 1e-1 == speeddot_trapz * dt / 1e-1,
     dgamma / 1e-2 == gammadot_trapz * dt / 1e-2,
@@ -1459,10 +1459,10 @@ if not allow_trajectory_optimization:
         flight_path_angle / 100 == 0
     ])
     # Prevent groundspeed loss
-    # opti.subject_to([
-    #     airspeed / 20 > ((wind_speed) / 20),
-    #
-    # ])
+    opti.subject_to([
+        airspeed / 20 > ((wind_speed) / 20),
+
+    ])
 
 ###### Climb Optimization Constraints
 if climb_opt:
