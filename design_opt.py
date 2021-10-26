@@ -556,47 +556,14 @@ wind_speed = wind_speed_func(y)
 wind_direction = 180
 flight_path_radius = 50000
 
-vehicle_direction = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=90,
-    scale=20,
-    category="ops"
-)
-heading_x = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=25,
-    scale=20,
-    category="ops"
-)
-heading_y = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=3,
-    scale=20,
-    category="ops"
-)
-vehicle_heading = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=90,
-    scale=20,
-    category="ops"
-)
-groundspeed = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=5,
-    scale=1,
-    category="ops"
-)
+vehicle_bearing = x / (np.pi / 180) / flight_path_radius + 90
+# heading_x = airspeed * np.sind(vehicle_bearing) - wind_speed * np.sind(wind_direction)  # x component of heading vector
+# heading_y = airspeed * np.cosd(vehicle_bearing) - wind_speed * np.cosd(wind_direction) # y component of heading vector
+# vehicle_heading = np.arctan2d(heading_y, heading_x) # actual directionality of the vehicle as modified by the wind speed and direction
+vehicle_heading = vehicle_bearing # TODO this is here only for debugging
+# groundspeed = (heading_x ** 2 + heading_y ** 2) ** 0.5
+groundspeed = airspeed # TODO this is here only for debugging
 
-opti.subject_to([
-    vehicle_direction == x / (np.pi / 180) / flight_path_radius + 90, # direction the vehicle must fly on to remain in the circular trajectory
-    # vehicle_direction >= 0,
-    heading_x == airspeed * np.sind(vehicle_direction) - wind_speed * np.sind(wind_direction),  # x component of heading vector
-    heading_y == airspeed * np.cosd(vehicle_direction) - wind_speed * np.cosd(wind_direction) , # y component of heading vector
-    vehicle_heading == np.arctan2d(heading_y, heading_x), # actual directionality of the vehicle as modified by the wind speed and direction
-    # vehicle_heading >= 0,
-    groundspeed ** 2 == heading_x ** 2 + heading_y ** 2, # speed of aircraft as measured from observer on the ground
-    groundspeed >= 0.2,
-])
 panel_heading = vehicle_heading - 90 # actual directionality of the solar panel
 
 solar_flux_on_horizontal = lib_solar.solar_flux_on_horizontal(
@@ -1395,7 +1362,6 @@ dy = np.diff(y)
 dspeed = np.diff(airspeed)
 dgamma = np.diff(flight_path_angle)
 
-wind_speed_midpoints = wind_speed_func(trapz(y))
 xdot_trapz = trapz(groundspeed * np.cosd(flight_path_angle))
 ydot_trapz = trapz(airspeed * np.sind(flight_path_angle))
 speeddot_trapz = trapz(speeddot)
@@ -1403,7 +1369,6 @@ gammadot_trapz = trapz(gammadot)
 
 ##### Winds
 
-wind_speed_midpoints = wind_speed_func(trapz(y))
 # Total
 opti.subject_to([
     dx / 1e4 == xdot_trapz * dt / 1e4,
