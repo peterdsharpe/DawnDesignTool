@@ -55,7 +55,7 @@ allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
 make_plots = False
 mass_payload = opti.parameter(value=6)
-tail_panels = False
+tail_panels = True
 fuselage_billboard = False
 wing_cells = "microlink" # select cells for wing, options include ascent_solar, sunpower, and microlink
 vertical_cells = "microlink" # select cells for vtail, options include ascent_solar, sunpower, and microlink
