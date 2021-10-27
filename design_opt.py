@@ -91,7 +91,7 @@ n_timesteps_per_segment = 180  # Only relevant if allow_trajectory_optimization 
 # Quick convergence testing indicates you can get bad analyses below 150 or so...
 
 ##### Optimization bounds
-min_speed = 1  # Specify a minimum speed - keeps the speed-gamma velocity parameterization from NaNing
+min_speed = 0  # Specify a minimum speed - keeps the speed-gamma velocity parameterization from NaNing
 
 ##### Time Discretization
 if climb_opt:  # roughly 1-day-plus-climb window, starting at ground. Periodicity enforced for last 24 hours.
@@ -163,16 +163,13 @@ opti.subject_to([
     y / 40000 > 0,  # stay above ground
     y / 40000 < 1,  # models break down
 ])
-
-airspeed = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=35,
-    scale=20,
-    category="ops"
-)
-opti.subject_to([
-    airspeed / min_speed > 1,
-])
+#
+# airspeed = opti.variable(
+#     n_vars=n_timesteps,
+#     init_guess=35,
+#     scale=20,
+#     category="ops"
+# )
 
 flight_path_angle = opti.variable(
     n_vars=n_timesteps,
@@ -542,6 +539,45 @@ airplane = asb.Airplane(
 # endregion
 
 # region Atmosphere
+wind_speed = wind_speed_func(y)
+wind_direction = 180
+flight_path_radius = 50000
+
+groundspeed = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=5,
+    scale=5,
+    category="ops"
+)
+airspeed = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=20,
+    scale=20,
+    category="ops"
+)
+
+vehicle_bearing = x / (np.pi / 180) / flight_path_radius + 90
+groundspeed_x = groundspeed * np.cosd(vehicle_bearing)
+groundspeed_y = groundspeed * np.sind(vehicle_bearing)
+windspeed_x = wind_speed * np.cosd(wind_direction)
+windspeed_y = wind_speed * np.sind(wind_direction)
+airspeed_x = groundspeed_x - windspeed_x
+airspeed_y = groundspeed_y - windspeed_y
+opti.subject_to([
+    groundspeed > 0.5,
+    airspeed > min_speed,
+    airspeed ** 2 == (airspeed_x ** 2 + airspeed_y ** 2),
+])
+vehicle_heading = 0  # np.arctan2d(airspeed_y, airspeed_x)
+
+
+# # heading_x = airspeed * np.sind(vehicle_bearing) - wind_speed * np.sind(wind_direction)  # x component of heading vector
+# # heading_y = airspeed * np.cosd(vehicle_bearing) - wind_speed * np.cosd(wind_direction) # y component of heading vector
+# # vehicle_heading = np.arctan2d(heading_y, heading_x) # actual directionality of the vehicle as modified by the wind speed and direction
+# vehicle_heading = vehicle_bearing # TODO this is here only for debugging
+# groundspeed = (heading_x ** 2 + heading_y ** 2) ** 0.5
+# groundspeed = airspeed # TODO this is here only for debugging
+
 ##### Atmosphere
 my_atmosphere = atmo(altitude=y)
 P = my_atmosphere.pressure()
@@ -552,17 +588,8 @@ a = my_atmosphere.speed_of_sound()
 mach = airspeed / a
 g = 9.81  # gravitational acceleration, m/s^2
 q = 1 / 2 * rho * airspeed ** 2  # Solar calculations
-wind_speed = wind_speed_func(y)
-wind_direction = 180
-flight_path_radius = 50000
 
-vehicle_bearing = x / (np.pi / 180) / flight_path_radius + 90
-# heading_x = airspeed * np.sind(vehicle_bearing) - wind_speed * np.sind(wind_direction)  # x component of heading vector
-# heading_y = airspeed * np.cosd(vehicle_bearing) - wind_speed * np.cosd(wind_direction) # y component of heading vector
-# vehicle_heading = np.arctan2d(heading_y, heading_x) # actual directionality of the vehicle as modified by the wind speed and direction
-vehicle_heading = vehicle_bearing # TODO this is here only for debugging
-# groundspeed = (heading_x ** 2 + heading_y ** 2) ** 0.5
-groundspeed = airspeed # TODO this is here only for debugging
+
 
 panel_heading = vehicle_heading - 90 # actual directionality of the solar panel
 
@@ -1424,10 +1451,10 @@ if not allow_trajectory_optimization:
         flight_path_angle / 100 == 0
     ])
     # Prevent groundspeed loss
-    opti.subject_to([
-        airspeed / 20 > ((wind_speed) / 20),
-
-    ])
+    # opti.subject_to([
+    #     airspeed / 20 > ((wind_speed) / 20),
+    #
+    # ])
 
 ###### Climb Optimization Constraints
 if climb_opt:
@@ -1498,7 +1525,7 @@ opti.minimize(
 if __name__ == "__main__":
     # Solve
     sol = opti.solve(
-        max_iter=2000,
+        max_iter=1000,
         options={
             "ipopt.max_cpu_time": 600
         }
