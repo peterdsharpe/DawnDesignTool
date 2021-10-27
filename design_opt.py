@@ -568,7 +568,7 @@ opti.subject_to([
     airspeed > min_speed,
     airspeed ** 2 == (airspeed_x ** 2 + airspeed_y ** 2),
 ])
-vehicle_heading = 0  # np.arctan2d(airspeed_y, airspeed_x)
+vehicle_heading = np.arctan2d(airspeed_y, airspeed_x)
 
 
 # # heading_x = airspeed * np.sind(vehicle_bearing) - wind_speed * np.sind(wind_direction)  # x component of heading vector
