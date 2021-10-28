@@ -55,10 +55,10 @@ allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
 make_plots = True
 mass_payload = opti.parameter(value=6)
-tail_panels = False
+tail_panels = True
 fuselage_billboard = False
 wing_cells = "sunpower" # select cells for wing, options include ascent_solar, sunpower, and microlink
-vertical_cells = "microlink" # select cells for vtail, options include ascent_solar, sunpower, and microlink
+vertical_cells = "sunpower" # select cells for vtail, options include ascent_solar, sunpower, and microlink
 # vertical cells only mounted when tail_panels is True
 billboard_cells = "sunpower" # select cells for billboard, options include ascent_solar, sunpower, and microlink
 # vertical cells only mounted when fuselage_billboard is True
@@ -564,7 +564,7 @@ windspeed_y = wind_speed * np.sind(wind_direction)
 airspeed_x = groundspeed_x - windspeed_x
 airspeed_y = groundspeed_y - windspeed_y
 opti.subject_to([
-    groundspeed > 0.5,
+    groundspeed > min_speed,
     airspeed > min_speed,
     airspeed ** 2 == (airspeed_x ** 2 + airspeed_y ** 2),
 ])
