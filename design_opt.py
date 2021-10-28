@@ -53,11 +53,11 @@ min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + str
 required_headway_per_day = 1000 # meters
 allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
-make_plots = False
+make_plots = True
 mass_payload = opti.parameter(value=6)
-tail_panels = True
+tail_panels = False
 fuselage_billboard = False
-wing_cells = "microlink" # select cells for wing, options include ascent_solar, sunpower, and microlink
+wing_cells = "sunpower" # select cells for wing, options include ascent_solar, sunpower, and microlink
 vertical_cells = "microlink" # select cells for vtail, options include ascent_solar, sunpower, and microlink
 # vertical cells only mounted when tail_panels is True
 billboard_cells = "sunpower" # select cells for billboard, options include ascent_solar, sunpower, and microlink
@@ -545,13 +545,13 @@ flight_path_radius = 50000
 
 groundspeed = opti.variable(
     n_vars=n_timesteps,
-    init_guess=5,
-    scale=5,
+    init_guess=1,
+    scale=0.1,
     category="ops"
 )
 airspeed = opti.variable(
     n_vars=n_timesteps,
-    init_guess=20,
+    init_guess=25,
     scale=20,
     category="ops"
 )
@@ -1509,7 +1509,7 @@ for penalty_input in [
     thrust_force / 10,
     net_accel_parallel / 1e-1,
     net_accel_perpendicular / 1e-1,
-    airspeed / 2,
+    groundspeed,
     flight_path_angle / 2,
     alpha / 1,
 ]:

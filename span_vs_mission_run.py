@@ -3,11 +3,10 @@ from design_opt import *
 import aerosandbox.numpy as np
 
 ### Set the run ID
-run_name = "6kg_payload_100W_CIGS&sunpower_300whr_pack"
+run_name = "new/6kg_payload_100W_350batt"
 
 ### Turn parallelization on/off.
 parallel = True
-
 
 def run(day_val, lat_val):
     print("\n".join([
@@ -33,8 +32,8 @@ def run(day_val, lat_val):
         #     }
         # )
         sol = opti.solve(
-            max_iter=200,
-            max_runtime=60,
+            max_iter=1000,
+            max_runtime=100,
             verbose=False
         )
 
