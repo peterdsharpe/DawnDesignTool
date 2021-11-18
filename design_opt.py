@@ -400,13 +400,13 @@ tail_airfoil = naca0008  # TODO remove this and use fits?
 
 wing = asb.Wing(
     name="Main Wing",
-    xyz_le = np.array([wing_x_quarter_chord, 0, 0]),
+    # xyz_le = np.array([wing_x_quarter_chord, 0, 0]),
     symmetric=True,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
             xyz_le = np.array([-wing_root_chord/4, 0, 0]),
             chord=wing_root_chord,
-            twist_angle=0,  # degrees
+            twist=0,  # degrees
             airfoil=wing_airfoil,  # Airfoils are blended between a given XSec and the next one.
             control_surface_is_symmetric=True,
             # Flap # Control surfaces are applied between a given XSec and the next one.
@@ -415,27 +415,27 @@ wing = asb.Wing(
         asb.WingXSec(  # Break
             xyz_le = np.array([-wing_root_chord/4, wing_y_taper_break, 0]),
             chord=wing_root_chord,
-            twist_angle=0,
+            twist=0,
             airfoil=wing_airfoil,
         ),
         asb.WingXSec(  # Tip
             xyz_le = np.array([-wing_root_chord * wing_taper_ratio / 4, wing_span / 2, 0]),
             chord=wing_root_chord * wing_taper_ratio,
-            twist_angle=0,
+            twist=0,
             airfoil=wing_airfoil,
         ),
     ]
 )
-
+wing = asb.Wing.translate(wing, np.array([wing_x_quarter_chord, 0, 0]))
 center_hstab = asb.Wing(
     name="Horizontal Stabilizer",
-    xyz_le=np.array([center_boom_length - center_vstab_chord * 0.75 - center_hstab_chord, 0, 0.1]),
+    # xyz_le=np.array([center_boom_length - center_vstab_chord * 0.75 - center_hstab_chord, 0, 0.1]),
     symmetric=True,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
             xyz_le=np.array([0, 0, 0]),
             chord=center_hstab_chord,
-            twist_angle=-3,  # degrees
+            twist=-3,  # degrees
             airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
             control_surface_is_symmetric = True,
             # Flap # Control surfaces are applied between a given XSec and the next one.
@@ -444,21 +444,22 @@ center_hstab = asb.Wing(
         asb.WingXSec(  # Tip
             xyz_le=np.array([0, center_hstab_span / 2, 0]),
             chord=center_hstab_chord,
-            twist_angle=-3,
+            twist=-3,
             airfoil=tail_airfoil,
         ),
     ]
 )
+center_hstab = asb.Wing.translate(center_hstab, np.array([center_boom_length - center_vstab_chord * 0.75 - center_hstab_chord, 0, 0.1]))
 
 right_hstab = asb.Wing(
     name="Horizontal Stabilizer",
-    xyz_le=np.array([outboard_boom_length - outboard_hstab_chord * 0.75, boom_location * wing_span / 2, 0.1]),
+    # xyz_le=np.array([outboard_boom_length - outboard_hstab_chord * 0.75, boom_location * wing_span / 2, 0.1]),
     symmetric=True,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
             xyz_le=np.array([0, 0, 0]),
             chord=outboard_hstab_chord,
-            twist_angle=-3,  # degrees
+            twist=-3,  # degrees
             airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
             control_surface_is_symmetric = True,
             # Flap # Control surfaces are applied between a given XSec and the next one.
@@ -467,14 +468,15 @@ right_hstab = asb.Wing(
         asb.WingXSec(  # Tip
             xyz_le=np.array([0, outboard_hstab_span / 2, 0]),
             chord=outboard_hstab_chord,
-            twist_angle=-3,
+            twist=-3,
             airfoil=tail_airfoil,
         ),
     ]
 )
-
-left_hstab = copy.deepcopy(right_hstab)
-left_hstab.xyz_le[1] *= -1
+right_hstab = asb.Wing.translate(right_hstab, np.array([outboard_boom_length - outboard_hstab_chord * 0.75, boom_location * wing_span / 2, 0.1]))
+# TODO check with peter that this is a correct interpretation of the translate function
+left_hstab = asb.Wing.translate(right_hstab, np.array([outboard_boom_length - outboard_hstab_chord * 0.75, -(boom_location * wing_span / 2), 0.1]))
+# left_hstab.xyz_le[1] *= -1
 
 center_vstab = asb.Wing(
     name="Vertical Stabilizer",
@@ -484,7 +486,7 @@ center_vstab = asb.Wing(
         asb.WingXSec(  # Root
             xyz_le=np.array([0, 0, 0]),
             chord=center_vstab_chord,
-            twist_angle=0,  # degrees
+            twist=0,  # degrees
             airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
             control_surface_is_symmetric = True,
             # Flap # Control surfaces are applied between a given XSec and the next one.
@@ -493,7 +495,7 @@ center_vstab = asb.Wing(
         asb.WingXSec(  # Tip
             xyz_le=np.array([0, 0, center_vstab_span]),
             chord=center_vstab_chord,
-            twist_angle=0,
+            twist=0,
             airfoil=tail_airfoil,
         ),
     ]
@@ -540,7 +542,7 @@ airplane = asb.Airplane(
 
 # region Atmosphere
 wind_speed = wind_speed_func(y)
-wind_direction = 180
+wind_direction = 315
 flight_path_radius = 50000
 
 groundspeed = opti.variable(
@@ -589,12 +591,16 @@ mach = airspeed / a
 g = 9.81  # gravitational acceleration, m/s^2
 q = 1 / 2 * rho * airspeed ** 2  # Solar calculations
 
-
-
 panel_heading = vehicle_heading - 90 # actual directionality of the solar panel
 
 solar_flux_on_horizontal = lib_solar.solar_flux_on_horizontal(
     latitude, day_of_year, time, scattering=True
+)
+solar_flux_on_wing_left =  lib_solar.solar_flux_circular_flight_path(
+    latitude, day_of_year, time, 170, panel_heading, scattering=True,
+)
+solar_flux_on_wing_right =  lib_solar.solar_flux_circular_flight_path(
+    latitude, day_of_year, time, 10, panel_heading, scattering=True,
 )
 solar_flux_on_vertical_left = lib_solar.solar_flux_circular_flight_path(
     latitude, day_of_year, time, 90, panel_heading, scattering=True,
@@ -1075,10 +1081,10 @@ if fuselage_billboard == False:
 
 
 area_solar_horz = wing.area() * solar_area_fraction
-area_solar_vert = center_vstab.area() * vtail_solar_area_fraction
+area_solar_vert = center_vstab.area() * vtail_solar_area_fraction * 0.5
 
 # Energy generation cascade accounting for different horizontal and vertical cell assumptions
-power_in_from_sun_horz = solar_flux_on_horizontal * area_solar_horz
+power_in_from_sun_horz = solar_flux_on_wing_left * area_solar_horz + solar_flux_on_wing_right * area_solar_horz
 power_in_from_sun_vert = solar_flux_on_vertical_left * area_solar_vert + solar_flux_on_vertical_right * area_solar_vert
 power_in_from_sun_fuselage = solar_flux_on_billboard_left * billboard_area + solar_flux_on_billboard_right * area_solar_vert
 power_in_from_sun_horz = power_in_from_sun_horz / energy_generation_margin
