@@ -480,7 +480,7 @@ left_hstab = asb.Wing.translate(right_hstab, np.array([outboard_boom_length - ou
 
 center_vstab = asb.Wing(
     name="Vertical Stabilizer",
-    xyz_le=np.array([center_boom_length - center_vstab_chord * 0.75, 0, -center_vstab_span / 2 + center_vstab_span * 0.15]),
+    # xyz_le=np.array([center_boom_length - center_vstab_chord * 0.75, 0, -center_vstab_span / 2 + center_vstab_span * 0.15]),
     symmetric=False,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
@@ -500,6 +500,7 @@ center_vstab = asb.Wing(
         ),
     ]
 )
+center_vstab = asb.Wing.translate(center_vstab, np.array([center_boom_length - center_vstab_chord * 0.75, 0, -center_vstab_span / 2 + center_vstab_span * 0.15]))
 
 center_fuse = make_fuselage(
     boom_length=center_boom_length,
@@ -514,11 +515,11 @@ right_fuse = make_fuselage(
     fuse_diameter=boom_diameter,
     boom_diameter=boom_diameter,
 )
-
-right_fuse.xyz_le += np.concatenate((0, boom_location * wing_span / 2, 0))
+# TODO Check this is correct
+right_fuse = asb.Fuselage.translate(right_fuse, np.concatenate((0, boom_location * wing_span / 2, 0)))
 
 left_fuse = copy.deepcopy(right_fuse)
-left_fuse.xyz_le[1] *= -1
+left_fuse = asb.Fuselage.translate(left_fuse, np.concatenate((0, -boom_location * wing_span / 2, 0)))
 
 # Assemble the airplane
 airplane = asb.Airplane(
