@@ -22,7 +22,13 @@ dill = "^0.3.4"
 jupyter = "1.0.0"
 pylint = "^2.12.2"
 pytest = "^6.2.5"
-black = "^21.12b0"
+yapf = "^0.31.0"
+
+[tool.yapf]
+based_on_style = "google"
+split_before_logical_operator = true
+split_before_arithmetic_operator = true
+split_before_bitwise_operator = true
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
