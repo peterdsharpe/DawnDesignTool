@@ -1,10 +1,9 @@
 import multiprocessing as mp
 from design_opt import *
-from func_timeout import func_timeout
 import aerosandbox.numpy as np
 
 ### Set the run ID
-run_name = "payload_maximization_34_span"
+run_name = "payload_maximization_100W"
 
 ### Turn parallelization on/off.
 parallel = True
@@ -21,17 +20,22 @@ def run(day_val, lat_val):
     opti.set_value(latitude, lat_val)
 
     try:
-        sol = func_timeout(
-            timeout=60,
-            func=opti.solve,
-            args=(),
-            kwargs={
-                "max_iter": 200,
-                "options" : {
-                    "ipopt.max_cpu_time": 60,
-                },
-                "verbose" : False
-            }
+        # sol = func_timeout(
+        #     timeout=60,
+        #     func=opti.solve,
+        #     args=(),
+        #     kwargs={
+        #         "max_iter": 200,
+        #         "options" : {
+        #             "ipopt.max_cpu_time": 60,
+        #         },
+        #         "verbose" : False
+        #     }
+        # )
+        sol = opti.solve(
+            max_iter=200,
+            max_runtime=60,
+            verbose=False
         )
         print("Success!")
         if not parallel:

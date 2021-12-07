@@ -20,6 +20,9 @@ dill = "^0.3.4"
 
 [tool.poetry.dev-dependencies]
 jupyter = "1.0.0"
+pylint = "^2.12.2"
+pytest = "^6.2.5"
+black = "^21.12b0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
