@@ -3,11 +3,11 @@ import aerosandbox as asb
 import aerosandbox.library.aerodynamics as aero
 from aerosandbox.atmosphere import Atmosphere as atmo
 from aerosandbox.library import mass_structural as lib_mass_struct
-from aerosandbox.library import power_solar as lib_solar
 from aerosandbox.library import propulsion_electric as lib_prop_elec
 from aerosandbox.library import propulsion_propeller as lib_prop_prop
 from aerosandbox.library import winds as lib_winds
 from aerosandbox.library.airfoils import naca0008, flat_plate
+from library import power_solar as lib_solar
 import aerosandbox.numpy as np
 import plotly.express as px
 import copy
