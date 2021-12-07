@@ -283,7 +283,7 @@ center_hstab_chord = opti.variable(
 )
 opti.subject_to(center_hstab_chord > 0.1)
 
-center_hstab_twist_angle = opti.variable(
+center_hstab_twist = opti.variable(
     n_vars=n_timesteps,
     init_guess=-3,
     scale=2,
@@ -310,7 +310,7 @@ opti.subject_to([
     outboard_hstab_chord > 0.8,  # TODO review this, driven by Trevor's ASWing findings on turn radius sizing, 8/16/20
 ])
 
-outboard_hstab_twist_angle = opti.variable(
+outboard_hstab_twist = opti.variable(
     n_vars=n_timesteps,
     init_guess=-3,
     scale=2,
@@ -400,7 +400,6 @@ tail_airfoil = naca0008  # TODO remove this and use fits?
 
 wing = asb.Wing(
     name="Main Wing",
-    # xyz_le = np.array([wing_x_quarter_chord, 0, 0]),
     symmetric=True,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
@@ -429,7 +428,6 @@ wing = asb.Wing(
 wing = asb.Wing.translate(wing, np.array([wing_x_quarter_chord, 0, 0]))
 center_hstab = asb.Wing(
     name="Horizontal Stabilizer",
-    # xyz_le=np.array([center_boom_length - center_vstab_chord * 0.75 - center_hstab_chord, 0, 0.1]),
     symmetric=True,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
@@ -453,7 +451,6 @@ center_hstab = asb.Wing.translate(center_hstab, np.array([center_boom_length - c
 
 right_hstab = asb.Wing(
     name="Horizontal Stabilizer",
-    # xyz_le=np.array([outboard_boom_length - outboard_hstab_chord * 0.75, boom_location * wing_span / 2, 0.1]),
     symmetric=True,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
@@ -480,7 +477,6 @@ left_hstab = asb.Wing.translate(right_hstab, np.array([outboard_boom_length - ou
 
 center_vstab = asb.Wing(
     name="Vertical Stabilizer",
-    # xyz_le=np.array([center_boom_length - center_vstab_chord * 0.75, 0, -center_vstab_span / 2 + center_vstab_span * 0.15]),
     symmetric=False,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
@@ -711,9 +707,9 @@ def compute_wing_aerodynamics(
 
 
 compute_wing_aerodynamics(wing)
-compute_wing_aerodynamics(center_hstab, incidence_angle=center_hstab_twist_angle)
-compute_wing_aerodynamics(right_hstab, incidence_angle=outboard_hstab_twist_angle)
-compute_wing_aerodynamics(left_hstab, incidence_angle=outboard_hstab_twist_angle)
+compute_wing_aerodynamics(center_hstab, incidence_angle=center_hstab_twist)
+compute_wing_aerodynamics(right_hstab, incidence_angle=outboard_hstab_twist)
+compute_wing_aerodynamics(left_hstab, incidence_angle=outboard_hstab_twist)
 compute_wing_aerodynamics(center_vstab, is_horizontal_surface=False)
 
 # Increase the wing drag due to tripped flow (8/17/20)
@@ -1478,10 +1474,10 @@ objective = eval(minimize)
 opti.subject_to([
     center_hstab_span == outboard_hstab_span,
     center_hstab_chord == outboard_hstab_chord,
-    # center_hstab_twist_angle == outboard_hstab_twist_angle,
+    # center_hstab_twist == outboard_hstab_twist,
     # center_boom_length == outboard_boom_length,
-    center_hstab_twist_angle <= 0,  # essentially enforces downforce, prevents hstab from lifting and exploiting config.
-    outboard_hstab_twist_angle <= 0,
+    center_hstab_twist <= 0,  # essentially enforces downforce, prevents hstab from lifting and exploiting config.
+    outboard_hstab_twist <= 0,
     # essentially enforces downforce, prevents hstab from lifting and exploiting config.
 ])
 
@@ -1569,6 +1565,8 @@ if __name__ == "__main__":
         "wing_root_chord"
     ])
 
+    import plotly.io as pio
+    pio.renderers.default="browser"
 
     def qp(*args: List[str]):
         """
