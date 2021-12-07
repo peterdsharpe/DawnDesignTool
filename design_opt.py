@@ -221,9 +221,9 @@ def initialize_traj_opt(opti, min_cruise_altitude, min_speed, time_periodic_star
     category="ops"
 )
     
-    return x,x_km,x_mi,y,y_km,y_ft,airspeed,flight_path_angle,alpha,thrust_force,net_accel_parallel,net_accel_perpendicular
+    return x,x_km,x_mi,y,y_km,y_ft,flight_path_angle,alpha,thrust_force,net_accel_parallel,net_accel_perpendicular
 
-x, x_km, x_mi, y, y_km, y_ft, airspeed, flight_path_angle, alpha, thrust_force, net_accel_parallel, net_accel_perpendicular = initialize_traj_opt(opti, min_cruise_altitude, min_speed, time_periodic_start_index, n_timesteps)
+x, x_km, x_mi, y, y_km, y_ft, flight_path_angle, alpha, thrust_force, net_accel_parallel, net_accel_perpendicular = initialize_traj_opt(opti, min_cruise_altitude, min_speed, time_periodic_start_index, n_timesteps)
 # endregion
 
 # region Design Optimization Variables
