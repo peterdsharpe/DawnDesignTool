@@ -94,17 +94,18 @@ n_timesteps_per_segment = 180  # Only relevant if allow_trajectory_optimization 
 min_speed = 0  # Specify a minimum speed - keeps the speed-gamma velocity parameterization from NaNing
 
 ##### Time Discretization
-if climb_opt:  # roughly 1-day-plus-climb window, starting at ground. Periodicity enforced for last 24 hours.
-    assert allow_trajectory_optimization, "You can't do climb optimization without trajectory optimziation!"
-    time_start = opti.variable(init_guess=-12 * 3600, scale=3600, category="ops")
-    opti.subject_to([
+def discretize_time(opti, climb_opt, allow_trajectory_optimization, n_timesteps_per_segment):
+    if climb_opt:  # roughly 1-day-plus-climb window, starting at ground. Periodicity enforced for last 24 hours.
+        assert allow_trajectory_optimization, "You can't do climb optimization without trajectory optimziation!"
+        time_start = opti.variable(init_guess=-12 * 3600, scale=3600, category="ops")
+        opti.subject_to([
         time_start / 3600 < 0,
         time_start / 3600 > -24,
     ])
-    time_end = 36 * 3600
+        time_end = 36 * 3600
 
-    time_periodic_window_start = time_end - 24 * 3600
-    time = np.concatenate((
+        time_periodic_window_start = time_end - 24 * 3600
+        time = np.concatenate((
         np.linspace(
             time_start,
             time_periodic_window_start,
@@ -116,48 +117,52 @@ if climb_opt:  # roughly 1-day-plus-climb window, starting at ground. Periodicit
             n_timesteps_per_segment
         )
     ))
-    time_periodic_start_index = time.shape[0] - n_timesteps_per_segment
-    time_periodic_end_index = time.shape[0] - 1
+        time_periodic_start_index = time.shape[0] - n_timesteps_per_segment
+        time_periodic_end_index = time.shape[0] - 1
 
-else:  # Normal mode: 24-hour periodic window, starting at altitude.
-    time_start = 0 * 3600
-    time_end = 24 * 3600
+    else:  # Normal mode: 24-hour periodic window, starting at altitude.
+        time_start = 0 * 3600
+        time_end = 24 * 3600
 
-    time = np.linspace(
+        time = np.linspace(
         time_start,
         time_end,
         n_timesteps_per_segment
     )
-    time_periodic_start_index = 0
-    time_periodic_end_index = time.shape[0] - 1
+        time_periodic_start_index = 0
+        time_periodic_end_index = time.shape[0] - 1
 
-n_timesteps = time.shape[0]
-hour = time / 3600
+    n_timesteps = time.shape[0]
+    hour = time / 3600
+    return time,time_periodic_start_index,time_periodic_end_index,n_timesteps,hour
+
+time, time_periodic_start_index, time_periodic_end_index, n_timesteps, hour = discretize_time(opti, climb_opt, allow_trajectory_optimization, n_timesteps_per_segment)
 
 # endregion
 
 # region Trajectory Optimization Variables
 ##### Initialize trajectory optimization variables
 
-x = opti.variable(
+def initialize_traj_opt(opti, min_cruise_altitude, min_speed, time_periodic_start_index, n_timesteps):
+    x = opti.variable(
     n_vars=n_timesteps,
     init_guess=0,
     scale=1e5,
     category="ops"
 )
-x_km = x / 1000
-x_mi = x / 1609.34
+    x_km = x / 1000
+    x_mi = x / 1609.34
 
-y = opti.variable(
+    y = opti.variable(
     n_vars=n_timesteps,
     init_guess=opti.value(min_cruise_altitude),
     scale=1e4,
     category="ops"
 )
-y_km = y / 1000
-y_ft = y / 0.3048
+    y_km = y / 1000
+    y_ft = y / 0.3048
 
-opti.subject_to([
+    opti.subject_to([
     y[time_periodic_start_index:] / min_cruise_altitude > 1,
     # y[time_periodic_start_index:] == 16000,
     y / 40000 > 0,  # stay above ground
@@ -171,99 +176,115 @@ opti.subject_to([
 #     category="ops"
 # )
 
-flight_path_angle = opti.variable(
+    flight_path_angle = opti.variable(
     n_vars=n_timesteps,
     init_guess=0,
     scale=2,
     category="ops"
 )
-opti.subject_to([
+    opti.subject_to([
     flight_path_angle / 90 < 1,
     flight_path_angle / 90 > -1,
 ])
 
-alpha = opti.variable(
+    alpha = opti.variable(
     n_vars=n_timesteps,
     init_guess=5,
     scale=4,
     category="ops"
 )
-opti.subject_to([
+    opti.subject_to([
     alpha > -8,
     alpha < 12
 ])
 
-thrust_force = opti.variable(
+    thrust_force = opti.variable(
     n_vars=n_timesteps,
     init_guess=150,
     scale=200,
     category="ops"
 )
-opti.subject_to([
+    opti.subject_to([
     thrust_force > 0
 ])
 
-net_accel_parallel = opti.variable(
+    net_accel_parallel = opti.variable(
     n_vars=n_timesteps,
     init_guess=0,
     scale=1e-4,
     category="ops"
 )
-net_accel_perpendicular = opti.variable(
+    net_accel_perpendicular = opti.variable(
     n_vars=n_timesteps,
     init_guess=0,
     scale=1e-5,
     category="ops"
 )
+    
+    return x,x_km,x_mi,y,y_km,y_ft,airspeed,flight_path_angle,alpha,thrust_force,net_accel_parallel,net_accel_perpendicular
+
+x, x_km, x_mi, y, y_km, y_ft, airspeed, flight_path_angle, alpha, thrust_force, net_accel_parallel, net_accel_perpendicular = initialize_traj_opt(opti, min_cruise_altitude, min_speed, time_periodic_start_index, n_timesteps)
 # endregion
 
 # region Design Optimization Variables
 ##### Initialize design optimization variables (all units in base SI or derived units)
 
-mass_total = opti.variable(
+def init_design_opt(opti):
+    mass_total = opti.variable(
     init_guess=600,
     scale=600,
     category="ops"
 )
 
-max_mass_total = opti.variable(
+    max_mass_total = opti.variable(
     init_guess=600,
     scale=600,
     category="des"
 )
-opti.subject_to(max_mass_total / 600 >= mass_total / 600)
+    opti.subject_to(max_mass_total / 600 >= mass_total / 600)
+    return mass_total,max_mass_total
+
+mass_total, max_mass_total = init_design_opt(opti)
 
 ### Initialize geometric variables
 
 # overall layout
-boom_location = 0.80  # as a fraction of the half-span
-break_location = 0.67  # as a fraction of the half-span
+def set_boom_break_param():
+    boom_location = 0.80  # as a fraction of the half-span
+    break_location = 0.67  # as a fraction of the half-span
+    return boom_location,break_location
+
+boom_location, break_location = set_boom_break_param()
 
 # wing
-wing_span = opti.variable(
+def new_func(opti, break_location):
+    wing_span = opti.variable(
     init_guess=40,
     scale=60,
     category="des"
 )
 
-opti.subject_to([wing_span > 1])
+    opti.subject_to([wing_span > 1])
 
-wing_root_chord = opti.variable(
+    wing_root_chord = opti.variable(
     init_guess=3,
     scale=4,
     category="des"
 )
-opti.subject_to([wing_root_chord > 0.1])
+    opti.subject_to([wing_root_chord > 0.1])
 
-wing_x_quarter_chord = opti.variable(
+    wing_x_quarter_chord = opti.variable(
     init_guess=0,
     scale=0.01,
     category="des"
 )
 
-wing_y_taper_break = break_location * wing_span / 2
+    wing_y_taper_break = break_location * wing_span / 2
 
-wing_taper_ratio = 0.5  # TODO analyze this more
+    wing_taper_ratio = 0.5  # TODO analyze this more
+    return wing_span,wing_root_chord,wing_x_quarter_chord,wing_y_taper_break,wing_taper_ratio
+
+wing_span, wing_root_chord, wing_x_quarter_chord, wing_y_taper_break, wing_taper_ratio = new_func(opti, break_location)
 
 # center hstab
 center_hstab_span = opti.variable(
