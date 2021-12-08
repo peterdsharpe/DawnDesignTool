@@ -19,6 +19,8 @@ import aerosandbox.numpy as np
 from library import power_solar as lib_solar
 from library.mass_models import (mass_hstab, mass_vstab,
                                  estimate_mass_wing_secondary)
+from library.aero_models import (compute_fuse_aerodynamics,
+                                 compute_wing_aerodynamics, dynamic_pressure)
 import plotly.express as px
 import plotly.io as pio
 import copy
@@ -694,14 +696,12 @@ def design_opt(params: Dict[str, Any]):
 
     ##### Atmosphere
     my_atmosphere = atmo(altitude=y)
-    P = my_atmosphere.pressure()
     rho = my_atmosphere.density()
-    T = my_atmosphere.temperature()
     mu = my_atmosphere.dynamic_viscosity()
     a = my_atmosphere.speed_of_sound()
     mach = airspeed / a
     g = 9.81  # gravitational acceleration, m/s^2
-    q = 1 / 2 * rho * airspeed**2  # Solar calculations
+    q = dynamic_pressure(airspeed, rho)
 
     panel_heading = vehicle_heading - 90  # actual directionality of the solar panel
 
@@ -763,118 +763,43 @@ def design_opt(params: Dict[str, Any]):
     ##### Aerodynamics
 
     # Fuselage
-    def compute_fuse_aerodynamics(fuse: asb.Fuselage):
-        fuse.Re = rho / mu * airspeed * fuse.length()
-        fuse.CLA = 0
-        fuse.CDA = (aero.Cf_flat_plate(fuse.Re) * fuse.area_wetted() * 1.2
-                   )  # wetted area with form factor
 
-        fuse.lift = fuse.CLA * q  # per fuse
-        fuse.drag = fuse.CDA * q  # per fuse
-
-    compute_fuse_aerodynamics(center_fuse)
-    compute_fuse_aerodynamics(left_fuse)
-    compute_fuse_aerodynamics(right_fuse)
+    compute_fuse_aerodynamics(center_fuse,
+                              atmosphere=my_atmosphere,
+                              airspeed=airspeed)
+    compute_fuse_aerodynamics(left_fuse,
+                              atmosphere=my_atmosphere,
+                              airspeed=airspeed)
+    compute_fuse_aerodynamics(right_fuse,
+                              atmosphere=my_atmosphere,
+                              airspeed=airspeed)
 
     # Wing
-    def compute_wing_aerodynamics(surface: asb.Wing,
-                                  incidence_angle: float = 0,
-                                  is_horizontal_surface: bool = True):
-        surface.alpha_eff = incidence_angle + surface.mean_twist_angle()
-        if is_horizontal_surface:
-            surface.alpha_eff += alpha
 
-        surface.Re = rho / mu * airspeed * surface.mean_geometric_chord()
-        surface.airfoil = surface.xsecs[0].airfoil
-        try:
-            surface.Cl_inc = surface.airfoil.CL_function({
-                "alpha": surface.alpha_eff,
-                "reynolds": np.log(surface.Re)
-            })  # Incompressible 2D lift coefficient
-            surface.CL = surface.Cl_inc * aero.CL_over_Cl(
-                surface.aspect_ratio(),
-                mach=mach,
-                sweep=surface.mean_sweep_angle(
-                ))  # Compressible 3D lift coefficient
-            surface.lift = surface.CL * q * surface.area()
-
-            surface.Cd_profile = np.exp(
-                surface.airfoil.CD_function({
-                    "alpha": surface.alpha_eff,
-                    "reynolds": np.log(surface.Re)
-                }))
-            surface.drag_profile = surface.Cd_profile * q * surface.area()
-
-            surface.oswalds_efficiency = aero.oswalds_efficiency(
-                taper_ratio=surface.taper_ratio(),
-                aspect_ratio=surface.aspect_ratio(),
-                sweep=surface.mean_sweep_angle(),
-            )
-            surface.drag_induced = aero.induced_drag(
-                lift=surface.lift,
-                span=surface.span(),
-                dynamic_pressure=q,
-                oswalds_efficiency=surface.oswalds_efficiency,
-            )
-
-            surface.drag = surface.drag_profile + surface.drag_induced
-
-            surface.Cm_inc = surface.airfoil.CM_function({
-                "alpha": surface.alpha_eff,
-                "reynolds": np.log(surface.Re)
-            })  # Incompressible 2D moment coefficient
-            surface.CM = surface.Cm_inc * aero.CL_over_Cl(
-                surface.aspect_ratio(),
-                mach=mach,
-                sweep=surface.mean_sweep_angle(
-                ))  # Compressible 3D moment coefficient
-            surface.moment = (surface.CM * q * surface.area()
-                              * surface.mean_geometric_chord())
-        except TypeError:
-            surface.Cl_inc = surface.airfoil.CL_function(
-                surface.alpha_eff, surface.Re, 0,
-                0)  # Incompressible 2D lift coefficient
-            surface.CL = surface.Cl_inc * aero.CL_over_Cl(
-                surface.aspect_ratio(),
-                mach=mach,
-                sweep=surface.mean_sweep_angle(
-                ))  # Compressible 3D lift coefficient
-            surface.lift = surface.CL * q * surface.area()
-
-            surface.Cd_profile = surface.airfoil.CD_function(
-                surface.alpha_eff, surface.Re, mach, 0)
-            surface.drag_profile = surface.Cd_profile * q * surface.area()
-
-            surface.oswalds_efficiency = aero.oswalds_efficiency(
-                taper_ratio=surface.taper_ratio(),
-                aspect_ratio=surface.aspect_ratio(),
-                sweep=surface.mean_sweep_angle(),
-            )
-            surface.drag_induced = aero.induced_drag(
-                lift=surface.lift,
-                span=surface.span(),
-                dynamic_pressure=q,
-                oswalds_efficiency=surface.oswalds_efficiency,
-            )
-
-            surface.drag = surface.drag_profile + surface.drag_induced
-
-            surface.Cm_inc = surface.airfoil.CM_function(
-                surface.alpha_eff, surface.Re, 0,
-                0)  # Incompressible 2D moment coefficient
-            surface.CM = surface.Cm_inc * aero.CL_over_Cl(
-                surface.aspect_ratio(),
-                mach=mach,
-                sweep=surface.mean_sweep_angle(
-                ))  # Compressible 3D moment coefficient
-            surface.moment = (surface.CM * q * surface.area()
-                              * surface.mean_geometric_chord())
-
-    compute_wing_aerodynamics(wing)
-    compute_wing_aerodynamics(center_hstab, incidence_angle=center_hstab_twist)
-    compute_wing_aerodynamics(right_hstab, incidence_angle=outboard_hstab_twist)
-    compute_wing_aerodynamics(left_hstab, incidence_angle=outboard_hstab_twist)
-    compute_wing_aerodynamics(center_vstab, is_horizontal_surface=False)
+    compute_wing_aerodynamics(wing,
+                              atmosphere=my_atmosphere,
+                              airspeed=airspeed,
+                              alpha=alpha)
+    compute_wing_aerodynamics(center_hstab,
+                              atmosphere=my_atmosphere,
+                              airspeed=airspeed,
+                              alpha=alpha,
+                              incidence_angle=center_hstab_twist)
+    compute_wing_aerodynamics(right_hstab,
+                              atmosphere=my_atmosphere,
+                              airspeed=airspeed,
+                              alpha=alpha,
+                              incidence_angle=outboard_hstab_twist)
+    compute_wing_aerodynamics(left_hstab,
+                              atmosphere=my_atmosphere,
+                              airspeed=airspeed,
+                              alpha=alpha,
+                              incidence_angle=outboard_hstab_twist)
+    compute_wing_aerodynamics(center_vstab,
+                              atmosphere=my_atmosphere,
+                              airspeed=airspeed,
+                              alpha=alpha,
+                              is_horizontal_surface=False)
 
     # Increase the wing drag due to tripped flow (8/17/20)
     wing_drag_multiplier = opti.parameter(value=1.06)  # TODO review
