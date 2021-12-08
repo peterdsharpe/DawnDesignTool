@@ -1,3 +1,10 @@
+"""
+Design_opt.py
+
+Main module defining the optimization solution for the Dawn solar vehicle.
+Primary function is design_opt(), which takes in a parameter structure containing
+all of the configurable values.
+"""
 # Imports
 import aerosandbox as asb
 import aerosandbox.library.aerodynamics as aero
@@ -14,7 +21,7 @@ import aerosandbox.numpy as np
 import plotly.express as px
 import copy
 import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
+from matplotlib import ticker
 import seaborn as sns
 from design_opt_utilities.fuselage import make_fuselage
 from typing import Any, Dict, Tuple, Union, List
@@ -129,7 +136,7 @@ def discretize_time(opti, climb_opt, allow_trajectory_optimization,
 
     # Roughly 1-day-plus-climb window, starting at ground.
     # Periodicity enforced for last 24 hours.
-    if (climb_opt):
+    if climb_opt:
         assert (
             allow_trajectory_optimization
         ), "You can't do climb optimization without trajectory optimziation!"
@@ -1318,7 +1325,8 @@ def design_opt(params: Dict[str, Any]):
                                         scale=40,
                                         category="des",
                                         log_transform=True)
-    mass_center_hstab = mass_hstab(center_hstab, n_ribs_center_hstab, structural_load_factor, q_ne)
+    mass_center_hstab = mass_hstab(center_hstab, n_ribs_center_hstab,
+                                   structural_load_factor, q_ne)
 
     n_ribs_outboard_hstab = opti.variable(
         init_guess=40,
@@ -1326,13 +1334,15 @@ def design_opt(params: Dict[str, Any]):
         category="des",
         log_transform=True,
     )
-    mass_right_hstab = mass_hstab(right_hstab, n_ribs_outboard_hstab, structural_load_factor, q_ne)
-    mass_left_hstab = mass_hstab(left_hstab, n_ribs_outboard_hstab, structural_load_factor, q_ne)
-
+    mass_right_hstab = mass_hstab(right_hstab, n_ribs_outboard_hstab,
+                                  structural_load_factor, q_ne)
+    mass_left_hstab = mass_hstab(left_hstab, n_ribs_outboard_hstab,
+                                 structural_load_factor, q_ne)
 
     n_ribs_vstab = opti.variable(init_guess=35, scale=20, category="des")
     opti.subject_to(n_ribs_vstab > 0)
-    mass_center_vstab = mass_vstab(center_vstab, n_ribs_vstab, structural_load_factor, q_ne)
+    mass_center_vstab = mass_vstab(center_vstab, n_ribs_vstab,
+                                   structural_load_factor, q_ne)
 
     # Fuselage & Boom
     mass_center_boom = lib_mass_struct.mass_hpa_tail_boom(  # TODO add gravitational load for solar cells
@@ -1365,7 +1375,7 @@ def design_opt(params: Dict[str, Any]):
         0.728 * max_mass_total / mass_daedalus
     )  # Scale landing gear mass to same mass fraction as Daedalus
     mass_strut = (661 / 2 * (strut_chord / 10)**2 * strut_span
-                )  # mass per strut, formula from Jamie
+                 )  # mass per strut, formula from Jamie
 
     mass_center_fuse = (mass_center_boom + mass_fairings + mass_landing_gear
                         + mass_billboard)  # per fuselage
@@ -1374,8 +1384,8 @@ def design_opt(params: Dict[str, Any]):
 
     mass_structural = (
         mass_wing + mass_center_hstab + mass_right_hstab + mass_left_hstab
-        + mass_center_vstab + mass_center_fuse + mass_right_fuse + mass_left_fuse
-        + mass_strut * 2  # left and right struts
+        + mass_center_vstab + mass_center_fuse + mass_right_fuse
+        + mass_left_fuse + mass_strut * 2  # left and right struts
     )
     mass_structural *= structural_mass_margin_multiplier
 
@@ -1386,7 +1396,7 @@ def design_opt(params: Dict[str, Any]):
 
     opti.subject_to([
         mass_total / 250 == (mass_payload + mass_structural + mass_propulsion
-                            + mass_power_systems + mass_avionics) / 250
+                             + mass_power_systems + mass_avionics) / 250
     ])
 
     gravity_force = g * mass_total
@@ -1396,14 +1406,15 @@ def design_opt(params: Dict[str, Any]):
     # region Dynamics
 
     net_force_parallel_calc = (thrust_force * np.cosd(alpha) - drag_force
-                            - gravity_force * np.sind(flight_path_angle))
-    net_force_perpendicular_calc = (thrust_force * np.sind(alpha) + lift_force
-                                    - gravity_force * np.cosd(flight_path_angle))
+                               - gravity_force * np.sind(flight_path_angle))
+    net_force_perpendicular_calc = (
+        thrust_force * np.sind(alpha) + lift_force
+        - gravity_force * np.cosd(flight_path_angle))
 
     opti.subject_to([
         net_accel_parallel * mass_total / 1e1 == net_force_parallel_calc / 1e1,
-        net_accel_perpendicular * mass_total / 1e2 == net_force_perpendicular_calc
-        / 1e2,
+        net_accel_perpendicular * mass_total
+        / 1e2 == net_force_perpendicular_calc / 1e2,
     ])
 
     speeddot = net_accel_parallel
@@ -1547,7 +1558,7 @@ def design_opt(params: Dict[str, Any]):
             alpha / 1,
     ]:
         penalty += np.sum(np.diff(np.diff(penalty_input))**
-                        2) / n_timesteps_per_segment
+                          2) / n_timesteps_per_segment
 
     opti.minimize(objective + penalty + 1e-3 * things_to_slightly_minimize)
     # endregion
@@ -1580,9 +1591,11 @@ def design_opt(params: Dict[str, Any]):
         print(f"\n{'*' * 10} {s.upper()} {'*' * 10}")
 
     print_title("Key Results")
-    output([("Mass", max_mass_total),
-            ("Wingspan", wing_span),
-            ("Wing root chord", wing_root_chord)])
+    output([
+        ("Mass", max_mass_total),
+        ("Wingspan", wing_span),
+        ("Wing root chord", wing_root_chord),
+    ])
 
     import plotly.io as pio
 
@@ -1853,7 +1866,7 @@ def design_opt(params: Dict[str, Any]):
         plt.title("Power Systems Mass*")
 
         plt.annotate(
-            s="* percentages referenced to total aircraft mass",
+            text="* percentages referenced to total aircraft mass",
             xy=(0.01, 0.01),
             # xytext=(0.03, 0.03),
             xycoords="figure fraction",
@@ -1865,7 +1878,7 @@ def design_opt(params: Dict[str, Any]):
             # }
         )
         plt.annotate(
-            s="""
+            text="""
             Total mass: %.1f kg
             Wing span: %.2f m
             """ % (s(mass_total), s(wing.span())),

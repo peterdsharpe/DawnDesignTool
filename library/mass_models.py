@@ -8,6 +8,7 @@ from aerosandbox.library import mass_structural as lib_mass_struct
 
 gravity = 9.81
 
+
 def mass_vstab(
     vstab,
     n_ribs_vstab,
@@ -24,7 +25,7 @@ def mass_vstab(
         span=vstab.span(),
         mass_supported=q_ne * cl_max * vstab.area() / gravity,
         ultimate_load_factor=structural_load_factor,
-    ) * mass_knockup)  
+    ) * mass_knockup)
     mass_vstab_secondary = lib_mass_struct.mass_hpa_stabilizer(
         span=vstab.span(),
         chord=vstab.mean_geometric_chord(),
