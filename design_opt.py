@@ -2,8 +2,8 @@
 Design_opt.py
 
 Main module defining the optimization solution for the Dawn solar vehicle.
-Primary function is design_opt(), which takes in a parameter structure containing
-all of the configurable values.
+Primary function is design_opt(), which takes in a parameter structure
+containing all of the configurable values.
 """
 # Imports
 import aerosandbox as asb
@@ -14,18 +14,21 @@ from aerosandbox.library import propulsion_electric as lib_prop_elec
 from aerosandbox.library import propulsion_propeller as lib_prop_prop
 from aerosandbox.library import winds as lib_winds
 from aerosandbox.library.airfoils import naca0008, flat_plate
+from aerosandbox.modeling.interpolation import InterpolatedModel
+import aerosandbox.numpy as np
 from library import power_solar as lib_solar
 from library.mass_models import (mass_hstab, mass_vstab,
                                  estimate_mass_wing_secondary)
-import aerosandbox.numpy as np
 import plotly.express as px
+import plotly.io as pio
 import copy
 import matplotlib.pyplot as plt
 from matplotlib import ticker
 import seaborn as sns
+from design_opt_utilities.new_models import eff_curve_fit
 from design_opt_utilities.fuselage import make_fuselage
 from typing import Any, Dict, Tuple, Union, List
-from aerosandbox.modeling.interpolation import InterpolatedModel
+from types import ModuleType
 import pathlib
 
 path = str(pathlib.Path(__file__).parent.absolute())
@@ -90,7 +93,6 @@ min_hori_chord = 0.6
 # vertical cells only mounted when fuselage_billboard is True
 
 
-# wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
 def wind_speed_func(alt):
     day_array = np.full(shape=alt.shape[0], fill_value=1) * day_of_year
     latitude_array = np.full(shape=alt.shape[0], fill_value=1) * latitude
@@ -114,19 +116,20 @@ use_propulsion_fits_from_FL2020_1682_undergrads = (
 ##### Margins
 structural_mass_margin_multiplier = opti.parameter(value=1.25)
 energy_generation_margin = opti.parameter(value=1.05)
-allowable_battery_depth_of_discharge = opti.parameter(
-    value=0.95
-)  # How much of the battery can you actually use? # updated according to Matthew Berk discussion 10/21/21
-q_ne_over_q_max = opti.parameter(
-    value=2
-)  # Chosen on the basis of a paper read by Trevor Long about Helios, 1/16/21
+# How much of the battery can you actually use?
+# updated according to Matthew Berk discussion 10/21/21
+allowable_battery_depth_of_discharge = opti.parameter(value=0.95)
+# Chosen on the basis of a paper read by Trevor Long about Helios, 1/16/21
+q_ne_over_q_max = opti.parameter(value=2)
 
 ##### Simulation Parameters
-n_timesteps_per_segment = 180  # Only relevant if allow_trajectory_optimization is True.
-# Quick convergence testing indicates you can get bad analyses below 150 or so...
+# Only relevant if allow_trajectory_optimization is True.
+n_timesteps_per_segment = 180
+# Quick convergence testing indicates you can get bad analyses below 150 or so.
 
 ##### Optimization bounds
-# Specify a minimum speed - keeps the speed-gamma velocity parameterization from NaNing
+# Specify a minimum speed.
+# Keeps the speed-gamma velocity parameterization from NaNing
 min_speed = 0
 
 
@@ -170,7 +173,13 @@ def discretize_time(opti, climb_opt, allow_trajectory_optimization,
 
     n_timesteps = time.shape[0]
     hour = time / SECONDS_PER_HOUR
-    return time, time_periodic_start_index, time_periodic_end_index, n_timesteps, hour
+    return (
+        time,
+        time_periodic_start_index,
+        time_periodic_end_index,
+        n_timesteps,
+        hour,
+    )
 
 
 # endregion
@@ -272,7 +281,7 @@ def initialize_traj_opt(opti, min_cruise_altitude, min_speed,
 # endregion
 
 # region Design Optimization Variables
-##### Initialize design optimization variables (all units in base SI or derived units)
+##### Initialize design optimization variables (all units in SI)
 
 
 def init_design_opt(opti: asb.Opti) -> Tuple[asb.cas.MX, asb.cas.MX]:
@@ -327,15 +336,15 @@ def make_empennage(opti, wing_span, n_timesteps, min_hori_span, min_hori_chord):
     # center hstab
     outboard_hstab_span = opti.variable(init_guess=4, scale=4, category="des")
     opti.subject_to([
-        outboard_hstab_span >
-        2,  # TODO review this, driven by Trevor's ASWing findings on turn radius sizing, 8/16/20
+        outboard_hstab_span > 2,  # TODO review this,
+        # driven by Trevor's ASWing findings on turn radius sizing, 8/16/20
         outboard_hstab_span < wing_span / 6,
     ])
 
     outboard_hstab_chord = opti.variable(init_guess=3, scale=2, category="des")
     opti.subject_to([
-        outboard_hstab_chord >
-        0.8,  # TODO review this, driven by Trevor's ASWing findings on turn radius sizing, 8/16/20
+        outboard_hstab_chord > 0.8,  # TODO review this, driven
+        # by Trevor's ASWing findings on turn radius sizing, 8/16/20
     ])
 
     outboard_hstab_twist = opti.variable(n_vars=n_timesteps,
@@ -418,7 +427,9 @@ def design_opt(params: Dict[str, Any]):
     outboard_boom_length = opti.variable(init_guess=10, scale=2, category="des")
     opti.subject_to([
         outboard_boom_length > wing_root_chord * 3 / 4,
-        # outboard_boom_length < 3.5, # TODO review this, driven by Trevor's ASWing findings on turn radius sizing, 8/16/20
+        # outboard_boom_length < 3.5, #  TODO review this, driven by Trevor's
+        #                             #  ASWing findings on turn radius sizing,
+        #                             #  8/16/20
     ])
 
     nose_length = 1.80  # Calculated on 4/15/20 with Trevor and Olek
@@ -482,10 +493,11 @@ def design_opt(params: Dict[str, Any]):
                 xyz_le=np.array([-wing_root_chord / 4, 0, 0]),
                 chord=wing_root_chord,
                 twist=0,  # degrees
-                airfoil=
-                wing_airfoil,  # Airfoils are blended between a given XSec and the next one.
+                # Airfoils are blended between a given XSec and the next one.
+                airfoil=wing_airfoil,
                 control_surface_is_symmetric=True,
-                # Flap # Control surfaces are applied between a given XSec and the next one.
+                # Flap Control surfaces are applied between a given XSec
+                # and the next one.
                 control_surface_deflection=0,  # degrees
             ),
             asb.WingXSec(  # Break
@@ -513,10 +525,11 @@ def design_opt(params: Dict[str, Any]):
                 xyz_le=np.array([0, 0, 0]),
                 chord=center_hstab_chord,
                 twist=-3,  # degrees
-                airfoil=
-                tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
+                # Airfoils are blended between a given XSec and the next one.
+                airfoil=tail_airfoil,
                 control_surface_is_symmetric=True,
-                # Flap # Control surfaces are applied between a given XSec and the next one.
+                # Flap # Control surfaces are applied between a given XSec
+                # and the next one.
                 control_surface_deflection=0,  # degrees
             ),
             asb.WingXSec(  # Tip
@@ -974,7 +987,6 @@ def design_opt(params: Dict[str, Any]):
 
     else:
         ### Use Jamie's model
-        from design_opt_utilities.new_models import eff_curve_fit
 
         opti.subject_to(y < 30000)  # Bugs out without this limiter
 
@@ -1597,40 +1609,38 @@ def design_opt(params: Dict[str, Any]):
         ("Wing root chord", wing_root_chord),
     ])
 
-    import plotly.io as pio
-
     pio.renderers.default = "browser"
 
-    def qp(*args: List[str]):
+    def qp(*args: List[Tuple[str, List[float]]]):
         """
         QuickPlot a variable or set of variables
-        :param args: Variable names, given as strings (e.g. 'x')
+        :param args: List of tuples of (title, values) for each axis
         """
         n = len(args)
         if n == 1:
-            fig = px.scatter(y=s(eval(args[0])),
-                             title=args[0],
-                             labels={"y": args[0]})
+            fig = px.scatter(y=args[0][1],
+                             title=args[0][0],
+                             labels={"y": args[0][0]})
         elif n == 2:
             fig = px.scatter(
-                x=s(eval(args[0])),
-                y=s(eval(args[1])),
-                title=f"{args[0]} vs. {args[1]}",
+                x=args[0][1],
+                y=args[1][1],
+                title=f"{args[0][0]} vs. {args[1][0]}",
                 labels={
-                    "x": args[0],
-                    "y": args[1]
+                    "x": args[0][0],
+                    "y": args[1][0],
                 },
             )
         elif n == 3:
             fig = px.scatter_3d(
-                x=s(eval(args[0])),
-                y=s(eval(args[1])),
-                z=s(eval(args[2])),
-                title=f"{args[0]} vs. {args[1]} vs. {args[2]}",
+                x=args[0][1],
+                y=args[1][1],
+                z=args[2][1],
+                title=f"{args[0][0]} vs. {args[1][0]} vs. {args[2][0]}",
                 labels={
-                    "x": args[0],
-                    "y": args[1],
-                    "z": args[2]
+                    "x": args[0][0],
+                    "y": args[1][0],
+                    "z": args[2][0],
                 },
                 size_max=18,
             )
@@ -1648,20 +1658,19 @@ def design_opt(params: Dict[str, Any]):
     plot_dpi = 200
 
     # Find dusk and dawn
-    is_daytime = s(
-        solar_flux_on_horizontal) >= 1  # 1 W/m^2 or greater insolation
+    daytime_insolation_threshold = 1  # W/m^2
+    is_daytime = s(solar_flux_on_horizontal) >= daytime_insolation_threshold
     is_nighttime = np.logical_not(is_daytime)
 
     def plot(
-        x: Any,
-        x_name: str,
-        y: Any,
-        y_name: str,
+        x: List[float],
+        y: List[float],
         xlabel: str,
         ylabel: str,
         title: str,
         save_name: str = None,
         show: bool = True,
+        is_hour: bool = False,
         plot_day_color=(103 / 255, 155 / 255, 240 / 255),
         plot_night_color=(7 / 255, 36 / 255, 84 / 255),
     ) -> None:  # Plot a variable x and variable y, highlighting where day and night occur
@@ -1698,7 +1707,7 @@ def design_opt(params: Dict[str, Any]):
         ax.ticklabel_format(useOffset=False)
 
         # Do specific things for certain variable names.
-        if x_name == "hour":
+        if is_hour:
             ax.xaxis.set_major_locator(ticker.MultipleLocator(base=3))
 
         # Do the usual plot things.
@@ -1717,9 +1726,8 @@ def design_opt(params: Dict[str, Any]):
     if make_plots:
         plot(
             s(hour),
-            "hour",
             s(y_km),
-            "y_km",
+            is_hour=True,
             xlabel="Hours after Solar Noon",
             ylabel="Altitude [km]",
             title="Altitude over Simulation",
@@ -1727,9 +1735,8 @@ def design_opt(params: Dict[str, Any]):
         )
         plot(
             s(hour),
-            "hour",
             s(airspeed),
-            "airspeed",
+            is_hour=True,
             xlabel="Hours after Solar Noon",
             ylabel="True Airspeed [m/s]",
             title="True Airspeed over Simulation",
@@ -1737,9 +1744,8 @@ def design_opt(params: Dict[str, Any]):
         )
         plot(
             s(hour),
-            "hour",
             s(net_power_to_battery),
-            "net_power_to_battery",
+            is_hour=True,
             xlabel="Hours after Solar Noon",
             ylabel="Net Power [W] (positive is charging)",
             title="Net Power to Battery over Simulation",
@@ -1747,9 +1753,8 @@ def design_opt(params: Dict[str, Any]):
         )
         plot(
             s(hour),
-            "hour",
             s(battery_state_of_charge_percentage),
-            "battery_state_of_charge_percentage",
+            is_hour=True,
             xlabel="Hours after Solar Noon",
             ylabel="State of Charge [%]",
             title="Battery Charge State over Simulation",
@@ -1757,9 +1762,8 @@ def design_opt(params: Dict[str, Any]):
         )
         plot(
             s(hour),
-            "hour",
             s(x_km),
-            "x_km",
+            is_hour=True,
             xlabel="hours after Solar Noon",
             ylabel="Downrange Distance [km]",
             title="Optimal Trajectory over Simulation",
@@ -1898,7 +1902,6 @@ def design_opt(params: Dict[str, Any]):
 
     # Write a mass budget
     with open("outputs/mass_budget.csv", "w+") as f:
-        from types import ModuleType
 
         f.write("Object or Collection of Objects, Mass [kg],\n")
         for var_name in dir():
