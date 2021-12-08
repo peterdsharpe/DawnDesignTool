@@ -23,6 +23,7 @@ jupyter = "1.0.0"
 pylint = "^2.12.2"
 pytest = "^6.2.5"
 yapf = "^0.31.0"
+rope = "^0.22.0"
 
 [tool.yapf]
 based_on_style = "google"
