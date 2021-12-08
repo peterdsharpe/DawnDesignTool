@@ -1249,6 +1249,8 @@ def design_opt(params: Dict[str, Any]):
         n_wing_sections=4,
         t_over_c=0.14,
         scaling_factor=1.5,  # Suggested by Drela
+        # TODO: Check this LE assumption, it seem wrong
+        include_wing_le_sheeting=False,
     )
 
     mass_wing = mass_wing_primary + mass_wing_secondary

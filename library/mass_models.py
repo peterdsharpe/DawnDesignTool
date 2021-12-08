@@ -80,23 +80,26 @@ def estimate_mass_wing_secondary(
     # Scale-up factor for masses that haven't yet totally been pinned down
     # experimentally
     scaling_factor=1.0,
+    include_wing_le_sheeting=False,
 ):
     """
     Finds the mass of the wing structure of a human powered aircraft (HPA),
     following Juan Cruz's correlations in
     http://journals.sfu.ca/ts/index.php/ts/article/viewFile/760/718
-    :param span: wing span [m]
-    :param chord: wing mean chord [m]
-    :param vehicle_mass: aircraft gross weight [kg]
-    :param n_ribs: number of ribs in the wing
-    :param n_wing_sections: number of wing sections or panels (for disassembly?)
-    :param ultimate_load_factor: ultimate load factor [unitless]
-    :param type: Type of bracing: "cantilevered", "one-wire", "multi-wire"
-    :param t_over_c: wing airfoil thickness-to-chord ratio
-    :param include_spar: Should we include the mass of the spar?
-                         Useful if you want to do your own primary
-                         structure calculations. [boolean]
-    :return: Wing structure mass [kg]
+    
+    Args:
+        span: wing span [m]
+        chord: wing mean chord [m]
+        n_ribs: number of ribs in the wing
+        skin_density: Density of the wing skin
+        n_wing_sections: number of wing sections or panels (for disassembly)
+        t_over_c: wing airfoil thickness-to-chord ratio
+        scaling_factor: Scaling factor to apply to rib and trailing edge weight
+        include_wing_le_sheeting: Boolean to turn on or off the weight of the
+                                  LE sheeting.
+    
+    Returns:
+        Wing secondary structure mass [kg]
     """
     ### Secondary structure
     n_end_ribs = 2 * n_wing_sections - 2
@@ -116,9 +119,12 @@ def estimate_mass_wing_secondary(
                                     + chord * 6.57e-3)
 
     # LE sheeting mass
-    ratio_of_rib_spacing_to_chord = (span / n_ribs) / chord
-    weight_leading_edge_sheeting = 0.456 / 2 * (
-        span**2 * ratio_of_rib_spacing_to_chord**(4 / 3) / span)
+    if include_wing_le_sheeting:
+        ratio_of_rib_spacing_to_chord = (span / n_ribs) / chord
+        weight_leading_edge_sheeting = 0.456 / 2 * (
+            span**2 * ratio_of_rib_spacing_to_chord**(4 / 3) / span)
+    else:
+        weight_leading_edge_sheeting = 0
 
     # Skin Panel Mass
     weight_skin_panel = (
