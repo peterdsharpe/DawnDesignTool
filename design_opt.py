@@ -1879,3 +1879,6 @@ def design_opt(params: Dict[str, Any]):
     opti.value(net_power_to_battery)
     opti.value(net_power_to_battery_pack)
     opti.value(time)
+
+if __name__ == "__main__":
+    design_opt({})
