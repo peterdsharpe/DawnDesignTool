@@ -3,11 +3,11 @@ import aerosandbox as asb
 import aerosandbox.library.aerodynamics as aero
 from aerosandbox.atmosphere import Atmosphere as atmo
 from aerosandbox.library import mass_structural as lib_mass_struct
-from aerosandbox.library import power_solar as lib_solar
 from aerosandbox.library import propulsion_electric as lib_prop_elec
 from aerosandbox.library import propulsion_propeller as lib_prop_prop
 from aerosandbox.library import winds as lib_winds
 from aerosandbox.library.airfoils import naca0008, flat_plate
+from library import power_solar as lib_solar
 import aerosandbox.numpy as np
 import plotly.express as px
 import copy
@@ -476,7 +476,7 @@ left_hstab.xyz_le[1] *= -1
 
 center_vstab = asb.Wing(
     name="Vertical Stabilizer",
-    xyz_le=np.array([center_boom_length - center_vstab_chord * 0.75, 0, -center_vstab_span / 2 + center_vstab_span * 0.15]),
+    # xyz_le=np.array([center_boom_length - center_vstab_chord * 0.75, 0, -center_vstab_span / 2 + center_vstab_span * 0.15]),
     symmetric=False,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
@@ -1596,6 +1596,8 @@ if __name__ == "__main__":
         "wing_root_chord"
     ])
 
+    import plotly.io as pio
+    pio.renderers.default="browser"
 
     def qp(*args: List[str]):
         """
