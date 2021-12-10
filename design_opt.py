@@ -836,7 +836,7 @@ opti.subject_to([
     # Vv < 0.05,
     # Vv == 0.035,
     center_vstab.aspect_ratio() == 2.5,  # TODO review this
-    # center_vstab.area() < 0.1 * wing.area(),
+    center_vstab.area() < 0.1 * wing.area(), # checked with Matt on 12/10/21
     # center_vstab.aspect_ratio() > 1.9, # from Jamie, based on ASWing
     # center_vstab.aspect_ratio() < 2.5 # from Jamie, based on ASWing
 ])
