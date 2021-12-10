@@ -983,43 +983,62 @@ if vertical_cells == "microlink":
     vert_solar_cell_efficiency = 0.285 * 0.9  # Microlink
     vert_rho_solar_cells = 0.255 * 1.1  # kg/m^2, solar cell area density. Microlink.
     max_solar_area_fraction_vert = opti.parameter(value=0.80)  # for microlink and ascent solar
+    vert_solar_cost_per_watt = 250 # $/W
+    vert_solar_power_ratio = 1100 # W/kg
 
 if vertical_cells == "sunpower":
     vert_solar_cell_efficiency = 0.243 * 0.9 # Sunpower
     vert_rho_solar_cells = 0.425 * 1.1 * 1.15  # kg/m^2, solar cell area density. Sunpower.
     max_solar_area_fraction_vert = opti.parameter(value=0.60) # for sunpower
+    vert_solar_cost_per_watt = 3 # $/W
+    vert_solar_power_ratio = 500 # W/kg
 
 if vertical_cells == "ascent_solar":
     vert_solar_cell_efficiency = 0.14 * 0.9  # Ascent Solar
     vert_rho_solar_cells = 0.300 * 1.1  # kg/m^2, solar cell area density. Ascent Solar
     max_solar_area_fraction_vert = opti.parameter(value=0.80)  # for microlink and ascent solar
+    vert_solar_cost_per_watt = 80 # $/W
+    vert_solar_power_ratio = 300 # W/kg
 
 if wing_cells == "microlink":
     horz_solar_cell_efficiency = 0.285 * 0.9  # Microlink
     horz_rho_solar_cells = 0.255 * 1.1  # kg/m^2, solar cell area density. Microlink.
     max_solar_area_fraction_horz = opti.parameter(value=0.80)  # for microlink and ascent solar
+    horz_solar_cost_per_watt = 250 # $/W
+    horz_solar_power_ratio = 1100 # W/kg
 
 if wing_cells == "sunpower":
     horz_solar_cell_efficiency = 0.243 * 0.9  # Sunpower
     horz_rho_solar_cells = 0.425 * 1.1 * 1.15  # kg/m^2, solar cell area density. Sunpower.
     max_solar_area_fraction_horz = opti.parameter(value=0.60)  # for sunpower
+    horz_solar_cost_per_watt = 3 # $/W
+    horz_solar_power_ratio = 500 # W/kg
 
 if wing_cells == "ascent_solar":
     horz_solar_cell_efficiency = 0.14 * 0.9  # Ascent Solar
     horz_rho_solar_cells = 0.300 * 1.1  # kg/m^2, solar cell area density. Ascent Solar
     max_solar_area_fraction_horz = opti.parameter(value=0.80)  # for microlink and ascent solar
+    horz_solar_cost_per_watt = 80 # $/W
+    horz_solar_power_ratio = 300 # W/kg
 
 if billboard_cells == "microlink":
     fuselage_solar_cell_efficiency = 0.285 * 0.9  # Microlink
     fuselage_rho_solar_cells = 0.255 * 1.1  # kg/m^2, solar cell area density. Microlink.
+    fuselage_solar_cost_per_watt = 250 # $/W
+    fuselage_solar_power_ratio = 1100 # W/kg
 
 if billboard_cells == "sunpower":
     fuselage_solar_cell_efficiency = 0.243 * 0.9  # Sunpower
     fuselage_rho_solar_cells = 0.425 * 1.1 * 1.15  # kg/m^2, solar cell area density. Sunpower.
+    fuselage_solar_cost_per_watt = 3 # $/W
+    fuselage_solar_power_ratio = 500 # W/kg
 
 if billboard_cells == "ascent_solar":
     fuselage_solar_cell_efficiency = 0.14 * 0.9  # Ascent Solar
     fuselage_rho_solar_cells = 0.300 * 1.1  # kg/m^2, solar cell area density. Ascent Solar
+    fuselage_solar_cost_per_watt = 80 # $/W
+    fuselage_solar_power_ratio = 300 # W/kg
+
 
 # This figure should take into account all temperature factors,
 # spectral losses (different spectrum at altitude), multi-junction effects, etc.
@@ -1125,6 +1144,9 @@ power_in_after_panels_tot = power_in_after_panels_horz + power_in_after_panels_v
 power_in = (power_in_after_panels_tot) * MPPT_efficiency
 
 mass_solar_cells = (vert_rho_solar_cells * area_solar_vert * 2) + (horz_rho_solar_cells * area_solar_horz) + (fuselage_rho_solar_cells * area_solar_fuselage * 2)
+cost_solar_cells = (vert_rho_solar_cells * area_solar_vert * 2) * vert_solar_power_ratio * vert_solar_cost_per_watt + \
+                   (horz_rho_solar_cells * area_solar_horz) * horz_solar_power_ratio * horz_solar_cost_per_watt  + \
+                   (fuselage_rho_solar_cells * area_solar_fuselage * 2) * fuselage_solar_power_ratio * fuselage_solar_cost_per_watt
 
 ### Battery calculations
 
@@ -1594,7 +1616,9 @@ if __name__ == "__main__":
     output([
         "max_mass_total",
         "wing_span",
-        "wing_root_chord"
+        "wing_root_chord",
+        "cost_solar_cells",
+        "cost_batteries"
     ])
 
 
