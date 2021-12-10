@@ -1011,7 +1011,7 @@ if vertical_cells == "microlink":
 
 if vertical_cells == "sunpower":
     vert_solar_cell_efficiency = 0.243 * 0.9 # Sunpower
-    vert_rho_solar_cells = 0.425 * 1.1  # kg/m^2, solar cell area density. Sunpower.
+    vert_rho_solar_cells = 0.425 * 1.1 * 1.15  # kg/m^2, solar cell area density. Sunpower.
     max_solar_area_fraction_vert = opti.parameter(value=0.60) # for sunpower
 
 if vertical_cells == "ascent_solar":
@@ -1026,7 +1026,7 @@ if wing_cells == "microlink":
 
 if wing_cells == "sunpower":
     horz_solar_cell_efficiency = 0.243 * 0.9  # Sunpower
-    horz_rho_solar_cells = 0.425 * 1.1  # kg/m^2, solar cell area density. Sunpower.
+    horz_rho_solar_cells = 0.425 * 1.1 * 1.15  # kg/m^2, solar cell area density. Sunpower.
     max_solar_area_fraction_horz = opti.parameter(value=0.60)  # for sunpower
 
 if wing_cells == "ascent_solar":
@@ -1040,7 +1040,7 @@ if billboard_cells == "microlink":
 
 if billboard_cells == "sunpower":
     fuselage_solar_cell_efficiency = 0.243 * 0.9  # Sunpower
-    fuselage_rho_solar_cells = 0.425 * 1.1  # kg/m^2, solar cell area density. Sunpower.
+    fuselage_rho_solar_cells = 0.425 * 1.1 * 1.15  # kg/m^2, solar cell area density. Sunpower.
 
 if billboard_cells == "ascent_solar":
     fuselage_solar_cell_efficiency = 0.14 * 0.9  # Ascent Solar
@@ -1163,6 +1163,7 @@ mass_battery_pack = lib_prop_elec.mass_battery_pack(
     battery_pack_cell_fraction=battery_pack_cell_percentage
 )
 mass_battery_cells = mass_battery_pack * battery_pack_cell_percentage
+cost_batteries = 12 * battery_capacity_watt_hours # dollars assuming 355 whr/kg cells
 
 mass_wires = lib_prop_elec.mass_wires(
     wire_length=wing.span() / 2,
