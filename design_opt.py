@@ -406,7 +406,7 @@ wing = asb.Wing(
         asb.WingXSec(  # Root
             xyz_le = np.array([-wing_root_chord/4, 0, 0]),
             chord=wing_root_chord,
-            twist=0,  # degrees
+            twist_angle=0,  # degrees
             airfoil=wing_airfoil,  # Airfoils are blended between a given XSec and the next one.
             control_surface_is_symmetric=True,
             # Flap # Control surfaces are applied between a given XSec and the next one.
@@ -415,13 +415,13 @@ wing = asb.Wing(
         asb.WingXSec(  # Break
             xyz_le = np.array([-wing_root_chord/4, wing_y_taper_break, 0]),
             chord=wing_root_chord,
-            twist=0,
+            twist_angle=0,
             airfoil=wing_airfoil,
         ),
         asb.WingXSec(  # Tip
             xyz_le = np.array([-wing_root_chord * wing_taper_ratio / 4, wing_span / 2, 0]),
             chord=wing_root_chord * wing_taper_ratio,
-            twist=0,
+            twist_angle=0,
             airfoil=wing_airfoil,
         ),
     ]
@@ -435,7 +435,7 @@ center_hstab = asb.Wing(
         asb.WingXSec(  # Root
             xyz_le=np.array([0, 0, 0]),
             chord=center_hstab_chord,
-            twist=-3,  # degrees
+            twist_angle=-3,  # degrees
             airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
             control_surface_is_symmetric = True,
             # Flap # Control surfaces are applied between a given XSec and the next one.
@@ -444,7 +444,7 @@ center_hstab = asb.Wing(
         asb.WingXSec(  # Tip
             xyz_le=np.array([0, center_hstab_span / 2, 0]),
             chord=center_hstab_chord,
-            twist=-3,
+            twist_angle=-3,
             airfoil=tail_airfoil,
         ),
     ]
@@ -459,7 +459,7 @@ right_hstab = asb.Wing(
         asb.WingXSec(  # Root
             xyz_le=np.array([0, 0, 0]),
             chord=outboard_hstab_chord,
-            twist=-3,  # degrees
+            twist_angle=-3,  # degrees
             airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
             control_surface_is_symmetric = True,
             # Flap # Control surfaces are applied between a given XSec and the next one.
@@ -468,7 +468,7 @@ right_hstab = asb.Wing(
         asb.WingXSec(  # Tip
             xyz_le=np.array([0, outboard_hstab_span / 2, 0]),
             chord=outboard_hstab_chord,
-            twist=-3,
+            twist_angle=-3,
             airfoil=tail_airfoil,
         ),
     ]
@@ -486,7 +486,7 @@ center_vstab = asb.Wing(
         asb.WingXSec(  # Root
             xyz_le=np.array([0, 0, 0]),
             chord=center_vstab_chord,
-            twist=0,  # degrees
+            twist_angle=0,  # degrees
             airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
             control_surface_is_symmetric = True,
             # Flap # Control surfaces are applied between a given XSec and the next one.
@@ -495,7 +495,7 @@ center_vstab = asb.Wing(
         asb.WingXSec(  # Tip
             xyz_le=np.array([0, 0, center_vstab_span]),
             chord=center_vstab_chord,
-            twist=0,
+            twist_angle=0,
             airfoil=tail_airfoil,
         ),
     ]
@@ -543,7 +543,7 @@ airplane = asb.Airplane(
 
 # region Atmosphere
 wind_speed = wind_speed_func(y)
-wind_direction = 315
+wind_direction = 180
 flight_path_radius = 50000
 
 groundspeed = opti.variable(
@@ -594,30 +594,63 @@ q = 1 / 2 * rho * airspeed ** 2  # Solar calculations
 
 panel_heading = vehicle_heading - 90 # actual directionality of the solar panel
 
-solar_flux_on_horizontal = lib_solar.solar_flux_on_horizontal(
-    latitude, day_of_year, time, scattering=True
+solar_flux_on_horizontal = lib_solar.solar_flux(
+    latitude=latitude,
+    day_of_year=day_of_year,
+    time=time,
+    scattering=True
 )
-solar_flux_on_wing_left =  lib_solar.solar_flux_circular_flight_path(
-    latitude, day_of_year, time, 170, panel_heading, scattering=True,
+solar_flux_on_wing_left =  lib_solar.solar_flux(
+    latitude=latitude,
+    day_of_year=day_of_year,
+    time=time,
+    panel_azimuth_angle=panel_heading,
+    panel_tilt_angle=170,
+    scattering=True,
 )
-solar_flux_on_wing_right =  lib_solar.solar_flux_circular_flight_path(
-    latitude, day_of_year, time, 10, panel_heading, scattering=True,
+solar_flux_on_wing_right =  lib_solar.solar_flux(
+    latitude=latitude,
+    day_of_year=day_of_year,
+    time=time,
+    panel_azimuth_angle=panel_heading,
+    panel_tilt_angle=10,
+    scattering=True,
 )
-solar_flux_on_vertical_left = lib_solar.solar_flux_circular_flight_path(
-    latitude, day_of_year, time, 90, panel_heading, scattering=True,
+solar_flux_on_vertical_left = lib_solar.solar_flux(
+    latitude=latitude,
+    day_of_year=day_of_year,
+    time=time,
+    panel_azimuth_angle=panel_heading,
+    panel_tilt_angle=90,
+    scattering=True,
 )
-solar_flux_on_vertical_right= lib_solar.solar_flux_circular_flight_path(
-    latitude, day_of_year, time, -90, panel_heading, scattering=True,
+solar_flux_on_vertical_right= lib_solar.solar_flux(
+    latitude=latitude,
+    day_of_year=day_of_year,
+    time=time,
+    panel_azimuth_angle=panel_heading,
+    panel_tilt_angle=-90,
+    scattering=True,
 )
 billboard_angle = opti.variable(
     init_guess=10,
     scale=1,
     category="ops")
-solar_flux_on_billboard_left = lib_solar.solar_flux_circular_flight_path(
-    latitude, day_of_year, time, billboard_angle, panel_heading, scattering=True,
+solar_flux_on_billboard_left = lib_solar.solar_flux(
+    latitude=latitude,
+    day_of_year=day_of_year,
+    time=time,
+    panel_azimuth_angle=panel_heading,
+    panel_tilt_angle=billboard_angle,
+    scattering=True,
 )
-solar_flux_on_billboard_right = lib_solar.solar_flux_circular_flight_path(
-    latitude, day_of_year, time, -billboard_angle, panel_heading, scattering=True,
+solar_flux_on_billboard_right = lib_solar.solar_flux(
+    latitude=latitude,
+    day_of_year=day_of_year,
+    time=time,
+    panel_azimuth_angle=panel_heading,
+    panel_tilt_angle=-billboard_angle,
+    scattering=True,
 )
 
 # endregion
