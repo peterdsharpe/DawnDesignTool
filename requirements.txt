@@ -1,4 +1,4 @@
-aerosandbox~=3.2.0
+aerosandbox
 numpy
 pandas
 plotly
