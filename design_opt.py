@@ -535,7 +535,7 @@ airplane = asb.Airplane(
 # region Atmosphere
 wind_speed = wind_speed_func(y)
 wind_direction = 180
-flight_path_radius = 50000
+flight_path_radius = 100000
 
 groundspeed = opti.variable(
     n_vars=n_timesteps,
@@ -1185,7 +1185,7 @@ mass_battery_pack = lib_prop_elec.mass_battery_pack(
     battery_pack_cell_fraction=battery_pack_cell_percentage
 )
 mass_battery_cells = mass_battery_pack * battery_pack_cell_percentage
-cost_batteries = 12 * battery_capacity_watt_hours # dollars assuming 355 whr/kg cells
+cost_batteries = 4 * battery_capacity_watt_hours # dollars assuming 355 whr/kg cells
 
 mass_wires = lib_prop_elec.mass_wires(
     wire_length=wing.span() / 2,
