@@ -70,8 +70,8 @@ def wind_speed_func(alt):
     speed_func = lib_winds.wind_speed_world_95(alt, latitude_array, day_array)
     return speed_func
 
-battery_specific_energy_Wh_kg = opti.parameter(value=300)
-battery_pack_cell_percentage = 1.0  # What percent of the battery pack consists of the module, by weight?
+battery_specific_energy_Wh_kg = opti.parameter(value=450)
+battery_pack_cell_percentage = 0.89  # What percent of the battery pack consists of the module, by weight?
 variable_pitch = False
 use_propulsion_fits_from_FL2020_1682_undergrads = True # Warning: Fits not yet validated
 # Accounts for module HW, BMS, pack installation, etc.
@@ -538,7 +538,7 @@ airplane = asb.Airplane(
 # region Atmosphere
 wind_speed = wind_speed_func(y)
 wind_direction = 180
-flight_path_radius = 50000
+flight_path_radius = 100000
 
 groundspeed = opti.variable(
     n_vars=n_timesteps,
@@ -1160,7 +1160,7 @@ mass_battery_pack = lib_prop_elec.mass_battery_pack(
     battery_pack_cell_fraction=battery_pack_cell_percentage
 )
 mass_battery_cells = mass_battery_pack * battery_pack_cell_percentage
-cost_batteries = 12 * battery_capacity_watt_hours # dollars assuming 355 whr/kg cells
+cost_batteries = 4 * battery_capacity_watt_hours # dollars assuming 355 whr/kg cells
 
 mass_wires = lib_prop_elec.mass_wires(
     wire_length=wing.span() / 2,

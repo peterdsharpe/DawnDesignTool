@@ -3,7 +3,7 @@ from design_opt import *
 import aerosandbox.numpy as np
 
 ### Set the run ID
-run_name = "new/6kg_payload_100W_CIGS_300batt_vert_solar_micrcolink_90wind"
+run_name = "new/6kg_payload_100W_sunpower_450batt"
 
 ### Turn parallelization on/off.
 parallel = True
