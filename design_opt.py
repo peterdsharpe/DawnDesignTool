@@ -46,11 +46,13 @@ minimize = "wing.span() / 50"  # any "eval-able" expression
 
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
-latitude = opti.parameter(value=60)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
-day_of_year = opti.parameter(value=244)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
+latitude = opti.parameter(value=-73)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
+day_of_year = opti.parameter(value=340)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 strat_offset_value = opti.parameter(value=1000)
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
-required_headway_per_day = 1000 # meters
+wind_direction = 0 # direction wind is coming from 0 is North and 90 is East
+flight_path_radius = 50000
+required_headway_per_day = 10000 #2 * np.pi * flight_path_radius# meters
 allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
 make_plots = True
@@ -535,10 +537,9 @@ airplane = asb.Airplane(
 
 # endregion
 
-# region Atmosphere
+# region Flight Path Optimization
+
 wind_speed = wind_speed_func(y)
-wind_direction = 180
-flight_path_radius = 100000
 
 groundspeed = opti.variable(
     n_vars=n_timesteps,
@@ -575,6 +576,9 @@ vehicle_heading = np.arctan2d(airspeed_y, airspeed_x)
 # groundspeed = (heading_x ** 2 + heading_y ** 2) ** 0.5
 # groundspeed = airspeed # TODO this is here only for debugging
 
+# endregion
+
+# region Atmosphere
 ##### Atmosphere
 my_atmosphere = atmo(altitude=y)
 P = my_atmosphere.pressure()
@@ -1582,7 +1586,7 @@ opti.minimize(
 if __name__ == "__main__":
     # Solve
     sol = opti.solve(
-        max_iter=1000,
+        max_iter=2000,
         options={
             "ipopt.max_cpu_time": 600
         }
@@ -1761,6 +1765,12 @@ if __name__ == "__main__":
              xlabel="hours after Solar Noon",
              ylabel="Downrange Distance [km]",
              title="Optimal Trajectory over Simulation",
+             save_name="outputs/trajectory.png"
+             )
+        plot("hour", "groundspeed",
+             xlabel="hours after Solar Noon",
+             ylabel="Groundspeed [m/s]",
+             title="Groundspeed over Simulation",
              save_name="outputs/trajectory.png"
              )
 
