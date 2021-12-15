@@ -1577,7 +1577,7 @@ opti.subject_to([
     center_hstab_span == outboard_hstab_span,
     center_hstab_chord == outboard_hstab_chord,
     # center_hstab_twist_angle == outboard_hstab_twist_angle,
-    # center_boom_length == outboard_boom_length,
+    center_boom_length >= outboard_boom_length,
     center_hstab_twist_angle <= 0,  # essentially enforces downforce, prevents hstab from lifting and exploiting config.
     outboard_hstab_twist_angle <= 0,
     # essentially enforces downforce, prevents hstab from lifting and exploiting config.
