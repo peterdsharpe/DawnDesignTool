@@ -474,7 +474,7 @@ right_hstab = asb.Wing(
     ]
 )
 left_hstab = copy.deepcopy(right_hstab)
-left_hstab = left_hstab.translate(np.array([1, -1, 1]))
+left_hstab = left_hstab.translate(np.array([0, -1, 0]))
 # left_hstab.xyz_le[1] *= -1
 
 center_vstab = asb.Wing(
@@ -516,7 +516,7 @@ right_fuse = make_fuselage(
 right_fuse = right_fuse.translate(np.array([0, boom_location * wing_span / 2, 0]))
 
 left_fuse = copy.deepcopy(right_fuse)
-left_fuse = left_fuse.translate(np.array([0, -boom_location * wing_span / 2, 0]))
+left_fuse = left_fuse.translate(np.array([0, - boom_location * wing_span, 0]))
 
 # Assemble the airplane
 airplane = asb.Airplane(
