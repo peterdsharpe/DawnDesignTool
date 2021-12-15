@@ -1890,7 +1890,7 @@ if __name__ == "__main__":
         plt.title("Power Systems Mass*")
 
         plt.annotate(
-            s="* percentages referenced to total aircraft mass",
+            text="* percentages referenced to total aircraft mass",
             xy=(0.01, 0.01),
             # xytext=(0.03, 0.03),
             xycoords="figure fraction",
@@ -1902,7 +1902,7 @@ if __name__ == "__main__":
             # }
         )
         plt.annotate(
-            s="""
+            text="""
             Total mass: %.1f kg
             Wing span: %.2f m
             """ % (s(mass_total), s(wing.span())),
