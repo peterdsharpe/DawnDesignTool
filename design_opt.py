@@ -1455,7 +1455,7 @@ opti.subject_to([
 ##### Add periodic constraints
 opti.subject_to([
     dyn.x_e[time_periodic_end_index] / 1e5 > (dyn.x_e[time_periodic_start_index] + required_headway_per_day) / 1e5,
-    dyn.y_e[time_periodic_end_index] / 1e4 > dyn.y_ey[time_periodic_start_index] / 1e4,
+    dyn.y_e[time_periodic_end_index] / 1e4 > dyn.y_e[time_periodic_start_index] / 1e4,
     dyn.speed[time_periodic_end_index] / 2e1 > dyn.speed[time_periodic_start_index] / 2e1,
     battery_stored_energy_nondim[time_periodic_end_index] > battery_stored_energy_nondim[time_periodic_start_index],
     dyn.gamma[time_periodic_end_index] == dyn.gamma[time_periodic_start_index],
@@ -1489,10 +1489,10 @@ if climb_opt:
 #         gravity_force * np.cosd(dyn.gamma)
 # )
 
-opti.subject_to([
-    net_accel_parallel * mass_total / 1e1 == net_force_parallel_calc / 1e1,
-    net_accel_perpendicular * mass_total / 1e2 == net_force_perpendicular_calc / 1e2,
-])
+# opti.subject_to([
+#     net_accel_parallel * mass_total / 1e1 == net_force_parallel_calc / 1e1,
+#     net_accel_perpendicular * mass_total / 1e2 == net_force_perpendicular_calc / 1e2,
+# ])
 
 speeddot = net_accel_parallel
 gammadot = (net_accel_perpendicular / airspeed) * 180 / np.pi
