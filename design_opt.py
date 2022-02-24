@@ -530,7 +530,7 @@ airplane = asb.Airplane(
     ],
 )
 
-# endregion
+# endregion`
 
 # region Atmosphere
 wind_speed = wind_speed_func(y)
@@ -941,6 +941,7 @@ antenna_gain = opti.parameter(value=1) # TODO check this
 bandwidth = opti.variable(init_guess=200000000) #Hz
 center_wavelength = opti.variable(init_guess = 0.226) # meters
 peak_power = opti.variable(init_guess = 500) # Watts
+power_out_payload = opti.variable(init_guess=100)
 radar_area = radar_width * radar_length
 look_angle = opti.parameter(value= 45) # TODO check this value with Brent
 dist = y / np.cosd(look_angle)
@@ -953,12 +954,13 @@ opti.subject_to([
 ])
 
 # account for snr
-noise_power_density = k_b * T * bandwidth / center_wavelength ** 2
+noise_power_density = k_b * T * bandwidth / (center_wavelength ** 2)
 power_received = peak_power * antenna_gain * radar_area * scattering_cross_sec / ((4 * np.pi) ** 2 * dist ** 4)
+power_out_payload = peak_power * (1 / bandwidth) * center_wavelength
 opti.subject_to([
     required_snr <= power_received / noise_power_density,
+    power_out_payload >= 0,
 ])
-power_out_payload = peak_power * (1 / bandwidth) * center_wavelength
 
 ### Power accounting
 power_out = power_out_propulsion + power_out_payload + power_out_avionics
