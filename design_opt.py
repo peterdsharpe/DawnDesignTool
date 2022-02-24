@@ -937,11 +937,11 @@ required_snr = opti.parameter(value=20)  # dB from conversation w Brent on 2/18/
 radar_length = opti.parameter(value=1) # meter from GAMMA remote sensing doc
 radar_width = opti.parameter(value=0.3) # meter from GAMMA remote sensing doc
 scattering_cross_sec = opti.parameter(value=0.8) # TODO check this
-antenna_gain = opti.parameter(value=1) # TODO check this
-bandwidth = opti.variable(init_guess=200000000) #Hz
-center_wavelength = opti.variable(init_guess = 0.226) # meters
-peak_power = opti.variable(init_guess = 500) # Watts
-power_out_payload = opti.variable(init_guess=100)
+antenna_gain = opti.parameter(value=0.8) # TODO check this
+bandwidth = opti.variable(init_guess=2E8, scale=1E8) #Hz
+center_wavelength = opti.variable(init_guess = 0.226, scale=1) # meters
+peak_power = opti.variable(init_guess = 500, scale=100) # Watts
+power_out_payload = opti.variable(init_guess=100, scale=10)
 radar_area = radar_width * radar_length
 look_angle = opti.parameter(value= 45) # TODO check this value with Brent
 dist = y / np.cosd(look_angle)
@@ -959,7 +959,9 @@ power_received = peak_power * antenna_gain * radar_area * scattering_cross_sec /
 power_out_payload = peak_power * (1 / bandwidth) * center_wavelength
 opti.subject_to([
     required_snr <= power_received / noise_power_density,
-    power_out_payload >= 0,
+    peak_power >= 0,
+    bandwidth >= 0,
+    center_wavelength >= 0,
 ])
 
 ### Power accounting
