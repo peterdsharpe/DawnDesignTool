@@ -930,11 +930,14 @@ power_out_avionics = 180  # Pulled from Avionics spreadsheet on 5/13/20
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
 ### Payload Module
-c = 299792458 # [m / s] speed of light
+c = 299792458 # [m/s] speed of light
+k_b = 1.38064852E-23 # [m2 kg s-2 K-1]
 radar_resolution = opti.parameter(value=2) # meters from conversation with Brent on 2/18/22
 required_snr = opti.parameter(value=20) # dB from conversation w Brent on 2/18/22
 radar_length = opti.parameter(value=1) # meter from GAMMA remote sensing doc
 radar_width = opti.parameter(value=0.3) # meter from GAMMA remote sensing doc
+radar_eff = opti.parameter(value=0.8) # TODO check this
+antenna_gain = opti.parameter(value=1) # TODO check this
 bandwidth = opti.variable(init_guess=200000000) #Hz
 center_wavelength = opti.variable(init_guess = 0.226) # meters
 peak_power = opti.variable(init_guess = 500) # Watts
@@ -949,11 +952,14 @@ opti.subject_to([
     azimuth_resolution <= radar_resolution,
 ])
 
+# account for snr
 noise_power_density = k_b * T * bandwidth / center_wavelength ** 2
-power_received = peak_power * antenna_gain * radar_area * radar_efficiency / (4 * np.pi * dist) ** 4
+power_received = peak_power * antenna_gain * radar_area * radar_eff / (4 * np.pi * dist) ** 4
 opti.subject_to([
-    required_snr >= power_received / noise_power_density,
+    required_snr <= power_received / noise_power_density,
 ])
+power_out_payload = peak_power * (1 / bandwidth) * center_wavelength
+
 ### Power accounting
 power_out = power_out_propulsion + power_out_payload + power_out_avionics
 
