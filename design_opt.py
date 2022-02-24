@@ -29,7 +29,10 @@ sns.set(font_scale=1)
 # def run_sizing(lat, day):
 # region Setup
 ##### Initialize Optimization
-
+opti = asb.Opti(  # Normal mode - Design Optimization
+    cache_filename="cache/optimization_solution.json",
+    save_to_cache_on_solve=True
+)
 # opti = asb.Opti( # Alternate mode - Frozen Design Optimization
 #     variable_categories_to_freeze=["des"],
 #     cache_filename="cache/optimization_solution.json",
@@ -929,12 +932,15 @@ power_out_avionics = 180  # Pulled from Avionics spreadsheet on 5/13/20
 ### Payload Module
 c = 299792458 # [m / s] speed of light
 radar_resolution = opti.parameter(value=2) # meters from conversation with Brent on 2/18/22
-radar_snr = opti.parameter(value=20) # dB from conversation w Brent on 2/18/22
+required_snr = opti.parameter(value=20) # dB from conversation w Brent on 2/18/22
 radar_length = opti.parameter(value=1) # meter from GAMMA remote sensing doc
 radar_width = opti.parameter(value=0.3) # meter from GAMMA remote sensing doc
 bandwidth = opti.variable(init_guess=200000000) #Hz
-wavelength = opti.variable(init_guess = )
-
+center_wavelength = opti.variable(init_guess = 0.226) # meters
+peak_power = opti.variable(init_guess = 500) # Watts
+radar_area = radar_width * radar_length
+look_angle = opti.parameter(value= 45) # TODO check this value with Brent
+dist = y / np.cosd(look_angle)
 # constrain SAR resolution to required value
 range_resolution = c / (2 * bandwidth)
 azimuth_resolution = radar_length / 2
@@ -943,7 +949,11 @@ opti.subject_to([
     azimuth_resolution <= radar_resolution,
 ])
 
-Noise_power_density = k_b * T * bandwidth / wavelength ** 2
+noise_power_density = k_b * T * bandwidth / center_wavelength ** 2
+power_received = peak_power * antenna_gain * radar_area * radar_efficiency / (4 * np.pi * dist) ** 4
+opti.subject_to([
+    required_snr >= power_received / noise_power_density,
+])
 ### Power accounting
 power_out = power_out_propulsion + power_out_payload + power_out_avionics
 
