@@ -29,10 +29,7 @@ sns.set(font_scale=1)
 # def run_sizing(lat, day):
 # region Setup
 ##### Initialize Optimization
-opti = asb.Opti(  # Normal mode - Design Optimization
-    cache_filename="cache/optimization_solution.json",
-    save_to_cache_on_solve=True
-)
+
 # opti = asb.Opti( # Alternate mode - Frozen Design Optimization
 #     variable_categories_to_freeze=["des"],
 #     cache_filename="cache/optimization_solution.json",
@@ -43,18 +40,19 @@ opti = asb.Opti(  # Normal mode - Design Optimization
 minimize = "wing.span() / 50"  # any "eval-able" expression
 # minimize = "max_mass_total / 300" # any "eval-able" expression
 # minimize = "wing.span() / 50 * 0.9 + max_mass_total / 300 * 0.1"
+# minimize = "np.mean(np.trapz(net_power ** 2) * np.diff(time))"
 
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
-latitude = opti.parameter(value=60)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
-day_of_year = opti.parameter(value=244)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
+latitude = opti.parameter(value=-75)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
+day_of_year = opti.parameter(value=60)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 strat_offset_value = opti.parameter(value=1000)
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
-required_headway_per_day = 1000 # meters
+required_headway_per_day = 100 # meters
 allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
 make_plots = True
-mass_payload = opti.parameter(value=6)
+mass_payload = opti.parameter(value=10)
 tail_panels = True
 fuselage_billboard = False
 wing_cells = "sunpower" # select cells for wing, options include ascent_solar, sunpower, and microlink
@@ -70,8 +68,8 @@ def wind_speed_func(alt):
     speed_func = lib_winds.wind_speed_world_95(alt, latitude_array, day_array)
     return speed_func
 
-battery_specific_energy_Wh_kg = opti.parameter(value=300)
-battery_pack_cell_percentage = 1.0  # What percent of the battery pack consists of the module, by weight?
+battery_specific_energy_Wh_kg = opti.parameter(value=450)
+battery_pack_cell_percentage = 0.89  # What percent of the battery pack consists of the module, by weight?
 variable_pitch = False
 use_propulsion_fits_from_FL2020_1682_undergrads = True # Warning: Fits not yet validated
 # Accounts for module HW, BMS, pack installation, etc.
@@ -246,6 +244,8 @@ wing_span = opti.variable(
     category="des"
 )
 
+boom_offset = boom_location * wing_span / 2 # in real units (meters)
+
 opti.subject_to([wing_span > 1])
 
 wing_root_chord = opti.variable(
@@ -400,13 +400,12 @@ tail_airfoil = naca0008  # TODO remove this and use fits?
 
 wing = asb.Wing(
     name="Main Wing",
-    xyz_le = np.array([wing_x_quarter_chord, 0, 0]),
     symmetric=True,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
             xyz_le = np.array([-wing_root_chord/4, 0, 0]),
             chord=wing_root_chord,
-            twist_angle=0,  # degrees
+            twist=0,  # degrees
             airfoil=wing_airfoil,  # Airfoils are blended between a given XSec and the next one.
             control_surface_is_symmetric=True,
             # Flap # Control surfaces are applied between a given XSec and the next one.
@@ -415,26 +414,25 @@ wing = asb.Wing(
         asb.WingXSec(  # Break
             xyz_le = np.array([-wing_root_chord/4, wing_y_taper_break, 0]),
             chord=wing_root_chord,
-            twist_angle=0,
+            twist=0,
             airfoil=wing_airfoil,
         ),
         asb.WingXSec(  # Tip
             xyz_le = np.array([-wing_root_chord * wing_taper_ratio / 4, wing_span / 2, 0]),
             chord=wing_root_chord * wing_taper_ratio,
-            twist_angle=0,
+            twist=0,
             airfoil=wing_airfoil,
         ),
     ]
-)
+).translate(np.array([wing_x_quarter_chord, 0, 0]))
 center_hstab = asb.Wing(
     name="Horizontal Stabilizer",
-    xyz_le=np.array([center_boom_length - center_vstab_chord * 0.75 - center_hstab_chord, 0, 0.1]),
     symmetric=True,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
             xyz_le=np.array([0, 0, 0]),
             chord=center_hstab_chord,
-            twist_angle=-3,  # degrees
+            twist=-3,  # degrees
             airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
             control_surface_is_symmetric = True,
             # Flap # Control surfaces are applied between a given XSec and the next one.
@@ -443,21 +441,20 @@ center_hstab = asb.Wing(
         asb.WingXSec(  # Tip
             xyz_le=np.array([0, center_hstab_span / 2, 0]),
             chord=center_hstab_chord,
-            twist_angle=-3,
+            twist=-3,
             airfoil=tail_airfoil,
         ),
     ]
-)
+).translate(np.array([center_boom_length - center_vstab_chord * 0.75 - center_hstab_chord, 0, 0.1]))
 
 right_hstab = asb.Wing(
     name="Horizontal Stabilizer",
-    xyz_le=np.array([outboard_boom_length - outboard_hstab_chord * 0.75, boom_location * wing_span / 2, 0.1]),
     symmetric=True,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
             xyz_le=np.array([0, 0, 0]),
             chord=outboard_hstab_chord,
-            twist_angle=-3,  # degrees
+            twist=-3,  # degrees
             airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
             control_surface_is_symmetric = True,
             # Flap # Control surfaces are applied between a given XSec and the next one.
@@ -466,23 +463,22 @@ right_hstab = asb.Wing(
         asb.WingXSec(  # Tip
             xyz_le=np.array([0, outboard_hstab_span / 2, 0]),
             chord=outboard_hstab_chord,
-            twist_angle=-3,
+            twist=-3,
             airfoil=tail_airfoil,
         ),
     ]
-)
-left_hstab = copy.deepcopy(right_hstab)
-left_hstab.xyz_le[1] *= -1
+).translate(np.array([outboard_boom_length - outboard_hstab_chord * 0.75, boom_offset, 0.1]))
+left_hstab = right_hstab.translate([0, -boom_offset * 2, 0])
+
 
 center_vstab = asb.Wing(
     name="Vertical Stabilizer",
-    xyz_le=np.array([center_boom_length - center_vstab_chord * 0.75, 0, -center_vstab_span / 2 + center_vstab_span * 0.15]),
     symmetric=False,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
             xyz_le=np.array([0, 0, 0]),
             chord=center_vstab_chord,
-            twist_angle=0,  # degrees
+            twist=0,  # degrees
             airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
             control_surface_is_symmetric = True,
             # Flap # Control surfaces are applied between a given XSec and the next one.
@@ -491,11 +487,11 @@ center_vstab = asb.Wing(
         asb.WingXSec(  # Tip
             xyz_le=np.array([0, 0, center_vstab_span]),
             chord=center_vstab_chord,
-            twist_angle=0,
+            twist=0,
             airfoil=tail_airfoil,
         ),
     ]
-)
+).translate(np.array([center_boom_length - center_vstab_chord * 0.75, 0, -center_vstab_span / 2 + center_vstab_span * 0.15]))
 
 center_fuse = make_fuselage(
     boom_length=center_boom_length,
@@ -510,10 +506,8 @@ right_fuse = make_fuselage(
     fuse_diameter=boom_diameter,
     boom_diameter=boom_diameter,
 )
-right_fuse.xyz_le += np.concatenate((0, boom_location * wing_span / 2, 0))
-
-left_fuse = copy.deepcopy(right_fuse)
-left_fuse.xyz_le[1] *= -1
+right_fuse = right_fuse.translate(np.array([0, boom_offset, 0]))
+left_fuse = right_fuse.translate(np.array([0, -2*boom_offset, 0]))
 
 # Assemble the airplane
 airplane = asb.Airplane(
@@ -928,17 +922,28 @@ mass_ESC = lib_prop_elec.mass_ESC(max_power=power_out_propulsion_max)
 mass_propulsion = mass_motor_mounted + mass_propellers# Total propulsion mass
 mass_propulsion = mass_motor_mounted + mass_propellers + mass_ESC
 
-# Account for payload power
-power_out_payload = np.where(
-    solar_flux_on_horizontal > 1,
-    100,
-    100
-)
-
 # Account for avionics power
 power_out_avionics = 180  # Pulled from Avionics spreadsheet on 5/13/20
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
+### Payload Module
+c = 299792458 # [m / s] speed of light
+radar_resolution = opti.parameter(value=2) # meters from conversation with Brent on 2/18/22
+radar_snr = opti.parameter(value=20) # dB from conversation w Brent on 2/18/22
+radar_length = opti.parameter(value=1) # meter from GAMMA remote sensing doc
+radar_width = opti.parameter(value=0.3) # meter from GAMMA remote sensing doc
+bandwidth = opti.variable(init_guess=200000000) #Hz
+wavelength = opti.variable(init_guess = )
+
+# constrain SAR resolution to required value
+range_resolution = c / (2 * bandwidth)
+azimuth_resolution = radar_length / 2
+opti.subject_to([
+    range_resolution <= radar_resolution,
+    azimuth_resolution <= radar_resolution,
+])
+
+Noise_power_density = k_b * T * bandwidth / wavelength ** 2
 ### Power accounting
 power_out = power_out_propulsion + power_out_payload + power_out_avionics
 
