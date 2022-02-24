@@ -933,10 +933,10 @@ power_out_avionics = 180  # Pulled from Avionics spreadsheet on 5/13/20
 c = 299792458 # [m/s] speed of light
 k_b = 1.38064852E-23 # [m2 kg s-2 K-1]
 radar_resolution = opti.parameter(value=2) # meters from conversation with Brent on 2/18/22
-required_snr = opti.parameter(value=20) # dB from conversation w Brent on 2/18/22
+required_snr = opti.parameter(value=20)  # dB from conversation w Brent on 2/18/22
 radar_length = opti.parameter(value=1) # meter from GAMMA remote sensing doc
 radar_width = opti.parameter(value=0.3) # meter from GAMMA remote sensing doc
-radar_eff = opti.parameter(value=0.8) # TODO check this
+scattering_cross_sec = opti.parameter(value=0.8) # TODO check this
 antenna_gain = opti.parameter(value=1) # TODO check this
 bandwidth = opti.variable(init_guess=200000000) #Hz
 center_wavelength = opti.variable(init_guess = 0.226) # meters
@@ -954,7 +954,7 @@ opti.subject_to([
 
 # account for snr
 noise_power_density = k_b * T * bandwidth / center_wavelength ** 2
-power_received = peak_power * antenna_gain * radar_area * radar_eff / (4 * np.pi * dist) ** 4
+power_received = peak_power * antenna_gain * radar_area * scattering_cross_sec / ((4 * np.pi) ** 2 * dist ** 4)
 opti.subject_to([
     required_snr <= power_received / noise_power_density,
 ])
