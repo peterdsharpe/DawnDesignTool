@@ -46,15 +46,15 @@ minimize = "wing.span() / 50"  # any "eval-able" expression
 
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
-latitude = opti.parameter(value=60)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
-day_of_year = opti.parameter(value=244)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
+latitude = opti.parameter(value=-75)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
+day_of_year = opti.parameter(value=60)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 strat_offset_value = opti.parameter(value=1000)
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 required_headway_per_day = 100 # meters
 allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
 make_plots = True
-mass_payload = opti.parameter(value=6)
+mass_payload = opti.parameter(value=10)
 tail_panels = True
 fuselage_billboard = False
 wing_cells = "sunpower" # select cells for wing, options include ascent_solar, sunpower, and microlink
@@ -451,7 +451,6 @@ center_hstab = asb.Wing(
 
 right_hstab = asb.Wing(
     name="Horizontal Stabilizer",
-    xyz_le=np.array([outboard_boom_length - outboard_hstab_chord * 0.75, boom_location * wing_span / 2, 0.1]),
     symmetric=True,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
@@ -833,7 +832,7 @@ opti.subject_to([
     # Vv < 0.05,
     # Vv == 0.035,
     center_vstab.aspect_ratio() == 2.5,  # TODO review this
-    center_vstab.area() < 0.1 * wing.area(),
+    center_vstab.area() < 0.1 * wing.area(), # checked with Matt on 12/10/21
     # center_vstab.aspect_ratio() > 1.9, # from Jamie, based on ASWing
     # center_vstab.aspect_ratio() < 2.5 # from Jamie, based on ASWing
 ])
@@ -983,7 +982,7 @@ if vertical_cells == "microlink":
 
 if vertical_cells == "sunpower":
     vert_solar_cell_efficiency = 0.243 * 0.9 # Sunpower
-    vert_rho_solar_cells = 0.425 * 1.1  # kg/m^2, solar cell area density. Sunpower.
+    vert_rho_solar_cells = 0.425 * 1.1 * 1.15  # kg/m^2, solar cell area density. Sunpower.
     max_solar_area_fraction_vert = opti.parameter(value=0.60) # for sunpower
 
 if vertical_cells == "ascent_solar":
@@ -998,7 +997,7 @@ if wing_cells == "microlink":
 
 if wing_cells == "sunpower":
     horz_solar_cell_efficiency = 0.243 * 0.9  # Sunpower
-    horz_rho_solar_cells = 0.425 * 1.1  # kg/m^2, solar cell area density. Sunpower.
+    horz_rho_solar_cells = 0.425 * 1.1 * 1.15  # kg/m^2, solar cell area density. Sunpower.
     max_solar_area_fraction_horz = opti.parameter(value=0.60)  # for sunpower
 
 if wing_cells == "ascent_solar":
@@ -1012,7 +1011,7 @@ if billboard_cells == "microlink":
 
 if billboard_cells == "sunpower":
     fuselage_solar_cell_efficiency = 0.243 * 0.9  # Sunpower
-    fuselage_rho_solar_cells = 0.425 * 1.1  # kg/m^2, solar cell area density. Sunpower.
+    fuselage_rho_solar_cells = 0.425 * 1.1 * 1.15  # kg/m^2, solar cell area density. Sunpower.
 
 if billboard_cells == "ascent_solar":
     fuselage_solar_cell_efficiency = 0.14 * 0.9  # Ascent Solar
@@ -1135,6 +1134,7 @@ mass_battery_pack = lib_prop_elec.mass_battery_pack(
     battery_pack_cell_fraction=battery_pack_cell_percentage
 )
 mass_battery_cells = mass_battery_pack * battery_pack_cell_percentage
+cost_batteries = 12 * battery_capacity_watt_hours # dollars assuming 355 whr/kg cells
 
 mass_wires = lib_prop_elec.mass_wires(
     wire_length=wing.span() / 2,
