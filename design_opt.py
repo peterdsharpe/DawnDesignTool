@@ -56,7 +56,7 @@ flight_path_radius = 50000
 required_headway_per_day = 10000 #2 * np.pi * flight_path_radius# meters
 allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
-make_plots = True
+make_plots = False
 mass_payload = opti.parameter(value=10)
 tail_panels = True
 fuselage_billboard = False
@@ -934,22 +934,48 @@ mass_propulsion = mass_motor_mounted + mass_propellers + mass_ESC
 power_out_avionics = 180  # Pulled from Avionics spreadsheet on 5/13/20
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
+
+wing_span = opti.variable(
+    init_guess=40,
+    scale=60,
+    category="des"
+)
+
 ### Payload Module
+
 c = 299792458 # [m/s] speed of light
 k_b = 1.38064852E-23 # [m2 kg s-2 K-1]
 radar_resolution = opti.parameter(value=2) # meters from conversation with Brent on 2/18/22
 required_snr = opti.parameter(value=20)  # dB from conversation w Brent on 2/18/22
 radar_length = opti.parameter(value=1) # meter from GAMMA remote sensing doc
 radar_width = opti.parameter(value=0.3) # meter from GAMMA remote sensing doc
-scattering_cross_sec = opti.parameter(value=0.8) # TODO check this
+scattering_cross_sec = opti.parameter(value=1) # TODO check this
 antenna_gain = opti.parameter(value=0.8) # TODO check this
-bandwidth = opti.variable(init_guess=2E8, scale=1E8) #Hz
-center_wavelength = opti.variable(init_guess = 0.226, scale=1) # meters
-peak_power = opti.variable(init_guess = 500, scale=100) # Watts
-power_out_payload = opti.variable(init_guess=100, scale=10)
+
+bandwidth = opti.variable(
+    init_guess=2E8,
+    scale=1E8,
+    category='des'
+) #Hz
+center_wavelength = opti.variable(
+    init_guess=0.226,
+    scale=0.1,
+    category='des'
+) # meters
+peak_power = opti.variable(
+    init_guess = 500,
+    scale=100,
+    category='des'
+) # Watts
+power_out_payload = opti.variable(
+    init_guess=100,
+    scale=100,
+    category='des'
+)
 radar_area = radar_width * radar_length
-look_angle = opti.parameter(value= 45) # TODO check this value with Brent
+look_angle = opti.parameter(value=30) # TODO check this value with Brent
 dist = y / np.cosd(look_angle)
+
 # constrain SAR resolution to required value
 range_resolution = c / (2 * bandwidth)
 azimuth_resolution = radar_length / 2
@@ -1612,7 +1638,7 @@ opti.minimize(
 if __name__ == "__main__":
     # Solve
     sol = opti.solve(
-        max_iter=2000,
+        max_iter=1000,
         options={
             "ipopt.max_cpu_time": 600
         }
