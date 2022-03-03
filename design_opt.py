@@ -945,7 +945,7 @@ wing_span = opti.variable(
 
 c = 299792458 # [m/s] speed of light
 k_b = 1.38064852E-23 # [m2 kg s-2 K-1]
-radar_resolution = opti.parameter(value=2) # meters from conversation with Brent on 2/18/22
+required_resolution = opti.parameter(value=2) # meters from conversation with Brent on 2/18/22
 required_snr = opti.parameter(value=20)  # dB from conversation w Brent on 2/18/22
 radar_length = opti.parameter(value=1) # meter from GAMMA remote sensing doc
 radar_width = opti.parameter(value=0.3) # meter from GAMMA remote sensing doc
@@ -954,7 +954,7 @@ antenna_gain = opti.parameter(value=0.8) # TODO check this
 
 bandwidth = opti.variable(
     init_guess=2E8,
-    scale=1E8,
+    scale=1E6,
     category='des'
 ) #Hz
 center_wavelength = opti.variable(
@@ -963,31 +963,32 @@ center_wavelength = opti.variable(
     category='des'
 ) # meters
 peak_power = opti.variable(
-    init_guess = 500,
+    init_guess=500,
     scale=100,
     category='des'
 ) # Watts
 power_out_payload = opti.variable(
     init_guess=100,
-    scale=100,
+    scale=10,
     category='des'
 )
 radar_area = radar_width * radar_length
-look_angle = opti.parameter(value=30) # TODO check this value with Brent
+look_angle = opti.parameter(value=45)
 dist = y / np.cosd(look_angle)
+pulse_duration = 1 / bandwidth
 
 # constrain SAR resolution to required value
-range_resolution = c / (2 * bandwidth)
+range_resolution = c * pulse_duration / (2 * np.sind(look_angle))
 azimuth_resolution = radar_length / 2
 opti.subject_to([
-    range_resolution <= radar_resolution,
-    azimuth_resolution <= radar_resolution,
+    range_resolution <= required_resolution,
+    azimuth_resolution <= required_resolution,
 ])
 
 # account for snr
 noise_power_density = k_b * T * bandwidth / (center_wavelength ** 2)
 power_received = peak_power * antenna_gain * radar_area * scattering_cross_sec / ((4 * np.pi) ** 2 * dist ** 4)
-power_out_payload = peak_power * (1 / bandwidth) * center_wavelength
+power_out_payload = peak_power * pulse_duration * center_wavelength
 opti.subject_to([
     required_snr <= power_received / noise_power_density,
     peak_power >= 0,
