@@ -947,8 +947,8 @@ c = 299792458 # [m/s] speed of light
 k_b = 1.38064852E-23 # [m2 kg s-2 K-1]
 required_resolution = opti.parameter(value=2) # meters from conversation with Brent on 2/18/22
 required_snr = opti.parameter(value=20)  # dB from conversation w Brent on 2/18/22
-radar_length = opti.parameter(value=1) # meter from GAMMA remote sensing doc
-radar_width = opti.parameter(value=0.3) # meter from GAMMA remote sensing doc
+radar_length = opti.parameter(value=0.1) # meter from GAMMA remote sensing doc
+radar_width = opti.parameter(value=0.03) # meter from GAMMA remote sensing doc
 scattering_cross_sec = opti.parameter(value=1) # TODO check this
 antenna_gain = opti.parameter(value=0.8) # TODO check this
 
@@ -967,6 +967,11 @@ peak_power = opti.variable(
     scale=100,
     category='des'
 ) # Watts
+pulse_rep_freq = opti.variable(
+    init_guess=10,
+    scale=1,
+    category='des'
+)
 power_out_payload = opti.variable(
     init_guess=100,
     scale=10,
@@ -987,13 +992,26 @@ opti.subject_to([
 
 # account for snr
 noise_power_density = k_b * T * bandwidth / (center_wavelength ** 2)
-power_received = peak_power * antenna_gain * radar_area * scattering_cross_sec / ((4 * np.pi) ** 2 * dist ** 4)
-power_out_payload = peak_power * pulse_duration * center_wavelength
+power_trans = peak_power * pulse_duration
+power_received = power_trans * antenna_gain * radar_area * scattering_cross_sec / ((4 * np.pi) ** 2 * dist ** 4)
+power_out_payload = power_trans * pulse_rep_freq
 opti.subject_to([
     required_snr <= power_received / noise_power_density,
     peak_power >= 0,
     bandwidth >= 0,
     center_wavelength >= 0,
+    pulse_rep_freq >= 2 * groundspeed / radar_length,
+])
+
+# account for coherence
+min_wavelength = center_wavelength - bandwidth / 2
+max_wavelength = center_wavelength + bandwidth / 2
+delta_phase_min = 4 * np.pi / max_wavelength * (y ** 2 + (groundspeed * time - x) ** 2) ** 0.5
+delta_phase_max = 4 * np.pi / min_wavelength * (y ** 2 + (groundspeed * time - x) ** 2) ** 0.5
+
+opti.subject_to([
+    delta_phase_min <= 2 * np.pi,
+    delta_phase_max <= 2 * np.pi,
 ])
 
 ### Power accounting
