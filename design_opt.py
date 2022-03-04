@@ -951,17 +951,13 @@ radar_length = opti.parameter(value=0.1) # meter from GAMMA remote sensing doc
 radar_width = opti.parameter(value=0.03) # meter from GAMMA remote sensing doc
 scattering_cross_sec = opti.parameter(value=1) # TODO check this
 antenna_gain = opti.parameter(value=0.8) # TODO check this
+center_wavelength = opti.parameter(value=0.226) # meters
 
 bandwidth = opti.variable(
     init_guess=2E8,
     scale=1E6,
     category='des'
 ) #Hz
-center_wavelength = opti.variable(
-    init_guess=0.226,
-    scale=0.1,
-    category='des'
-) # meters
 peak_power = opti.variable(
     init_guess=500,
     scale=100,
