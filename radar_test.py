@@ -9,7 +9,7 @@ minimize = "power_out_payload"  # any "eval-able" expression
 c = 299792458 # [m/s] speed of light
 k_b = 1.38064852E-23 # [m2 kg s-2 K-1]
 required_resolution = opti.parameter(value=2) # meters from conversation with Brent on 2/18/22
-required_snr = opti.parameter(value=6)  # dB from conversation w Brent on 2/18/22
+required_snr = opti.parameter(value=20)  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
 radar_length = opti.parameter(value=0.1) # meter from GAMMA remote sensing doc
 radar_width = opti.parameter(value=0.03) # meter from GAMMA remote sensing doc
 center_wavelength = opti.parameter(value=0.226) # meters
@@ -29,22 +29,22 @@ scattering_cross_sec = 4 * np.pi * ground_area ** 2 / center_wavelength ** 2
 
 antenna_gain = 4 * np.pi * radar_area * 0.7 / center_wavelength ** 2
 bandwidth = opti.variable(
-    init_guess=2E8,
-    scale=1E6,
+    init_guess=105992638,
+    scale=1E7,
     category='des'
 ) #Hz
 peak_power = opti.variable(
-    init_guess=500,
-    scale=100,
+    init_guess=13493849,
+    scale=1E6,
     category='des'
 ) # Watts
 pulse_rep_freq = opti.variable(
-    init_guess=10,
-    scale=1,
+    init_guess=600,
+    scale=100,
     category='des'
 )
 power_out_payload = opti.variable(
-    init_guess=100,
+    init_guess=76,
     scale=10,
     category='des'
 )
