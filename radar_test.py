@@ -8,7 +8,7 @@ minimize = "power_out_payload"  # any "eval-able" expression
 
 c = 299792458 # [m/s] speed of light
 k_b = 1.38064852E-23 # [m2 kg s-2 K-1]
-required_resolution = opti.parameter(value=2) # meters from conversation with Brent on 2/18/22
+required_resolution = opti.parameter(value=1) # meters from conversation with Brent on 2/18/22
 required_snr = opti.parameter(value=20)  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
 radar_length = opti.parameter(value=0.1) # meter from GAMMA remote sensing doc
 radar_width = opti.parameter(value=0.03) # meter from GAMMA remote sensing doc
@@ -21,10 +21,10 @@ radar_area = radar_width * radar_length
 look_angle = opti.parameter(value=45)
 dist = y / np.cosd(look_angle)
 grazing_angle = 90 - look_angle
-aperture_beamwidth = center_wavelength / radar_length
-swath_width = center_wavelength * dist / (radar_width * np.sind(grazing_angle))
+swath_length = center_wavelength * dist / radar_length
+swath_width = center_wavelength * dist / (radar_width * np.cosd(look_angle))
 max_length_synth_ap = center_wavelength * dist / radar_length
-ground_area = swath_width * aperture_beamwidth
+ground_area = swath_width * swath_length * np.pi / 4
 scattering_cross_sec = 4 * np.pi * ground_area ** 2 / center_wavelength ** 2
 
 antenna_gain = 4 * np.pi * radar_area * 0.7 / center_wavelength ** 2
@@ -71,6 +71,8 @@ opti.subject_to([
     peak_power >= 0,
     bandwidth >= 0,
     pulse_rep_freq >= 2 * groundspeed / radar_length,
+    pulse_rep_freq >= groundspeed / azimuth_resolution,
+    pulse_rep_freq <= c / (2 * swath_width),
 ])
 
 objective = eval(minimize)
