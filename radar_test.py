@@ -4,30 +4,27 @@ import aerosandbox as asb
 
 ### Payload Module
 opti = asb.Opti()
-minimize = "power_out_payload"  # any "eval-able" expression
+minimize = "power_out_payload"
 
 c = 299792458 # [m/s] speed of light
 k_b = 1.38064852E-23 # [m2 kg s-2 K-1]
-required_resolution = opti.parameter(value=1) # meters from conversation with Brent on 2/18/22
+required_resolution = opti.parameter(value=2) # 1-2 meters required from conversation with Brent on 2/18/22
 required_snr = opti.parameter(value=20)  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
-radar_length = opti.parameter(value=0.1) # meter from GAMMA remote sensing doc
-radar_width = opti.parameter(value=0.03) # meter from GAMMA remote sensing doc
-center_wavelength = opti.parameter(value=0.226) # meters
-groundspeed = opti.parameter(value=30)
+center_wavelength = opti.parameter(value=0.226) # meters from GAMMA Remote Sensing Doc
+groundspeed = opti.parameter(value=30) # average groudspeed
 T = opti.parameter(value=216)
 y = opti.parameter(value=12000)
 
-radar_area = radar_width * radar_length
-look_angle = opti.parameter(value=45)
-dist = y / np.cosd(look_angle)
-grazing_angle = 90 - look_angle
-swath_length = center_wavelength * dist / radar_length
-swath_width = center_wavelength * dist / (radar_width * np.cosd(look_angle))
-max_length_synth_ap = center_wavelength * dist / radar_length
-ground_area = swath_width * swath_length * np.pi / 4
-scattering_cross_sec = 4 * np.pi * ground_area ** 2 / center_wavelength ** 2
-
-antenna_gain = 4 * np.pi * radar_area * 0.7 / center_wavelength ** 2
+radar_length = opti.variable(
+    init_guess=0.1,
+    scale=1,
+    category='des',
+)
+radar_width = opti.variable(
+    init_guess=0.03,
+    scale=0.1,
+    category='des',
+)
 bandwidth = opti.variable(
     init_guess=105992638,
     scale=1E7,
@@ -48,6 +45,17 @@ power_out_payload = opti.variable(
     scale=10,
     category='des'
 )
+
+radar_area = radar_width * radar_length
+look_angle = opti.parameter(value=45)
+dist = y / np.cosd(look_angle)
+grazing_angle = 90 - look_angle
+swath_length = center_wavelength * dist / radar_length
+swath_width = center_wavelength * dist / (radar_width * np.cosd(look_angle))
+max_length_synth_ap = center_wavelength * dist / radar_length
+ground_area = swath_width * swath_length * np.pi / 4
+scattering_cross_sec = 4 * np.pi * ground_area ** 2 / center_wavelength ** 2  # TODO check this is right
+antenna_gain = 4 * np.pi * radar_area * 0.7 / center_wavelength ** 2
 
 pulse_duration = 1 / bandwidth
 
@@ -73,6 +81,8 @@ opti.subject_to([
     pulse_rep_freq >= 2 * groundspeed / radar_length,
     pulse_rep_freq >= groundspeed / azimuth_resolution,
     pulse_rep_freq <= c / (2 * swath_width),
+    radar_width <= 0.4,
+    radar_length <= 0.4,
 ])
 
 objective = eval(minimize)
