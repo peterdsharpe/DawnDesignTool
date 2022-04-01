@@ -596,7 +596,7 @@ solar_flux_on_horizontal = lib_solar.solar_flux(
     time=time,
     scattering=True
 )
-solar_flux_on_wing_left =  lib_solar.solar_flux(
+solar_flux_on_wing_left = lib_solar.solar_flux(
     latitude=latitude,
     day_of_year=day_of_year,
     time=time,
@@ -604,7 +604,7 @@ solar_flux_on_wing_left =  lib_solar.solar_flux(
     panel_tilt_angle=170,
     scattering=True,
 )
-solar_flux_on_wing_right =  lib_solar.solar_flux(
+solar_flux_on_wing_right = lib_solar.solar_flux(
     latitude=latitude,
     day_of_year=day_of_year,
     time=time,
@@ -620,7 +620,7 @@ solar_flux_on_vertical_left = lib_solar.solar_flux(
     panel_tilt_angle=90,
     scattering=True,
 )
-solar_flux_on_vertical_right= lib_solar.solar_flux(
+solar_flux_on_vertical_right = lib_solar.solar_flux(
     latitude=latitude,
     day_of_year=day_of_year,
     time=time,
