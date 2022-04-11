@@ -46,15 +46,15 @@ minimize = "wing.span() / 50"  # any "eval-able" expression
 
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
-latitude = opti.parameter(value=-75)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
-day_of_year = opti.parameter(value=60)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
+latitude = opti.parameter(value=49)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
+day_of_year = opti.parameter(value=174)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 strat_offset_value = opti.parameter(value=1000)
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 required_headway_per_day = 100 # meters
 allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
 make_plots = True
-mass_payload = opti.parameter(value=10)
+mass_payload = opti.parameter(value=30)
 tail_panels = True
 fuselage_billboard = False
 wing_cells = "sunpower" # select cells for wing, options include ascent_solar, sunpower, and microlink
@@ -1851,7 +1851,7 @@ if __name__ == "__main__":
         plt.title("Power Systems Mass*")
 
         plt.annotate(
-            s="* percentages referenced to total aircraft mass",
+            text="* percentages referenced to total aircraft mass",
             xy=(0.01, 0.01),
             # xytext=(0.03, 0.03),
             xycoords="figure fraction",
@@ -1863,7 +1863,7 @@ if __name__ == "__main__":
             # }
         )
         plt.annotate(
-            s="""
+            text="""
             Total mass: %.1f kg
             Wing span: %.2f m
             """ % (s(mass_total), s(wing.span())),
@@ -1928,6 +1928,3 @@ if __name__ == "__main__":
             except:
                 value = eval(var_name)
             f.write(f"{var_name}, {value},\n")
-    opti.value(net_power_to_battery)
-    opti.value(net_power_to_battery_pack)
-    opti.value(time)
