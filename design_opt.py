@@ -19,11 +19,9 @@ from typing import Union, List
 from aerosandbox.modeling.interpolation import InterpolatedModel
 import pathlib
 
-
 path = str(
     pathlib.Path(__file__).parent.absolute()
 )
-
 
 sns.set(font_scale=1)
 # def run_sizing(lat, day):
@@ -50,17 +48,19 @@ latitude = opti.parameter(value=49)  # degrees (49 deg is top of CONUS, 26 deg i
 day_of_year = opti.parameter(value=174)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 strat_offset_value = opti.parameter(value=1000)
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
-required_headway_per_day = 100 # meters
+required_headway_per_day = 100  # meters
 allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
 make_plots = True
 mass_payload = opti.parameter(value=30)
 tail_panels = True
 fuselage_billboard = False
-wing_cells = "sunpower" # select cells for wing, options include ascent_solar, sunpower, and microlink
-vertical_cells = "sunpower" # select cells for vtail, options include ascent_solar, sunpower, and microlink
+wing_cells = "sunpower"  # select cells for wing, options include ascent_solar, sunpower, and microlink
+vertical_cells = "sunpower"  # select cells for vtail, options include ascent_solar, sunpower, and microlink
 # vertical cells only mounted when tail_panels is True
-billboard_cells = "sunpower" # select cells for billboard, options include ascent_solar, sunpower, and microlink
+billboard_cells = "sunpower"  # select cells for billboard, options include ascent_solar, sunpower, and microlink
+
+
 # vertical cells only mounted when fuselage_billboard is True
 
 # wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
@@ -70,10 +70,11 @@ def wind_speed_func(alt):
     speed_func = lib_winds.wind_speed_world_95(alt, latitude_array, day_array)
     return speed_func
 
+
 battery_specific_energy_Wh_kg = opti.parameter(value=450)
 battery_pack_cell_percentage = 0.89  # What percent of the battery pack consists of the module, by weight?
 variable_pitch = False
-use_propulsion_fits_from_FL2020_1682_undergrads = True # Warning: Fits not yet validated
+use_propulsion_fits_from_FL2020_1682_undergrads = True  # Warning: Fits not yet validated
 # Accounts for module HW, BMS, pack installation, etc.
 # Ed Lovelace (in his presentation) gives 70% as a state-of-the-art fraction.
 # Used 75% in the 16.82 CDR.
@@ -84,7 +85,7 @@ structural_mass_margin_multiplier = opti.parameter(value=1.25)  # TODO Jamie dro
 energy_generation_margin = opti.parameter(value=1.05)
 allowable_battery_depth_of_discharge = opti.parameter(
     value=0.95)  # How much of the battery can you actually use? # updated according to Matthew Berk discussion 10/21/21
-q_ne_over_q_max = opti.parameter(value=2) # Chosen on the basis of a paper read by Trevor Long about Helios, 1/16/21
+q_ne_over_q_max = opti.parameter(value=2)  # Chosen on the basis of a paper read by Trevor Long about Helios, 1/16/21
 
 ##### Simulation Parameters
 n_timesteps_per_segment = 180  # Only relevant if allow_trajectory_optimization is True.
@@ -246,7 +247,7 @@ wing_span = opti.variable(
     category="des"
 )
 
-boom_offset = boom_location * wing_span / 2 # in real units (meters)
+boom_offset = boom_location * wing_span / 2  # in real units (meters)
 
 opti.subject_to([wing_span > 1])
 
@@ -377,19 +378,18 @@ n_propellers = opti.parameter(value=4)
 # import pickle
 import dill as pickle
 
-
 # wing_airfoil = wing_airfoil.repanel()
 cl_array = np.load(path + '/data/cl_function.npy')
 cd_array = np.load(path + '/data/cd_function.npy')
 cm_array = np.load(path + '/data/cm_function.npy')
 alpha_array = np.load(path + '/data/alpha.npy')
 reynolds_array = np.load(path + '/data/reynolds.npy')
-cl_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(np.array(reynolds_array)),},
-                                              cl_array, "bspline")
+cl_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(np.array(reynolds_array)), },
+                                cl_array, "bspline")
 cd_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(np.array(reynolds_array))},
-                                              cd_array, "bspline")
+                                cd_array, "bspline")
 cm_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(np.array(reynolds_array))},
-                                              cm_array, "bspline")
+                                cm_array, "bspline")
 
 wing_airfoil = asb.geometry.Airfoil(
     name="HALE_03",
@@ -405,7 +405,7 @@ wing = asb.Wing(
     symmetric=True,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
-            xyz_le = np.array([-wing_root_chord/4, 0, 0]),
+            xyz_le=np.array([-wing_root_chord / 4, 0, 0]),
             chord=wing_root_chord,
             twist=0,  # degrees
             airfoil=wing_airfoil,  # Airfoils are blended between a given XSec and the next one.
@@ -414,13 +414,13 @@ wing = asb.Wing(
             control_surface_deflection=0,  # degrees
         ),
         asb.WingXSec(  # Break
-            xyz_le = np.array([-wing_root_chord/4, wing_y_taper_break, 0]),
+            xyz_le=np.array([-wing_root_chord / 4, wing_y_taper_break, 0]),
             chord=wing_root_chord,
             twist=0,
             airfoil=wing_airfoil,
         ),
         asb.WingXSec(  # Tip
-            xyz_le = np.array([-wing_root_chord * wing_taper_ratio / 4, wing_span / 2, 0]),
+            xyz_le=np.array([-wing_root_chord * wing_taper_ratio / 4, wing_span / 2, 0]),
             chord=wing_root_chord * wing_taper_ratio,
             twist=0,
             airfoil=wing_airfoil,
@@ -436,7 +436,7 @@ center_hstab = asb.Wing(
             chord=center_hstab_chord,
             twist=-3,  # degrees
             airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
-            control_surface_is_symmetric = True,
+            control_surface_is_symmetric=True,
             # Flap # Control surfaces are applied between a given XSec and the next one.
             control_surface_deflection=0,  # degrees
         ),
@@ -458,7 +458,7 @@ right_hstab = asb.Wing(
             chord=outboard_hstab_chord,
             twist=-3,  # degrees
             airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
-            control_surface_is_symmetric = True,
+            control_surface_is_symmetric=True,
             # Flap # Control surfaces are applied between a given XSec and the next one.
             control_surface_deflection=0,  # degrees
         ),
@@ -472,7 +472,6 @@ right_hstab = asb.Wing(
 ).translate(np.array([outboard_boom_length - outboard_hstab_chord * 0.75, boom_offset, 0.1]))
 left_hstab = right_hstab.translate([0, -boom_offset * 2, 0])
 
-
 center_vstab = asb.Wing(
     name="Vertical Stabilizer",
     symmetric=False,
@@ -482,7 +481,7 @@ center_vstab = asb.Wing(
             chord=center_vstab_chord,
             twist=0,  # degrees
             airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
-            control_surface_is_symmetric = True,
+            control_surface_is_symmetric=True,
             # Flap # Control surfaces are applied between a given XSec and the next one.
             control_surface_deflection=0,  # degrees
         ),
@@ -493,7 +492,8 @@ center_vstab = asb.Wing(
             airfoil=tail_airfoil,
         ),
     ]
-).translate(np.array([center_boom_length - center_vstab_chord * 0.75, 0, -center_vstab_span / 2 + center_vstab_span * 0.15]))
+).translate(
+    np.array([center_boom_length - center_vstab_chord * 0.75, 0, -center_vstab_span / 2 + center_vstab_span * 0.15]))
 
 center_fuse = make_fuselage(
     boom_length=center_boom_length,
@@ -509,12 +509,12 @@ right_fuse = make_fuselage(
     boom_diameter=boom_diameter,
 )
 right_fuse = right_fuse.translate(np.array([0, boom_offset, 0]))
-left_fuse = right_fuse.translate(np.array([0, -2*boom_offset, 0]))
+left_fuse = right_fuse.translate(np.array([0, -2 * boom_offset, 0]))
 
 # Assemble the airplane
 airplane = asb.Airplane(
     name="Solar1",
-    xyz_ref = np.array([0, 0, 0]),
+    xyz_ref=np.array([0, 0, 0]),
     wings=[
         wing,
         center_hstab,
@@ -563,7 +563,6 @@ opti.subject_to([
 ])
 vehicle_heading = np.arctan2d(airspeed_y, airspeed_x)
 
-
 # # heading_x = airspeed * np.sind(vehicle_bearing) - wind_speed * np.sind(wind_direction)  # x component of heading vector
 # # heading_y = airspeed * np.cosd(vehicle_bearing) - wind_speed * np.cosd(wind_direction) # y component of heading vector
 # # vehicle_heading = np.arctan2d(heading_y, heading_x) # actual directionality of the vehicle as modified by the wind speed and direction
@@ -582,7 +581,7 @@ mach = airspeed / a
 g = 9.81  # gravitational acceleration, m/s^2
 q = 1 / 2 * rho * airspeed ** 2  # Solar calculations
 
-panel_heading = vehicle_heading - 90 # actual directionality of the solar panel
+panel_heading = vehicle_heading - 90  # actual directionality of the solar panel
 
 solar_flux_on_horizontal = lib_solar.solar_flux(
     latitude=latitude,
@@ -590,7 +589,7 @@ solar_flux_on_horizontal = lib_solar.solar_flux(
     time=time,
     scattering=True
 )
-solar_flux_on_wing_left =  lib_solar.solar_flux(
+solar_flux_on_wing_left = lib_solar.solar_flux(
     latitude=latitude,
     day_of_year=day_of_year,
     time=time,
@@ -598,7 +597,7 @@ solar_flux_on_wing_left =  lib_solar.solar_flux(
     panel_tilt_angle=170,
     scattering=True,
 )
-solar_flux_on_wing_right =  lib_solar.solar_flux(
+solar_flux_on_wing_right = lib_solar.solar_flux(
     latitude=latitude,
     day_of_year=day_of_year,
     time=time,
@@ -614,7 +613,7 @@ solar_flux_on_vertical_left = lib_solar.solar_flux(
     panel_tilt_angle=90,
     scattering=True,
 )
-solar_flux_on_vertical_right= lib_solar.solar_flux(
+solar_flux_on_vertical_right = lib_solar.solar_flux(
     latitude=latitude,
     day_of_year=day_of_year,
     time=time,
@@ -642,6 +641,7 @@ solar_flux_on_billboard_right = lib_solar.solar_flux(
     panel_tilt_angle=-billboard_angle,
     scattering=True,
 )
+
 
 # endregion
 
@@ -676,12 +676,14 @@ def compute_wing_aerodynamics(
     surface.Re = rho / mu * airspeed * surface.mean_geometric_chord()
     surface.airfoil = surface.xsecs[0].airfoil
     try:
-        surface.Cl_inc = surface.airfoil.CL_function({'alpha': surface.alpha_eff, 'reynolds': np.log(surface.Re)})  # Incompressible 2D lift coefficient
+        surface.Cl_inc = surface.airfoil.CL_function(
+            {'alpha': surface.alpha_eff, 'reynolds': np.log(surface.Re)})  # Incompressible 2D lift coefficient
         surface.CL = surface.Cl_inc * aero.CL_over_Cl(surface.aspect_ratio(), mach=mach,
                                                       sweep=surface.mean_sweep_angle())  # Compressible 3D lift coefficient
         surface.lift = surface.CL * q * surface.area()
 
-        surface.Cd_profile = np.exp(surface.airfoil.CD_function({'alpha': surface.alpha_eff, 'reynolds': np.log(surface.Re)}))
+        surface.Cd_profile = np.exp(
+            surface.airfoil.CD_function({'alpha': surface.alpha_eff, 'reynolds': np.log(surface.Re)}))
         surface.drag_profile = surface.Cd_profile * q * surface.area()
 
         surface.oswalds_efficiency = aero.oswalds_efficiency(
@@ -698,7 +700,8 @@ def compute_wing_aerodynamics(
 
         surface.drag = surface.drag_profile + surface.drag_induced
 
-        surface.Cm_inc = surface.airfoil.CM_function({'alpha':surface.alpha_eff, 'reynolds':np.log(surface.Re)})  # Incompressible 2D moment coefficient
+        surface.Cm_inc = surface.airfoil.CM_function(
+            {'alpha': surface.alpha_eff, 'reynolds': np.log(surface.Re)})  # Incompressible 2D moment coefficient
         surface.CM = surface.Cm_inc * aero.CL_over_Cl(surface.aspect_ratio(), mach=mach,
                                                       sweep=surface.mean_sweep_angle())  # Compressible 3D moment coefficient
         surface.moment = surface.CM * q * surface.area() * surface.mean_geometric_chord()
@@ -726,11 +729,11 @@ def compute_wing_aerodynamics(
 
         surface.drag = surface.drag_profile + surface.drag_induced
 
-        surface.Cm_inc = surface.airfoil.CM_function(surface.alpha_eff, surface.Re, 0, 0)  # Incompressible 2D moment coefficient
+        surface.Cm_inc = surface.airfoil.CM_function(surface.alpha_eff, surface.Re, 0,
+                                                     0)  # Incompressible 2D moment coefficient
         surface.CM = surface.Cm_inc * aero.CL_over_Cl(surface.aspect_ratio(), mach=mach,
                                                       sweep=surface.mean_sweep_angle())  # Compressible 3D moment coefficient
         surface.moment = surface.CM * q * surface.area() * surface.mean_geometric_chord()
-
 
 
 compute_wing_aerodynamics(wing)
@@ -832,7 +835,7 @@ opti.subject_to([
     # Vv < 0.05,
     # Vv == 0.035,
     center_vstab.aspect_ratio() == 2.5,  # TODO review this
-    center_vstab.area() < 0.1 * wing.area(), # checked with Matt on 12/10/21
+    center_vstab.area() < 0.1 * wing.area(),  # checked with Matt on 12/10/21
     # center_vstab.aspect_ratio() > 1.9, # from Jamie, based on ASWing
     # center_vstab.aspect_ratio() < 2.5 # from Jamie, based on ASWing
 ])
@@ -921,7 +924,7 @@ mass_propellers = n_propellers * lib_prop_prop.mass_hpa_propeller(
 mass_ESC = lib_prop_elec.mass_ESC(max_power=power_out_propulsion_max)
 
 # Total propulsion mass
-mass_propulsion = mass_motor_mounted + mass_propellers# Total propulsion mass
+mass_propulsion = mass_motor_mounted + mass_propellers  # Total propulsion mass
 mass_propulsion = mass_motor_mounted + mass_propellers + mass_ESC
 
 # Account for payload power
@@ -981,9 +984,9 @@ if vertical_cells == "microlink":
     max_solar_area_fraction_vert = opti.parameter(value=0.80)  # for microlink and ascent solar
 
 if vertical_cells == "sunpower":
-    vert_solar_cell_efficiency = 0.243 * 0.9 # Sunpower
+    vert_solar_cell_efficiency = 0.243 * 0.9  # Sunpower
     vert_rho_solar_cells = 0.425 * 1.1 * 1.15  # kg/m^2, solar cell area density. Sunpower.
-    max_solar_area_fraction_vert = opti.parameter(value=0.60) # for sunpower
+    max_solar_area_fraction_vert = opti.parameter(value=0.60)  # for sunpower
 
 if vertical_cells == "ascent_solar":
     vert_solar_cell_efficiency = 0.14 * 0.9  # Ascent Solar
@@ -1058,9 +1061,9 @@ billboard_solar_area_fraction = opti.variable(
     category='des'
 )
 billboard_height = opti.variable(
-    init_guess = boom_diameter * 3,
-    scale = 0.1,
-    category = 'des'
+    init_guess=boom_diameter * 3,
+    scale=0.1,
+    category='des'
 )
 
 if tail_panels == True:
@@ -1086,7 +1089,7 @@ if fuselage_billboard == True:
         billboard_height >= 0,
     ])
     # Billboard geometry is 3 times the height of the boom diameter and fixed
-    billboard_area = billboard_height * center_boom_length # TODO make billboard height a optimization variable
+    billboard_area = billboard_height * center_boom_length  # TODO make billboard height a optimization variable
     billboard_volume = (billboard_height * boom_diameter / 2) * 0.5 * center_boom_length
     foam_density = 16.0185
     mass_billboard = billboard_volume * foam_density
@@ -1102,7 +1105,6 @@ if fuselage_billboard == False:
     billboard_volume = (billboard_height * boom_diameter / 2) * 0.5 * center_boom_length
     billboard_area = 0
     mass_billboard = 0
-
 
 area_solar_horz = wing.area() * solar_area_fraction
 area_solar_vert = center_vstab.area() * vtail_solar_area_fraction * 0.5
@@ -1120,7 +1122,8 @@ power_in_after_panels_fuselage = power_in_from_sun_fuselage * fuselage_solar_cel
 power_in_after_panels_tot = power_in_after_panels_horz + power_in_after_panels_vert + power_in_after_panels_fuselage
 power_in = (power_in_after_panels_tot) * MPPT_efficiency
 
-mass_solar_cells = (vert_rho_solar_cells * area_solar_vert * 2) + (horz_rho_solar_cells * area_solar_horz) + (fuselage_rho_solar_cells * area_solar_fuselage * 2)
+mass_solar_cells = (vert_rho_solar_cells * area_solar_vert * 2) + (horz_rho_solar_cells * area_solar_horz) + (
+            fuselage_rho_solar_cells * area_solar_fuselage * 2)
 
 ### Battery calculations
 
@@ -1134,7 +1137,7 @@ mass_battery_pack = lib_prop_elec.mass_battery_pack(
     battery_pack_cell_fraction=battery_pack_cell_percentage
 )
 mass_battery_cells = mass_battery_pack * battery_pack_cell_percentage
-cost_batteries = 12 * battery_capacity_watt_hours # dollars assuming 355 whr/kg cells
+cost_batteries = 12 * battery_capacity_watt_hours  # dollars assuming 355 whr/kg cells
 
 mass_wires = lib_prop_elec.mass_wires(
     wire_length=wing.span() / 2,
@@ -1262,9 +1265,10 @@ mass_wing = mass_wing_primary + mass_wing_secondary
 # Stabilizers
 q_ne = opti.variable(
     init_guess=70,
-    category = "des"
+    category="des"
 )  # Never-exceed dynamic pressure [Pa].
 opti.subject_to(q_ne / 100 > q * q_ne_over_q_max / 100)
+
 
 def mass_hstab(
         hstab,
@@ -1335,7 +1339,7 @@ opti.subject_to(n_ribs_vstab > 0)
 mass_center_vstab = mass_vstab(center_vstab, n_ribs_vstab)
 
 # Fuselage & Boom
-mass_center_boom = lib_mass_struct.mass_hpa_tail_boom( #TODO add gravitational load for solar cells
+mass_center_boom = lib_mass_struct.mass_hpa_tail_boom(  # TODO add gravitational load for solar cells
     length_tail_boom=center_boom_length - wing_x_quarter_chord,  # support up to the quarter-chord
     dynamic_pressure_at_manuever_speed=q_ne,
     # mean_tail_surface_area=cas.fmax(center_hstab.area(), center_vstab.area()), # most optimistic
@@ -1716,7 +1720,7 @@ if __name__ == "__main__":
              ylabel="True Airspeed [m/s]",
              title="True Airspeed over Simulation",
              save_name="outputs/airspeed.png"
-            )
+             )
         plot("hour", "net_power_to_battery",
              xlabel="Hours after Solar Noon",
              ylabel="Net Power [W] (positive is charging)",
