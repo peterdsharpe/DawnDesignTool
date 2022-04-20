@@ -58,7 +58,7 @@ allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
 make_plots = False
 mass_payload = opti.parameter(value=10)
-tail_panels = True
+tail_panels = False
 fuselage_billboard = False
 wing_cells = "sunpower" # select cells for wing, options include ascent_solar, sunpower, and microlink
 vertical_cells = "sunpower" # select cells for vtail, options include ascent_solar, sunpower, and microlink
@@ -567,13 +567,6 @@ opti.subject_to([
 vehicle_heading = np.arctan2d(airspeed_y, airspeed_x)
 
 
-# # heading_x = airspeed * np.sind(vehicle_bearing) - wind_speed * np.sind(wind_direction)  # x component of heading vector
-# # heading_y = airspeed * np.cosd(vehicle_bearing) - wind_speed * np.cosd(wind_direction) # y component of heading vector
-# # vehicle_heading = np.arctan2d(heading_y, heading_x) # actual directionality of the vehicle as modified by the wind speed and direction
-# vehicle_heading = vehicle_bearing # TODO this is here only for debugging
-# groundspeed = (heading_x ** 2 + heading_y ** 2) ** 0.5
-# groundspeed = airspeed # TODO this is here only for debugging
-
 # endregion
 
 # region Atmosphere
@@ -947,12 +940,22 @@ c = 299792458 # [m/s] speed of light
 k_b = 1.38064852E-23 # [m2 kg s-2 K-1]
 required_resolution = opti.parameter(value=2) # meters from conversation with Brent on 2/18/22
 required_snr = opti.parameter(value=20)  # dB from conversation w Brent on 2/18/22
-radar_length = opti.parameter(value=0.1) # meter from GAMMA remote sensing doc
-radar_width = opti.parameter(value=0.03) # meter from GAMMA remote sensing doc
 scattering_cross_sec = opti.parameter(value=1) # TODO check this
 antenna_gain = opti.parameter(value=0.8) # TODO check this
 center_wavelength = opti.parameter(value=0.226) # meters
 
+radar_length = opti.variable(
+    init_guess=0.1,
+    scale=1,
+    category='des',
+    lower_bound=0,
+)
+radar_width = opti.variable(
+    init_guess=0.03,
+    scale=0.1,
+    category='des',
+    lower_bound=0,
+)
 bandwidth = opti.variable(
     init_guess=2E8,
     scale=1E6,
@@ -973,9 +976,19 @@ power_out_payload = opti.variable(
     scale=10,
     category='des'
 )
+# define key radar parameters
 radar_area = radar_width * radar_length
 look_angle = opti.parameter(value=45)
 dist = y / np.cosd(look_angle)
+grazing_angle = 90 - look_angle
+swath_length = center_wavelength * dist / radar_length
+swath_width = center_wavelength * dist / (radar_width * np.cosd(look_angle))
+max_length_synth_ap = center_wavelength * dist / radar_length
+ground_area = swath_width * swath_length * np.pi / 4
+radius = (swath_length + swath_width) / 4
+scattering_cross_sec = 4 * np.pi * ground_area ** 2 / center_wavelength ** 2  # TODO check this is right
+# scattering_cross_sec = np.pi * radius ** 2
+antenna_gain = 4 * np.pi * radar_area * 0.7 / center_wavelength ** 2
 pulse_duration = 1 / bandwidth
 
 # constrain SAR resolution to required value
@@ -997,17 +1010,6 @@ opti.subject_to([
     bandwidth >= 0,
     center_wavelength >= 0,
     pulse_rep_freq >= 2 * groundspeed / radar_length,
-])
-
-# account for coherence
-min_wavelength = center_wavelength - bandwidth / 2
-max_wavelength = center_wavelength + bandwidth / 2
-delta_phase_min = 4 * np.pi / max_wavelength * (y ** 2 + (groundspeed * time - x) ** 2) ** 0.5
-delta_phase_max = 4 * np.pi / min_wavelength * (y ** 2 + (groundspeed * time - x) ** 2) ** 0.5
-
-opti.subject_to([
-    delta_phase_min <= 2 * np.pi,
-    delta_phase_max <= 2 * np.pi,
 ])
 
 ### Power accounting
