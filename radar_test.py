@@ -19,11 +19,13 @@ radar_length = opti.variable(
     init_guess=0.1,
     scale=1,
     category='des',
+    lower_bound=0,
 )
 radar_width = opti.variable(
     init_guess=0.03,
     scale=0.1,
     category='des',
+    lower_bound=0,
 )
 bandwidth = opti.variable(
     init_guess=105992638,
@@ -46,6 +48,7 @@ power_out_payload = opti.variable(
     category='des'
 )
 
+# define key radar parameters
 radar_area = radar_width * radar_length
 look_angle = opti.parameter(value=45)
 dist = y / np.cosd(look_angle)
@@ -54,7 +57,9 @@ swath_length = center_wavelength * dist / radar_length
 swath_width = center_wavelength * dist / (radar_width * np.cosd(look_angle))
 max_length_synth_ap = center_wavelength * dist / radar_length
 ground_area = swath_width * swath_length * np.pi / 4
+radius = (swath_length + swath_width) / 4
 scattering_cross_sec = 4 * np.pi * ground_area ** 2 / center_wavelength ** 2  # TODO check this is right
+# scattering_cross_sec = np.pi * radius ** 2
 antenna_gain = 4 * np.pi * radar_area * 0.7 / center_wavelength ** 2
 
 pulse_duration = 1 / bandwidth
