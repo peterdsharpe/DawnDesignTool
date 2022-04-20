@@ -537,7 +537,6 @@ airplane = asb.Airplane(
 # region Flight Path Optimization
 wind_speed = wind_speed_func(y)
 wind_direction = 180
-flight_path_radius = 100000
 
 groundspeed = opti.variable(
     n_vars=n_timesteps,
@@ -552,7 +551,7 @@ airspeed = opti.variable(
     category="ops"
 )
 
-vehicle_bearing = x / (np.pi / 180) / flight_path_radius + 90
+vehicle_bearing = 90
 groundspeed_x = groundspeed * np.cosd(vehicle_bearing)
 groundspeed_y = groundspeed * np.sind(vehicle_bearing)
 windspeed_x = wind_speed * np.cosd(wind_direction)
@@ -1655,7 +1654,7 @@ opti.minimize(
 if __name__ == "__main__":
     # Solve
     sol = opti.solve(
-        max_iter=1000,
+        max_iter=2000,
         options={
             "ipopt.max_cpu_time": 600
         }
