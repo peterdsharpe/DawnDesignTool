@@ -19,7 +19,6 @@ from typing import Union, List
 from aerosandbox.modeling.interpolation import InterpolatedModel
 import pathlib
 
-
 path = str(
     pathlib.Path(__file__).parent.absolute()
 )
@@ -43,22 +42,21 @@ opti = asb.Opti(  # Normal mode - Design Optimization
 minimize = "wing.span() / 50"  # any "eval-able" expression
 # minimize = "max_mass_total / 300" # any "eval-able" expression
 # minimize = "wing.span() / 50 * 0.9 + max_mass_total / 300 * 0.1"
-# minimize = "np.mean(np.trapz(net_power ** 2) * np.diff(time))"
 
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
-latitude = opti.parameter(value=-75)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
-day_of_year = opti.parameter(value=60)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
+latitude = opti.parameter(value=-60)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
+day_of_year = opti.parameter(value=1)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 strat_offset_value = opti.parameter(value=1000)
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 wind_direction = 0 # direction wind is coming from 0 is North and 90 is East
 flight_path_radius = 50000
-required_headway_per_day = 10000 #2 * np.pi * flight_path_radius# meters
+required_headway_per_day = 100 #2 * np.pi * flight_path_radius# meters
 allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
 make_plots = False
 mass_payload = opti.parameter(value=10)
-tail_panels = False
+tail_panels = True
 fuselage_billboard = False
 wing_cells = "sunpower" # select cells for wing, options include ascent_solar, sunpower, and microlink
 vertical_cells = "sunpower" # select cells for vtail, options include ascent_solar, sunpower, and microlink
@@ -551,7 +549,7 @@ airspeed = opti.variable(
     category="ops"
 )
 
-vehicle_bearing = 90
+vehicle_bearing = x / (np.pi / 180) / flight_path_radius + 90
 groundspeed_x = groundspeed * np.cosd(vehicle_bearing)
 groundspeed_y = groundspeed * np.sind(vehicle_bearing)
 windspeed_x = wind_speed * np.cosd(wind_direction)
@@ -922,6 +920,13 @@ mass_ESC = lib_prop_elec.mass_ESC(max_power=power_out_propulsion_max)
 mass_propulsion = mass_motor_mounted + mass_propellers# Total propulsion mass
 mass_propulsion = mass_motor_mounted + mass_propellers + mass_ESC
 
+# Account for payload power
+power_out_payload = np.where(
+    solar_flux_on_horizontal > 1,
+    100,
+    100
+)
+
 # Account for avionics power
 power_out_avionics = 180  # Pulled from Avionics spreadsheet on 5/13/20
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
@@ -934,83 +939,82 @@ wing_span = opti.variable(
 )
 
 ### Payload Module
-
-c = 299792458 # [m/s] speed of light
-k_b = 1.38064852E-23 # [m2 kg s-2 K-1]
-required_resolution = opti.parameter(value=2) # meters from conversation with Brent on 2/18/22
-required_snr = opti.parameter(value=20)  # dB from conversation w Brent on 2/18/22
-scattering_cross_sec = opti.parameter(value=1) # TODO check this
-antenna_gain = opti.parameter(value=0.8) # TODO check this
-center_wavelength = opti.parameter(value=0.226) # meters
-
-radar_length = opti.variable(
-    init_guess=0.1,
-    scale=1,
-    category='des',
-    lower_bound=0,
-)
-radar_width = opti.variable(
-    init_guess=0.03,
-    scale=0.1,
-    category='des',
-    lower_bound=0,
-)
-bandwidth = opti.variable(
-    init_guess=2E8,
-    scale=1E6,
-    category='des'
-) #Hz
-peak_power = opti.variable(
-    init_guess=500,
-    scale=100,
-    category='des'
-) # Watts
-pulse_rep_freq = opti.variable(
-    init_guess=10,
-    scale=1,
-    category='des'
-)
-power_out_payload = opti.variable(
-    init_guess=100,
-    scale=10,
-    category='des'
-)
-# define key radar parameters
-radar_area = radar_width * radar_length
-look_angle = opti.parameter(value=45)
-dist = y / np.cosd(look_angle)
-grazing_angle = 90 - look_angle
-swath_length = center_wavelength * dist / radar_length
-swath_width = center_wavelength * dist / (radar_width * np.cosd(look_angle))
-max_length_synth_ap = center_wavelength * dist / radar_length
-ground_area = swath_width * swath_length * np.pi / 4
-radius = (swath_length + swath_width) / 4
-scattering_cross_sec = 4 * np.pi * ground_area ** 2 / center_wavelength ** 2  # TODO check this is right
-# scattering_cross_sec = np.pi * radius ** 2
-antenna_gain = 4 * np.pi * radar_area * 0.7 / center_wavelength ** 2
-pulse_duration = 1 / bandwidth
-
-# constrain SAR resolution to required value
-range_resolution = c * pulse_duration / (2 * np.sind(look_angle))
-azimuth_resolution = radar_length / 2
-opti.subject_to([
-    range_resolution <= required_resolution,
-    azimuth_resolution <= required_resolution,
-])
-
-# account for snr
-noise_power_density = k_b * T * bandwidth / (center_wavelength ** 2)
-power_trans = peak_power * pulse_duration
-power_received = power_trans * antenna_gain * radar_area * scattering_cross_sec / ((4 * np.pi) ** 2 * dist ** 4)
-power_out_payload = power_trans * pulse_rep_freq
-opti.subject_to([
-    required_snr <= power_received / noise_power_density,
-    peak_power >= 0,
-    bandwidth >= 0,
-    center_wavelength >= 0,
-    pulse_rep_freq >= 2 * groundspeed / radar_length,
-])
-
+#
+# c = 299792458 # [m/s] speed of light
+# k_b = 1.38064852E-23 # [m2 kg s-2 K-1]
+# required_resolution = opti.parameter(value=2) # meters from conversation with Brent on 2/18/22
+# required_snr = opti.parameter(value=20)  # dB from conversation w Brent on 2/18/22
+# scattering_cross_sec = opti.parameter(value=1) # TODO check this
+# antenna_gain = opti.parameter(value=0.8) # TODO check this
+# center_wavelength = opti.parameter(value=0.226) # meters
+#
+# radar_length = opti.variable(
+#     init_guess=0.1,
+#     scale=1,
+#     category='des',
+#     lower_bound=0,
+# )
+# radar_width = opti.variable(
+#     init_guess=0.03,
+#     scale=0.1,
+#     category='des',
+#     lower_bound=0,
+# )
+# bandwidth = opti.variable(
+#     init_guess=2E8,
+#     scale=1E6,
+#     category='des'
+# ) #Hz
+# peak_power = opti.variable(
+#     init_guess=500,
+#     scale=100,
+#     category='des'
+# ) # Watts
+# pulse_rep_freq = opti.variable(
+#     init_guess=10,
+#     scale=1,
+#     category='des'
+# )
+# power_out_payload = opti.variable(
+#     init_guess=100,
+#     scale=10,
+#     category='des'
+# )
+# # define key radar parameters
+# radar_area = radar_width * radar_length
+# look_angle = opti.parameter(value=45)
+# dist = y / np.cosd(look_angle)
+# grazing_angle = 90 - look_angle
+# swath_length = center_wavelength * dist / radar_length
+# swath_width = center_wavelength * dist / (radar_width * np.cosd(look_angle))
+# max_length_synth_ap = center_wavelength * dist / radar_length
+# ground_area = swath_width * swath_length * np.pi / 4
+# radius = (swath_length + swath_width) / 4
+# scattering_cross_sec = 4 * np.pi * ground_area ** 2 / center_wavelength ** 2  # TODO check this is right
+# # scattering_cross_sec = np.pi * radius ** 2
+# antenna_gain = 4 * np.pi * radar_area * 0.7 / center_wavelength ** 2
+# pulse_duration = 1 / bandwidth
+#
+# # constrain SAR resolution to required value
+# range_resolution = c * pulse_duration / (2 * np.sind(look_angle))
+# azimuth_resolution = radar_length / 2
+# opti.subject_to([
+#     range_resolution <= required_resolution,
+#     azimuth_resolution <= required_resolution,
+# ])
+#
+# # account for snr
+# noise_power_density = k_b * T * bandwidth / (center_wavelength ** 2)
+# power_trans = peak_power * pulse_duration
+# power_received = power_trans * antenna_gain * radar_area * scattering_cross_sec / ((4 * np.pi) ** 2 * dist ** 4)
+# power_out_payload = power_trans * pulse_rep_freq
+# opti.subject_to([
+#     required_snr <= power_received / noise_power_density,
+#     peak_power >= 0,
+#     bandwidth >= 0,
+#     center_wavelength >= 0,
+#     pulse_rep_freq >= 2 * groundspeed / radar_length,
+# ])
 ### Power accounting
 power_out = power_out_propulsion + power_out_payload + power_out_avionics
 
@@ -2032,6 +2036,3 @@ if __name__ == "__main__":
             except:
                 value = eval(var_name)
             f.write(f"{var_name}, {value},\n")
-    opti.value(net_power_to_battery)
-    opti.value(net_power_to_battery_pack)
-    opti.value(time)
