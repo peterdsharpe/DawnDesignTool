@@ -991,13 +991,13 @@ radar_area = radar_width * radar_length
 look_angle = opti.parameter(value=45)
 dist = y / np.cosd(look_angle)
 grazing_angle = 90 - look_angle
-swath_length = center_wavelength * dist / radar_length
-swath_width = center_wavelength * dist / (radar_width * np.cosd(look_angle))
+swath_azimuth = center_wavelength * dist / radar_length
+swath_range = center_wavelength * dist / (radar_width * np.cosd(look_angle))
 max_length_synth_ap = center_wavelength * dist / radar_length
-ground_area = swath_width * swath_length * np.pi / 4
-radius = (swath_length + swath_width) / 4
+ground_area = swath_range * swath_azimuth * np.pi / 4
+radius = (swath_azimuth + swath_range) / 4
 scattering_cross_sec = sigma0
-# scattering_cross_sec = np.pi * radius ** 2
+# scattering_cross_sec = np.pi * radius ** 2radar_offset_length =
 antenna_gain = 4 * np.pi * radar_area * 0.7 / center_wavelength ** 2
 pulse_duration = 1 / bandwidth
 
