@@ -86,9 +86,14 @@ noise_power_density = k_b * T * bandwidth / (center_wavelength ** 2)
 power_trans = peak_power * pulse_duration
 power_received = power_trans * antenna_gain * radar_area * scattering_cross_sec / ((4 * np.pi) ** 2 * dist ** 4)
 power_out_payload = power_trans * pulse_rep_freq
+snr = power_received / noise_power_density
+snr_db = 10 * np.log10(snr)
 opti.subject_to([
-    required_snr <= power_received / noise_power_density,
+    required_snr <= snr_db,
     pulse_rep_freq >= 2 * groundspeed / radar_length,
+    pulse_rep_freq <= c / (2 * swath_azimuth),
+    radar_width <= 0.4,
+    radar_length <= 0.4,
 ])
 
 objective = eval(minimize)
