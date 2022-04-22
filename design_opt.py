@@ -23,7 +23,6 @@ path = str(
     pathlib.Path(__file__).parent.absolute()
 )
 
-
 sns.set(font_scale=1)
 # def run_sizing(lat, day):
 # region Setup
@@ -49,9 +48,9 @@ latitude = opti.parameter(value=49)  # degrees (49 deg is top of CONUS, 26 deg i
 day_of_year = opti.parameter(value=174)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 strat_offset_value = opti.parameter(value=1000)
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
-wind_direction = 0 # direction wind is coming from 0 is North and 90 is East
+wind_direction = 0  # direction wind is coming from 0 is North and 90 is East
 flight_path_radius = 50000
-required_headway_per_day = 100 #2 * np.pi * flight_path_radius# meters
+required_headway_per_day = 100  # 2 * np.pi * flight_path_radius# meters
 allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
 make_plots = False
@@ -62,6 +61,8 @@ wing_cells = "sunpower"  # select cells for wing, options include ascent_solar, 
 vertical_cells = "sunpower"  # select cells for vtail, options include ascent_solar, sunpower, and microlink
 # vertical cells only mounted when tail_panels is True
 billboard_cells = "sunpower"  # select cells for billboard, options include ascent_solar, sunpower, and microlink
+
+
 # vertical cells only mounted when fuselage_billboard is True
 
 # wind_speed_func = lambda alt: lib_winds.wind_speed_conus_summer_99(alt, latitude)
@@ -70,6 +71,7 @@ def wind_speed_func(alt):
     latitude_array = np.full(shape=alt.shape[0], fill_value=1) * latitude
     speed_func = lib_winds.wind_speed_world_95(alt, latitude_array, day_array)
     return speed_func
+
 
 battery_specific_energy_Wh_kg = opti.parameter(value=450)
 battery_pack_cell_percentage = 0.89  # What percent of the battery pack consists of the module, by weight?
@@ -378,7 +380,6 @@ n_propellers = opti.parameter(value=4)
 # import pickle
 import dill as pickle
 
-
 # wing_airfoil = wing_airfoil.repanel()
 cl_array = np.load(path + '/data/cl_function.npy')
 cd_array = np.load(path + '/data/cd_function.npy')
@@ -564,7 +565,6 @@ opti.subject_to([
 ])
 vehicle_heading = np.arctan2d(airspeed_y, airspeed_x)
 
-
 # endregion
 
 # region Atmosphere
@@ -639,6 +639,7 @@ solar_flux_on_billboard_right = lib_solar.solar_flux(
     panel_tilt_angle=-billboard_angle,
     scattering=True,
 )
+
 
 # endregion
 
@@ -731,7 +732,6 @@ def compute_wing_aerodynamics(
         surface.CM = surface.Cm_inc * aero.CL_over_Cl(surface.aspect_ratio(), mach=mach,
                                                       sweep=surface.mean_sweep_angle())  # Compressible 3D moment coefficient
         surface.moment = surface.CM * q * surface.area() * surface.mean_geometric_chord()
-
 
 
 compute_wing_aerodynamics(wing)
@@ -938,13 +938,13 @@ power_out_avionics = 180  # Pulled from Avionics spreadsheet on 5/13/20
 
 ### Payload Module
 #
-c = 299792458 # [m/s] speed of light
-k_b = 1.38064852E-23 # [m2 kg s-2 K-1]
-required_resolution = opti.parameter(value=2) # meters from conversation with Brent on 2/18/22
+c = 299792458  # [m/s] speed of light
+k_b = 1.38064852E-23  # [m2 kg s-2 K-1]
+required_resolution = opti.parameter(value=2)  # meters from conversation with Brent on 2/18/22
 required_snr = opti.parameter(value=20)  # dB from conversation w Brent on 2/18/22
-antenna_gain = opti.parameter(value=0.8) # TODO check this
-center_wavelength = opti.parameter(value=0.226) # meters
-sigma0 = opti.parameter(value=1) # meters ** 2
+antenna_gain = opti.parameter(value=0.8)  # TODO check this
+center_wavelength = opti.parameter(value=0.226)  # meters
+sigma0 = opti.parameter(value=0.1)  # meters ** 2
 
 radar_length = opti.variable(
     init_guess=0.1,
@@ -959,30 +959,30 @@ radar_width = opti.variable(
     lower_bound=0,
 )
 bandwidth = opti.variable(
-    n_vars = n_timesteps,
-    init_guess=1e3,
-    scale=1e2,
+    n_vars=n_timesteps,
+    init_guess=1e6,
+    scale=1e4,
     lower_bound=0,
     category='ops'
-) #Hz
+)  # Hz
 peak_power = opti.variable(
     n_vars=n_timesteps,
-    init_guess=100,
-    scale=10,
+    init_guess=1000,
+    scale=100,
     lower_bound=0,
     category='ops'
-) # Watts
+)  # Watts
 pulse_rep_freq = opti.variable(
     n_vars=n_timesteps,
-    init_guess=10,
-    scale=1,
+    init_guess=3000,
+    scale=100,
     lower_bound=0,
     category='ops'
 )
 power_out_payload = opti.variable(
     n_vars=n_timesteps,
-    init_guess=100,
-    scale=10,
+    init_guess=3,
+    scale=1,
     lower_bound=0,
     category='ops'
 )
@@ -1065,62 +1065,61 @@ if vertical_cells == "microlink":
     vert_solar_cell_efficiency = 0.285 * 0.9  # Microlink
     vert_rho_solar_cells = 0.255 * 1.1  # kg/m^2, solar cell area density. Microlink.
     max_solar_area_fraction_vert = opti.parameter(value=0.80)  # for microlink and ascent solar
-    vert_solar_cost_per_watt = 250 # $/W
-    vert_solar_power_ratio = 1100 # W/kg
+    vert_solar_cost_per_watt = 250  # $/W
+    vert_solar_power_ratio = 1100  # W/kg
 
 if vertical_cells == "sunpower":
-    vert_solar_cell_efficiency = 0.243 * 0.9 # Sunpower
+    vert_solar_cell_efficiency = 0.243 * 0.9  # Sunpower
     vert_rho_solar_cells = 0.425 * 1.1 * 1.15  # kg/m^2, solar cell area density. Sunpower.
-    max_solar_area_fraction_vert = opti.parameter(value=0.60) # for sunpower
-    vert_solar_cost_per_watt = 3 # $/W
-    vert_solar_power_ratio = 500 # W/kg
+    max_solar_area_fraction_vert = opti.parameter(value=0.60)  # for sunpower
+    vert_solar_cost_per_watt = 3  # $/W
+    vert_solar_power_ratio = 500  # W/kg
 
 if vertical_cells == "ascent_solar":
     vert_solar_cell_efficiency = 0.14 * 0.9  # Ascent Solar
     vert_rho_solar_cells = 0.300 * 1.1  # kg/m^2, solar cell area density. Ascent Solar
     max_solar_area_fraction_vert = opti.parameter(value=0.80)  # for microlink and ascent solar
-    vert_solar_cost_per_watt = 80 # $/W
-    vert_solar_power_ratio = 300 # W/kg
+    vert_solar_cost_per_watt = 80  # $/W
+    vert_solar_power_ratio = 300  # W/kg
 
 if wing_cells == "microlink":
     horz_solar_cell_efficiency = 0.285 * 0.9  # Microlink
     horz_rho_solar_cells = 0.255 * 1.1  # kg/m^2, solar cell area density. Microlink.
     max_solar_area_fraction_horz = opti.parameter(value=0.80)  # for microlink and ascent solar
-    horz_solar_cost_per_watt = 250 # $/W
-    horz_solar_power_ratio = 1100 # W/kg
+    horz_solar_cost_per_watt = 250  # $/W
+    horz_solar_power_ratio = 1100  # W/kg
 
 if wing_cells == "sunpower":
     horz_solar_cell_efficiency = 0.243 * 0.9  # Sunpower
     horz_rho_solar_cells = 0.425 * 1.1 * 1.15  # kg/m^2, solar cell area density. Sunpower.
     max_solar_area_fraction_horz = opti.parameter(value=0.60)  # for sunpower
-    horz_solar_cost_per_watt = 3 # $/W
-    horz_solar_power_ratio = 500 # W/kg
+    horz_solar_cost_per_watt = 3  # $/W
+    horz_solar_power_ratio = 500  # W/kg
 
 if wing_cells == "ascent_solar":
     horz_solar_cell_efficiency = 0.14 * 0.9  # Ascent Solar
     horz_rho_solar_cells = 0.300 * 1.1  # kg/m^2, solar cell area density. Ascent Solar
     max_solar_area_fraction_horz = opti.parameter(value=0.80)  # for microlink and ascent solar
-    horz_solar_cost_per_watt = 80 # $/W
-    horz_solar_power_ratio = 300 # W/kg
+    horz_solar_cost_per_watt = 80  # $/W
+    horz_solar_power_ratio = 300  # W/kg
 
 if billboard_cells == "microlink":
     fuselage_solar_cell_efficiency = 0.285 * 0.9  # Microlink
     fuselage_rho_solar_cells = 0.255 * 1.1  # kg/m^2, solar cell area density. Microlink.
-    fuselage_solar_cost_per_watt = 250 # $/W
-    fuselage_solar_power_ratio = 1100 # W/kg
+    fuselage_solar_cost_per_watt = 250  # $/W
+    fuselage_solar_power_ratio = 1100  # W/kg
 
 if billboard_cells == "sunpower":
     fuselage_solar_cell_efficiency = 0.243 * 0.9  # Sunpower
     fuselage_rho_solar_cells = 0.425 * 1.1 * 1.15  # kg/m^2, solar cell area density. Sunpower.
-    fuselage_solar_cost_per_watt = 3 # $/W
-    fuselage_solar_power_ratio = 500 # W/kg
+    fuselage_solar_cost_per_watt = 3  # $/W
+    fuselage_solar_power_ratio = 500  # W/kg
 
 if billboard_cells == "ascent_solar":
     fuselage_solar_cell_efficiency = 0.14 * 0.9  # Ascent Solar
     fuselage_rho_solar_cells = 0.300 * 1.1  # kg/m^2, solar cell area density. Ascent Solar
-    fuselage_solar_cost_per_watt = 80 # $/W
-    fuselage_solar_power_ratio = 300 # W/kg
-
+    fuselage_solar_cost_per_watt = 80  # $/W
+    fuselage_solar_power_ratio = 300  # W/kg
 
 # This figure should take into account all temperature factors,
 # spectral losses (different spectrum at altitude), multi-junction effects, etc.
@@ -1163,9 +1162,9 @@ billboard_solar_area_fraction = opti.variable(
     category='des'
 )
 billboard_height = opti.variable(
-    init_guess = boom_diameter * 3,
-    scale = 0.1,
-    category = 'des'
+    init_guess=boom_diameter * 3,
+    scale=0.1,
+    category='des'
 )
 
 if tail_panels == True:
@@ -1191,7 +1190,7 @@ if fuselage_billboard == True:
         billboard_height >= 0,
     ])
     # Billboard geometry is 3 times the height of the boom diameter and fixed
-    billboard_area = billboard_height * center_boom_length # TODO make billboard height a optimization variable
+    billboard_area = billboard_height * center_boom_length  # TODO make billboard height a optimization variable
     billboard_volume = (billboard_height * boom_diameter / 2) * 0.5 * center_boom_length
     foam_density = 16.0185
     mass_billboard = billboard_volume * foam_density
@@ -1207,7 +1206,6 @@ if fuselage_billboard == False:
     billboard_volume = (billboard_height * boom_diameter / 2) * 0.5 * center_boom_length
     billboard_area = 0
     mass_billboard = 0
-
 
 area_solar_horz = wing.area() * solar_area_fraction
 area_solar_vert = center_vstab.area() * vtail_solar_area_fraction * 0.5
@@ -1225,10 +1223,12 @@ power_in_after_panels_fuselage = power_in_from_sun_fuselage * fuselage_solar_cel
 power_in_after_panels_tot = power_in_after_panels_horz + power_in_after_panels_vert + power_in_after_panels_fuselage
 power_in = (power_in_after_panels_tot) * MPPT_efficiency
 
-mass_solar_cells = (vert_rho_solar_cells * area_solar_vert * 2) + (horz_rho_solar_cells * area_solar_horz) + (fuselage_rho_solar_cells * area_solar_fuselage * 2)
+mass_solar_cells = (vert_rho_solar_cells * area_solar_vert * 2) + (horz_rho_solar_cells * area_solar_horz) + (
+            fuselage_rho_solar_cells * area_solar_fuselage * 2)
 cost_solar_cells = (vert_rho_solar_cells * area_solar_vert * 2) * vert_solar_power_ratio * vert_solar_cost_per_watt + \
-                   (horz_rho_solar_cells * area_solar_horz) * horz_solar_power_ratio * horz_solar_cost_per_watt  + \
-                   (fuselage_rho_solar_cells * area_solar_fuselage * 2) * fuselage_solar_power_ratio * fuselage_solar_cost_per_watt
+                   (horz_rho_solar_cells * area_solar_horz) * horz_solar_power_ratio * horz_solar_cost_per_watt + \
+                   (
+                               fuselage_rho_solar_cells * area_solar_fuselage * 2) * fuselage_solar_power_ratio * fuselage_solar_cost_per_watt
 
 ### Battery calculations
 
@@ -1242,7 +1242,7 @@ mass_battery_pack = lib_prop_elec.mass_battery_pack(
     battery_pack_cell_fraction=battery_pack_cell_percentage
 )
 mass_battery_cells = mass_battery_pack * battery_pack_cell_percentage
-cost_batteries = 4 * battery_capacity_watt_hours # dollars assuming 355 whr/kg cells
+cost_batteries = 4 * battery_capacity_watt_hours  # dollars assuming 355 whr/kg cells
 
 mass_wires = lib_prop_elec.mass_wires(
     wire_length=wing.span() / 2,
@@ -1370,9 +1370,10 @@ mass_wing = mass_wing_primary + mass_wing_secondary
 # Stabilizers
 q_ne = opti.variable(
     init_guess=70,
-    category = "des"
+    category="des"
 )  # Never-exceed dynamic pressure [Pa].
 opti.subject_to(q_ne / 100 > q * q_ne_over_q_max / 100)
+
 
 def mass_hstab(
         hstab,
@@ -1443,7 +1444,7 @@ opti.subject_to(n_ribs_vstab > 0)
 mass_center_vstab = mass_vstab(center_vstab, n_ribs_vstab)
 
 # Fuselage & Boom
-mass_center_boom = lib_mass_struct.mass_hpa_tail_boom( #TODO add gravitational load for solar cells
+mass_center_boom = lib_mass_struct.mass_hpa_tail_boom(  # TODO add gravitational load for solar cells
     length_tail_boom=center_boom_length - wing_x_quarter_chord,  # support up to the quarter-chord
     dynamic_pressure_at_manuever_speed=q_ne,
     # mean_tail_surface_area=cas.fmax(center_hstab.area(), center_vstab.area()), # most optimistic
@@ -1824,7 +1825,7 @@ if __name__ == "__main__":
              ylabel="True Airspeed [m/s]",
              title="True Airspeed over Simulation",
              save_name="outputs/airspeed.png"
-            )
+             )
         plot("hour", "net_power_to_battery",
              xlabel="Hours after Solar Noon",
              ylabel="Net Power [W] (positive is charging)",
