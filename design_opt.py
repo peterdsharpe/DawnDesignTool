@@ -941,7 +941,7 @@ power_out_avionics = 180  # Pulled from Avionics spreadsheet on 5/13/20
 c = 299792458  # [m/s] speed of light
 k_b = 1.38064852E-23  # [m2 kg s-2 K-1]
 required_resolution = opti.parameter(value=2)  # meters from conversation with Brent on 2/18/22
-required_snr = opti.parameter(value=20)  # dB from conversation w Brent on 2/18/22
+required_snr = opti.parameter(value=0)  # dB from conversation w Brent on 2/18/22
 antenna_gain = opti.parameter(value=0.8)  # TODO check this
 center_wavelength = opti.parameter(value=0.226)  # meters
 sigma0 = opti.parameter(value=0.1)  # meters ** 2
@@ -974,15 +974,15 @@ peak_power = opti.variable(
 )  # Watts
 pulse_rep_freq = opti.variable(
     n_vars=n_timesteps,
-    init_guess=3000,
-    scale=100,
+    init_guess=10000,
+    scale=1000,
     lower_bound=0,
     category='ops'
 )
 power_out_payload = opti.variable(
     n_vars=n_timesteps,
-    init_guess=3,
-    scale=1,
+    init_guess=1,
+    scale=0.1,
     lower_bound=0,
     category='ops'
 )
@@ -996,6 +996,7 @@ swath_range = center_wavelength * dist / (radar_width * np.cosd(look_angle))
 max_length_synth_ap = center_wavelength * dist / radar_length
 ground_area = swath_range * swath_azimuth * np.pi / 4
 radius = (swath_azimuth + swath_range) / 4
+ground_imaging_offset = np.sin(look_angle) * dist
 scattering_cross_sec = sigma0
 # scattering_cross_sec = np.pi * radius ** 2radar_offset_length =
 antenna_gain = 4 * np.pi * radar_area * 0.7 / center_wavelength ** 2
@@ -1016,9 +1017,6 @@ power_received = power_trans * antenna_gain * radar_area * scattering_cross_sec 
 power_out_payload = power_trans * pulse_rep_freq
 opti.subject_to([
     required_snr <= power_received / noise_power_density,
-    peak_power >= 0,
-    bandwidth >= 0,
-    center_wavelength >= 0,
     pulse_rep_freq >= 2 * groundspeed / radar_length,
 ])
 # ### Power accounting
