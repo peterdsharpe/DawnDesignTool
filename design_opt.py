@@ -938,82 +938,90 @@ power_out_avionics = 180  # Pulled from Avionics spreadsheet on 5/13/20
 
 ### Payload Module
 #
-# c = 299792458 # [m/s] speed of light
-# k_b = 1.38064852E-23 # [m2 kg s-2 K-1]
-# required_resolution = opti.parameter(value=2) # meters from conversation with Brent on 2/18/22
-# required_snr = opti.parameter(value=20)  # dB from conversation w Brent on 2/18/22
-# scattering_cross_sec = opti.parameter(value=1) # TODO check this
-# antenna_gain = opti.parameter(value=0.8) # TODO check this
-# center_wavelength = opti.parameter(value=0.226) # meters
-#
-# radar_length = opti.variable(
-#     init_guess=0.1,
-#     scale=1,
-#     category='des',
-#     lower_bound=0,
-# )
-# radar_width = opti.variable(
-#     init_guess=0.03,
-#     scale=0.1,
-#     category='des',
-#     lower_bound=0,
-# )
-# bandwidth = opti.variable(
-#     init_guess=2E8,
-#     scale=1E6,
-#     category='des'
-# ) #Hz
-# peak_power = opti.variable(
-#     init_guess=500,
-#     scale=100,
-#     category='des'
-# ) # Watts
-# pulse_rep_freq = opti.variable(
-#     init_guess=10,
-#     scale=1,
-#     category='des'
-# )
-# power_out_payload = opti.variable(
-#     init_guess=100,
-#     scale=10,
-#     category='des'
-# )
-# # define key radar parameters
-# radar_area = radar_width * radar_length
-# look_angle = opti.parameter(value=45)
-# dist = y / np.cosd(look_angle)
-# grazing_angle = 90 - look_angle
-# swath_length = center_wavelength * dist / radar_length
-# swath_width = center_wavelength * dist / (radar_width * np.cosd(look_angle))
-# max_length_synth_ap = center_wavelength * dist / radar_length
-# ground_area = swath_width * swath_length * np.pi / 4
-# radius = (swath_length + swath_width) / 4
-# scattering_cross_sec = 4 * np.pi * ground_area ** 2 / center_wavelength ** 2  # TODO check this is right
-# # scattering_cross_sec = np.pi * radius ** 2
-# antenna_gain = 4 * np.pi * radar_area * 0.7 / center_wavelength ** 2
-# pulse_duration = 1 / bandwidth
-#
-# # constrain SAR resolution to required value
-# range_resolution = c * pulse_duration / (2 * np.sind(look_angle))
-# azimuth_resolution = radar_length / 2
-# opti.subject_to([
-#     range_resolution <= required_resolution,
-#     azimuth_resolution <= required_resolution,
-# ])
-#
-# # account for snr
-# noise_power_density = k_b * T * bandwidth / (center_wavelength ** 2)
-# power_trans = peak_power * pulse_duration
-# power_received = power_trans * antenna_gain * radar_area * scattering_cross_sec / ((4 * np.pi) ** 2 * dist ** 4)
-# power_out_payload = power_trans * pulse_rep_freq
-# opti.subject_to([
-#     required_snr <= power_received / noise_power_density,
-#     peak_power >= 0,
-#     bandwidth >= 0,
-#     center_wavelength >= 0,
-#     pulse_rep_freq >= 2 * groundspeed / radar_length,
-# ])
-### Power accounting
+c = 299792458 # [m/s] speed of light
+k_b = 1.38064852E-23 # [m2 kg s-2 K-1]
+required_resolution = opti.parameter(value=2) # meters from conversation with Brent on 2/18/22
+required_snr = opti.parameter(value=20)  # dB from conversation w Brent on 2/18/22
+antenna_gain = opti.parameter(value=0.8) # TODO check this
+center_wavelength = opti.parameter(value=0.226) # meters
+sigma0 = opti.parameter(value=1) # meters ** 2
+
+radar_length = opti.variable(
+    init_guess=0.1,
+    scale=1,
+    category='des',
+    lower_bound=0,
+)
+radar_width = opti.variable(
+    init_guess=0.03,
+    scale=0.1,
+    category='des',
+    lower_bound=0,
+)
+bandwidth = opti.variable(
+    n_vars = n_timesteps,
+    init_guess=1e3,
+    scale=1e2,
+    lower_bound=0,
+    category='ops'
+) #Hz
+peak_power = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=100,
+    scale=10,
+    lower_bound=0,
+    category='ops'
+) # Watts
+pulse_rep_freq = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=10,
+    scale=1,
+    lower_bound=0,
+    category='ops'
+)
+power_out_payload = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=100,
+    scale=10,
+    lower_bound=0,
+    category='ops'
+)
+# define key radar parameters
+radar_area = radar_width * radar_length
+look_angle = opti.parameter(value=45)
+dist = y / np.cosd(look_angle)
+grazing_angle = 90 - look_angle
+swath_length = center_wavelength * dist / radar_length
+swath_width = center_wavelength * dist / (radar_width * np.cosd(look_angle))
+max_length_synth_ap = center_wavelength * dist / radar_length
+ground_area = swath_width * swath_length * np.pi / 4
+radius = (swath_length + swath_width) / 4
+scattering_cross_sec = sigma0
+# scattering_cross_sec = np.pi * radius ** 2
+antenna_gain = 4 * np.pi * radar_area * 0.7 / center_wavelength ** 2
+pulse_duration = 1 / bandwidth
+
+# constrain SAR resolution to required value
+range_resolution = c * pulse_duration / (2 * np.sind(look_angle))
+azimuth_resolution = radar_length / 2
+opti.subject_to([
+    range_resolution <= required_resolution,
+    azimuth_resolution <= required_resolution,
+])
+
+# account for snr
+noise_power_density = k_b * T * bandwidth / (center_wavelength ** 2)
+power_trans = peak_power * pulse_duration
+power_received = power_trans * antenna_gain * radar_area * scattering_cross_sec / ((4 * np.pi) ** 2 * dist ** 4)
+power_out_payload = power_trans * pulse_rep_freq
+opti.subject_to([
+    required_snr <= power_received / noise_power_density,
+    peak_power >= 0,
+    bandwidth >= 0,
+    center_wavelength >= 0,
+    pulse_rep_freq >= 2 * groundspeed / radar_length,
+])
+# ### Power accounting
 power_out = power_out_propulsion + power_out_payload + power_out_avionics
 
 # endregion
