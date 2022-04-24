@@ -944,7 +944,7 @@ required_resolution = opti.parameter(value=2)  # meters from conversation with B
 required_snr = opti.parameter(value=20)  # dB from conversation w Brent on 2/18/22
 antenna_gain = opti.parameter(value=0.8)  # TODO check this
 center_wavelength = opti.parameter(value=0.226)  # meters
-sigma0 = opti.parameter(value=1)  # meters ** 2 ranges from
+sigma0_db = opti.parameter(value=0)  # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
 
 radar_length = opti.variable(
     init_guess=0.1,
@@ -997,8 +997,8 @@ max_length_synth_ap = center_wavelength * dist / radar_length
 ground_area = swath_range * swath_azimuth * np.pi / 4
 radius = (swath_azimuth + swath_range) / 4
 ground_imaging_offset = np.sin(look_angle) * dist
-scattering_cross_sec = sigma0 # Todo change from db to ratio
-# scattering_cross_sec = np.pi * radius ** 2radar_offset_length =
+sigma0 = 10 ** (sigma0_db / 10)
+scattering_cross_sec = sigma0
 antenna_gain = 4 * np.pi * radar_area * 0.7 / center_wavelength ** 2
 pulse_duration = 1 / bandwidth
 
@@ -1018,7 +1018,7 @@ power_out_payload = power_trans * pulse_rep_freq
 snr = power_received / noise_power_density
 snr_db = 10 * np.log10(snr)
 opti.subject_to([
-    # required_snr <= snr_db,
+    required_snr <= snr_db,
     pulse_rep_freq >= 2 * groundspeed / radar_length,
     pulse_rep_freq <= c / (2 * swath_azimuth),
     radar_width <= 0.4,
