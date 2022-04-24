@@ -944,7 +944,7 @@ required_resolution = opti.parameter(value=2)  # meters from conversation with B
 required_snr = opti.parameter(value=0)  # dB from conversation w Brent on 2/18/22
 antenna_gain = opti.parameter(value=0.8)  # TODO check this
 center_wavelength = opti.parameter(value=0.226)  # meters
-sigma0 = opti.parameter(value=0.1)  # meters ** 2
+sigma0 = opti.parameter(value=1)  # meters ** 2 ranges from
 
 radar_length = opti.variable(
     init_guess=0.1,
@@ -1018,6 +1018,9 @@ power_out_payload = power_trans * pulse_rep_freq
 opti.subject_to([
     required_snr <= power_received / noise_power_density,
     pulse_rep_freq >= 2 * groundspeed / radar_length,
+    pulse_rep_freq <= c / (2 * swath_azimuth),
+    radar_width <= 0.4,
+    radar_length <= 0.4,
 ])
 # ### Power accounting
 power_out = power_out_propulsion + power_out_payload + power_out_avionics
@@ -1686,7 +1689,10 @@ if __name__ == "__main__":
             for xi in x:
                 output(xi)
             return
-        print(f"{x}: {sol.value(eval(x)):.3f}")
+        if type(sol.value(eval(x))) is float:
+            print(f"{x}: {sol.value(eval(x)):.3f}")
+        else:
+            print(f"{x}: {sol.value(eval(x)).mean():.3f}")
 
 
     def print_title(s: str) -> None:  # Print a nicely formatted title
@@ -1697,7 +1703,13 @@ if __name__ == "__main__":
     output([
         "max_mass_total",
         "wing_span",
-        "wing_root_chord"
+        "wing_root_chord",
+        "radar_length",
+        "radar_width",
+        "bandwidth",
+        "peak_power",
+        "pulse_rep_freq",
+        "power_out_payload",
     ])
 
 
