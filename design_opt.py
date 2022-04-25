@@ -44,13 +44,12 @@ minimize = "wing.span() / 50"  # any "eval-able" expression
 
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
-latitude = opti.parameter(value=49)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
-day_of_year = opti.parameter(value=174)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
+latitude = opti.parameter(value=-75)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
+day_of_year = opti.parameter(value=60)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 strat_offset_value = opti.parameter(value=1000)
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
-wind_direction = 0  # direction wind is coming from 0 is North and 90 is East
-flight_path_radius = 50000
-required_headway_per_day = 100  # 2 * np.pi * flight_path_radius# meters
+observation_length = opti.parameter(value=50000)  # meters
+observation_width = opti.parameter(value=50000)  # meters
 allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
 make_plots = False
@@ -535,8 +534,7 @@ airplane = asb.Airplane(
 
 # region Flight Path Optimization
 wind_speed = wind_speed_func(y)
-wind_direction = 180
-flight_path_radius = 50000
+wind_direction = 0
 
 groundspeed = opti.variable(
     n_vars=n_timesteps,
@@ -550,8 +548,33 @@ airspeed = opti.variable(
     scale=20,
     category="ops"
 )
+# hardcode x trajectory
+ground_imaging_offset = opti.parameter(value=14440)
+leg_1_length = (observation_length ** 2 + (observation_width - ground_imaging_offset) ** 2) ** 0.5  #
+turn_1_radius = observation_width - 2 * ground_imaging_offset
+turn_1_length = np.pi * turn_1_radius / 2  # assume semi-circle
+leg_2_length = (observation_length ** 2 + (observation_width - ground_imaging_offset) ** 2) ** 0.5
+turn_2_radius = observation_width + 2 * ground_imaging_offset
+turn_2_length = np.pi * turn_1_radius / 2  # assume semi-circle
 
-vehicle_bearing = x / (np.pi / 180) / flight_path_radius + 90
+total_length = leg_1_length + turn_1_length + leg_2_length + turn_2_length
+place_on_track = asb.cas.if_else(x > total_length,
+                                 x - total_length,
+                                 x)
+place_on_track = asb.cas.if_else(x > total_length,
+                                 x - total_length,
+                                 x)
+vehicle_bearing = np.arctan2d(observation_width - ground_imaging_offset, observation_length)
+vehicle_bearing = asb.cas.if_else(place_on_track > leg_1_length,
+                                  x / (np.pi / 180) / turn_1_radius,
+                                  vehicle_bearing)
+vehicle_bearing = asb.cas.if_else(place_on_track > leg_1_length + turn_1_length,
+                                  np.arctan2d(observation_width - ground_imaging_offset, observation_length) + 180,
+                                  vehicle_bearing)
+vehicle_bearing = asb.cas.if_else(place_on_track > leg_1_length + turn_1_length + leg_2_length,
+                                  x / (np.pi / 180) / turn_2_radius,
+                                  vehicle_bearing)
+
 groundspeed_x = groundspeed * np.cosd(vehicle_bearing)
 groundspeed_y = groundspeed * np.sind(vehicle_bearing)
 windspeed_x = wind_speed * np.cosd(wind_direction)
@@ -925,106 +948,105 @@ mass_ESC = lib_prop_elec.mass_ESC(max_power=power_out_propulsion_max)
 mass_propulsion = mass_motor_mounted + mass_propellers  # Total propulsion mass
 mass_propulsion = mass_motor_mounted + mass_propellers + mass_ESC
 
-# # Account for payload power
-# power_out_payload = np.where(
-#     solar_flux_on_horizontal > 1,
-#     100,
-#     100
-# )
-
 # Account for avionics power
 power_out_avionics = 180  # Pulled from Avionics spreadsheet on 5/13/20
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
 ### Payload Module
 #
-c = 299792458  # [m/s] speed of light
-k_b = 1.38064852E-23  # [m2 kg s-2 K-1]
-required_resolution = opti.parameter(value=2)  # meters from conversation with Brent on 2/18/22
-required_snr = opti.parameter(value=20)  # dB from conversation w Brent on 2/18/22
-antenna_gain = opti.parameter(value=0.8)  # TODO check this
-center_wavelength = opti.parameter(value=0.226)  # meters
-sigma0_db = opti.parameter(value=0)  # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
-
-radar_length = opti.variable(
-    init_guess=0.1,
-    scale=1,
-    category='des',
-    lower_bound=0,
-)
-radar_width = opti.variable(
-    init_guess=0.03,
-    scale=0.1,
-    category='des',
-    lower_bound=0,
-)
-bandwidth = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=1e6,
-    scale=1e4,
-    lower_bound=0,
-    category='ops'
-)  # Hz
-peak_power = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=1000,
-    scale=100,
-    lower_bound=0,
-    category='ops'
-)  # Watts
-pulse_rep_freq = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=10000,
-    scale=1000,
-    lower_bound=0,
-    category='ops'
-)
-power_out_payload = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=1,
-    scale=0.1,
-    lower_bound=0,
-    category='ops'
-)
-# define key radar parameters
-radar_area = radar_width * radar_length
-look_angle = opti.parameter(value=45)
-dist = y / np.cosd(look_angle)
-grazing_angle = 90 - look_angle
-swath_azimuth = center_wavelength * dist / radar_length
-swath_range = center_wavelength * dist / (radar_width * np.cosd(look_angle))
-max_length_synth_ap = center_wavelength * dist / radar_length
-ground_area = swath_range * swath_azimuth * np.pi / 4
-radius = (swath_azimuth + swath_range) / 4
-ground_imaging_offset = np.sin(look_angle) * dist
-sigma0 = 10 ** (sigma0_db / 10)
-scattering_cross_sec = sigma0
-antenna_gain = 4 * np.pi * radar_area * 0.7 / center_wavelength ** 2
-pulse_duration = 1 / bandwidth
-
-# constrain SAR resolution to required value
-range_resolution = c * pulse_duration / (2 * np.sind(look_angle))
-azimuth_resolution = radar_length / 2
-opti.subject_to([
-    range_resolution <= required_resolution,
-    azimuth_resolution <= required_resolution,
-])
-
-# account for snr
-noise_power_density = k_b * T * bandwidth / (center_wavelength ** 2)
-power_trans = peak_power * pulse_duration
-power_received = power_trans * antenna_gain * radar_area * scattering_cross_sec / ((4 * np.pi) ** 2 * dist ** 4)
-power_out_payload = power_trans * pulse_rep_freq
-snr = power_received / noise_power_density
-snr_db = 10 * np.log10(snr)
-opti.subject_to([
-    required_snr <= snr_db,
-    pulse_rep_freq >= 2 * groundspeed / radar_length,
-    pulse_rep_freq <= c / (2 * swath_azimuth),
-    radar_width <= 0.4,
-    radar_length <= 0.4,
-])
+# c = 299792458  # [m/s] speed of light
+# k_b = 1.38064852E-23  # [m2 kg s-2 K-1]
+# required_resolution = opti.parameter(value=2)  # meters from conversation with Brent on 2/18/22
+# required_snr = opti.parameter(value=20)  # dB from conversation w Brent on 2/18/22
+# antenna_gain = opti.parameter(value=0.8)  # TODO check this
+# center_wavelength = opti.parameter(value=0.226)  # meters
+# sigma0_db = opti.parameter(value=0)  # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
+#
+# radar_length = opti.variable(
+#     init_guess=0.1,
+#     scale=1,
+#     category='des',
+#     lower_bound=0,
+# )
+# radar_width = opti.variable(
+#     init_guess=0.03,
+#     scale=0.1,
+#     category='des',
+#     lower_bound=0,
+# )
+# bandwidth = opti.variable(
+#     n_vars=n_timesteps,
+#     init_guess=1e6,
+#     scale=1e4,
+#     lower_bound=0,
+#     category='ops'
+# )  # Hz
+# peak_power = opti.variable(
+#     n_vars=n_timesteps,
+#     init_guess=1000,
+#     scale=100,
+#     lower_bound=0,
+#     category='ops'
+# )  # Watts
+# pulse_rep_freq = opti.variable(
+#     n_vars=n_timesteps,
+#     init_guess=10000,
+#     scale=1000,
+#     lower_bound=0,
+#     category='ops'
+# )
+# power_out_payload = opti.variable(
+#     n_vars=n_timesteps,
+#     init_guess=1,
+#     scale=0.1,
+#     lower_bound=0,
+#     category='ops'
+# )
+# # define key radar parameters
+# radar_area = radar_width * radar_length
+# look_angle = opti.parameter(value=45)
+# dist = y / np.cosd(look_angle)
+# grazing_angle = 90 - look_angle
+# swath_azimuth = center_wavelength * dist / radar_length
+# swath_range = center_wavelength * dist / (radar_width * np.cosd(look_angle))
+# max_length_synth_ap = center_wavelength * dist / radar_length
+# ground_area = swath_range * swath_azimuth * np.pi / 4
+# radius = (swath_azimuth + swath_range) / 4
+# ground_imaging_offset = np.sin(look_angle) * dist
+# sigma0 = 10 ** (sigma0_db / 10)
+# scattering_cross_sec = sigma0
+# antenna_gain = 4 * np.pi * radar_area * 0.7 / center_wavelength ** 2
+# pulse_duration = 1 / bandwidth
+#
+# # constrain SAR resolution to required value
+# range_resolution = c * pulse_duration / (2 * np.sind(look_angle))
+# azimuth_resolution = radar_length / 2
+# opti.subject_to([
+#     range_resolution <= required_resolution,
+#     azimuth_resolution <= required_resolution,
+# ])
+#
+# # account for snr
+# noise_power_density = k_b * T * bandwidth / (center_wavelength ** 2)
+# power_trans = peak_power * pulse_duration
+# power_received = power_trans * antenna_gain * radar_area * scattering_cross_sec / ((4 * np.pi) ** 2 * dist ** 4)
+# power_out_payload = power_trans * pulse_rep_freq
+# snr = power_received / noise_power_density
+# snr_db = 10 * np.log10(snr)
+# opti.subject_to([
+#     required_snr <= snr_db,
+#     pulse_rep_freq >= 2 * groundspeed / radar_length,
+#     pulse_rep_freq <= c / (2 * swath_azimuth),
+#     radar_width <= 0.4,
+#     radar_length <= 0.4,
+# ])
 # ### Power accounting
+# Account for payload power
+power_out_payload = np.where(
+    solar_flux_on_horizontal > 1,
+    100,
+    100
+)
 power_out = power_out_propulsion + power_out_payload + power_out_avionics
 
 # endregion
@@ -1227,11 +1249,11 @@ power_in_after_panels_tot = power_in_after_panels_horz + power_in_after_panels_v
 power_in = (power_in_after_panels_tot) * MPPT_efficiency
 
 mass_solar_cells = (vert_rho_solar_cells * area_solar_vert * 2) + (horz_rho_solar_cells * area_solar_horz) + (
-            fuselage_rho_solar_cells * area_solar_fuselage * 2)
+        fuselage_rho_solar_cells * area_solar_fuselage * 2)
 cost_solar_cells = (vert_rho_solar_cells * area_solar_vert * 2) * vert_solar_power_ratio * vert_solar_cost_per_watt + \
                    (horz_rho_solar_cells * area_solar_horz) * horz_solar_power_ratio * horz_solar_cost_per_watt + \
                    (
-                               fuselage_rho_solar_cells * area_solar_fuselage * 2) * fuselage_solar_power_ratio * fuselage_solar_cost_per_watt
+                           fuselage_rho_solar_cells * area_solar_fuselage * 2) * fuselage_solar_power_ratio * fuselage_solar_cost_per_watt
 
 ### Battery calculations
 
