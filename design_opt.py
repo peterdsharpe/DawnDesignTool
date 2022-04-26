@@ -38,10 +38,10 @@ opti = asb.Opti(  # Normal mode - Design Optimization
 #     ignore_violated_parametric_constraints=True
 # )
 
-minimize = "wing.span() / 50"  # any "eval-able" expression
+# minimize = "wing.span() / 50"  # any "eval-able" expression
 # minimize = "max_mass_total / 300" # any "eval-able" expression
 # minimize = "wing.span() / 50 * 0.9 + max_mass_total / 300 * 0.1"
-# minimize = "wing.span() / 50 * 0.9 - revisit_rate / 8 * 0.1"
+minimize = "wing.span() / 50 * 0.9 - revisit_rate / 8 * 0.1"
 
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
@@ -537,6 +537,11 @@ airplane = asb.Airplane(
 wind_speed = wind_speed_func(y)
 wind_direction = 0
 
+revisit_rate = opti.variable(
+    init_guess=4,
+    scale=0.1,
+    category="des"
+)
 groundspeed = opti.variable(
     n_vars=n_timesteps,
     init_guess=1,
@@ -572,19 +577,19 @@ vehicle_bearing =  opti.variable(
     scale=20,
     category="ops"
 )
-revisit_rate = asb.cas.mmax(x) / total_length
-place_on_track = asb.cas.mod( x,  total_length)
+place_on_track = asb.cas.mod(x,  total_length)
 opti.subject_to([
     vehicle_bearing == np.arctan2d(observation_width - ground_imaging_offset, observation_length),
     # vehicle_bearing == asb.cas.if_else(place_on_track > leg_1_length,
-    #                               x / (np.pi / 180) / turn_1_radius,
+    #                               place_on_track / (np.pi / 180) / turn_1_radius,
     #                               vehicle_bearing),
     # vehicle_bearing == asb.cas.if_else(place_on_track > leg_1_length + turn_1_length,
     #                               np.arctan2d(observation_width - ground_imaging_offset, observation_length) + 180,
     #                               vehicle_bearing),
     # vehicle_bearing == asb.cas.if_else(place_on_track > leg_1_length + turn_1_length + leg_2_length,
-    #                               x / (np.pi / 180) / turn_2_radius,
+    #                               place_on_track / (np.pi / 180) / turn_2_radius,
     #                               vehicle_bearing),
+    revisit_rate <= x[time_periodic_end_index] / total_length
 ])
 groundspeed_x = groundspeed * np.cosd(vehicle_bearing)
 groundspeed_y = groundspeed * np.sind(vehicle_bearing)
