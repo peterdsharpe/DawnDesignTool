@@ -558,23 +558,33 @@ turn_2_radius = observation_width + 2 * ground_imaging_offset
 turn_2_length = np.pi * turn_1_radius / 2  # assume semi-circle
 
 total_length = leg_1_length + turn_1_length + leg_2_length + turn_2_length
-place_on_track = asb.cas.if_else(x > total_length,
-                                 x - total_length,
-                                 x)
-place_on_track = asb.cas.if_else(x > total_length,
-                                 x - total_length,
-                                 x)
-vehicle_bearing = np.arctan2d(observation_width - ground_imaging_offset, observation_length)
-vehicle_bearing = asb.cas.if_else(place_on_track > leg_1_length,
-                                  x / (np.pi / 180) / turn_1_radius,
-                                  vehicle_bearing)
-vehicle_bearing = asb.cas.if_else(place_on_track > leg_1_length + turn_1_length,
-                                  np.arctan2d(observation_width - ground_imaging_offset, observation_length) + 180,
-                                  vehicle_bearing)
-vehicle_bearing = asb.cas.if_else(place_on_track > leg_1_length + turn_1_length + leg_2_length,
-                                  x / (np.pi / 180) / turn_2_radius,
-                                  vehicle_bearing)
-
+#
+# place_on_track = opti.variable(
+#     n_vars=n_timesteps,
+#     init_guess=total_length,
+#     scale=1e4,
+#     category="ops"
+# )
+vehicle_bearing =  opti.variable(
+    n_vars=n_timesteps,
+    init_guess=1,
+    scale=20,
+    category="ops"
+)
+revisit_rate = asb.cas.mmax(x) / total_length
+place_on_track = asb.cas.mod( x,  total_length)
+opti.subject_to([
+    vehicle_bearing == np.arctan2d(observation_width - ground_imaging_offset, observation_length),
+    # vehicle_bearing == asb.cas.if_else(place_on_track > leg_1_length,
+    #                               x / (np.pi / 180) / turn_1_radius,
+    #                               vehicle_bearing),
+    # vehicle_bearing == asb.cas.if_else(place_on_track > leg_1_length + turn_1_length,
+    #                               np.arctan2d(observation_width - ground_imaging_offset, observation_length) + 180,
+    #                               vehicle_bearing),
+    # vehicle_bearing == asb.cas.if_else(place_on_track > leg_1_length + turn_1_length + leg_2_length,
+    #                               x / (np.pi / 180) / turn_2_radius,
+    #                               vehicle_bearing),
+])
 groundspeed_x = groundspeed * np.cosd(vehicle_bearing)
 groundspeed_y = groundspeed * np.sind(vehicle_bearing)
 windspeed_x = wind_speed * np.cosd(wind_direction)
@@ -1601,7 +1611,7 @@ opti.subject_to([
 
 ##### Add periodic constraints
 opti.subject_to([
-    x[time_periodic_end_index] / 1e5 > (x[time_periodic_start_index] + required_headway_per_day) / 1e5,
+    # x[time_periodic_end_index] / 1e5 > (x[time_periodic_start_index] + required_headway_per_day) / 1e5,
     y[time_periodic_end_index] / 1e4 > y[time_periodic_start_index] / 1e4,
     airspeed[time_periodic_end_index] / 2e1 > airspeed[time_periodic_start_index] / 2e1,
     battery_stored_energy_nondim[time_periodic_end_index] > battery_stored_energy_nondim[time_periodic_start_index],
@@ -1728,12 +1738,12 @@ if __name__ == "__main__":
         "max_mass_total",
         "wing_span",
         "wing_root_chord",
-        "radar_length",
-        "radar_width",
-        "bandwidth",
-        "peak_power",
-        "pulse_rep_freq",
-        "power_out_payload",
+        # "radar_length",
+        # "radar_width",
+        # "bandwidth",
+        # "peak_power",
+        # "pulse_rep_freq",
+        # "power_out_payload",
     ])
 
 
