@@ -38,10 +38,10 @@ opti = asb.Opti(  # Normal mode - Design Optimization
 #     ignore_violated_parametric_constraints=True
 # )
 
-# minimize = "wing.span() / 50"  # any "eval-able" expression
+minimize = "wing.span() / 50"  # any "eval-able" expression
 # minimize = "max_mass_total / 300" # any "eval-able" expression
 # minimize = "wing.span() / 50 * 0.9 + max_mass_total / 300 * 0.1"
-minimize = "wing.span() / 50 * 0.9 - revisit_rate / 8 * 0.1"
+# minimize = "wing.span() / 50 * 0.9 - revisit_rate / 8 * 0.1"
 
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
@@ -51,6 +51,7 @@ strat_offset_value = opti.parameter(value=1000)
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 observation_length = opti.parameter(value=50000)  # meters
 observation_width = opti.parameter(value=50000)  # meters
+required_headway_per_day = opti.parameter(value=100)
 allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
 make_plots = False
@@ -535,7 +536,7 @@ airplane = asb.Airplane(
 
 # region Flight Path Optimization
 wind_speed = wind_speed_func(y)
-wind_direction = 0
+wind_direction = 90
 
 revisit_rate = opti.variable(
     init_guess=4,
@@ -557,39 +558,34 @@ airspeed = opti.variable(
 # hardcode x trajectory
 ground_imaging_offset = opti.parameter(value=14440)
 leg_1_length = (observation_length ** 2 + (observation_width - ground_imaging_offset) ** 2) ** 0.5  #
+leg_1_bearing = np.arctan2d(observation_width - ground_imaging_offset, observation_length)
 turn_1_radius = observation_width - 2 * ground_imaging_offset
 turn_1_length = np.pi * turn_1_radius / 2  # assume semi-circle
 leg_2_length = (observation_length ** 2 + (observation_width - ground_imaging_offset) ** 2) ** 0.5
+leg_2_bearing = np.arctan2d(observation_width - ground_imaging_offset, observation_length) + 180
 turn_2_radius = observation_width + 2 * ground_imaging_offset
 turn_2_length = np.pi * turn_1_radius / 2  # assume semi-circle
 
 total_length = leg_1_length + turn_1_length + leg_2_length + turn_2_length
-#
-# place_on_track = opti.variable(
-#     n_vars=n_timesteps,
-#     init_guess=total_length,
-#     scale=1e4,
-#     category="ops"
-# )
-vehicle_bearing =  opti.variable(
-    n_vars=n_timesteps,
-    init_guess=1,
-    scale=20,
-    category="ops"
-)
 place_on_track = asb.cas.mod(x,  total_length)
+vehicle_bearing = leg_1_bearing
+vehicle_bearing = np.where(
+    place_on_track > leg_1_length,
+    leg_1_bearing + 45,
+    vehicle_bearing
+)
+vehicle_bearing = np.where(
+    place_on_track > leg_1_length + turn_1_length,
+    leg_2_bearing,
+    vehicle_bearing
+)
+vehicle_bearing = np.where(
+    place_on_track > leg_1_length + turn_1_length + leg_2_length,
+    leg_2_bearing + 45,
+    vehicle_bearing
+)
 opti.subject_to([
-    vehicle_bearing == np.arctan2d(observation_width - ground_imaging_offset, observation_length),
-    # vehicle_bearing == asb.cas.if_else(place_on_track > leg_1_length,
-    #                               place_on_track / (np.pi / 180) / turn_1_radius,
-    #                               vehicle_bearing),
-    # vehicle_bearing == asb.cas.if_else(place_on_track > leg_1_length + turn_1_length,
-    #                               np.arctan2d(observation_width - ground_imaging_offset, observation_length) + 180,
-    #                               vehicle_bearing),
-    # vehicle_bearing == asb.cas.if_else(place_on_track > leg_1_length + turn_1_length + leg_2_length,
-    #                               place_on_track / (np.pi / 180) / turn_2_radius,
-    #                               vehicle_bearing),
-    revisit_rate <= x[time_periodic_end_index] / total_length
+    revisit_rate == x[time_periodic_end_index] / total_length,
 ])
 groundspeed_x = groundspeed * np.cosd(vehicle_bearing)
 groundspeed_y = groundspeed * np.sind(vehicle_bearing)
@@ -1617,7 +1613,7 @@ opti.subject_to([
 
 ##### Add periodic constraints
 opti.subject_to([
-    # x[time_periodic_end_index] / 1e5 > (x[time_periodic_start_index] + required_headway_per_day) / 1e5,
+    x[time_periodic_end_index] / 1e5 > (x[time_periodic_start_index] + required_headway_per_day) / 1e5,
     y[time_periodic_end_index] / 1e4 > y[time_periodic_start_index] / 1e4,
     airspeed[time_periodic_end_index] / 2e1 > airspeed[time_periodic_start_index] / 2e1,
     battery_stored_energy_nondim[time_periodic_end_index] > battery_stored_energy_nondim[time_periodic_start_index],
