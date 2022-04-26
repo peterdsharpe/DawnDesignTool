@@ -41,6 +41,7 @@ opti = asb.Opti(  # Normal mode - Design Optimization
 minimize = "wing.span() / 50"  # any "eval-able" expression
 # minimize = "max_mass_total / 300" # any "eval-able" expression
 # minimize = "wing.span() / 50 * 0.9 + max_mass_total / 300 * 0.1"
+# minimize = "wing.span() / 50 * 0.9 - revisit_rate / 8 * 0.1"
 
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
