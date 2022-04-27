@@ -46,20 +46,19 @@ minimize = "wing.span() / 50"  # any "eval-able" expression
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
 latitude = opti.parameter(value=-75)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
-day_of_year = opti.parameter(value=60)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
+day_of_year = opti.parameter(value=1)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 strat_offset_value = opti.parameter(value=1000)
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 observation_length = opti.parameter(value=50000)  # meters
 observation_width = opti.parameter(value=50000)  # meters
-required_headway_per_day = opti.parameter(value=100)
 allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
 make_plots = False
 mass_payload = opti.parameter(value=10)
 tail_panels = True
 fuselage_billboard = False
-wing_cells = "sunpower"  # select cells for wing, options include ascent_solar, sunpower, and microlink
-vertical_cells = "sunpower"  # select cells for vtail, options include ascent_solar, sunpower, and microlink
+wing_cells = "microlink"  # select cells for wing, options include ascent_solar, sunpower, and microlink
+vertical_cells = "microlink"  # select cells for vtail, options include ascent_solar, sunpower, and microlink
 # vertical cells only mounted when tail_panels is True
 billboard_cells = "sunpower"  # select cells for billboard, options include ascent_solar, sunpower, and microlink
 
@@ -535,8 +534,8 @@ airplane = asb.Airplane(
 # endregion`
 
 # region Flight Path Optimization
-wind_speed = wind_speed_func(y)
-wind_direction = 90
+wind_speed = 0 # wind_speed_func(y)
+wind_direction = 0
 
 revisit_rate = opti.variable(
     init_guess=4,
@@ -558,20 +557,22 @@ airspeed = opti.variable(
 # hardcode x trajectory
 ground_imaging_offset = opti.parameter(value=14440)
 leg_1_length = (observation_length ** 2 + (observation_width - ground_imaging_offset) ** 2) ** 0.5  #
-leg_1_bearing = np.arctan2d(observation_width - ground_imaging_offset, observation_length)
+leg_1_bearing = 360 - np.arctan2d(observation_width - ground_imaging_offset, observation_length)
 turn_1_radius = observation_width - 2 * ground_imaging_offset
 turn_1_length = np.pi * turn_1_radius / 2  # assume semi-circle
 leg_2_length = (observation_length ** 2 + (observation_width - ground_imaging_offset) ** 2) ** 0.5
-leg_2_bearing = np.arctan2d(observation_width - ground_imaging_offset, observation_length) + 180
+leg_2_bearing = 412
 turn_2_radius = observation_width + 2 * ground_imaging_offset
 turn_2_length = np.pi * turn_1_radius / 2  # assume semi-circle
 
-total_length = leg_1_length + turn_1_length + leg_2_length + turn_2_length
-place_on_track = asb.cas.mod(x,  total_length)
+total_track_length = leg_1_length + turn_1_length + leg_2_length + turn_2_length
+# required_headway_per_day = total_length
+place_on_track = asb.cas.mod(x,  total_track_length)
+
 vehicle_bearing = leg_1_bearing
 vehicle_bearing = np.where(
     place_on_track > leg_1_length,
-    leg_1_bearing + 45,
+    (place_on_track - leg_1_length) * 180 / (np.pi * turn_1_radius) + leg_1_bearing,
     vehicle_bearing
 )
 vehicle_bearing = np.where(
@@ -581,11 +582,12 @@ vehicle_bearing = np.where(
 )
 vehicle_bearing = np.where(
     place_on_track > leg_1_length + turn_1_length + leg_2_length,
-    leg_2_bearing + 45,
+    (place_on_track - leg_1_length - turn_1_length - leg_2_length) * 180 / (np.pi * turn_2_radius) + leg_2_bearing,
     vehicle_bearing
 )
 opti.subject_to([
-    revisit_rate == x[time_periodic_end_index] / total_length,
+    revisit_rate == (x[time_periodic_end_index] / total_track_length) - 1,
+    revisit_rate >= 1,
 ])
 groundspeed_x = groundspeed * np.cosd(vehicle_bearing)
 groundspeed_y = groundspeed * np.sind(vehicle_bearing)
@@ -1613,7 +1615,7 @@ opti.subject_to([
 
 ##### Add periodic constraints
 opti.subject_to([
-    x[time_periodic_end_index] / 1e5 > (x[time_periodic_start_index] + required_headway_per_day) / 1e5,
+    # x[time_periodic_end_index] / 1e5 > (x[time_periodic_start_index] + required_headway_per_day) / 1e5,
     y[time_periodic_end_index] / 1e4 > y[time_periodic_start_index] / 1e4,
     airspeed[time_periodic_end_index] / 2e1 > airspeed[time_periodic_start_index] / 2e1,
     battery_stored_energy_nondim[time_periodic_end_index] > battery_stored_energy_nondim[time_periodic_start_index],
@@ -1702,7 +1704,7 @@ opti.minimize(
 if __name__ == "__main__":
     # Solve
     sol = opti.solve(
-        max_iter=2000,
+        max_iter=5000,
         options={
             "ipopt.max_cpu_time": 600
         }
