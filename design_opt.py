@@ -51,6 +51,7 @@ strat_offset_value = opti.parameter(value=1000)
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 observation_length = opti.parameter(value=50000)  # meters
 observation_width = opti.parameter(value=50000)  # meters
+required_headway_per_day = opti.parameter(value=1000)
 allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
 make_plots = False
@@ -587,7 +588,7 @@ vehicle_bearing = np.where(
 )
 opti.subject_to([
     revisit_rate == (x[time_periodic_end_index] / total_track_length) - 1,
-    # revisit_rate >= 1,
+    # revisit_rate >= 0,
 ])
 groundspeed_x = groundspeed * np.cosd(vehicle_bearing)
 groundspeed_y = groundspeed * np.sind(vehicle_bearing)
@@ -1615,7 +1616,7 @@ opti.subject_to([
 
 ##### Add periodic constraints
 opti.subject_to([
-    # x[time_periodic_end_index] / 1e5 > (x[time_periodic_start_index] + required_headway_per_day) / 1e5,
+    x[time_periodic_end_index] / 1e5 > (x[time_periodic_start_index] + required_headway_per_day) / 1e5,
     y[time_periodic_end_index] / 1e4 > y[time_periodic_start_index] / 1e4,
     airspeed[time_periodic_end_index] / 2e1 > airspeed[time_periodic_start_index] / 2e1,
     battery_stored_energy_nondim[time_periodic_end_index] > battery_stored_energy_nondim[time_periodic_start_index],
