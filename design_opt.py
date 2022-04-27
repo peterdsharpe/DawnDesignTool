@@ -534,13 +534,13 @@ airplane = asb.Airplane(
 # endregion`
 
 # region Flight Path Optimization
-wind_speed = 0 # wind_speed_func(y)
+wind_speed = wind_speed_func(y)
 wind_direction = 0
 
 revisit_rate = opti.variable(
-    init_guess=4,
+    init_guess=1,
     scale=0.1,
-    category="des"
+    category="ops"
 )
 groundspeed = opti.variable(
     n_vars=n_timesteps,
@@ -558,11 +558,11 @@ airspeed = opti.variable(
 ground_imaging_offset = opti.parameter(value=14440)
 leg_1_length = (observation_length ** 2 + (observation_width - ground_imaging_offset) ** 2) ** 0.5  #
 leg_1_bearing = 360 - np.arctan2d(observation_width - ground_imaging_offset, observation_length)
-turn_1_radius = observation_width - 2 * ground_imaging_offset
+turn_1_radius = (observation_width - 2 * ground_imaging_offset) / 2
 turn_1_length = np.pi * turn_1_radius / 2  # assume semi-circle
 leg_2_length = (observation_length ** 2 + (observation_width - ground_imaging_offset) ** 2) ** 0.5
-leg_2_bearing = 412
-turn_2_radius = observation_width + 2 * ground_imaging_offset
+leg_2_bearing = 239
+turn_2_radius = (observation_width + 2 * ground_imaging_offset) / 2
 turn_2_length = np.pi * turn_1_radius / 2  # assume semi-circle
 
 total_track_length = leg_1_length + turn_1_length + leg_2_length + turn_2_length
@@ -572,7 +572,7 @@ place_on_track = asb.cas.mod(x,  total_track_length)
 vehicle_bearing = leg_1_bearing
 vehicle_bearing = np.where(
     place_on_track > leg_1_length,
-    (place_on_track - leg_1_length) * 180 / (np.pi * turn_1_radius) + leg_1_bearing,
+     - (place_on_track - leg_1_length) * 180 / (np.pi * turn_1_radius) + leg_1_bearing,
     vehicle_bearing
 )
 vehicle_bearing = np.where(
@@ -582,12 +582,12 @@ vehicle_bearing = np.where(
 )
 vehicle_bearing = np.where(
     place_on_track > leg_1_length + turn_1_length + leg_2_length,
-    (place_on_track - leg_1_length - turn_1_length - leg_2_length) * 180 / (np.pi * turn_2_radius) + leg_2_bearing,
+    - (place_on_track - leg_1_length - turn_1_length - leg_2_length) * 180 / (np.pi * turn_2_radius) + leg_2_bearing,
     vehicle_bearing
 )
 opti.subject_to([
     revisit_rate == (x[time_periodic_end_index] / total_track_length) - 1,
-    revisit_rate >= 1,
+    # revisit_rate >= 1,
 ])
 groundspeed_x = groundspeed * np.cosd(vehicle_bearing)
 groundspeed_y = groundspeed * np.sind(vehicle_bearing)
