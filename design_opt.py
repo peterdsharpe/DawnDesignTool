@@ -561,7 +561,7 @@ place_on_track = opti.variable(
     scale=10000,
     category="ops"
 )
-track_offset= opti.variable(
+starting_point_on_track = opti.variable(
     init_guess=0,
     scale=10000,
     category="ops"
@@ -580,24 +580,26 @@ turn_2_length = np.pi * turn_2_radius  # assume semi-circle
 total_track_length = leg_1_length + turn_1_length + leg_2_length + turn_2_length
 # required_headway_per_day = total_length
 opti.subject_to([
-    place_on_track == asb.cas.mod(x,  total_track_length) + track_offset,
-    track_offset >= 0,
-    track_offset <= total_track_length,
+    place_on_track == asb.cas.mod(x,  total_track_length) + starting_point_on_track,
+    starting_point_on_track >= 0,
+    starting_point_on_track <= total_track_length,
 ])
-
+loc = np.where(place_on_track > total_track_length,
+                           place_on_track - total_track_length,
+                           place_on_track)
 vehicle_bearing = leg_1_bearing
 vehicle_bearing = np.where(
-    place_on_track > leg_1_length,
-    (place_on_track - leg_1_length) * 180 / (np.pi * turn_1_radius),
+    loc > leg_1_length,
+    (loc - leg_1_length) * 180 / (np.pi * turn_1_radius),
     vehicle_bearing
 )
 vehicle_bearing = np.where(
-    place_on_track > (leg_1_length + turn_1_length),
+    loc > (leg_1_length + turn_1_length),
     leg_2_bearing,
     vehicle_bearing
 )
 vehicle_bearing = np.where(
-    place_on_track > (leg_1_length + turn_1_length + leg_2_length),
+    loc > (leg_1_length + turn_1_length + leg_2_length),
     180 - ((place_on_track - (leg_1_length + turn_1_length + leg_2_length)) * 180 / (np.pi * turn_2_radius)),
     vehicle_bearing
 )
