@@ -18,13 +18,13 @@ def run(dist):
 
     try:
         sol = func_timeout(
-            timeout=60,
+            timeout=240,
             func=opti.solve,
             args=(),
             kwargs={
                 "max_iter": 2000,
                 "options" : {
-                    "ipopt.max_cpu_time": 60,
+                    "ipopt.max_cpu_time": 240,
                 },
                 "verbose" : False
             }
