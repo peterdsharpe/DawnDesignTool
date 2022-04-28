@@ -46,12 +46,12 @@ minimize = "wing.span() / 50"  # any "eval-able" expression
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
 latitude = opti.parameter(value=-75)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
-day_of_year = opti.parameter(value=1)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
+day_of_year = opti.parameter(value=45)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 strat_offset_value = opti.parameter(value=1000)
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
-observation_length = opti.parameter(value=50000)  # meters
-observation_width = opti.parameter(value=50000)  # meters
-required_headway_per_day = opti.parameter(value=1e4)
+observation_length = opti.parameter(value=10000)  # meters
+observation_width = opti.parameter(value=10000)  # meters
+required_headway_per_day = opti.parameter(value=0)
 allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
 make_plots = False
@@ -555,6 +555,17 @@ airspeed = opti.variable(
     scale=20,
     category="ops"
 )
+place_on_track = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=50000,
+    scale=10000,
+    category="ops"
+)
+track_offset= opti.variable(
+    init_guess=0,
+    scale=10000,
+    category="ops"
+)
 # hardcode x trajectory
 ground_imaging_offset = opti.parameter(value=14440)
 leg_1_length = (observation_length ** 2 + (observation_width - ground_imaging_offset) ** 2) ** 0.5  #
@@ -568,7 +579,11 @@ turn_2_length = np.pi * turn_2_radius  # assume semi-circle
 
 total_track_length = leg_1_length + turn_1_length + leg_2_length + turn_2_length
 # required_headway_per_day = total_length
-place_on_track = asb.cas.mod(x,  total_track_length)
+opti.subject_to([
+    place_on_track == asb.cas.mod(x,  total_track_length) + track_offset,
+    track_offset >= 0,
+    track_offset <= total_track_length,
+])
 
 vehicle_bearing = leg_1_bearing
 vehicle_bearing = np.where(
@@ -583,15 +598,15 @@ vehicle_bearing = np.where(
 )
 vehicle_bearing = np.where(
     place_on_track > (leg_1_length + turn_1_length + leg_2_length),
-    ((place_on_track - (leg_1_length + turn_1_length + leg_2_length)) * 180 / (np.pi * turn_2_radius)),
+    180 - ((place_on_track - (leg_1_length + turn_1_length + leg_2_length)) * 180 / (np.pi * turn_2_radius)),
     vehicle_bearing
 )
 opti.subject_to([
     revisit_rate == (x[time_periodic_end_index] / total_track_length) - 1,
-    # revisit_rate >= 0,
+    revisit_rate >= 0,
 ])
-groundspeed_x = groundspeed * np.cosd(0)
-groundspeed_y = groundspeed * np.sind(0)
+groundspeed_x = groundspeed * np.cosd(vehicle_bearing)
+groundspeed_y = groundspeed * np.sind(vehicle_bearing)
 windspeed_x = wind_speed * np.cosd(wind_direction)
 windspeed_y = wind_speed * np.sind(wind_direction)
 airspeed_x = groundspeed_x - windspeed_x
