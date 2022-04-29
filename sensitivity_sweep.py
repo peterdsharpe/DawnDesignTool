@@ -5,16 +5,18 @@ import aerosandbox.numpy as np
 import pandas as pd
 
 ### Set the run ID
-run_name = "required_headway_per_day"
+run_name = "wind_direction"
+parameter = "wind_direction"
+unit = "degrees"
+sweep_space = np.linspace(0, 400, 20)
 
-
-def run(dist):
+def run(val):
     print("\n".join([
         "-" * 50,
-        f"required_headway_per_day: {dist}",
+        f"{parameter}: {val}",
     ]))
 
-    opti.set_value(required_headway_per_day, dist)
+    opti.set_value(eval(parameter), val)
 
     try:
         sol = func_timeout(
@@ -41,7 +43,7 @@ def run(dist):
 
         span = np.NaN
 
-    return dist, span
+    return val, span
 
 def plot_results(run_name):
     import matplotlib.pyplot as plt
@@ -51,17 +53,17 @@ def plot_results(run_name):
     # Do raw imports
     data = pd.read_csv(f"cache/{run_name}.csv")
     data.columns = data.columns.str.strip()
-    altitude = np.array(data['Distance'], dtype=float)
-    altitude = np.divide(altitude, 1000)
+    altitude = np.array(data[parameter], dtype=float)
+    # altitude = np.divide(altitude, 1000)
     spans = np.array(data['Spans'], dtype=float)
 
     sns.set(font_scale=1)
 
     plt.plot(altitude, spans, ".-", label='Feasible Aircraft')
-    plt.scatter(altitude[43], spans[43], marker = "o", color='r', label='Baseline Design')
-    plt.xlabel(r"Required Headway Per Day [km]")
+    # plt.scatter(altitude[43], spans[43], marker = "o", color='r', label='Baseline Design')
+    plt.xlabel(f"{parameter} [{unit}]")
     plt.ylabel(r"Wing Span [m]")
-    plt.title(r"Effect of Required Headway Per Day on Wingspan")
+    plt.title(f"Effect of {parameter} on Wingspan")
     plt.tight_layout()
     plt.legend()
     plt.savefig('/Users/annickdewald/Desktop/Thesis/Photos/' + run_name, dpi=300)
@@ -75,19 +77,19 @@ if __name__ == '__main__':
     l = 20
     with open(filename, "w+") as f:
         f.write(
-            f"{'Distance'.ljust(l)},"
+            f"{parameter.ljust(l)},"
             f"{'Spans'.ljust(l)}\n"
         )
 
     ### Define sweep space
-    distances = np.linspace(0, 1e6, 50)
+    values = sweep_space
 
     ### Crunch the numbers
-    for dist in distances:
-            dist, span_val = run(dist)
+    for val in values:
+            val, span_val = run(val)
             with open(filename, "a") as f:
                 f.write(
-                    f"{str(dist).ljust(l)},"
+                    f"{str(val).ljust(l)},"
                     f"{str(span_val).ljust(l)}\n"
                 )
 
