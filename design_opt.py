@@ -647,7 +647,7 @@ solar_flux_on_wing_left = lib_solar.solar_flux(
     day_of_year=day_of_year,
     time=time,
     panel_azimuth_angle=panel_heading,
-    panel_tilt_angle=170,
+    panel_tilt_angle=0,
     scattering=True,
 )
 solar_flux_on_wing_right = lib_solar.solar_flux(
@@ -655,7 +655,7 @@ solar_flux_on_wing_right = lib_solar.solar_flux(
     day_of_year=day_of_year,
     time=time,
     panel_azimuth_angle=panel_heading,
-    panel_tilt_angle=10,
+    panel_tilt_angle=0,
     scattering=True,
 )
 solar_flux_on_vertical_left = lib_solar.solar_flux(
