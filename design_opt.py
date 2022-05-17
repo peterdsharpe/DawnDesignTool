@@ -536,7 +536,7 @@ airplane = asb.Airplane(
 
 # region Flight Path Optimization
 wind_speed = wind_speed_func(y)
-wind_direction = 0
+wind_direction = opti.parameter(value=0)
 
 revisit_rate = opti.variable(
     init_guess=1,
@@ -567,7 +567,7 @@ starting_point_on_track = opti.variable(
     category="ops"
 )
 # hardcode x trajectory
-ground_imaging_offset = opti.parameter(value=14440)
+ground_imaging_offset = opti.parameter(value=14440/8)
 leg_1_length = (observation_length ** 2 + (observation_width - ground_imaging_offset) ** 2) ** 0.5  #
 leg_1_bearing = 360 - np.arctan2d(observation_width - 2 * ground_imaging_offset, observation_length)
 turn_1_radius = (observation_width - 2 * ground_imaging_offset) / 2
@@ -578,7 +578,6 @@ turn_2_radius = (observation_width + 2 * ground_imaging_offset) / 2
 turn_2_length = np.pi * turn_2_radius  # assume semi-circle
 
 total_track_length = leg_1_length + turn_1_length + leg_2_length + turn_2_length
-# required_headway_per_day = total_length
 opti.subject_to([
     place_on_track == asb.cas.mod(x,  total_track_length) + starting_point_on_track,
     starting_point_on_track >= 0,
@@ -1265,7 +1264,7 @@ if fuselage_billboard == False:
     mass_billboard = 0
 
 area_solar_horz = wing.area() * solar_area_fraction
-area_solar_vert = center_vstab.area() * vtail_solar_area_fraction * 0.5
+area_solar_vert = center_vstab.area() * vtail_solar_area_fraction
 
 # Energy generation cascade accounting for different horizontal and vertical cell assumptions
 power_in_from_sun_horz = solar_flux_on_wing_left * area_solar_horz + solar_flux_on_wing_right * area_solar_horz
@@ -1724,7 +1723,7 @@ if __name__ == "__main__":
     sol = opti.solve(
         max_iter=5000,
         options={
-            "ipopt.max_cpu_time": 600
+            "ipopt.max_cpu_time": 1000
         }
     )
 
