@@ -58,8 +58,8 @@ make_plots = False
 mass_payload = opti.parameter(value=10)
 tail_panels = True
 fuselage_billboard = False
-wing_cells = "microlink"  # select cells for wing, options include ascent_solar, sunpower, and microlink
-vertical_cells = "microlink"  # select cells for vtail, options include ascent_solar, sunpower, and microlink
+wing_cells = "sunpower"  # select cells for wing, options include ascent_solar, sunpower, and microlink
+vertical_cells = "sunpower"  # select cells for vtail, options include ascent_solar, sunpower, and microlink
 # vertical cells only mounted when tail_panels is True
 billboard_cells = "sunpower"  # select cells for billboard, options include ascent_solar, sunpower, and microlink
 
@@ -199,8 +199,8 @@ opti.subject_to([
 
 thrust_force = opti.variable(
     n_vars=n_timesteps,
-    init_guess=150,
-    scale=200,
+    init_guess=60,
+    scale=50,
     category="ops"
 )
 opti.subject_to([
@@ -210,13 +210,13 @@ opti.subject_to([
 net_accel_parallel = opti.variable(
     n_vars=n_timesteps,
     init_guess=0,
-    scale=1e-4,
+    scale=1e-5,
     category="ops"
 )
 net_accel_perpendicular = opti.variable(
     n_vars=n_timesteps,
     init_guess=0,
-    scale=1e-5,
+    scale=1e-7,
     category="ops"
 )
 # endregion
@@ -225,14 +225,14 @@ net_accel_perpendicular = opti.variable(
 ##### Initialize design optimization variables (all units in base SI or derived units)
 
 mass_total = opti.variable(
-    init_guess=600,
-    scale=600,
+    init_guess=110,
+    scale=100,
     category="ops"
 )
 
 max_mass_total = opti.variable(
-    init_guess=600,
-    scale=600,
+    init_guess=110,
+    scale=100,
     category="des"
 )
 opti.subject_to(max_mass_total / 600 >= mass_total / 600)
@@ -245,8 +245,8 @@ break_location = 0.67  # as a fraction of the half-span
 
 # wing
 wing_span = opti.variable(
-    init_guess=40,
-    scale=60,
+    init_guess=14,
+    scale=10,
     category="des"
 )
 
@@ -255,8 +255,8 @@ boom_offset = boom_location * wing_span / 2  # in real units (meters)
 opti.subject_to([wing_span > 1])
 
 wing_root_chord = opti.variable(
-    init_guess=3,
-    scale=4,
+    init_guess=1.8,
+    scale=1,
     category="des"
 )
 opti.subject_to([wing_root_chord > 0.1])
@@ -266,6 +266,7 @@ wing_x_quarter_chord = opti.variable(
     scale=0.01,
     category="des"
 )
+opti.subject_to([wing_x_quarter_chord > 0])
 
 wing_y_taper_break = break_location * wing_span / 2
 
@@ -273,8 +274,8 @@ wing_taper_ratio = 0.5  # TODO analyze this more
 
 # center hstab
 center_hstab_span = opti.variable(
-    init_guess=4,
-    scale=4,
+    init_guess=2,
+    scale=2,
     category="des"
 )
 opti.subject_to([
@@ -283,7 +284,7 @@ opti.subject_to([
 ])
 
 center_hstab_chord = opti.variable(
-    init_guess=3,
+    init_guess=0.8,
     scale=2,
     category="des"
 )
@@ -291,8 +292,8 @@ opti.subject_to(center_hstab_chord > 0.1)
 
 center_hstab_twist_angle = opti.variable(
     n_vars=n_timesteps,
-    init_guess=-3,
-    scale=2,
+    init_guess=-2,
+    scale=1,
     category="ops"
 )
 
@@ -308,8 +309,8 @@ opti.subject_to([
 ])
 
 outboard_hstab_chord = opti.variable(
-    init_guess=3,
-    scale=2,
+    init_guess=0.8,
+    scale=0.5,
     category="des"
 )
 opti.subject_to([
@@ -319,29 +320,29 @@ opti.subject_to([
 outboard_hstab_twist_angle = opti.variable(
     n_vars=n_timesteps,
     init_guess=-3,
-    scale=2,
+    scale=1,
     category="ops"
 )
 
 # center_vstab
 center_vstab_span = opti.variable(
-    init_guess=7,
-    scale=8,
+    init_guess=3,
+    scale=2,
     category="des"
 )
 opti.subject_to(center_vstab_span > 0.1)
 
 center_vstab_chord = opti.variable(
-    init_guess=2.5,
-    scale=2,
+    init_guess=1,
+    scale=1,
     category="des"
 )
 opti.subject_to([center_vstab_chord > 0.1])
 
 # center_fuselage
 center_boom_length = opti.variable(
-    init_guess=10,
-    scale=2,
+    init_guess=3,
+    scale=1,
     category="des"
 )
 opti.subject_to([
@@ -350,8 +351,8 @@ opti.subject_to([
 
 # outboard_fuselage
 outboard_boom_length = opti.variable(
-    init_guess=10,
-    scale=2,
+    init_guess=3,
+    scale=1,
     category="des"
 )
 opti.subject_to([
@@ -367,8 +368,8 @@ boom_diameter = 0.2
 
 # Propeller
 propeller_diameter = opti.variable(
-    init_guess=5,
-    scale=5,
+    init_guess=1,
+    scale=1,
     category="des"
 )
 opti.subject_to([
@@ -540,7 +541,7 @@ wind_direction = opti.parameter(value=0)
 
 revisit_rate = opti.variable(
     init_guess=1,
-    scale=0.1,
+    scale=1,
     category="ops"
 )
 groundspeed = opti.variable(
@@ -552,7 +553,7 @@ groundspeed = opti.variable(
 airspeed = opti.variable(
     n_vars=n_timesteps,
     init_guess=25,
-    scale=20,
+    scale=10,
     category="ops"
 )
 place_on_track = opti.variable(
@@ -570,14 +571,16 @@ starting_point_on_track = opti.variable(
 ground_imaging_offset = opti.parameter(value=14440/8)
 leg_1_length = (observation_length ** 2 + (observation_width - ground_imaging_offset) ** 2) ** 0.5  #
 leg_1_bearing = 360 - np.arctan2d(observation_width - 2 * ground_imaging_offset, observation_length)
+leg_2_bearing = 180 + np.arctan2d(observation_length, observation_width + 2 * ground_imaging_offset)
 turn_1_radius = (observation_width - 2 * ground_imaging_offset) / 2
+arc_length_turn_1 = (360 - (leg_1_bearing - leg_2_bearing)) / 180 * np.pi * turn_1_radius
 turn_1_length = np.pi * turn_1_radius  # assume semi-circle
 leg_2_length = (observation_length ** 2 + (observation_width - ground_imaging_offset) ** 2) ** 0.5
-leg_2_bearing = 180 +  np.arctan2d(observation_length, observation_width + 2 * ground_imaging_offset)
 turn_2_radius = (observation_width + 2 * ground_imaging_offset) / 2
 turn_2_length = np.pi * turn_2_radius  # assume semi-circle
+arc_length_turn_2 = (360 - (leg_1_bearing - leg_2_bearing)) / 180 * np.pi * turn_2_radius
 
-total_track_length = leg_1_length + turn_1_length + leg_2_length + turn_2_length
+total_track_length = leg_1_length + arc_length_turn_1 + leg_2_length + arc_length_turn_2
 opti.subject_to([
     place_on_track == asb.cas.mod(x,  total_track_length) + starting_point_on_track,
     starting_point_on_track >= 0,
@@ -586,25 +589,30 @@ opti.subject_to([
 loc = np.where(place_on_track > total_track_length,
                            place_on_track - total_track_length,
                            place_on_track)
-vehicle_bearing = leg_1_bearing
+# vehicle_bearing = np.ones(n_timesteps) * leg_1_bearing
 vehicle_bearing = np.where(
     loc > leg_1_length,
-    (loc - leg_1_length) * 180 / (np.pi * turn_1_radius),
-    vehicle_bearing
+    leg_1_bearing + (loc - leg_1_length) * 180 / (np.pi * turn_1_radius),
+    leg_1_bearing
 )
 vehicle_bearing = np.where(
-    loc > (leg_1_length + turn_1_length),
+    loc > (leg_1_length + arc_length_turn_1),
     leg_2_bearing,
     vehicle_bearing
 )
 vehicle_bearing = np.where(
-    loc > (leg_1_length + turn_1_length + leg_2_length),
-    180 - ((place_on_track - (leg_1_length + turn_1_length + leg_2_length)) * 180 / (np.pi * turn_2_radius)),
+    loc > (leg_1_length + arc_length_turn_1 + leg_2_length),
+    leg_2_bearing - ((loc - (leg_1_length + arc_length_turn_1 + leg_2_length)) * 180 / (np.pi * turn_2_radius)),
     vehicle_bearing
 )
+# vehicle_bearing = np.zeros([n_timesteps])
+# vehicle_bearing = np.where(loc > place_on_track / 2,
+#                            10,
+#                            vehicle_bearing)
+# vehicle_bearing = place_on_track * 180 / (np.pi * 13859) - 180
 opti.subject_to([
-    revisit_rate == (x[time_periodic_end_index] / total_track_length) - 1,
-    revisit_rate >= 0,
+    revisit_rate == (x[time_periodic_end_index] / total_track_length),
+    revisit_rate >= 0.25,
 ])
 groundspeed_x = groundspeed * np.cosd(vehicle_bearing)
 groundspeed_y = groundspeed * np.sind(vehicle_bearing)
@@ -613,8 +621,7 @@ windspeed_y = wind_speed * np.sind(wind_direction)
 airspeed_x = groundspeed_x - windspeed_x
 airspeed_y = groundspeed_y - windspeed_y
 opti.subject_to([
-    groundspeed > min_speed,
-    airspeed > min_speed,
+    airspeed >= 0,
     airspeed ** 2 == (airspeed_x ** 2 + airspeed_y ** 2),
 ])
 vehicle_heading = np.arctan2d(airspeed_y, airspeed_x)
@@ -646,7 +653,7 @@ solar_flux_on_wing_left = lib_solar.solar_flux(
     day_of_year=day_of_year,
     time=time,
     panel_azimuth_angle=panel_heading,
-    panel_tilt_angle=0,
+    panel_tilt_angle=10,
     scattering=True,
 )
 solar_flux_on_wing_right = lib_solar.solar_flux(
@@ -654,7 +661,7 @@ solar_flux_on_wing_right = lib_solar.solar_flux(
     day_of_year=day_of_year,
     time=time,
     panel_azimuth_angle=panel_heading,
-    panel_tilt_angle=0,
+    panel_tilt_angle=-10,
     scattering=True,
 )
 solar_flux_on_vertical_left = lib_solar.solar_flux(
@@ -800,8 +807,8 @@ wing.drag *= wing_drag_multiplier
 
 # strut drag
 strut_y_location = opti.variable(
-    init_guess=5,
-    scale=5,
+    init_guess=3,
+    scale=1,
     category="des"
 )
 opti.subject_to([
@@ -944,8 +951,8 @@ opti.subject_to(heat_motor <= heat_motor_max)
 
 # Calculate maximum power in/out requirements
 power_out_propulsion_max = opti.variable(
-    init_guess=5e3,
-    scale=5e3,
+    init_guess=1500,
+    scale=1e3,
     category="des",
 )
 
@@ -1105,8 +1112,8 @@ opti.subject_to([
 ])
 
 battery_capacity = opti.variable(
-    init_guess=3600 * 60e3,  # Joules, not watt-hours!
-    scale=3600 * 60e3,
+    init_guess=50000000,  # Joules, not watt-hours!
+    scale=50000000,
     category="des",
 )
 opti.subject_to([
@@ -1311,8 +1318,8 @@ mass_wires = lib_prop_elec.mass_wires(
 
 # Calculate MPPT power requirement
 power_in_after_panels_max = opti.variable(
-    init_guess=5e3,
-    scale=5e3,
+    init_guess=3e3,
+    scale=3e3,
     category="des"
 )
 opti.subject_to([
@@ -1425,7 +1432,7 @@ mass_wing = mass_wing_primary + mass_wing_secondary
 
 # Stabilizers
 q_ne = opti.variable(
-    init_guess=70,
+    init_guess=160,
     category="des"
 )  # Never-exceed dynamic pressure [Pa].
 opti.subject_to(q_ne / 100 > q * q_ne_over_q_max / 100)
@@ -1492,9 +1499,9 @@ def mass_vstab(
 
 
 n_ribs_vstab = opti.variable(
-    init_guess=35,
-    scale=20,
-    category="des"
+    init_guess=8,
+    scale=5,
+    category="des",
 )
 opti.subject_to(n_ribs_vstab > 0)
 mass_center_vstab = mass_vstab(center_vstab, n_ribs_vstab)
