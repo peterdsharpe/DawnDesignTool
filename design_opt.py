@@ -46,7 +46,7 @@ minimize = "wing.span() / 50"  # any "eval-able" expression
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
 latitude = opti.parameter(value=-75)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
-day_of_year = opti.parameter(value=45)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
+day_of_year = opti.parameter(value=75)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 strat_offset_value = opti.parameter(value=1000)
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 observation_length = opti.parameter(value=10000)  # meters
@@ -540,30 +540,30 @@ wind_speed = wind_speed_func(y)
 wind_direction = opti.parameter(value=0)
 
 revisit_rate = opti.variable(
-    init_guess=1,
-    scale=1,
+    init_guess=0.5,
+    scale=0.1,
     category="ops"
 )
 groundspeed = opti.variable(
     n_vars=n_timesteps,
-    init_guess=1,
+    init_guess=0,
     scale=0.1,
     category="ops"
 )
 airspeed = opti.variable(
     n_vars=n_timesteps,
-    init_guess=25,
-    scale=10,
+    init_guess=23,
+    scale=20,
     category="ops"
 )
 place_on_track = opti.variable(
     n_vars=n_timesteps,
-    init_guess=50000,
+    init_guess=10000,
     scale=10000,
     category="ops"
 )
 starting_point_on_track = opti.variable(
-    init_guess=0,
+    init_guess=19000,
     scale=10000,
     category="ops"
 )
