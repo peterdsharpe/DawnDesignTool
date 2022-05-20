@@ -46,7 +46,7 @@ minimize = "wing.span() / 50"  # any "eval-able" expression
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
 latitude = opti.parameter(value=-75)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
-day_of_year = opti.parameter(value=75)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
+day_of_year = opti.parameter(value=30)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 strat_offset_value = opti.parameter(value=1000)
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 observation_length = opti.parameter(value=10000)  # meters
@@ -1002,7 +1002,7 @@ center_wavelength = opti.variable(
     init_guess=0.0226,
     scale=0.01,
     category='des',
-    lower_bound=0.01,
+    lower_bound=0.02,
     upper_bound=0.04,
 ) # constrain to roughly X-band wavelengths
 radar_length = opti.variable(
