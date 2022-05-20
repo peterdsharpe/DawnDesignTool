@@ -9,12 +9,18 @@ c = 299792458 # [m/s] speed of light
 k_b = 1.38064852E-23 # [m2 kg s-2 K-1]
 required_resolution = opti.parameter(value=1) # 1-2 meters required from conversation with Brent on 2/18/22
 required_snr = opti.parameter(value=6)  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
-center_wavelength = opti.parameter(value=0.226) # meters from GAMMA Remote Sensing Doc
-groundspeed = opti.parameter(value=30) # average groundspeed
+center_wavelength = opti.parameter(value=0.0226) # meters from GAMMA Remote Sensing Doc
+groundspeed = opti.parameter(value=5) # average groundspeed
 T = opti.parameter(value=216)
 y = opti.parameter(value=12000)
 sigma0_db = opti.parameter(value=0)
-
+# center_wavelength = opti.variable(
+#     init_guess=0.0226,
+#     scale=0.01,
+#     category='des',
+#     lower_bound=0.02,
+#     upper_bound=0.035,
+# )
 radar_length = opti.variable(
     init_guess=0.1,
     scale=1,
@@ -93,4 +99,4 @@ opti.subject_to([
 minimize = "power_out_payload"
 objective = eval(minimize)
 opti.minimize(objective)
-sol = opti.solve(max_iter=1000)
+sol = opti.solve(max_iter=3000)
