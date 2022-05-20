@@ -9,18 +9,18 @@ c = 299792458 # [m/s] speed of light
 k_b = 1.38064852E-23 # [m2 kg s-2 K-1]
 required_resolution = opti.parameter(value=1) # 1-2 meters required from conversation with Brent on 2/18/22
 required_snr = opti.parameter(value=6)  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
-center_wavelength = opti.parameter(value=0.0226) # meters from GAMMA Remote Sensing Doc
+# center_wavelength = opti.parameter(value=0.0226) # meters from GAMMA Remote Sensing Doc
 groundspeed = opti.parameter(value=5) # average groundspeed
 T = opti.parameter(value=216)
 y = opti.parameter(value=12000)
 sigma0_db = opti.parameter(value=0)
-# center_wavelength = opti.variable(
-#     init_guess=0.0226,
-#     scale=0.01,
-#     category='des',
-#     lower_bound=0.02,
-#     upper_bound=0.035,
-# )
+center_wavelength = opti.variable(
+    init_guess=0.0226,
+    scale=0.01,
+    category='des',
+    lower_bound=0.01,
+    upper_bound=0.04,
+)
 radar_length = opti.variable(
     init_guess=0.1,
     scale=1,
@@ -85,9 +85,9 @@ opti.subject_to([
 noise_power_density = k_b * T * bandwidth / (center_wavelength ** 2)
 power_trans = peak_power * pulse_duration
 power_received = power_trans * antenna_gain * radar_area * scattering_cross_sec / ((4 * np.pi) ** 2 * dist ** 4)
-power_out_payload = power_trans * pulse_rep_freq
+power_out_payload = power_trans / pulse_rep_freq
 snr = power_received / noise_power_density
-snr_db = 10 * np.log10(snr)
+snr_db = 10 * np.log(snr)
 opti.subject_to([
     required_snr <= snr_db,
     pulse_rep_freq >= 2 * groundspeed / radar_length,
