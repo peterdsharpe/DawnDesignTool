@@ -34,26 +34,26 @@ radar_width = opti.variable(
     lower_bound=0,
 )
 bandwidth = opti.variable(
-    init_guess=1e6,
-    scale=1e4,
+    init_guess=1e8,
+    scale=1e6,
     lower_bound=0,
     category='ops'
 )  # Hz
 peak_power = opti.variable(
-    init_guess=1000,
-    scale=100,
+    init_guess=1e+16,
+    scale=1e15,
     lower_bound=0,
     category='ops'
 )  # Watts
 pulse_rep_freq = opti.variable(
-    init_guess=10000,
-    scale=1000,
+    init_guess=353308,
+    scale=10000,
     lower_bound=0,
     category='ops'
 )
 power_out_payload = opti.variable(
-    init_guess=1,
-    scale=0.1,
+    init_guess=200,
+    scale=100,
     lower_bound=0,
     category='ops'
 )
