@@ -46,7 +46,7 @@ minimize = "wing.span() / 50"  # any "eval-able" expression
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
 latitude = opti.parameter(value=-75)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
-day_of_year = opti.parameter(value=30)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
+day_of_year = opti.parameter(value=60)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 strat_offset_value = opti.parameter(value=1000)
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 observation_length = opti.parameter(value=10000)  # meters
@@ -245,7 +245,7 @@ break_location = 0.67  # as a fraction of the half-span
 
 # wing
 wing_span = opti.variable(
-    init_guess=14,
+    init_guess=30,
     scale=10,
     category="des"
 )
@@ -994,8 +994,8 @@ power_out_avionics = 180  # Pulled from Avionics spreadsheet on 5/13/20
 
 c = 299792458  # [m/s] speed of light
 k_b = 1.38064852E-23  # [m2 kg s-2 K-1]
-required_resolution = opti.parameter(value=1)  # meters from conversation with Brent on 2/18/22
-required_snr = opti.parameter(value=6)  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
+required_resolution = opti.parameter(value=2)  # meters from conversation with Brent on 2/18/22
+required_snr = opti.parameter(value=20)  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
 # center_wavelength = opti.parameter(value=0.0226)  # meters
 sigma0_db = opti.parameter(value=0)  # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
 center_wavelength = opti.variable(
