@@ -1,6 +1,7 @@
 # Imports
 import aerosandbox as asb
 import aerosandbox.library.aerodynamics as aero
+import pandas as pd
 from aerosandbox.atmosphere import Atmosphere as atmo
 from aerosandbox.library import mass_structural as lib_mass_struct
 from aerosandbox.library import power_solar as lib_solar
@@ -54,7 +55,7 @@ observation_width = opti.parameter(value=10000)  # meters
 required_headway_per_day = opti.parameter(value=0)
 allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
-make_plots = False
+make_plots = True
 mass_payload = opti.parameter(value=10)
 tail_panels = True
 fuselage_billboard = False
@@ -537,7 +538,7 @@ airplane = asb.Airplane(
 
 # region Flight Path Optimization
 wind_speed = wind_speed_func(y)
-wind_direction = opti.parameter(value=0)
+wind_direction = opti.parameter(value=90)
 
 revisit_rate = opti.variable(
     init_guess=0.5,
@@ -612,7 +613,7 @@ vehicle_bearing = np.where(
 # vehicle_bearing = place_on_track * 180 / (np.pi * 13859) - 180
 opti.subject_to([
     revisit_rate == (x[time_periodic_end_index] / total_track_length),
-    revisit_rate >= 0.25,
+    revisit_rate >= 0.75,
 ])
 groundspeed_x = groundspeed * np.cosd(vehicle_bearing)
 groundspeed_y = groundspeed * np.sind(vehicle_bearing)
@@ -1819,7 +1820,17 @@ if __name__ == "__main__":
     is_daytime = s(solar_flux_on_horizontal) >= 1  # 1 W/m^2 or greater insolation
     is_nighttime = np.logical_not(is_daytime)
 
-
+    plot_pos = np.zeros((2, n_timesteps)) + s(starting_point_on_track)
+    vel = np.empty((2, n_timesteps))
+    vel[0, :] = s(groundspeed_x)
+    vel[1, :] = s(groundspeed_y)
+    time_delta = np.ones(n_timesteps) * time[1]
+    plot_pos[:, :] = np.cumsum(time_delta*vel, axis=1)
+    d = {'x':s(x), 'groundspeed':s(groundspeed), 'airspeed':s(airspeed), 'wind_speed':s(wind_speed),
+         'plot_pos_x': plot_pos[0], 'plot_pos_y':plot_pos[1], 'groundspeed_x':s(groundspeed_x),
+         'groundspeed_y':s(groundspeed_y), 'airspeed_x':s(airspeed_x), 'airspeed_y': s(airspeed_y),
+         'vehicle_heading':s(vehicle_heading), 'vehicle_bearing':s(vehicle_bearing)}
+    df_trajectory = pd.DataFrame(data=d)
     def plot(
             x_name: str,
             y_name: str,
@@ -1911,18 +1922,23 @@ if __name__ == "__main__":
              title="Battery Charge State over Simulation",
              save_name="outputs/battery_charge.png"
              )
-        plot("hour", "x_km",
-             xlabel="hours after Solar Noon",
-             ylabel="Downrange Distance [km]",
-             title="Optimal Trajectory over Simulation",
-             save_name="outputs/trajectory.png"
-             )
+        # plot("hour", "x_km",
+        #      xlabel="hours after Solar Noon",
+        #      ylabel="Downrange Distance [km]",
+        #      title="Optimal Trajectory over Simulation",
+        #      save_name="outputs/trajectory.png"
+        #      )
         plot("hour", "groundspeed",
              xlabel="hours after Solar Noon",
              ylabel="Groundspeed [m/s]",
              title="Groundspeed over Simulation",
-             save_name="outputs/trajectory.png"
+             save_name="outputs/groundspeed.png"
              )
+        plot("plot_pos[0]", "plot_pos[1]",
+             xlabel="East/West Axis [m]",
+             ylabel='North/Sounth Axis [m]',
+             title="Vehicle Flight Path",
+             save_name='outputs/flight_path.png')
 
         # Draw mass breakdown
         fig = plt.figure(figsize=(10, 8), dpi=plot_dpi)
