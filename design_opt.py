@@ -47,7 +47,7 @@ minimize = "wing.span() / 50"  # any "eval-able" expression
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
 latitude = opti.parameter(value=-75)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
-day_of_year = opti.parameter(value=60)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
+day_of_year = opti.parameter(value=45)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 strat_offset_value = opti.parameter(value=1000)
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 observation_length = opti.parameter(value=10000)  # meters
@@ -539,9 +539,9 @@ airplane = asb.Airplane(
 # region Flight Path Optimization
 wind_speed = wind_speed_func(y)
 wind_direction = opti.parameter(value=90)
-
+required_revisit_rate = opti.parameter(value=0.75)
 revisit_rate = opti.variable(
-    init_guess=0.5,
+    init_guess=required_revisit_rate,
     scale=0.1,
     category="ops"
 )
@@ -613,7 +613,7 @@ vehicle_bearing = np.where(
 # vehicle_bearing = place_on_track * 180 / (np.pi * 13859) - 180
 opti.subject_to([
     revisit_rate == (x[time_periodic_end_index] / total_track_length),
-    revisit_rate >= 0.75,
+    revisit_rate >= required_revisit_rate,
 ])
 groundspeed_x = groundspeed * np.cosd(vehicle_bearing)
 groundspeed_y = groundspeed * np.sind(vehicle_bearing)
