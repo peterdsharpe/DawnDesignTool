@@ -996,7 +996,7 @@ power_out_avionics = 180  # Pulled from Avionics spreadsheet on 5/13/20
 c = 299792458  # [m/s] speed of light
 k_b = 1.38064852E-23  # [m2 kg s-2 K-1]
 required_resolution = opti.parameter(value=2)  # meters from conversation with Brent on 2/18/22
-required_snr = opti.parameter(value=20)  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
+required_snr = opti.parameter(value=6)  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
 # center_wavelength = opti.parameter(value=0.0226)  # meters
 sigma0_db = opti.parameter(value=0)  # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
 center_wavelength = opti.variable(
@@ -1070,7 +1070,7 @@ opti.subject_to([
 noise_power_density = k_b * T * bandwidth / (center_wavelength ** 2)
 power_trans = peak_power * pulse_duration
 power_received = power_trans * antenna_gain * radar_area * scattering_cross_sec / ((4 * np.pi) ** 2 * dist ** 4)
-power_out_payload = power_trans / pulse_rep_freq
+power_out_payload = power_trans / pulse_rep_freq # TODO check this is correct
 snr = power_received / noise_power_density
 snr_db = 10 * np.log(snr)
 opti.subject_to([
@@ -1080,14 +1080,19 @@ opti.subject_to([
     radar_width <= 0.4,
     radar_length <= 0.4,
 ])
-# ### Power accounting
+### Power accounting
 # Account for payload power
-# power_out_payload = np.where(
-#     solar_flux_on_horizontal > 1,
-#     100,
-#     100
-# )
-power_out = power_out_propulsion + power_out_payload + power_out_avionics
+power_out_payload_adjusted = np.where(
+    vehicle_bearing == leg_1_bearing,
+    power_out_payload,
+    0
+)
+power_out_payload_adjusted = np.where(
+    vehicle_bearing == leg_2_bearing,
+    power_out_payload,
+    power_out_payload_adjusted
+)
+power_out = power_out_propulsion + power_out_payload_adjusted + power_out_avionics
 
 # endregion
 
