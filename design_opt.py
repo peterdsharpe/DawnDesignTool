@@ -50,8 +50,8 @@ latitude = opti.parameter(value=-75)  # degrees (49 deg is top of CONUS, 26 deg 
 day_of_year = opti.parameter(value=45)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 strat_offset_value = opti.parameter(value=1000)
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
-observation_length = opti.parameter(value=10000)  # meters
-observation_width = opti.parameter(value=10000)  # meters
+sample_area_height = opti.parameter(value=15000)  # meters
+sample_area_width = opti.parameter(value=10000)  # meters
 required_headway_per_day = opti.parameter(value=0)
 allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
@@ -381,7 +381,7 @@ opti.subject_to([
 n_propellers = opti.parameter(value=4)
 
 # import pickle
-import dill as pickle
+# import dill as pickle
 
 # wing_airfoil = wing_airfoil.repanel()
 cl_array = np.load(path + '/data/cl_function.npy')
@@ -535,19 +535,110 @@ airplane = asb.Airplane(
 )
 
 # endregion`
+### Payload Module
+
+c = 299792458  # [m/s] speed of light
+k_b = 1.38064852E-23  # [m2 kg s-2 K-1]
+required_resolution = opti.parameter(value=2)  # meters from conversation with Brent on 2/18/22
+required_snr = opti.parameter(value=6)  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
+# center_wavelength = opti.parameter(value=0.0226)  # meters
+sigma0_db = opti.parameter(value=0)  # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
+center_wavelength = opti.variable(
+    init_guess=0.0226,
+    scale=0.01,
+    category='des',
+    lower_bound=0.02,
+    upper_bound=0.04,
+) # constrain to roughly X-band wavelengths
+radar_length = opti.variable(
+    init_guess=0.1,
+    scale=1,
+    category='des',
+    lower_bound=0,
+) # meters
+radar_width = opti.variable(
+    init_guess=0.03,
+    scale=0.1,
+    category='des',
+    lower_bound=0,
+) # meters
+bandwidth = opti.variable(
+    init_guess=1e8,
+    scale=1e6,
+    lower_bound=0,
+    category='ops'
+)  # Hz
+peak_power = opti.variable(
+    init_guess=1e+16,
+    scale=1e15,
+    lower_bound=0,
+    category='ops'
+)  # Watts
+pulse_rep_freq = opti.variable(
+    init_guess=353308,
+    scale=10000,
+    lower_bound=0,
+    category='ops'
+)
+power_out_payload = opti.variable(
+    init_guess=200,
+    scale=100,
+    lower_bound=0,
+    category='ops'
+)
+groundspeed = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=0,
+    scale=0.1,
+    category="ops"
+)
+# # define key radar parameters
+radar_area = radar_width * radar_length # meters ** 2
+look_angle = opti.parameter(value=45) # degrees
+dist = y / np.cosd(look_angle) # meters
+grazing_angle = 90 - look_angle # degrees
+swath_azimuth = center_wavelength * dist / radar_length # meters
+swath_range = center_wavelength * dist / (radar_width * np.cosd(look_angle)) # meters
+max_length_synth_ap = center_wavelength * dist / radar_length # meters
+ground_area = swath_range * swath_azimuth * np.pi / 4 # meters ** 2
+radius = (swath_azimuth + swath_range) / 4 # meters
+ground_imaging_offset = np.sin(look_angle) * dist # meters
+sigma0 = 10 ** (sigma0_db / 10)
+scattering_cross_sec = sigma0
+antenna_gain = 4 * np.pi * radar_area * 0.7 / center_wavelength ** 2
+pulse_duration = 1 / bandwidth
+#
+# # constrain SAR resolution to required value
+range_resolution = c * pulse_duration / (2 * np.sind(look_angle))
+azimuth_resolution = radar_length / 2
+opti.subject_to([
+    range_resolution <= required_resolution,
+    azimuth_resolution <= required_resolution,
+])
+#
+# account for snr
+noise_power_density = k_b * T * bandwidth / (center_wavelength ** 2)
+power_trans = peak_power * pulse_duration
+power_received = power_trans * antenna_gain * radar_area * scattering_cross_sec / ((4 * np.pi) ** 2 * dist ** 4)
+power_out_payload = power_trans / pulse_rep_freq # TODO check this is correct
+snr = power_received / noise_power_density
+snr_db = 10 * np.log(snr)
+opti.subject_to([
+    required_snr <= snr_db,
+    pulse_rep_freq >= 2 * groundspeed / radar_length,
+    pulse_rep_freq <= c / (2 * swath_azimuth),
+    radar_width <= 0.4,
+    radar_length <= 0.4,
+])
+
 
 # region Flight Path Optimization
 wind_speed = wind_speed_func(y)
 wind_direction = opti.parameter(value=90)
 required_revisit_rate = opti.parameter(value=0.75)
+swath_overlap = opti.parameter(value=0.1)
 revisit_rate = opti.variable(
     init_guess=required_revisit_rate,
-    scale=0.1,
-    category="ops"
-)
-groundspeed = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=0,
     scale=0.1,
     category="ops"
 )
@@ -568,20 +659,21 @@ starting_point_on_track = opti.variable(
     scale=10000,
     category="ops"
 )
-# hardcode x trajectory
-ground_imaging_offset = opti.parameter(value=14440/8)
-leg_1_length = (observation_length ** 2 + (observation_width - ground_imaging_offset) ** 2) ** 0.5  #
-leg_1_bearing = 360 - np.arctan2d(observation_width - 2 * ground_imaging_offset, observation_length)
-leg_2_bearing = 180 + np.arctan2d(observation_length, observation_width + 2 * ground_imaging_offset)
-turn_1_radius = (observation_width - 2 * ground_imaging_offset) / 2
+# trajectory
+ground_imaging_offset = opti.parameter(value = 14440 / 8)
+overlap_width = swath_range * swath_overlap
+leg_1_length = sample_area_height
+leg_1_bearing = 0
+leg_2_bearing = 180
+turn_1_radius = (ground_imaging_offset * 2 + swath_range * 2 - overlap_width) / 2
 arc_length_turn_1 = (360 - (leg_1_bearing - leg_2_bearing)) / 180 * np.pi * turn_1_radius
 turn_1_length = np.pi * turn_1_radius  # assume semi-circle
-leg_2_length = (observation_length ** 2 + (observation_width - ground_imaging_offset) ** 2) ** 0.5
-turn_2_radius = (observation_width + 2 * ground_imaging_offset) / 2
+leg_2_length = sample_area_height
+turn_2_radius = turn_1_radius - (2 * swath_range - overlap_width)
 turn_2_length = np.pi * turn_2_radius  # assume semi-circle
 arc_length_turn_2 = (360 - (leg_1_bearing - leg_2_bearing)) / 180 * np.pi * turn_2_radius
 
-total_track_length = leg_1_length + arc_length_turn_1 + leg_2_length + arc_length_turn_2
+number_of_passes_required =
 opti.subject_to([
     place_on_track == asb.cas.mod(x,  total_track_length) + starting_point_on_track,
     starting_point_on_track >= 0,
@@ -606,11 +698,6 @@ vehicle_bearing = np.where(
     leg_2_bearing - ((loc - (leg_1_length + arc_length_turn_1 + leg_2_length)) * 180 / (np.pi * turn_2_radius)),
     vehicle_bearing
 )
-# vehicle_bearing = np.zeros([n_timesteps])
-# vehicle_bearing = np.where(loc > place_on_track / 2,
-#                            10,
-#                            vehicle_bearing)
-# vehicle_bearing = place_on_track * 180 / (np.pi * 13859) - 180
 opti.subject_to([
     revisit_rate == (x[time_periodic_end_index] / total_track_length),
     revisit_rate >= required_revisit_rate,
@@ -628,6 +715,20 @@ opti.subject_to([
 vehicle_heading = np.arctan2d(airspeed_y, airspeed_x)
 
 # endregion
+
+### Power accounting
+# Account for payload power
+power_out_payload_adjusted = np.where(
+    vehicle_bearing == leg_1_bearing,
+    power_out_payload,
+    0
+)
+power_out_payload_adjusted = np.where(
+    vehicle_bearing == leg_2_bearing,
+    power_out_payload,
+    power_out_payload_adjusted
+)
+
 
 # region Atmosphere
 ##### Atmosphere
@@ -991,109 +1092,7 @@ mass_propulsion = mass_motor_mounted + mass_propellers + mass_ESC
 power_out_avionics = 180  # Pulled from Avionics spreadsheet on 5/13/20
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
-### Payload Module
-
-c = 299792458  # [m/s] speed of light
-k_b = 1.38064852E-23  # [m2 kg s-2 K-1]
-required_resolution = opti.parameter(value=2)  # meters from conversation with Brent on 2/18/22
-required_snr = opti.parameter(value=6)  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
-# center_wavelength = opti.parameter(value=0.0226)  # meters
-sigma0_db = opti.parameter(value=0)  # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
-center_wavelength = opti.variable(
-    init_guess=0.0226,
-    scale=0.01,
-    category='des',
-    lower_bound=0.02,
-    upper_bound=0.04,
-) # constrain to roughly X-band wavelengths
-radar_length = opti.variable(
-    init_guess=0.1,
-    scale=1,
-    category='des',
-    lower_bound=0,
-) # meters
-radar_width = opti.variable(
-    init_guess=0.03,
-    scale=0.1,
-    category='des',
-    lower_bound=0,
-) # meters
-bandwidth = opti.variable(
-    init_guess=1e8,
-    scale=1e6,
-    lower_bound=0,
-    category='ops'
-)  # Hz
-peak_power = opti.variable(
-    init_guess=1e+16,
-    scale=1e15,
-    lower_bound=0,
-    category='ops'
-)  # Watts
-pulse_rep_freq = opti.variable(
-    init_guess=353308,
-    scale=10000,
-    lower_bound=0,
-    category='ops'
-)
-power_out_payload = opti.variable(
-    init_guess=200,
-    scale=100,
-    lower_bound=0,
-    category='ops'
-)
-# # define key radar parameters
-radar_area = radar_width * radar_length # meters ** 2
-look_angle = opti.parameter(value=45) # degrees
-dist = y / np.cosd(look_angle) # meters
-grazing_angle = 90 - look_angle # degrees
-swath_azimuth = center_wavelength * dist / radar_length # meters
-swath_range = center_wavelength * dist / (radar_width * np.cosd(look_angle)) # meters
-max_length_synth_ap = center_wavelength * dist / radar_length # meters
-ground_area = swath_range * swath_azimuth * np.pi / 4 # meters ** 2
-radius = (swath_azimuth + swath_range) / 4 # meters
-ground_imaging_offset = np.sin(look_angle) * dist # meters
-sigma0 = 10 ** (sigma0_db / 10)
-scattering_cross_sec = sigma0
-antenna_gain = 4 * np.pi * radar_area * 0.7 / center_wavelength ** 2
-pulse_duration = 1 / bandwidth
-#
-# # constrain SAR resolution to required value
-range_resolution = c * pulse_duration / (2 * np.sind(look_angle))
-azimuth_resolution = radar_length / 2
-opti.subject_to([
-    range_resolution <= required_resolution,
-    azimuth_resolution <= required_resolution,
-])
-#
-# account for snr
-noise_power_density = k_b * T * bandwidth / (center_wavelength ** 2)
-power_trans = peak_power * pulse_duration
-power_received = power_trans * antenna_gain * radar_area * scattering_cross_sec / ((4 * np.pi) ** 2 * dist ** 4)
-power_out_payload = power_trans / pulse_rep_freq # TODO check this is correct
-snr = power_received / noise_power_density
-snr_db = 10 * np.log(snr)
-opti.subject_to([
-    required_snr <= snr_db,
-    pulse_rep_freq >= 2 * groundspeed / radar_length,
-    pulse_rep_freq <= c / (2 * swath_azimuth),
-    radar_width <= 0.4,
-    radar_length <= 0.4,
-])
-### Power accounting
-# Account for payload power
-power_out_payload_adjusted = np.where(
-    vehicle_bearing == leg_1_bearing,
-    power_out_payload,
-    0
-)
-power_out_payload_adjusted = np.where(
-    vehicle_bearing == leg_2_bearing,
-    power_out_payload,
-    power_out_payload_adjusted
-)
 power_out = power_out_propulsion + power_out_payload_adjusted + power_out_avionics
-
 # endregion
 
 
