@@ -536,6 +536,12 @@ airplane = asb.Airplane(
 
 # endregion`
 ### Payload Module
+my_atmosphere = atmo(altitude=y)
+P = my_atmosphere.pressure()
+rho = my_atmosphere.density()
+T = my_atmosphere.temperature()
+mu = my_atmosphere.dynamic_viscosity()
+a = my_atmosphere.speed_of_sound()
 
 c = 299792458  # [m/s] speed of light
 k_b = 1.38064852E-23  # [m2 kg s-2 K-1]
@@ -566,25 +572,25 @@ bandwidth = opti.variable(
     init_guess=1e8,
     scale=1e6,
     lower_bound=0,
-    category='ops'
+    category='des'
 )  # Hz
 peak_power = opti.variable(
     init_guess=1e+16,
     scale=1e15,
     lower_bound=0,
-    category='ops'
+    category='des'
 )  # Watts
 pulse_rep_freq = opti.variable(
     init_guess=353308,
     scale=10000,
     lower_bound=0,
-    category='ops'
+    category='des'
 )
 power_out_payload = opti.variable(
     init_guess=200,
     scale=100,
     lower_bound=0,
-    category='ops'
+    category='des'
 )
 groundspeed = opti.variable(
     n_vars=n_timesteps,
@@ -654,11 +660,12 @@ place_on_track = opti.variable(
     scale=10000,
     category="ops"
 )
-starting_point_on_track = opti.variable(
-    init_guess=19000,
-    scale=10000,
-    category="ops"
-)
+# starting_point_on_track = opti.variable(
+#     init_guess=19000,
+#     scale=10000,
+#     category="ops"
+# )
+starting_point_on_track = 0
 # trajectory
 ground_imaging_offset = opti.parameter(value = 14440 / 8)
 overlap_width = swath_range * swath_overlap
@@ -669,11 +676,12 @@ turn_1_radius = (ground_imaging_offset * 2 + swath_range * 2 - overlap_width) / 
 arc_length_turn_1 = (360 - (leg_1_bearing - leg_2_bearing)) / 180 * np.pi * turn_1_radius
 turn_1_length = np.pi * turn_1_radius  # assume semi-circle
 leg_2_length = sample_area_height
-turn_2_radius = turn_1_radius - (2 * swath_range - overlap_width)
+turn_2_radius = (turn_1_radius * 2 - (2 * ground_imaging_offset + swath_range)) / 2
 turn_2_length = np.pi * turn_2_radius  # assume semi-circle
 arc_length_turn_2 = (360 - (leg_1_bearing - leg_2_bearing)) / 180 * np.pi * turn_2_radius
 
-number_of_passes_required =
+total_track_length = leg_1_length + leg_2_length + turn_1_length + turn_2_length
+
 opti.subject_to([
     place_on_track == asb.cas.mod(x,  total_track_length) + starting_point_on_track,
     starting_point_on_track >= 0,
@@ -732,12 +740,6 @@ power_out_payload_adjusted = np.where(
 
 # region Atmosphere
 ##### Atmosphere
-my_atmosphere = atmo(altitude=y)
-P = my_atmosphere.pressure()
-rho = my_atmosphere.density()
-T = my_atmosphere.temperature()
-mu = my_atmosphere.dynamic_viscosity()
-a = my_atmosphere.speed_of_sound()
 mach = airspeed / a
 g = 9.81  # gravitational acceleration, m/s^2
 q = 1 / 2 * rho * airspeed ** 2  # Solar calculations
