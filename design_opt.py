@@ -39,10 +39,10 @@ opti = asb.Opti(  # Normal mode - Design Optimization
 #     ignore_violated_parametric_constraints=True
 # )
 
-minimize = "wing.span() / 50"  # any "eval-able" expression
+# minimize = "wing.span() / 50"  # any "eval-able" expression
 # minimize = "max_mass_total / 300" # any "eval-able" expression
 # minimize = "wing.span() / 50 * 0.9 + max_mass_total / 300 * 0.1"
-# minimize = "wing.span() / 50 * 0.9 - revisit_rate / 8 * 0.1"
+minimize = "wing.span() / 50 * 0.9 - revisit_rate / 20   * 0.1"
 
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
@@ -55,7 +55,7 @@ sample_area_width = opti.parameter(value=10000)  # meters
 required_headway_per_day = opti.parameter(value=0)
 allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
-make_plots = True
+make_plots = False
 mass_payload = opti.parameter(value=10)
 tail_panels = True
 fuselage_billboard = False
