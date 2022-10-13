@@ -545,12 +545,6 @@ thrust_force = opti.variable(
     category="ops",
     lower_bound=0
 )
-# Add forces
-dyn.add_force(
-    Fx=thrust_force,
-    axes='wind'
-)
-
 opti.subject_to([
     dyn.y_e[time_periodic_start_index:] / min_cruise_altitude > 1,
 ])
@@ -1606,21 +1600,20 @@ gravity_force = g * mass_total
 
 # region Dynamics
 
-net_force_parallel_calc = (
-        thrust_force * np.cosd(dyn.alpha) -
-        drag_force -
-        gravity_force * np.sind(dyn.gamma)
+# Add forces
+dyn.add_gravity_force(g=9.81)
+dyn.add_force(
+    Fx=thrust_force,
+    axes='wind'
 )
-net_force_perpendicular_calc = (
-        thrust_force * np.sind(dyn.alpha) +
-        lift_force -
-        gravity_force * np.cosd(dyn.gamma)
+dyn.add_force(
+    Fx=-drag_force,
+    axes='body'
 )
-
-opti.subject_to([
-    net_accel_parallel * mass_total / 1e1 == net_force_parallel_calc / 1e1,
-    net_accel_perpendicular * mass_total / 1e2 == net_force_perpendicular_calc / 1e2,
-])
+dyn.add_force(
+    Fz=lift_force,
+    axes='body'
+)
 
 speeddot = net_accel_parallel
 gammadot = (net_accel_perpendicular / airspeed) * 180 / np.pi
