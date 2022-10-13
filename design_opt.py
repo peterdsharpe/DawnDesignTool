@@ -666,12 +666,6 @@ revisit_rate = opti.variable(
     scale=1,
     category="ops"
 )
-airspeed = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=23,
-    scale=20,
-    category="ops"
-)
 place_on_track = opti.variable(
     n_vars=n_timesteps,
     init_guess=10000,
@@ -745,8 +739,8 @@ windspeed_y = wind_speed * np.sind(wind_direction)
 airspeed_x = groundspeed_x - windspeed_x
 airspeed_y = groundspeed_y - windspeed_y
 opti.subject_to([
-    airspeed >= 0,
-    airspeed ** 2 == (airspeed_x ** 2 + airspeed_y ** 2),
+    dyn.speed>= 0,
+    dyn.speed ** 2 == (airspeed_x ** 2 + airspeed_y ** 2),
 ])
 vehicle_heading = np.arctan2d(airspeed_y, airspeed_x)
 
@@ -767,9 +761,9 @@ power_out_payload_adjusted = np.where(
 
 # region Atmosphere
 ##### Atmosphere
-mach = airspeed / a
+mach = dyn.speed / a
 g = 9.81  # gravitational acceleration, m/s^2
-q = 1 / 2 * rho * airspeed ** 2  # Solar calculations
+q = 1 / 2 * rho * dyn.speed ** 2  # Solar calculations
 
 panel_heading = vehicle_heading - 90  # actual directionality of the solar panel
 
@@ -840,7 +834,7 @@ solar_flux_on_billboard_right = lib_solar.solar_flux(
 
 # Fuselage
 def compute_fuse_aerodynamics(fuse: asb.Fuselage):
-    fuse.Re = rho / mu * airspeed * fuse.length()
+    fuse.Re = rho / mu * dyn.speed * fuse.length()
     fuse.CLA = 0
     fuse.CDA = aero.Cf_flat_plate(fuse.Re) * fuse.area_wetted() * 1.2  # wetted area with form factor
 
@@ -863,7 +857,7 @@ def compute_wing_aerodynamics(
     if is_horizontal_surface:
         surface.alpha_eff += dyn.alpha
 
-    surface.Re = rho / mu * airspeed * surface.mean_geometric_chord()
+    surface.Re = rho / mu * dyn.speed * surface.mean_geometric_chord()
     surface.airfoil = surface.xsecs[0].airfoil
     try:
         surface.Cl_inc = surface.airfoil.CL_function(
@@ -949,7 +943,7 @@ opti.subject_to([
 
 strut_span = (strut_y_location ** 2 + (propeller_diameter / 2 + 0.25) ** 2) ** 0.5  # Formula from Jamie
 strut_chord = 0.167 * (strut_span * (propeller_diameter / 2 + 0.25)) ** 0.25  # Formula from Jamie
-strut_Re = rho / mu * airspeed * strut_chord
+strut_Re = rho / mu * dyn.speed * strut_chord
 strut_airfoil = flat_plate
 strut_Cd_profile = flat_plate.CD_function(0, strut_Re, mach, 0)
 drag_strut_profile = strut_Cd_profile * q * strut_chord * strut_span
@@ -1050,7 +1044,7 @@ if not use_propulsion_fits_from_FL2020_1682_undergrads:
     power_out_propulsion_shaft = lib_prop_prop.propeller_shaft_power_from_thrust(
         thrust_force=dyn.Fx_w,
         area_propulsive=area_propulsive,
-        airspeed=airspeed,
+        airspeed=dyn.speed,
         rho=rho,
         propeller_coefficient_of_performance=0.90  # calibrated to QProp output with Dongjoon
     )
@@ -1064,12 +1058,12 @@ else:
     opti.subject_to(dyn.y_e < 30000)  # Bugs out without this limiter
 
     propeller_efficiency, motor_efficiency = eff_curve_fit(
-        airspeed=airspeed,
+        airspeed=dyn.speed,
         total_thrust=dyn.Fx_w,
         altitude=dyn.y_e,
         var_pitch=variable_pitch
     )
-    power_out_propulsion_shaft = dyn.Fx_w * airspeed / propeller_efficiency
+    power_out_propulsion_shaft = dyn.Fx_w * dyn.speed / propeller_efficiency
 
     gearbox_efficiency = 0.986
 
@@ -1619,7 +1613,7 @@ dyn.add_force(
 pitch_rate = np.diff(dyn.alpha) / np.diff(time)  # deg/sec
 roll_rate = np.diff(np.degrees(dyn.bank)) / np.diff(time)  # deg/sec
 opti.subject_to([
-    pitch_rate > -5,
+    pitch_rate > -5,# TODO define pitch and roll rate limits
     pitch_rate < 5,
     roll_rate > -10,
     roll_rate < 10,
@@ -1708,7 +1702,7 @@ wing_loading = 9.81 * max_mass_total / wing.area()
 wing_loading_psf = wing_loading / 47.880258888889
 empty_wing_loading = 9.81 * mass_structural / wing.area()
 empty_wing_loading_psf = empty_wing_loading / 47.880258888889
-propeller_efficiency = thrust_force * airspeed / power_out_propulsion_shaft
+propeller_efficiency = thrust_force * dyn.speed / power_out_propulsion_shaft
 cruise_LD = lift_force / drag_force
 
 ##### Add tippers
@@ -1846,7 +1840,7 @@ if __name__ == "__main__":
     vel[1, :] = s(groundspeed_y)
     time_delta = np.ones(n_timesteps) * time[1]
     plot_pos[:, :] = np.cumsum(time_delta * vel, axis=1)
-    d = {'x': s(x), 'groundspeed': s(groundspeed), 'airspeed': s(airspeed), 'wind_speed': s(wind_speed),
+    d = {'x': s(dyn.x_e), 'groundspeed': s(groundspeed), 'airspeed': s(dyn.speed), 'wind_speed': s(wind_speed),
          'plot_pos_x': plot_pos[0], 'plot_pos_y': plot_pos[1], 'groundspeed_x': s(groundspeed_x),
          'groundspeed_y': s(groundspeed_y), 'airspeed_x': s(airspeed_x), 'airspeed_y': s(airspeed_y),
          'vehicle_heading': s(vehicle_heading), 'vehicle_bearing': s(vehicle_bearing)}
