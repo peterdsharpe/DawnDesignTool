@@ -141,87 +141,6 @@ hour = time / 3600
 
 # endregion
 
-# region Trajectory Optimization Variables
-##### Initialize trajectory optimization variables
-
-x = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=0,
-    scale=1e5,
-    category="ops"
-)
-x_km = x / 1000
-x_mi = x / 1609.34
-
-y = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=opti.value(min_cruise_altitude),
-    scale=1e4,
-    category="ops"
-)
-y_km = y / 1000
-y_ft = y / 0.3048
-
-opti.subject_to([
-    y[time_periodic_start_index:] / min_cruise_altitude > 1,
-    # y[time_periodic_start_index:] == 16000,
-    y / 40000 > 0,  # stay above ground
-    y / 40000 < 1,  # models break down
-])
-#
-# airspeed = opti.variable(
-#     n_vars=n_timesteps,
-#     init_guess=35,
-#     scale=20,
-#     category="ops"
-# )
-
-flight_path_angle = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=0,
-    scale=2,
-    category="ops"
-)
-opti.subject_to([
-    flight_path_angle / 90 < 1,
-    flight_path_angle / 90 > -1,
-])
-
-alpha = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=5,
-    scale=4,
-    category="ops"
-)
-opti.subject_to([
-    alpha > -8,
-    alpha < 12
-])
-
-thrust_force = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=60,
-    scale=50,
-    category="ops"
-)
-opti.subject_to([
-    thrust_force > 0
-])
-
-net_accel_parallel = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=0,
-    scale=1e-5,
-    category="ops"
-)
-net_accel_perpendicular = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=0,
-    scale=1e-7,
-    category="ops"
-)
-# endregion
-
 # region Design Optimization Variables
 ##### Initialize design optimization variables (all units in base SI or derived units)
 
@@ -534,7 +453,152 @@ airplane = asb.Airplane(
     ],
 )
 
-# endregion`
+# endregion
+
+# region Trajectory Optimization Variables
+##### Initialize trajectory optimization variables
+max_bank_angle = 30 # degrees
+x = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=0,
+    scale=1e5,
+    category="ops"
+)
+x_km = x / 1000
+x_mi = x / 1609.34
+
+y = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=opti.value(min_cruise_altitude),
+    scale=1e4,
+    category="ops"
+)
+y_km = y / 1000
+y_ft = y / 0.3048
+
+opti.subject_to([
+    y[time_periodic_start_index:] / min_cruise_altitude > 1,
+    # y[time_periodic_start_index:] == 16000,
+    y / 40000 > 0,  # stay above ground
+    y / 40000 < 1,  # models break down
+])
+#
+# airspeed = opti.variable(
+#     n_vars=n_timesteps,
+#     init_guess=35,
+#     scale=20,
+#     category="ops"
+# )
+
+flight_path_angle = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=0,
+    scale=2,
+    category="ops"
+)
+opti.subject_to([
+    flight_path_angle / 90 < 1,
+    flight_path_angle / 90 > -1,
+])
+
+alpha = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=5,
+    scale=4,
+    category="ops"
+)
+opti.subject_to([
+    alpha > -8,
+    alpha < 12
+])
+
+thrust_force = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=60,
+    scale=50,
+    category="ops"
+)
+opti.subject_to([
+    thrust_force > 0
+])
+
+net_accel_parallel = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=0,
+    scale=1e-5,
+    category="ops"
+)
+net_accel_perpendicular = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=0,
+    scale=1e-7,
+    category="ops"
+)
+
+# create dynamics instance
+
+dyn = asb.DynamicsPointMass3DSpeedGammaTrack(
+    mass_props=asb.MassProperties(mass=mass_total),
+    x_e=opti.variable(
+        n_vars=n_timesteps,
+        init_guess=0,
+        scale=1e5,
+        category="ops"
+    ),
+    y_e=opti.variable(
+        n_vars=n_timesteps,
+        init_guess=opti.value(min_cruise_altitude),
+        scale=1e4,
+        category="ops"
+    ),
+    z_e=opti.variable(
+        n_vars=n_timesteps,
+        init_guess=0,
+        scale=1e5,
+        category='ops'
+    ),
+    airspeed=opti.variable(
+        n_vars=n_timesteps,
+        init_guess=23,
+        scale=20,
+        category="ops"
+    ),
+    gamma=opti.variable(
+        n_vars=n_timesteps,
+        init_guess=0,
+        scale=5,
+        lower_bound=np.radians(-75),
+        upper_bound=np.radians(75),
+        category='ops'
+    ),
+    track=opti.variable(
+        init_guess=0,
+        scale=np.pi,
+        n_vars=n_timesteps,
+        category='ops'
+    ),
+    alpha=opti.variable(
+        n_vars=n_timesteps,
+        init_guess=5,
+        scale=4,
+        category="ops"
+    ),
+    beta=opti.variable(
+        n_vars=n_timesteps,
+        init_guess=0,
+        scale=1,
+        category="ops"
+    ),
+    bank=opti.variable(
+        n_vars=n_timesteps,
+        init_guess=np.radians(0),
+        scale=np.radians(20),
+        lower_bound=np.radians(-max_bank_angle), #TODO define max bank angle
+        upper_bound=np.radians(max_bank_angle)
+    )
+)
+#
+
 ### Payload Module
 my_atmosphere = atmo(altitude=y)
 P = my_atmosphere.pressure()
