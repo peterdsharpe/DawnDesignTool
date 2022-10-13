@@ -458,60 +458,6 @@ airplane = asb.Airplane(
 # region Trajectory Optimization Variables
 ##### Initialize trajectory optimization variables
 max_bank_angle = 30 # degrees
-x = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=0,
-    scale=1e5,
-    category="ops"
-)
-x_km = x / 1000
-x_mi = x / 1609.34
-
-y = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=opti.value(min_cruise_altitude),
-    scale=1e4,
-    category="ops"
-)
-y_km = y / 1000
-y_ft = y / 0.3048
-
-opti.subject_to([
-    y[time_periodic_start_index:] / min_cruise_altitude > 1,
-    # y[time_periodic_start_index:] == 16000,
-    y / 40000 > 0,  # stay above ground
-    y / 40000 < 1,  # models break down
-])
-#
-# airspeed = opti.variable(
-#     n_vars=n_timesteps,
-#     init_guess=35,
-#     scale=20,
-#     category="ops"
-# )
-
-flight_path_angle = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=0,
-    scale=2,
-    category="ops"
-)
-opti.subject_to([
-    flight_path_angle / 90 < 1,
-    flight_path_angle / 90 > -1,
-])
-
-alpha = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=5,
-    scale=4,
-    category="ops"
-)
-opti.subject_to([
-    alpha > -8,
-    alpha < 12
-])
-
 thrust_force = opti.variable(
     n_vars=n_timesteps,
     init_guess=60,
@@ -561,15 +507,15 @@ dyn = asb.DynamicsPointMass3DSpeedGammaTrack(
         n_vars=n_timesteps,
         init_guess=23,
         scale=20,
-        category="ops"
+        category="ops",
     ),
     gamma=opti.variable(
         n_vars=n_timesteps,
         init_guess=0,
-        scale=5,
-        lower_bound=np.radians(-75),
-        upper_bound=np.radians(75),
-        category='ops'
+        scale=2,
+        category="ops",
+        upper_bound=np.radians(90),
+        lower_bound=np.radians(-90)
     ),
     track=opti.variable(
         init_guess=0,
@@ -581,7 +527,9 @@ dyn = asb.DynamicsPointMass3DSpeedGammaTrack(
         n_vars=n_timesteps,
         init_guess=5,
         scale=4,
-        category="ops"
+        category="ops",
+        lower_bound=-8,
+        upper_bound=12,
     ),
     beta=opti.variable(
         n_vars=n_timesteps,
@@ -597,7 +545,17 @@ dyn = asb.DynamicsPointMass3DSpeedGammaTrack(
         upper_bound=np.radians(max_bank_angle)
     )
 )
-#
+# constrain the initial state
+opti.subject_to([
+    y[time_periodic_start_index:] / min_cruise_altitude > 1,
+    # y[time_periodic_start_index:] == 16000,
+    y / 40000 > 0,  # stay above ground
+    y / 40000 < 1,  # models break down
+])
+x_km = dyn.x_e / 1000
+x_mi = dyn.x_e / 1609.34
+y_km = dyn.y_e / 1000
+y_ft = dyn.y_e / 0.3048
 
 ### Payload Module
 my_atmosphere = atmo(altitude=y)
