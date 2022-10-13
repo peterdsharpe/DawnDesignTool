@@ -1753,8 +1753,8 @@ for penalty_input in [
     net_accel_parallel / 1e-1,
     net_accel_perpendicular / 1e-1,
     groundspeed,
-    flight_path_angle / 2,
-    alpha / 1,
+    dyn.gamma / 2,
+    dyn.alpha / 1,
 ]:
     penalty += np.sum(np.diff(np.diff(penalty_input)) ** 2) / n_timesteps_per_segment
 
