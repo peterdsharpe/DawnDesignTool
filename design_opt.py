@@ -702,16 +702,16 @@ loc = np.where(place_on_track > single_track_length,
 # vehicle_bearing = leg_2_bearing
 vehicle_bearing = np.where(
     loc > leg_1_length,
-    leg_1_bearing, #+ (loc - leg_1_length) * 180 / (np.pi * turn_1_radius),
+    leg_1_bearing + (loc - leg_1_length) * 180 / (np.pi * turn_1_radius),
     leg_1_bearing
 )
 vehicle_bearing = np.where(
-    loc > (leg_1_length + arc_length_turn_1),
+    loc > (leg_1_length + turn_1_length),
     leg_2_bearing,
     vehicle_bearing
 )
 vehicle_bearing = np.where(
-    loc > (leg_1_length + arc_length_turn_1 + leg_2_length),
+    loc > (leg_1_length + turn_1_length + leg_2_length),
     leg_2_bearing + ((loc - (leg_1_length + arc_length_turn_1 + leg_2_length)) * 180 / (np.pi * turn_2_radius)),
     vehicle_bearing
 )
