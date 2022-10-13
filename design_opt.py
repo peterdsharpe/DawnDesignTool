@@ -637,15 +637,14 @@ opti.subject_to([
     radar_length <= 0.4,
 ])
 
-
 # region Flight Path Optimization
 wind_speed = wind_speed_func(y)
 wind_direction = opti.parameter(value=90)
-required_revisit_rate = opti.parameter(value=0.75)
+required_revisit_rate = opti.parameter(value=0)
 swath_overlap = opti.parameter(value=0.1)
 revisit_rate = opti.variable(
-    init_guess=required_revisit_rate,
-    scale=0.1,
+    init_guess=10,
+    scale=1,
     category="ops"
 )
 airspeed = opti.variable(
@@ -660,40 +659,50 @@ place_on_track = opti.variable(
     scale=10000,
     category="ops"
 )
-# starting_point_on_track = opti.variable(
-#     init_guess=19000,
-#     scale=10000,
-#     category="ops"
-# )
-starting_point_on_track = 0
+starting_point_on_track = opti.variable(
+    init_guess=19000,
+    scale=10000,
+    category="ops"
+)
+passes_required = opti.variable(
+    init_guess=6,
+    scale=1,
+    category='ops'
+)
+# starting_point_on_track = 0
 # trajectory
 ground_imaging_offset = opti.parameter(value = 14440 / 8)
-overlap_width = swath_range * swath_overlap
+overlap_width = swath_range[0] * swath_overlap
 leg_1_length = sample_area_height
 leg_1_bearing = 0
 leg_2_bearing = 180
-turn_1_radius = (ground_imaging_offset * 2 + swath_range * 2 - overlap_width) / 2
+turn_1_radius = (ground_imaging_offset * 2 + swath_range[0] * 2 - overlap_width) / 2
 arc_length_turn_1 = (360 - (leg_1_bearing - leg_2_bearing)) / 180 * np.pi * turn_1_radius
 turn_1_length = np.pi * turn_1_radius  # assume semi-circle
 leg_2_length = sample_area_height
-turn_2_radius = (turn_1_radius * 2 - (2 * ground_imaging_offset + swath_range)) / 2
+turn_2_radius = (turn_1_radius * 2 - (2 * ground_imaging_offset + swath_range[0])) / 2
 turn_2_length = np.pi * turn_2_radius  # assume semi-circle
 arc_length_turn_2 = (360 - (leg_1_bearing - leg_2_bearing)) / 180 * np.pi * turn_2_radius
 
-total_track_length = leg_1_length + leg_2_length + turn_1_length + turn_2_length
+opti.subject_to([
+    sample_area_width <= swath_range[0] * passes_required - (overlap_width * (passes_required - 1)),
+])
+
+single_track_length = leg_1_length + leg_2_length + turn_1_length + turn_2_length
+total_track_length = single_track_length * passes_required
 
 opti.subject_to([
-    place_on_track == asb.cas.mod(x,  total_track_length) + starting_point_on_track,
+    place_on_track == asb.cas.mod(x,  single_track_length) + starting_point_on_track,
     starting_point_on_track >= 0,
-    starting_point_on_track <= total_track_length,
+    starting_point_on_track <= single_track_length,
 ])
-loc = np.where(place_on_track > total_track_length,
-                           place_on_track - total_track_length,
+loc = np.where(place_on_track > single_track_length,
+                           place_on_track - single_track_length,
                            place_on_track)
-# vehicle_bearing = np.ones(n_timesteps) * leg_1_bearing
+# vehicle_bearing = leg_2_bearing
 vehicle_bearing = np.where(
     loc > leg_1_length,
-    leg_1_bearing + (loc - leg_1_length) * 180 / (np.pi * turn_1_radius),
+    leg_1_bearing, #+ (loc - leg_1_length) * 180 / (np.pi * turn_1_radius),
     leg_1_bearing
 )
 vehicle_bearing = np.where(
@@ -703,7 +712,7 @@ vehicle_bearing = np.where(
 )
 vehicle_bearing = np.where(
     loc > (leg_1_length + arc_length_turn_1 + leg_2_length),
-    leg_2_bearing - ((loc - (leg_1_length + arc_length_turn_1 + leg_2_length)) * 180 / (np.pi * turn_2_radius)),
+    leg_2_bearing + ((loc - (leg_1_length + arc_length_turn_1 + leg_2_length)) * 180 / (np.pi * turn_2_radius)),
     vehicle_bearing
 )
 opti.subject_to([
