@@ -457,16 +457,7 @@ airplane = asb.Airplane(
 
 # region Trajectory Optimization Variables
 ##### Initialize trajectory optimization variables
-max_bank_angle = 30 # degrees
-thrust_force = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=60,
-    scale=50,
-    category="ops"
-)
-opti.subject_to([
-    thrust_force > 0
-])
+max_bank_angle = 30  # degrees
 
 net_accel_parallel = opti.variable(
     n_vars=n_timesteps,
@@ -503,7 +494,7 @@ dyn = asb.DynamicsPointMass3DSpeedGammaTrack(
         scale=1e5,
         category='ops'
     ),
-    airspeed=opti.variable(
+    speed=opti.variable(
         n_vars=n_timesteps,
         init_guess=23,
         scale=20,
@@ -541,16 +532,27 @@ dyn = asb.DynamicsPointMass3DSpeedGammaTrack(
         n_vars=n_timesteps,
         init_guess=np.radians(0),
         scale=np.radians(20),
-        lower_bound=np.radians(-max_bank_angle), #TODO define max bank angle
+        lower_bound=np.radians(-max_bank_angle),  # TODO define max bank angle
         upper_bound=np.radians(max_bank_angle)
-    )
+    ),
+)
+thrust_force = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=60,
+    scale=50,
+    category="ops",
+    lower_bound=0
+)
+dyn.add_force(
+    Fx=thrust_force,
+    axes='wind'
 )
 # constrain the initial state
 opti.subject_to([
-    y[time_periodic_start_index:] / min_cruise_altitude > 1,
+    dyn.y_e[time_periodic_start_index:] / min_cruise_altitude > 1,
     # y[time_periodic_start_index:] == 16000,
-    y / 40000 > 0,  # stay above ground
-    y / 40000 < 1,  # models break down
+    dyn.y_e / 40000 > 0,  # stay above ground
+    dyn.y_e / 40000 < 1,  # models break down
 ])
 x_km = dyn.x_e / 1000
 x_mi = dyn.x_e / 1609.34
@@ -558,7 +560,7 @@ y_km = dyn.y_e / 1000
 y_ft = dyn.y_e / 0.3048
 
 ### Payload Module
-my_atmosphere = atmo(altitude=y)
+my_atmosphere = atmo(altitude=dyn.y_e)
 P = my_atmosphere.pressure()
 rho = my_atmosphere.density()
 T = my_atmosphere.temperature()
@@ -577,19 +579,19 @@ center_wavelength = opti.variable(
     category='des',
     lower_bound=0.02,
     upper_bound=0.04,
-) # constrain to roughly X-band wavelengths
+)  # constrain to roughly X-band wavelengths
 radar_length = opti.variable(
     init_guess=0.1,
     scale=1,
     category='des',
     lower_bound=0,
-) # meters
+)  # meters
 radar_width = opti.variable(
     init_guess=0.03,
     scale=0.1,
     category='des',
     lower_bound=0,
-) # meters
+)  # meters
 bandwidth = opti.variable(
     init_guess=1e8,
     scale=1e6,
@@ -621,16 +623,16 @@ groundspeed = opti.variable(
     category="ops"
 )
 # # define key radar parameters
-radar_area = radar_width * radar_length # meters ** 2
-look_angle = opti.parameter(value=45) # degrees
-dist = y / np.cosd(look_angle) # meters
-grazing_angle = 90 - look_angle # degrees
-swath_azimuth = center_wavelength * dist / radar_length # meters
-swath_range = center_wavelength * dist / (radar_width * np.cosd(look_angle)) # meters
-max_length_synth_ap = center_wavelength * dist / radar_length # meters
-ground_area = swath_range * swath_azimuth * np.pi / 4 # meters ** 2
-radius = (swath_azimuth + swath_range) / 4 # meters
-ground_imaging_offset = np.sin(look_angle) * dist # meters
+radar_area = radar_width * radar_length  # meters ** 2
+look_angle = opti.parameter(value=45)  # degrees
+dist = dyn.y_e / np.cosd(look_angle)  # meters
+grazing_angle = 90 - look_angle  # degrees
+swath_azimuth = center_wavelength * dist / radar_length  # meters
+swath_range = center_wavelength * dist / (radar_width * np.cosd(look_angle))  # meters
+max_length_synth_ap = center_wavelength * dist / radar_length  # meters
+ground_area = swath_range * swath_azimuth * np.pi / 4  # meters ** 2
+radius = (swath_azimuth + swath_range) / 4  # meters
+ground_imaging_offset = np.sin(look_angle) * dist  # meters
 sigma0 = 10 ** (sigma0_db / 10)
 scattering_cross_sec = sigma0
 antenna_gain = 4 * np.pi * radar_area * 0.7 / center_wavelength ** 2
@@ -648,7 +650,7 @@ opti.subject_to([
 noise_power_density = k_b * T * bandwidth / (center_wavelength ** 2)
 power_trans = peak_power * pulse_duration
 power_received = power_trans * antenna_gain * radar_area * scattering_cross_sec / ((4 * np.pi) ** 2 * dist ** 4)
-power_out_payload = power_trans / pulse_rep_freq # TODO check this is correct
+power_out_payload = power_trans / pulse_rep_freq  # TODO check this is correct
 snr = power_received / noise_power_density
 snr_db = 10 * np.log(snr)
 opti.subject_to([
@@ -660,7 +662,7 @@ opti.subject_to([
 ])
 
 # region Flight Path Optimization
-wind_speed = wind_speed_func(y)
+wind_speed = wind_speed_func(dyn.y_e)
 wind_direction = opti.parameter(value=90)
 required_revisit_rate = opti.parameter(value=0)
 swath_overlap = opti.parameter(value=0.1)
@@ -693,7 +695,7 @@ passes_required = opti.variable(
 )
 # starting_point_on_track = 0
 # trajectory
-ground_imaging_offset = opti.parameter(value = 14440 / 8)
+ground_imaging_offset = opti.parameter(value=14440 / 8)
 overlap_width = swath_range[0] * swath_overlap
 leg_1_length = sample_area_height
 leg_1_bearing = 0
@@ -714,13 +716,13 @@ single_track_length = leg_1_length + leg_2_length + turn_1_length + turn_2_lengt
 total_track_length = single_track_length * passes_required
 
 opti.subject_to([
-    place_on_track == asb.cas.mod(x,  single_track_length) + starting_point_on_track,
+    place_on_track == asb.cas.mod(dyn.x_e, single_track_length) + starting_point_on_track,
     starting_point_on_track >= 0,
     starting_point_on_track <= single_track_length,
 ])
 loc = np.where(place_on_track > single_track_length,
-                           place_on_track - single_track_length,
-                           place_on_track)
+               place_on_track - single_track_length,
+               place_on_track)
 # vehicle_bearing = leg_2_bearing
 vehicle_bearing = np.where(
     loc > leg_1_length,
@@ -738,7 +740,7 @@ vehicle_bearing = np.where(
     vehicle_bearing
 )
 opti.subject_to([
-    revisit_rate == (x[time_periodic_end_index] / total_track_length),
+    revisit_rate == (dyn.x_e[time_periodic_end_index] / total_track_length),
     revisit_rate >= required_revisit_rate,
 ])
 groundspeed_x = groundspeed * np.cosd(vehicle_bearing)
@@ -767,7 +769,6 @@ power_out_payload_adjusted = np.where(
     power_out_payload,
     power_out_payload_adjusted
 )
-
 
 # region Atmosphere
 ##### Atmosphere
@@ -865,7 +866,7 @@ def compute_wing_aerodynamics(
 ):
     surface.alpha_eff = incidence_angle + surface.mean_twist_angle()
     if is_horizontal_surface:
-        surface.alpha_eff += alpha
+        surface.alpha_eff += dyn.alpha
 
     surface.Re = rho / mu * airspeed * surface.mean_geometric_chord()
     surface.airfoil = surface.xsecs[0].airfoil
@@ -1052,7 +1053,7 @@ if not use_propulsion_fits_from_FL2020_1682_undergrads:
     motor_efficiency = 0.955  # Taken from ThinGap estimates
 
     power_out_propulsion_shaft = lib_prop_prop.propeller_shaft_power_from_thrust(
-        thrust_force=thrust_force,
+        thrust_force=dyn.Fx_w,
         area_propulsive=area_propulsive,
         airspeed=airspeed,
         rho=rho,
@@ -1065,15 +1066,15 @@ else:
     ### Use Jamie's model
     from design_opt_utilities.new_models import eff_curve_fit
 
-    opti.subject_to(y < 30000)  # Bugs out without this limiter
+    opti.subject_to(dyn.y_e < 30000)  # Bugs out without this limiter
 
     propeller_efficiency, motor_efficiency = eff_curve_fit(
         airspeed=airspeed,
-        total_thrust=thrust_force,
-        altitude=y,
+        total_thrust=dyn.Fx_w,
+        altitude=dyn.y_e,
         var_pitch=variable_pitch
     )
-    power_out_propulsion_shaft = thrust_force * airspeed / propeller_efficiency
+    power_out_propulsion_shaft = dyn.Fx_w * airspeed / propeller_efficiency
 
     gearbox_efficiency = 0.986
 
@@ -1605,14 +1606,14 @@ gravity_force = g * mass_total
 # region Dynamics
 
 net_force_parallel_calc = (
-        thrust_force * np.cosd(alpha) -
+        thrust_force * np.cosd(dyn.alpha) -
         drag_force -
-        gravity_force * np.sind(flight_path_angle)
+        gravity_force * np.sind(dyn.gamma)
 )
 net_force_perpendicular_calc = (
-        thrust_force * np.sind(alpha) +
+        thrust_force * np.sind(dyn.alpha) +
         lift_force -
-        gravity_force * np.cosd(flight_path_angle)
+        gravity_force * np.cosd(dyn.gamma)
 )
 
 opti.subject_to([
@@ -1626,13 +1627,13 @@ gammadot = (net_accel_perpendicular / airspeed) * 180 / np.pi
 trapz = lambda x: (x[1:] + x[:-1]) / 2
 
 dt = np.diff(time)
-dx = np.diff(x)
-dy = np.diff(y)
-dspeed = np.diff(airspeed)
-dgamma = np.diff(flight_path_angle)
+dx = np.diff(dyn.x_e)
+dy = np.diff(dyn.y_e)
+dspeed = np.diff(dyn.speed)
+dgamma = np.diff(dyn.gamma)
 
-xdot_trapz = trapz(groundspeed * np.cosd(flight_path_angle))
-ydot_trapz = trapz(airspeed * np.sind(flight_path_angle))
+xdot_trapz = trapz(groundspeed * np.cosd(dyn.gamma))
+ydot_trapz = trapz(airspeed * np.sind(dyn.gamma))
 speeddot_trapz = trapz(speeddot)
 gammadot_trapz = trapz(gammadot)
 
@@ -1673,24 +1674,24 @@ opti.subject_to([
 
 ##### Add initial state constraints
 opti.subject_to([
-    x[0] / 1e5 == 0,  # Start at x-datum of zero
+    dyn.x_e[0] / 1e5 == 0,  # Start at x-datum of zero
 ])
 
 ##### Add periodic constraints
 opti.subject_to([
-    x[time_periodic_end_index] / 1e5 > (x[time_periodic_start_index] + required_headway_per_day) / 1e5,
-    y[time_periodic_end_index] / 1e4 > y[time_periodic_start_index] / 1e4,
-    airspeed[time_periodic_end_index] / 2e1 > airspeed[time_periodic_start_index] / 2e1,
+    dyn.x_e[time_periodic_end_index] / 1e5 > (dyn.x_e[time_periodic_start_index] + required_headway_per_day) / 1e5,
+    dyn.y_e[time_periodic_end_index] / 1e4 > dyn.y_e[time_periodic_start_index] / 1e4,
+    dyn.speed[time_periodic_end_index] / 2e1 > dyn.speed[time_periodic_start_index] / 2e1,
     battery_stored_energy_nondim[time_periodic_end_index] > battery_stored_energy_nondim[time_periodic_start_index],
-    flight_path_angle[time_periodic_end_index] == flight_path_angle[time_periodic_start_index],
-    alpha[time_periodic_end_index] == alpha[time_periodic_start_index],
+    dyn.gamma[time_periodic_end_index] == dyn.gamma[time_periodic_start_index],
+    dyn.alpha[time_periodic_end_index] == dyn.alpha[time_periodic_start_index],
     thrust_force[time_periodic_end_index] / 1e2 == thrust_force[time_periodic_start_index] / 1e2,
 ])
 
 ##### Optional constraints
 if not allow_trajectory_optimization:
     opti.subject_to([
-        flight_path_angle / 100 == 0
+        dyn.gamma / 100 == 0
     ])
     # Prevent groundspeed loss
     # opti.subject_to([
@@ -1862,12 +1863,14 @@ if __name__ == "__main__":
     vel[0, :] = s(groundspeed_x)
     vel[1, :] = s(groundspeed_y)
     time_delta = np.ones(n_timesteps) * time[1]
-    plot_pos[:, :] = np.cumsum(time_delta*vel, axis=1)
-    d = {'x':s(x), 'groundspeed':s(groundspeed), 'airspeed':s(airspeed), 'wind_speed':s(wind_speed),
-         'plot_pos_x': plot_pos[0], 'plot_pos_y':plot_pos[1], 'groundspeed_x':s(groundspeed_x),
-         'groundspeed_y':s(groundspeed_y), 'airspeed_x':s(airspeed_x), 'airspeed_y': s(airspeed_y),
-         'vehicle_heading':s(vehicle_heading), 'vehicle_bearing':s(vehicle_bearing)}
+    plot_pos[:, :] = np.cumsum(time_delta * vel, axis=1)
+    d = {'x': s(x), 'groundspeed': s(groundspeed), 'airspeed': s(airspeed), 'wind_speed': s(wind_speed),
+         'plot_pos_x': plot_pos[0], 'plot_pos_y': plot_pos[1], 'groundspeed_x': s(groundspeed_x),
+         'groundspeed_y': s(groundspeed_y), 'airspeed_x': s(airspeed_x), 'airspeed_y': s(airspeed_y),
+         'vehicle_heading': s(vehicle_heading), 'vehicle_bearing': s(vehicle_bearing)}
     df_trajectory = pd.DataFrame(data=d)
+
+
     def plot(
             x_name: str,
             y_name: str,
