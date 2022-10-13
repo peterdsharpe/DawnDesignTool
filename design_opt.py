@@ -486,7 +486,9 @@ dyn = asb.DynamicsPointMass3DSpeedGammaTrack(
         n_vars=n_timesteps,
         init_guess=opti.value(min_cruise_altitude),
         scale=1e4,
-        category="ops"
+        category="ops",
+        lower_bound=0,
+        upper_bound=400000,
     ),
     z_e=opti.variable(
         n_vars=n_timesteps,
@@ -543,17 +545,16 @@ thrust_force = opti.variable(
     category="ops",
     lower_bound=0
 )
+# Add forces
 dyn.add_force(
     Fx=thrust_force,
     axes='wind'
 )
-# constrain the initial state
+
 opti.subject_to([
     dyn.y_e[time_periodic_start_index:] / min_cruise_altitude > 1,
-    # y[time_periodic_start_index:] == 16000,
-    dyn.y_e / 40000 > 0,  # stay above ground
-    dyn.y_e / 40000 < 1,  # models break down
 ])
+
 x_km = dyn.x_e / 1000
 x_mi = dyn.x_e / 1609.34
 y_km = dyn.y_e / 1000
