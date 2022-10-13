@@ -1615,31 +1615,18 @@ dyn.add_force(
     axes='body'
 )
 
-speeddot = net_accel_parallel
-gammadot = (net_accel_perpendicular / airspeed) * 180 / np.pi
+# Add some constraints on rate of change of inputs (alpha and bank angle)
+pitch_rate = np.diff(dyn.alpha) / np.diff(time)  # deg/sec
+roll_rate = np.diff(np.degrees(dyn.bank)) / np.diff(time)  # deg/sec
+opti.subject_to([
+    pitch_rate > -5,
+    pitch_rate < 5,
+    roll_rate > -10,
+    roll_rate < 10,
+])
 
 trapz = lambda x: (x[1:] + x[:-1]) / 2
-
 dt = np.diff(time)
-dx = np.diff(dyn.x_e)
-dy = np.diff(dyn.y_e)
-dspeed = np.diff(dyn.speed)
-dgamma = np.diff(dyn.gamma)
-
-xdot_trapz = trapz(groundspeed * np.cosd(dyn.gamma))
-ydot_trapz = trapz(airspeed * np.sind(dyn.gamma))
-speeddot_trapz = trapz(speeddot)
-gammadot_trapz = trapz(gammadot)
-
-##### Winds
-
-# Total
-opti.subject_to([
-    dx / 1e4 == xdot_trapz * dt / 1e4,
-    dy / 1e2 == ydot_trapz * dt / 1e2,
-    dspeed / 1e-1 == speeddot_trapz * dt / 1e-1,
-    dgamma / 1e-2 == gammadot_trapz * dt / 1e-2,
-])
 
 # Powertrain-specific
 opti.subject_to([
@@ -1680,6 +1667,7 @@ opti.subject_to([
     dyn.gamma[time_periodic_end_index] == dyn.gamma[time_periodic_start_index],
     dyn.alpha[time_periodic_end_index] == dyn.alpha[time_periodic_start_index],
     thrust_force[time_periodic_end_index] / 1e2 == thrust_force[time_periodic_start_index] / 1e2,
+    dyn.bank[time_periodic_end_index] == dyn.bank[time_periodic_start_index]
 ])
 
 ##### Optional constraints
