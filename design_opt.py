@@ -918,7 +918,7 @@ mass_motor_mounted = 2 * mass_motor_raw  # similar to a quote from Raymer, modif
 
 mass_propellers = n_propellers * lib_prop_prop.mass_hpa_propeller(
     diameter=propeller_diameter,
-    max_power=power_out_propulsion_max,
+    max_power=power_out_propulsion_max / n_propellers,
     include_variable_pitch_mechanism=variable_pitch
 )
 mass_ESC = lib_prop_elec.mass_ESC(max_power=power_out_propulsion_max)
