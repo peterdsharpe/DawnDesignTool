@@ -547,15 +547,8 @@ c = 299792458  # [m/s] speed of light
 k_b = 1.38064852E-23  # [m2 kg s-2 K-1]
 required_resolution = opti.parameter(value=2)  # meters from conversation with Brent on 2/18/22
 required_snr = opti.parameter(value=6)  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
-# center_wavelength = opti.parameter(value=0.0226)  # meters
+center_wavelength = opti.parameter(value=0.024)  # meters
 sigma0_db = opti.parameter(value=0)  # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
-center_wavelength = opti.variable(
-    init_guess=0.0226,
-    scale=0.01,
-    category='des',
-    lower_bound=0.02,
-    upper_bound=0.04,
-) # constrain to roughly X-band wavelengths
 radar_length = opti.variable(
     init_guess=0.1,
     scale=1,
