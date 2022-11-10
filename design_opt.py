@@ -1776,6 +1776,7 @@ if __name__ == "__main__":
         "max_mass_total",
         "wing_span",
         "wing_root_chord",
+        "revisit_rate"
         # "radar_length",
         # "radar_width",
         # "bandwidth",
