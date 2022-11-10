@@ -664,7 +664,21 @@ passes_required = opti.variable(
 )
 # starting_point_on_track = 0
 # trajectory
-ground_imaging_offset = opti.parameter(value = 14440 / 8)
+max_y = opti.variable(
+    init_guess=min_cruise_altitude,
+    scale=1000,
+    category='ops'
+)
+max_swath_range = opti.variable(
+    init_guess=1500,
+    scale=1000,
+    category='ops'
+)
+opti.subject_to([
+    max_y >= y,
+    max_swath_range >= swath_range,
+])
+ground_imaging_offset = np.sind(look_angle) * max_y
 overlap_width = swath_range[0] * swath_overlap
 leg_1_length = sample_area_height
 leg_1_bearing = 0
