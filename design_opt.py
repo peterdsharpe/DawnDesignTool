@@ -674,19 +674,25 @@ max_swath_range = opti.variable(
     scale=1000,
     category='ops'
 )
+max_swath_azimuth = opti.variable(
+    init_guess=1500,
+    scale=1000,
+    category='ops'
+)
 opti.subject_to([
     max_y >= y,
     max_swath_range >= swath_range,
+    max_swath_azimuth >= swath_azimuth,
 ])
 ground_imaging_offset = np.sind(look_angle) * max_y
-overlap_width = swath_range[0] * swath_overlap
-leg_1_length = sample_area_height
+overlap_width = 10000 * swath_overlap
+leg_1_length = sample_area_height + 2 * max_swath_azimuth
 leg_1_bearing = 0
 leg_2_bearing = 180
 turn_1_radius = (ground_imaging_offset * 2 + swath_range[0] * 2 - overlap_width) / 2
 arc_length_turn_1 = (360 - (leg_1_bearing - leg_2_bearing)) / 180 * np.pi * turn_1_radius
 turn_1_length = np.pi * turn_1_radius  # assume semi-circle
-leg_2_length = sample_area_height
+leg_2_length = turn_1_length
 turn_2_radius = (turn_1_radius * 2 - (2 * ground_imaging_offset + swath_range[0])) / 2
 turn_2_length = np.pi * turn_2_radius  # assume semi-circle
 arc_length_turn_2 = (360 - (leg_1_bearing - leg_2_bearing)) / 180 * np.pi * turn_2_radius
