@@ -55,7 +55,7 @@ sample_area_width = opti.parameter(value=10000)  # meters
 required_headway_per_day = opti.parameter(value=0)
 allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
-make_plots = False
+make_plots = True
 mass_payload = opti.parameter(value=10)
 tail_panels = True
 fuselage_billboard = False
@@ -92,7 +92,7 @@ allowable_battery_depth_of_discharge = opti.parameter(
 q_ne_over_q_max = opti.parameter(value=2)  # Chosen on the basis of a paper read by Trevor Long about Helios, 1/16/21
 
 ##### Simulation Parameters
-n_timesteps_per_segment = 180  # Only relevant if allow_trajectory_optimization is True.
+n_timesteps_per_segment = 500  # Only relevant if allow_trajectory_optimization is True.
 # Quick convergence testing indicates you can get bad analyses below 150 or so...
 
 ##### Optimization bounds
@@ -623,7 +623,7 @@ power_out_payload = power_trans / pulse_rep_freq # TODO check this is correct
 snr = power_received / noise_power_density
 snr_db = 10 * np.log(snr)
 opti.subject_to([
-    required_snr <= snr_db,
+    # required_snr <= snr_db,
     pulse_rep_freq >= 2 * groundspeed / radar_length,
     pulse_rep_freq <= c / (2 * swath_azimuth),
     radar_width <= 0.4,
@@ -652,17 +652,6 @@ place_on_track = opti.variable(
     scale=10000,
     category="ops"
 )
-starting_point_on_track = opti.variable(
-    init_guess=19000,
-    scale=10000,
-    category="ops"
-)
-passes_required = opti.variable(
-    init_guess=6,
-    scale=1,
-    category='ops'
-)
-# starting_point_on_track = 0
 # trajectory
 max_y = opti.variable(
     init_guess=min_cruise_altitude,
@@ -685,29 +674,26 @@ opti.subject_to([
     max_swath_azimuth >= swath_azimuth,
 ])
 ground_imaging_offset = np.sind(look_angle) * max_y
-overlap_width = 10000 * swath_overlap
+overlap_width = swath_range * swath_overlap
 leg_1_length = sample_area_height + 2 * max_swath_azimuth
 leg_1_bearing = 0
 leg_2_bearing = 180
-turn_1_radius = (2 * ground_imaging_offset + (2 - swath_overlap) * swath_range) / 2
+turn_1_radius = (2 * ground_imaging_offset - overlap_width) / 2
 arc_length_turn_1 = (360 - (leg_1_bearing - leg_2_bearing)) / 180 * np.pi * turn_1_radius
 turn_1_length = np.pi * turn_1_radius  # assume semi-circle
 leg_2_length = turn_1_length
-turn_2_radius = (2 * ground_imaging_offset - swath_overlap * swath_range) / 2
+turn_2_radius = 2 * swath_range - 2 * ground_imaging_offset + overlap_width
 turn_2_length = np.pi * turn_2_radius  # assume semi-circle
 arc_length_turn_2 = (360 - (leg_1_bearing - leg_2_bearing)) / 180 * np.pi * turn_2_radius
 
-opti.subject_to([
-    sample_area_width <= swath_range[0] * passes_required - (overlap_width * (passes_required - 1)),
-])
-
+single_track_coverage = 2 * swath_range - overlap_width
 single_track_length = leg_1_length + leg_2_length + turn_1_length + turn_2_length
+passes_required = sample_area_width / single_track_coverage
 total_track_length = single_track_length * passes_required
 
+
 opti.subject_to([
-    place_on_track == asb.cas.mod(x,  single_track_length) + starting_point_on_track,
-    starting_point_on_track >= 0,
-    starting_point_on_track <= single_track_length,
+    place_on_track == asb.cas.mod(x,  single_track_length),
 ])
 loc = np.where(place_on_track > single_track_length,
                            place_on_track - single_track_length,
