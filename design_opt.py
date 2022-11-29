@@ -92,7 +92,7 @@ allowable_battery_depth_of_discharge = opti.parameter(
 q_ne_over_q_max = opti.parameter(value=2)  # Chosen on the basis of a paper read by Trevor Long about Helios, 1/16/21
 
 ##### Simulation Parameters
-n_timesteps_per_segment = 500  # Only relevant if allow_trajectory_optimization is True.
+n_timesteps_per_segment = 180  # Only relevant if allow_trajectory_optimization is True.
 # Quick convergence testing indicates you can get bad analyses below 150 or so...
 
 ##### Optimization bounds
@@ -549,18 +549,21 @@ required_resolution = opti.parameter(value=2)  # meters from conversation with B
 required_snr = opti.parameter(value=6)  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
 center_wavelength = opti.parameter(value=0.024)  # meters
 sigma0_db = opti.parameter(value=0)  # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
-radar_length = opti.variable(
-    init_guess=0.1,
-    scale=1,
-    category='des',
-    lower_bound=0,
-) # meters
-radar_width = opti.variable(
-    init_guess=0.03,
-    scale=0.1,
-    category='des',
-    lower_bound=0,
-) # meters
+radar_length = 1
+radar_width = 0.3
+# radar_length = opti.variable(
+#     init_guess=0.1,
+#     scale=1,
+#     category='des',
+#     lower_bound=0.1,
+#     upper_bound=1,
+# ) # meters
+# radar_width = opti.variable(
+#     init_guess=0.03,
+#     scale=0.1,
+#     category='des',
+#     lower_bound=0,
+# ) # meters
 bandwidth = opti.variable(
     init_guess=1e8,
     scale=1e6,
@@ -626,13 +629,11 @@ opti.subject_to([
     # required_snr <= snr_db,
     pulse_rep_freq >= 2 * groundspeed / radar_length,
     pulse_rep_freq <= c / (2 * swath_azimuth),
-    radar_width <= 0.4,
-    radar_length <= 0.4,
 ])
 
 # region Flight Path Optimization
 wind_speed = wind_speed_func(y)
-wind_direction = opti.parameter(value=90)
+wind_direction = opti.parameter(value=0)
 required_revisit_rate = opti.parameter(value=0)
 swath_overlap = opti.parameter(value=0.1)
 revisit_rate = opti.variable(
@@ -673,24 +674,20 @@ opti.subject_to([
     max_swath_range >= swath_range,
     max_swath_azimuth >= swath_azimuth,
 ])
-ground_imaging_offset = np.sind(look_angle) * max_y
 overlap_width = swath_range * swath_overlap
 leg_1_length = sample_area_height + 2 * max_swath_azimuth
 leg_1_bearing = 0
 leg_2_bearing = 180
 turn_1_radius = (2 * ground_imaging_offset - overlap_width) / 2
-arc_length_turn_1 = (360 - (leg_1_bearing - leg_2_bearing)) / 180 * np.pi * turn_1_radius
 turn_1_length = np.pi * turn_1_radius  # assume semi-circle
 leg_2_length = turn_1_length
 turn_2_radius = 2 * swath_range - 2 * ground_imaging_offset + overlap_width
 turn_2_length = np.pi * turn_2_radius  # assume semi-circle
-arc_length_turn_2 = (360 - (leg_1_bearing - leg_2_bearing)) / 180 * np.pi * turn_2_radius
 
 single_track_coverage = 2 * swath_range - overlap_width
 single_track_length = leg_1_length + leg_2_length + turn_1_length + turn_2_length
 passes_required = sample_area_width / single_track_coverage
 total_track_length = single_track_length * passes_required
-
 
 opti.subject_to([
     place_on_track == asb.cas.mod(x,  single_track_length),
@@ -698,22 +695,22 @@ opti.subject_to([
 loc = np.where(place_on_track > single_track_length,
                            place_on_track - single_track_length,
                            place_on_track)
-# vehicle_bearing = leg_2_bearing
-vehicle_bearing = np.where(
-    loc > leg_1_length,
-    leg_1_bearing + (loc - leg_1_length) * 180 / (np.pi * turn_1_radius),
-    leg_1_bearing
-)
-vehicle_bearing = np.where(
-    loc > (leg_1_length + turn_1_length),
-    leg_2_bearing,
-    vehicle_bearing
-)
-vehicle_bearing = np.where(
-    loc > (leg_1_length + turn_1_length + leg_2_length),
-    leg_2_bearing + ((loc - (leg_1_length + arc_length_turn_1 + leg_2_length)) * 180 / (np.pi * turn_2_radius)),
-    vehicle_bearing
-)
+vehicle_bearing = leg_2_bearing
+# vehicle_bearing = np.where(
+#     loc > leg_1_length,
+#     leg_1_bearing + (loc - leg_1_length) * 180 / (np.pi * turn_1_radius),
+#     leg_1_bearing
+# )
+# vehicle_bearing = np.where(
+#     loc > (leg_1_length + turn_1_length),
+#     leg_2_bearing,
+#     vehicle_bearing
+# )
+# vehicle_bearing = np.where(
+#     loc > (leg_1_length + turn_1_length + leg_2_length),
+#     leg_2_bearing + ((loc - (leg_1_length + turn_1_length + leg_2_length)) * 180 / (np.pi * turn_2_radius)),
+#     vehicle_bearing
+# )
 opti.subject_to([
     revisit_rate == (x[time_periodic_end_index] / total_track_length),
     revisit_rate >= required_revisit_rate,
@@ -1744,9 +1741,9 @@ opti.minimize(
 if __name__ == "__main__":
     # Solve
     sol = opti.solve(
-        max_iter=5000,
+        max_iter=10000,
         options={
-            "ipopt.max_cpu_time": 1000
+            "ipopt.max_cpu_time": 3000
         }
     )
 
@@ -1835,7 +1832,7 @@ if __name__ == "__main__":
     is_daytime = s(solar_flux_on_horizontal) >= 1  # 1 W/m^2 or greater insolation
     is_nighttime = np.logical_not(is_daytime)
 
-    plot_pos = np.zeros((2, n_timesteps)) + s(starting_point_on_track)
+    plot_pos = np.zeros((2, n_timesteps))
     vel = np.empty((2, n_timesteps))
     vel[0, :] = s(groundspeed_x)
     vel[1, :] = s(groundspeed_y)
