@@ -42,7 +42,7 @@ opti = asb.Opti(  # Normal mode - Design Optimization
 # minimize = "wing.span() / 50"  # any "eval-able" expression
 # minimize = "max_mass_total / 300" # any "eval-able" expression
 # minimize = "wing.span() / 50 * 0.9 + max_mass_total / 300 * 0.1"
-minimize = "wing.span() / 50 * 0.9 - revisit_rate / 20   * 0.1"
+minimize = "wing.span() / 50 * 0.5 - revisit_rate / 20   * 0.5"
 
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
@@ -551,13 +551,13 @@ center_wavelength = opti.parameter(value=0.024)  # meters
 sigma0_db = opti.parameter(value=0)  # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
 radar_length = 1
 radar_width = 0.3
-# radar_length = opti.variable(
-#     init_guess=0.1,
-#     scale=1,
-#     category='des',
-#     lower_bound=0.1,
-#     upper_bound=1,
-# ) # meters
+radar_length = opti.variable(
+    init_guess=0.1,
+    scale=1,
+    category='des',
+    lower_bound=0.1,
+    upper_bound=1,
+) # meters
 # radar_width = opti.variable(
 #     init_guess=0.03,
 #     scale=0.1,
@@ -634,7 +634,7 @@ opti.subject_to([
 # region Flight Path Optimization
 wind_speed = wind_speed_func(y)
 wind_direction = opti.parameter(value=0)
-required_revisit_rate = opti.parameter(value=0)
+required_revisit_rate = opti.parameter(value=0.1)
 swath_overlap = opti.parameter(value=0.1)
 revisit_rate = opti.variable(
     init_guess=10,
@@ -669,19 +669,26 @@ max_swath_azimuth = opti.variable(
     scale=1000,
     category='ops'
 )
+max_imaging_offset = opti.variable(
+    init_guess=1500,
+    scale=1000,
+    category='ops'
+)
 opti.subject_to([
     max_y >= y,
     max_swath_range >= swath_range,
     max_swath_azimuth >= swath_azimuth,
+    max_imaging_offset >= ground_imaging_offset,
+    max_imaging_offset <= ground_imaging_offset + 1,
 ])
-overlap_width = swath_range * swath_overlap
+overlap_width = max_swath_range * swath_overlap
 leg_1_length = sample_area_height + 2 * max_swath_azimuth
 leg_1_bearing = 0
 leg_2_bearing = 180
-turn_1_radius = (2 * ground_imaging_offset - overlap_width) / 2
+turn_1_radius = (2 * max_imaging_offset - overlap_width) / 2
 turn_1_length = np.pi * turn_1_radius  # assume semi-circle
 leg_2_length = turn_1_length
-turn_2_radius = 2 * swath_range - 2 * ground_imaging_offset + overlap_width
+turn_2_radius = 2 * max_swath_range - 2 * max_imaging_offset + overlap_width
 turn_2_length = np.pi * turn_2_radius  # assume semi-circle
 
 single_track_coverage = 2 * swath_range - overlap_width
@@ -695,7 +702,7 @@ opti.subject_to([
 loc = np.where(place_on_track > single_track_length,
                            place_on_track - single_track_length,
                            place_on_track)
-vehicle_bearing = leg_2_bearing
+vehicle_bearing = leg_1_bearing
 # vehicle_bearing = np.where(
 #     loc > leg_1_length,
 #     leg_1_bearing + (loc - leg_1_length) * 180 / (np.pi * turn_1_radius),
