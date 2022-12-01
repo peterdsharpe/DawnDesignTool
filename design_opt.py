@@ -42,16 +42,16 @@ opti = asb.Opti(  # Normal mode - Design Optimization
 # minimize = "wing.span() / 50"  # any "eval-able" expression
 # minimize = "max_mass_total / 300" # any "eval-able" expression
 # minimize = "wing.span() / 50 * 0.9 + max_mass_total / 300 * 0.1"
-minimize = "wing.span() / 50 * 0.5 - revisit_rate / 20   * 0.5"
+minimize = "wing.span() / 50 * 0.1 - revisit_rate / 30   * 0.9"
 
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
 latitude = opti.parameter(value=-75)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
-day_of_year = opti.parameter(value=45)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
+day_of_year = opti.parameter(value=30)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 strat_offset_value = opti.parameter(value=1000)
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
-sample_area_height = opti.parameter(value=15000)  # meters
-sample_area_width = opti.parameter(value=10000)  # meters
+sample_area_height = opti.parameter(value=150000)  # meters
+sample_area_width = opti.parameter(value=100000)  # meters
 required_headway_per_day = opti.parameter(value=0)
 allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
@@ -604,7 +604,7 @@ swath_range = center_wavelength * dist / (radar_width * np.cosd(look_angle)) # m
 max_length_synth_ap = center_wavelength * dist / radar_length # meters
 ground_area = swath_range * swath_azimuth * np.pi / 4 # meters ** 2
 radius = (swath_azimuth + swath_range) / 4 # meters
-ground_imaging_offset = np.sin(look_angle) * dist # meters
+ground_imaging_offset = np.tand(look_angle) * y # meters
 sigma0 = 10 ** (sigma0_db / 10)
 scattering_cross_sec = sigma0
 antenna_gain = 4 * np.pi * radar_area * 0.7 / center_wavelength ** 2
@@ -634,7 +634,7 @@ opti.subject_to([
 # region Flight Path Optimization
 wind_speed = wind_speed_func(y)
 wind_direction = opti.parameter(value=0)
-required_revisit_rate = opti.parameter(value=0.1)
+required_revisit_rate = opti.parameter(value=0)
 swath_overlap = opti.parameter(value=0.1)
 revisit_rate = opti.variable(
     init_guess=10,
@@ -677,7 +677,9 @@ max_imaging_offset = opti.variable(
 opti.subject_to([
     max_y >= y,
     max_swath_range >= swath_range,
+    max_swath_range <= swath_range + 1,
     max_swath_azimuth >= swath_azimuth,
+    max_swath_azimuth <= swath_azimuth + 1,
     max_imaging_offset >= ground_imaging_offset,
     max_imaging_offset <= ground_imaging_offset + 1,
 ])
@@ -688,10 +690,10 @@ leg_2_bearing = 180
 turn_1_radius = (2 * max_imaging_offset - overlap_width) / 2
 turn_1_length = np.pi * turn_1_radius  # assume semi-circle
 leg_2_length = turn_1_length
-turn_2_radius = 2 * max_swath_range - 2 * max_imaging_offset + overlap_width
+turn_2_radius = (2 * max_swath_range - 2 * max_imaging_offset + overlap_width) / 2
 turn_2_length = np.pi * turn_2_radius  # assume semi-circle
 
-single_track_coverage = 2 * swath_range - overlap_width
+single_track_coverage = 2 * max_swath_range - overlap_width
 single_track_length = leg_1_length + leg_2_length + turn_1_length + turn_2_length
 passes_required = sample_area_width / single_track_coverage
 total_track_length = single_track_length * passes_required
@@ -731,6 +733,7 @@ airspeed_y = groundspeed_y - windspeed_y
 opti.subject_to([
     airspeed >= 0,
     airspeed ** 2 == (airspeed_x ** 2 + airspeed_y ** 2),
+    groundspeed == airspeed - wind_speed,
 ])
 vehicle_heading = np.arctan2d(airspeed_y, airspeed_x)
 
