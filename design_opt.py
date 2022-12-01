@@ -1615,10 +1615,28 @@ dy = np.diff(y)
 dspeed = np.diff(airspeed)
 dgamma = np.diff(flight_path_angle)
 
-xdot_trapz = trapz(groundspeed * np.cosd(flight_path_angle))
+xdot_trapz = trapz(airspeed * np.cosd(flight_path_angle))
 ydot_trapz = trapz(airspeed * np.sind(flight_path_angle))
 speeddot_trapz = trapz(speeddot)
 gammadot_trapz = trapz(gammadot)
+
+##### Winds
+
+wind_speed = wind_speed_func(y)
+wind_speed_midpoints = wind_speed_func(trapz(y))
+
+# Total
+opti.subject_to([
+    dx / 1e4 == (xdot_trapz - wind_speed_midpoints) * dt / 1e4,
+    dy / 1e2 == ydot_trapz * dt / 1e2,
+    dspeed / 1e-1 == speeddot_trapz * dt / 1e-1,
+    dgamma / 1e-2 == gammadot_trapz * dt / 1e-2,
+])
+
+# Powertrain-specific
+opti.subject_to([
+    net_power / 5e3 < (power_in - power_out) / 5e3,
+])
 
 ##### Winds
 
