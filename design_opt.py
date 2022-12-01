@@ -690,7 +690,7 @@ leg_2_bearing = 180
 turn_1_radius = (2 * max_imaging_offset - overlap_width) / 2
 turn_1_length = np.pi * turn_1_radius  # assume semi-circle
 leg_2_length = turn_1_length
-turn_2_radius = (2 * max_swath_range - 2 * max_imaging_offset + overlap_width) / 2
+turn_2_radius = (2 * max_swath_range - overlap_width) / 2
 turn_2_length = np.pi * turn_2_radius  # assume semi-circle
 
 single_track_coverage = 2 * max_swath_range - overlap_width
