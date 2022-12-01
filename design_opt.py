@@ -685,12 +685,10 @@ opti.subject_to([
 ])
 overlap_width = max_swath_range * swath_overlap
 leg_1_length = sample_area_height + 2 * max_swath_azimuth
-leg_1_bearing = 0
-leg_2_bearing = 180
 turn_1_radius = (2 * max_imaging_offset - overlap_width) / 2
 turn_1_length = np.pi * turn_1_radius  # assume semi-circle
 leg_2_length = turn_1_length
-turn_2_radius = (2 * max_swath_range - 2 * max_imaging_offset + overlap_width) / 2
+turn_2_radius = (2 * max_swath_range - overlap_width) / 2
 turn_2_length = np.pi * turn_2_radius  # assume semi-circle
 
 single_track_coverage = 2 * max_swath_range - overlap_width
@@ -704,53 +702,17 @@ opti.subject_to([
 loc = np.where(place_on_track > single_track_length,
                            place_on_track - single_track_length,
                            place_on_track)
-vehicle_bearing = leg_1_bearing
-# vehicle_bearing = np.where(
-#     loc > leg_1_length,
-#     leg_1_bearing + (loc - leg_1_length) * 180 / (np.pi * turn_1_radius),
-#     leg_1_bearing
-# )
-# vehicle_bearing = np.where(
-#     loc > (leg_1_length + turn_1_length),
-#     leg_2_bearing,
-#     vehicle_bearing
-# )
-# vehicle_bearing = np.where(
-#     loc > (leg_1_length + turn_1_length + leg_2_length),
-#     leg_2_bearing + ((loc - (leg_1_length + turn_1_length + leg_2_length)) * 180 / (np.pi * turn_2_radius)),
-#     vehicle_bearing
-# )
+vehicle_bearing = 180
 opti.subject_to([
-    revisit_rate == (x[time_periodic_end_index] / total_track_length),
+    revisit_rate <= (x[time_periodic_end_index] / total_track_length),
     revisit_rate >= required_revisit_rate,
 ])
-groundspeed_x = groundspeed * np.cosd(vehicle_bearing)
-groundspeed_y = groundspeed * np.sind(vehicle_bearing)
-windspeed_x = wind_speed * np.cosd(wind_direction)
-windspeed_y = wind_speed * np.sind(wind_direction)
-airspeed_x = groundspeed_x - windspeed_x
-airspeed_y = groundspeed_y - windspeed_y
-opti.subject_to([
-    airspeed >= 0,
-    airspeed ** 2 == (airspeed_x ** 2 + airspeed_y ** 2),
-    groundspeed == airspeed - wind_speed,
-])
-vehicle_heading = np.arctan2d(airspeed_y, airspeed_x)
-
+vehicle_heading = vehicle_bearing
 # endregion
 
 ### Power accounting
 # Account for payload power
-power_out_payload_adjusted = np.where(
-    vehicle_bearing == leg_1_bearing,
-    power_out_payload,
-    0
-)
-power_out_payload_adjusted = np.where(
-    vehicle_bearing == leg_2_bearing,
-    power_out_payload,
-    power_out_payload_adjusted
-)
+power_out_payload_adjusted = power_out_payload
 
 
 # region Atmosphere
