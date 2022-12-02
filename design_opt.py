@@ -47,7 +47,7 @@ minimize = "wing.span() / 50 * 0.1 - revisit_rate / 30   * 0.9"
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
 latitude = opti.parameter(value=-75)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
-day_of_year = opti.parameter(value=30)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
+day_of_year = opti.parameter(value=45)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
 strat_offset_value = opti.parameter(value=1000)
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 sample_area_height = opti.parameter(value=150000)  # meters
@@ -163,6 +163,7 @@ y_km = y / 1000
 y_ft = y / 0.3048
 
 opti.subject_to([
+    x[time_periodic_start_index] == 0,
     y[time_periodic_start_index:] / min_cruise_altitude > 1,
     # y[time_periodic_start_index:] == 16000,
     y / 40000 > 0,  # stay above ground
@@ -685,8 +686,6 @@ opti.subject_to([
 ])
 overlap_width = max_swath_range * swath_overlap
 leg_1_length = sample_area_height + 2 * max_swath_azimuth
-leg_1_bearing = 0
-leg_2_bearing = 180
 turn_1_radius = (2 * max_imaging_offset - overlap_width) / 2
 turn_1_length = np.pi * turn_1_radius  # assume semi-circle
 leg_2_length = turn_1_length
@@ -704,7 +703,7 @@ opti.subject_to([
 loc = np.where(place_on_track > single_track_length,
                            place_on_track - single_track_length,
                            place_on_track)
-vehicle_bearing = leg_1_bearing
+vehicle_bearing = 180
 # vehicle_bearing = np.where(
 #     loc > leg_1_length,
 #     leg_1_bearing + (loc - leg_1_length) * 180 / (np.pi * turn_1_radius),
@@ -721,36 +720,37 @@ vehicle_bearing = leg_1_bearing
 #     vehicle_bearing
 # )
 opti.subject_to([
-    revisit_rate == (x[time_periodic_end_index] / total_track_length),
+    revisit_rate <= (x[time_periodic_end_index] / total_track_length),
     revisit_rate >= required_revisit_rate,
 ])
-groundspeed_x = groundspeed * np.cosd(vehicle_bearing)
-groundspeed_y = groundspeed * np.sind(vehicle_bearing)
-windspeed_x = wind_speed * np.cosd(wind_direction)
-windspeed_y = wind_speed * np.sind(wind_direction)
-airspeed_x = groundspeed_x - windspeed_x
-airspeed_y = groundspeed_y - windspeed_y
-opti.subject_to([
-    airspeed >= 0,
-    airspeed ** 2 == (airspeed_x ** 2 + airspeed_y ** 2),
-    groundspeed == airspeed - wind_speed,
-])
-vehicle_heading = np.arctan2d(airspeed_y, airspeed_x)
-
+# groundspeed_x = groundspeed * np.cosd(vehicle_bearing)
+# groundspeed_y = groundspeed * np.sind(vehicle_bearing)
+# windspeed_x = wind_speed * np.cosd(wind_direction)
+# windspeed_y = wind_speed * np.sind(wind_direction)
+# airspeed_x = groundspeed_x - windspeed_x
+# airspeed_y = groundspeed_y - windspeed_y
+# opti.subject_to([
+#     airspeed >= 0,
+#     airspeed ** 2 == (airspeed_x ** 2 + airspeed_y ** 2),
+#     groundspeed == airspeed - wind_speed,
+# ])
+# vehicle_heading = np.arctan2d(airspeed_y, airspeed_x)
+vehicle_heading = vehicle_bearing
 # endregion
 
 ### Power accounting
 # Account for payload power
-power_out_payload_adjusted = np.where(
-    vehicle_bearing == leg_1_bearing,
-    power_out_payload,
-    0
-)
-power_out_payload_adjusted = np.where(
-    vehicle_bearing == leg_2_bearing,
-    power_out_payload,
-    power_out_payload_adjusted
-)
+# power_out_payload_adjusted = np.where(
+#     vehicle_bearing == leg_1_bearing,
+#     power_out_payload,
+#     0
+# )
+# power_out_payload_adjusted = np.where(
+#     vehicle_bearing == leg_2_bearing,
+#     power_out_payload,
+#     power_out_payload_adjusted
+# )
+power_out_payload_adjusted = power_out_payload
 
 
 # region Atmosphere
@@ -1627,6 +1627,7 @@ wind_speed_midpoints = wind_speed_func(trapz(y))
 
 # Total
 opti.subject_to([
+    groundspeed == airspeed - wind_speed,
     dx / 1e4 == (xdot_trapz - wind_speed_midpoints) * dt / 1e4,
     dy / 1e2 == ydot_trapz * dt / 1e2,
     dspeed / 1e-1 == speeddot_trapz * dt / 1e-1,
@@ -1862,13 +1863,10 @@ if __name__ == "__main__":
 
     plot_pos = np.zeros((2, n_timesteps))
     vel = np.empty((2, n_timesteps))
-    vel[0, :] = s(groundspeed_x)
-    vel[1, :] = s(groundspeed_y)
     time_delta = np.ones(n_timesteps) * time[1]
     plot_pos[:, :] = np.cumsum(time_delta*vel, axis=1)
     d = {'x':s(x), 'groundspeed':s(groundspeed), 'airspeed':s(airspeed), 'wind_speed':s(wind_speed),
-         'plot_pos_x': plot_pos[0], 'plot_pos_y':plot_pos[1], 'groundspeed_x':s(groundspeed_x),
-         'groundspeed_y':s(groundspeed_y), 'airspeed_x':s(airspeed_x), 'airspeed_y': s(airspeed_y),
+         'plot_pos_x': plot_pos[0], 'plot_pos_y':plot_pos[1],
          'vehicle_heading':s(vehicle_heading), 'vehicle_bearing':s(vehicle_bearing)}
     df_trajectory = pd.DataFrame(data=d)
     def plot(
