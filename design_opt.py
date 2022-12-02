@@ -1639,21 +1639,6 @@ opti.subject_to([
     net_power / 5e3 < (power_in - power_out) / 5e3,
 ])
 
-##### Winds
-
-# Total
-opti.subject_to([
-    dx / 1e4 == xdot_trapz * dt / 1e4,
-    dy / 1e2 == ydot_trapz * dt / 1e2,
-    dspeed / 1e-1 == speeddot_trapz * dt / 1e-1,
-    dgamma / 1e-2 == gammadot_trapz * dt / 1e-2,
-])
-
-# Powertrain-specific
-opti.subject_to([
-    net_power / 5e3 < (power_in - power_out) / 5e3,
-])
-
 # Do the math for battery charging/discharging efficiency
 # Use tanh blending on charge/discharge eff. to avoid non-differentiability in integrator
 net_power_to_battery = net_power * np.blend(
