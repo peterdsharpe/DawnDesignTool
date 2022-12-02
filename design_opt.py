@@ -38,11 +38,11 @@ opti = asb.Opti(  # Normal mode - Design Optimization
 #     load_frozen_variables_from_cache=True,
 #     ignore_violated_parametric_constraints=True
 # )
-
+lam = opti.parameter(value = 0)
 # minimize = "wing.span() / 50"  # any "eval-able" expression
 # minimize = "max_mass_total / 300" # any "eval-able" expression
 # minimize = "wing.span() / 50 * 0.9 + max_mass_total / 300 * 0.1"
-minimize = "wing.span() / 50 * 0.5 - revisit_rate / 30   * 0.5"
+minimize = "wing.span() / 30 * lam - revisit_rate    * (1-lam)"
 
 ##### Operating Parameters
 climb_opt = False  # are we optimizing for the climb as well?
@@ -56,7 +56,7 @@ required_headway_per_day = opti.parameter(value=0)
 allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
 make_plots = True
-mass_payload = opti.parameter(value=10)
+mass_payload_base = opti.parameter(value=10)
 tail_panels = True
 fuselage_billboard = False
 wing_cells = "sunpower"  # select cells for wing, options include ascent_solar, sunpower, and microlink
@@ -1576,6 +1576,10 @@ mass_avionics = 12.153  # Pulled from Avionics team spreadsheet on 5/13
 # Back-calculated from Kevin Uleck's figures in MIT 16.82 presentation: 24.34 kg = 3.7 / 3.8 * 25
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
+# consider data storage weight
+mass_of_data_storage = 0.0053 # kg per TB of data
+tb_per_day = 4
+mass_payload = mass_payload_base + day_of_year * tb_per_day * mass_of_data_storage
 opti.subject_to([
     mass_total / 250 == (
             mass_payload + mass_structural + mass_propulsion + mass_power_systems + mass_avionics
