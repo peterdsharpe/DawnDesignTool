@@ -5,7 +5,7 @@ import aerosandbox.numpy as np
 import pandas as pd
 
 ### Set the run ID
-run_name = "pareto_front"
+run_name = "pareto_front3"
 parameter = "lam"
 unit = "[-]"
 sweep_space = np.linspace(0, 1, 11)

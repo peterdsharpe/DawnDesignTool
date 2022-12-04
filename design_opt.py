@@ -38,7 +38,7 @@ opti = asb.Opti(  # Normal mode - Design Optimization
 #     load_frozen_variables_from_cache=True,
 #     ignore_violated_parametric_constraints=True
 # )
-lam = opti.parameter(value = 0)
+lam = opti.parameter(value = 0.1)
 # minimize = "wing.span() / 50"  # any "eval-able" expression
 # minimize = "max_mass_total / 300" # any "eval-able" expression
 # minimize = "wing.span() / 50 * 0.9 + max_mass_total / 300 * 0.1"
@@ -55,7 +55,7 @@ sample_area_width = opti.parameter(value=100000)  # meters
 required_headway_per_day = opti.parameter(value=0)
 allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
-make_plots = True
+make_plots = False
 mass_payload_base = opti.parameter(value=10)
 tail_panels = True
 fuselage_billboard = False
@@ -63,7 +63,7 @@ wing_cells = "sunpower"  # select cells for wing, options include ascent_solar, 
 vertical_cells = "sunpower"  # select cells for vtail, options include ascent_solar, sunpower, and microlink
 # vertical cells only mounted when tail_panels is True
 billboard_cells = "sunpower"  # select cells for billboard, options include ascent_solar, sunpower, and microlink
-
+trajectory = 1
 
 # vertical cells only mounted when fuselage_billboard is True
 
@@ -627,7 +627,7 @@ power_out_payload = power_trans / pulse_rep_freq # TODO check this is correct
 snr = power_received / noise_power_density
 snr_db = 10 * np.log(snr)
 opti.subject_to([
-    # required_snr <= snr_db,
+    required_snr <= snr_db,
     pulse_rep_freq >= 2 * groundspeed / radar_length,
     pulse_rep_freq <= c / (2 * swath_azimuth),
 ])
@@ -695,7 +695,7 @@ turn_2_length = np.pi * turn_2_radius  # assume semi-circle
 single_track_coverage = 2 * max_swath_range - overlap_width
 single_track_length = leg_1_length + leg_2_length + turn_1_length + turn_2_length
 passes_required = sample_area_width / single_track_coverage
-total_track_length = single_track_length * passes_required
+total_track_length = single_track_length * passes_required * trajectory
 
 opti.subject_to([
     place_on_track == asb.cas.mod(x,  single_track_length),
@@ -750,7 +750,7 @@ vehicle_heading = vehicle_bearing
 #     power_out_payload,
 #     power_out_payload_adjusted
 # )
-power_out_payload_adjusted = power_out_payload
+
 
 
 # region Atmosphere
@@ -1109,7 +1109,7 @@ mass_propulsion = mass_motor_mounted + mass_propellers + mass_ESC
 power_out_avionics = 180  # Pulled from Avionics spreadsheet on 5/13/20
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
-power_out = power_out_propulsion + power_out_payload_adjusted + power_out_avionics
+
 # endregion
 
 
@@ -1580,11 +1580,16 @@ mass_avionics = 12.153  # Pulled from Avionics team spreadsheet on 5/13
 mass_of_data_storage = 0.0053 # kg per TB of data
 tb_per_day = 4
 mass_payload = mass_payload_base + day_of_year * tb_per_day * mass_of_data_storage
+
+# consider data storage power requirements
+power_of_data_storage = 0.1 # watt per tb of data
+power_out_payload_adjusted = power_out_payload + day_of_year * tb_per_day * power_of_data_storage
 opti.subject_to([
     mass_total / 250 == (
             mass_payload + mass_structural + mass_propulsion + mass_power_systems + mass_avionics
     ) / 250
 ])
+power_out = power_out_propulsion + power_out_payload_adjusted + power_out_avionics
 
 gravity_force = g * mass_total
 
