@@ -38,7 +38,7 @@ opti = asb.Opti(  # Normal mode - Design Optimization
 #     load_frozen_variables_from_cache=True,
 #     ignore_violated_parametric_constraints=True
 # )
-lam = opti.parameter(value = 0.1)
+lam = opti.parameter(value=0.3)
 # minimize = "wing.span() / 50"  # any "eval-able" expression
 # minimize = "max_mass_total / 300" # any "eval-able" expression
 # minimize = "wing.span() / 50 * 0.9 + max_mass_total / 300 * 0.1"
@@ -1636,7 +1636,8 @@ wind_speed_midpoints = wind_speed_func(trapz(y))
 
 # Total
 opti.subject_to([
-    groundspeed == airspeed - wind_speed,
+    groundspeed == (airspeed ** 2 - wind_speed ** 2) / airspeed,
+    airspeed >= 0,
     dx / 1e4 == (xdot_trapz - wind_speed_midpoints) * dt / 1e4,
     dy / 1e2 == ydot_trapz * dt / 1e2,
     dspeed / 1e-1 == speeddot_trapz * dt / 1e-1,
