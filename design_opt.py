@@ -549,7 +549,7 @@ k_b = 1.38064852E-23  # [m2 kg s-2 K-1]
 required_resolution = opti.parameter(value=2)  # meters from conversation with Brent on 2/18/22
 required_snr = opti.parameter(value=6)  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
 center_wavelength = opti.parameter(value=0.024)  # meters
-sigma0_db = opti.parameter(value=0)  # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
+sigma_db = opti.parameter(value=0)  # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
 radar_length = 1
 radar_width = 0.3
 radar_length = opti.variable(
@@ -606,8 +606,8 @@ max_length_synth_ap = center_wavelength * dist / radar_length # meters
 ground_area = swath_range * swath_azimuth * np.pi / 4 # meters ** 2
 radius = (swath_azimuth + swath_range) / 4 # meters
 ground_imaging_offset = np.tand(look_angle) * y # meters
-sigma0 = 10 ** (sigma0_db / 10)
-scattering_cross_sec = sigma0
+sigma = 10 ** (sigma_db / 10)
+sigma0 = sigma / ground_area
 antenna_gain = 4 * np.pi * radar_area * 0.7 / center_wavelength ** 2
 pulse_duration = 1 / bandwidth
 #
@@ -622,8 +622,8 @@ opti.subject_to([
 # account for snr
 noise_power_density = k_b * T * bandwidth / (center_wavelength ** 2)
 power_trans = peak_power * pulse_duration
-power_received = power_trans * antenna_gain * radar_area * scattering_cross_sec / ((4 * np.pi) ** 2 * dist ** 4)
-power_out_payload = power_trans / pulse_rep_freq # TODO check this is correct
+power_received = power_trans * center_wavelength ** 2 * antenna_gain ** 2 * radar_area * sigma0 / ((4 * np.pi) ** 3 * dist ** 4)
+power_out_payload = power_trans * pulse_rep_freq
 snr = power_received / noise_power_density
 snr_db = 10 * np.log(snr)
 opti.subject_to([
