@@ -48,6 +48,7 @@ minimize = "wing.span() / 30 * lam - revisit_rate    * (1-lam)"
 climb_opt = False  # are we optimizing for the climb as well?
 latitude = opti.parameter(value=-75)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
 day_of_year = opti.parameter(value=45)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
+mission_length = opti.parameter(value=45) # sets storage requirement based on how long you need to remain flying without landing to download data
 strat_offset_value = opti.parameter(value=1000)
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 sample_area_height = opti.parameter(value=150000)  # meters
@@ -1580,11 +1581,11 @@ mass_avionics = 12.153  # Pulled from Avionics team spreadsheet on 5/13
 # consider data storage weight
 mass_of_data_storage = 0.0053 # kg per TB of data
 tb_per_day = 4
-mass_payload = mass_payload_base + day_of_year * tb_per_day * mass_of_data_storage
+mass_payload = mass_payload_base + mission_length * tb_per_day * mass_of_data_storage
 
 # consider data storage power requirements
 power_of_data_storage = 0.1 # watt per tb of data
-power_out_payload_adjusted = power_out_payload + day_of_year * tb_per_day * power_of_data_storage
+power_out_payload_adjusted = power_out_payload + mission_length * tb_per_day * power_of_data_storage
 opti.subject_to([
     mass_total / 250 == (
             mass_payload + mass_structural + mass_propulsion + mass_power_systems + mass_avionics
