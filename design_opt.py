@@ -1295,11 +1295,11 @@ if fuselage_billboard == False:
     billboard_area = 0
     mass_billboard = 0
 
-area_solar_horz = wing.area() * solar_area_fraction * 0.5
+area_solar_horz = wing.area() * solar_area_fraction
 area_solar_vert = center_vstab.area() * vtail_solar_area_fraction
 
 # Energy generation cascade accounting for different horizontal and vertical cell assumptions
-power_in_from_sun_horz = solar_flux_on_wing_left * area_solar_horz + solar_flux_on_wing_right * area_solar_horz
+power_in_from_sun_horz = solar_flux_on_wing_left * area_solar_horz * 0.5 + solar_flux_on_wing_right * area_solar_horz * 0.5
 power_in_from_sun_vert = solar_flux_on_vertical_left * area_solar_vert + solar_flux_on_vertical_right * area_solar_vert
 power_in_from_sun_fuselage = solar_flux_on_billboard_left * billboard_area + solar_flux_on_billboard_right * area_solar_vert
 power_in_from_sun_horz = power_in_from_sun_horz / energy_generation_margin
@@ -1311,7 +1311,7 @@ power_in_after_panels_fuselage = power_in_from_sun_fuselage * fuselage_solar_cel
 power_in_after_panels_tot = power_in_after_panels_horz + power_in_after_panels_vert + power_in_after_panels_fuselage
 power_in = (power_in_after_panels_tot) * MPPT_efficiency
 
-mass_solar_cells = (vert_rho_solar_cells * area_solar_vert * 2) + (horz_rho_solar_cells * area_solar_horz * 2) + (
+mass_solar_cells = (vert_rho_solar_cells * area_solar_vert * 2) + (horz_rho_solar_cells * area_solar_horz) + (
         fuselage_rho_solar_cells * area_solar_fuselage * 2)
 cost_solar_cells = (vert_rho_solar_cells * area_solar_vert * 2) * vert_solar_power_ratio * vert_solar_cost_per_watt + \
                    (horz_rho_solar_cells * area_solar_horz) * horz_solar_power_ratio * horz_solar_cost_per_watt + \
