@@ -1427,7 +1427,7 @@ def estimate_mass_wing_secondary(
     W_wer = n_end_ribs * (chord ** 2 * t_over_c * 6.62e-1 + chord * 6.57e-3)
 
     # LE sheeting mass
-    # W_wLE = 0.456/2 * (span ** 2 * ratio_of_rib_spacing_to_chord ** (4 / 3) / span)
+    W_wLE = 0.456/2 * (span ** 2 * ratio_of_rib_spacing_to_chord ** (4 / 3) / span)
 
     # Skin Panel Mass
     W_wsp = area * skin_density * 1.05  # assumed constant thickness from 0.9c around LE to 0.15c
@@ -1438,7 +1438,7 @@ def estimate_mass_wing_secondary(
     # Covering
     W_wc = area * 0.076  # 0.033 kg/m2 Tedlar covering on 2 sides, with 1.1 coverage factor
 
-    mass_secondary = (W_wr + W_whr + W_wer + W_wTE) * scaling_factor + W_wsp + W_wc
+    mass_secondary = (W_wr + W_wLE + W_whr + W_wer + W_wTE) * scaling_factor + W_wsp + W_wc
 
     return mass_secondary
 
