@@ -773,7 +773,7 @@ solar_flux_on_wing_left = lib_solar.solar_flux(
     latitude=latitude,
     day_of_year=day_of_year,
     time=time,
-    panel_azimuth_angle=panel_heading,
+    panel_azimuth_angle=vehicle_heading + 90,
     panel_tilt_angle=10,
     scattering=True,
 )
@@ -781,7 +781,7 @@ solar_flux_on_wing_right = lib_solar.solar_flux(
     latitude=latitude,
     day_of_year=day_of_year,
     time=time,
-    panel_azimuth_angle=panel_heading,
+    panel_azimuth_angle=vehicle_heading - 90,
     panel_tilt_angle=-10,
     scattering=True,
 )
@@ -789,7 +789,7 @@ solar_flux_on_vertical_left = lib_solar.solar_flux(
     latitude=latitude,
     day_of_year=day_of_year,
     time=time,
-    panel_azimuth_angle=panel_heading,
+    panel_azimuth_angle=vehicle_heading + 90,
     panel_tilt_angle=90,
     scattering=True,
 )
@@ -797,8 +797,8 @@ solar_flux_on_vertical_right = lib_solar.solar_flux(
     latitude=latitude,
     day_of_year=day_of_year,
     time=time,
-    panel_azimuth_angle=panel_heading,
-    panel_tilt_angle=-90,
+    panel_azimuth_angle=vehicle_heading - 90,
+    panel_tilt_angle=90,
     scattering=True,
 )
 billboard_angle = opti.variable(
@@ -1019,7 +1019,7 @@ opti.subject_to([
     # center_vstab.aspect_ratio() > 1.9, # from Jamie, based on ASWing
     # center_vstab.aspect_ratio() < 2.5 # from Jamie, based on ASWing
 ])
-
+# TODO implement stability derivatives directly
 # endregion
 
 # region Propulsion
