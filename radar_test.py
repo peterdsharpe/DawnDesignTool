@@ -85,7 +85,7 @@ power_trans = peak_power * pulse_duration
 power_received = power_trans * antenna_gain * radar_area * sigma0 / ((4 * np.pi) ** 2 * dist ** 4)
 # power_received = power_trans * antenna_gain ** 2 * center_wavelength ** 2 * sigma0 *\
 # azimuth_resolution * range_resolution / ((4 * np.pi) ** 3 * dist ** 4)
-# power_received = power_trans * center_wavelength ** 2 * antenna_gain ** 1 * radar_length * c * pulse_duration / (4 * (4 * np.pi) ** 3 * dist ** 4 * np.sind(look_angle))
+power_received = power_trans * center_wavelength ** 2 * antenna_gain ** 2 * radar_length * c * pulse_duration / (4 * (4 * np.pi) ** 3 * dist ** 4 * np.sind(look_angle))
 power_out_payload = power_trans * pulse_rep_freq
 snr = power_received / noise_power_density
 snr_db = 10 * np.log(snr)
@@ -93,6 +93,7 @@ opti.subject_to([
     required_snr <= snr_db,
     pulse_rep_freq >= 2 * groundspeed / radar_length,
     pulse_rep_freq <= c / (2 * swath_azimuth),
+    peak_power <= 1000000,
 ])
 
 minimize = "power_out_payload"
