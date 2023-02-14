@@ -59,6 +59,12 @@ power_out_payload = opti.variable(
 #     lower_bound=0,
 #     category='des'
 # )
+power_trans = opti.variable(
+    init_guess = 1e6,
+    scale=1e5,
+    lower_bound=0,
+    category='des',
+)
 # # define key radar parameters
 radar_area = radar_width * radar_length # meters ** 2
 look_angle = opti.parameter(value=45) # degrees
@@ -74,10 +80,13 @@ scattering_cross_sec = 10 ** (scattering_cross_sec_db / 10)
 sigma0 = scattering_cross_sec / ground_area
 sigma0_db = 10 * np.log(sigma0)
 antenna_gain = 4 * np.pi * radar_area * 0.7 / center_wavelength ** 2
-pulse_duration = 1 / bandwidth
+a_hs = 0.88 # aperture-illumination taper factor associated with the synthetic aperture (value from Ulaby and Long)
+F = 4 # receiver noise figure (somewhat randomly chosen value from Ulaby and Long)
+a_B = 1 # pulse-taper factor to relate bandwidth and pulse duration
 # doppler_bandwidth = 2 * groundspeed * horz_beamwidth / (center_wavelength * y)
 #
 # # constrain SAR resolution to required value
+pulse_duration = a_B / bandwidth
 range_resolution = c * pulse_duration / (2 * np.sind(look_angle))
 azimuth_resolution = radar_length / 2
 opti.subject_to([
@@ -86,13 +95,18 @@ opti.subject_to([
 ])
 #
 # account for snr
-noise_power_density = k_b * T * bandwidth / (center_wavelength ** 2)
-power_trans = peak_power * pulse_duration
-power_received = power_trans * antenna_gain * radar_area * sigma0 / ((4 * np.pi) ** 2 * dist ** 4)
+# noise_power_density = k_b * T * bandwidth / (center_wavelength ** 2)
+# power_trans = peak_power * pulse_duration
+# power_received = power_trans * antenna_gain * radar_area * sigma0 / ((4 * np.pi) ** 2 * dist ** 4)
 # power_received = power_trans * antenna_gain ** 2 * center_wavelength ** 2 * sigma0 * azimuth_resolution * range_resolution / ((4 * np.pi) ** 3 * dist ** 4)
 # power_received = power_trans * center_wavelength ** 2 * antenna_gain ** 2 * radar_length * c * pulse_duration * sigma0 / (4 * (4 * np.pi) ** 3 * dist ** 4 * np.sind(look_angle))
-power_out_payload = power_trans * pulse_rep_freq
-snr = power_received / noise_power_density
+# power_out_payload = power_trans * pulse_rep_freq
+# snr = power_received / noise_power_density
+
+# use SAR specific equations from Ulaby and Long
+power_out_payload = power_trans * pulse_rep_freq * pulse_duration
+snr = power_out_payload * antenna_gain ** 2 * center_wavelength ** 3 * a_hs * sigma0 * range_resolution / ((2 * 4 * np.pi) ** 3 * dist ** 3 * k_b * T * F * groundspeed * a_B)
+
 snr_db = 10 * np.log(snr)
 opti.subject_to([
     required_snr <= snr_db,
