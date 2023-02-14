@@ -13,7 +13,7 @@ center_wavelength = opti.parameter(value=0.024)  # meters
 scattering_cross_sec_db = opti.parameter(value=0)  # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
 groundspeed = opti.parameter(value=5) # average groundspeed
 T = opti.parameter(value=216)
-y = opti.parameter(value=12000)
+y = opti.parameter(value=14000)
 radar_length = 1
 radar_width = 0.3
 # radar_length = opti.variable(
@@ -53,6 +53,12 @@ power_out_payload = opti.variable(
     lower_bound=0,
     category='des'
 )
+# pulse_duration = opti.variable(
+#     init_guess=0.03,
+#     scale=1,
+#     lower_bound=0,
+#     category='des'
+# )
 # # define key radar parameters
 radar_area = radar_width * radar_length # meters ** 2
 look_angle = opti.parameter(value=45) # degrees
@@ -83,9 +89,8 @@ opti.subject_to([
 noise_power_density = k_b * T * bandwidth / (center_wavelength ** 2)
 power_trans = peak_power * pulse_duration
 power_received = power_trans * antenna_gain * radar_area * sigma0 / ((4 * np.pi) ** 2 * dist ** 4)
-# power_received = power_trans * antenna_gain ** 2 * center_wavelength ** 2 * sigma0 *\
-# azimuth_resolution * range_resolution / ((4 * np.pi) ** 3 * dist ** 4)
-power_received = power_trans * center_wavelength ** 2 * antenna_gain ** 2 * radar_length * c * pulse_duration / (4 * (4 * np.pi) ** 3 * dist ** 4 * np.sind(look_angle))
+# power_received = power_trans * antenna_gain ** 2 * center_wavelength ** 2 * sigma0 * azimuth_resolution * range_resolution / ((4 * np.pi) ** 3 * dist ** 4)
+# power_received = power_trans * center_wavelength ** 2 * antenna_gain ** 2 * radar_length * c * pulse_duration * sigma0 / (4 * (4 * np.pi) ** 3 * dist ** 4 * np.sind(look_angle))
 power_out_payload = power_trans * pulse_rep_freq
 snr = power_received / noise_power_density
 snr_db = 10 * np.log(snr)
@@ -93,7 +98,6 @@ opti.subject_to([
     required_snr <= snr_db,
     pulse_rep_freq >= 2 * groundspeed / radar_length,
     pulse_rep_freq <= c / (2 * swath_azimuth),
-    peak_power <= 1000000,
 ])
 
 minimize = "power_out_payload"
