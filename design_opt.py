@@ -594,7 +594,8 @@ groundspeed = opti.variable(
     n_vars=n_timesteps,
     init_guess=1,
     scale=0.1,
-    category="ops"
+    category="ops",
+    lower_bound=1,
 )
 power_trans = opti.variable(
     init_guess=1e6,
