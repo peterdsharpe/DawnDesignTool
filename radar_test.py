@@ -63,8 +63,9 @@ power_trans = opti.variable(
     init_guess = 1e6,
     scale=1e5,
     lower_bound=0,
+    upper_bound=1e8,
     category='des',
-)
+) # watts
 # # define key radar parameters
 radar_area = radar_width * radar_length # meters ** 2
 look_angle = opti.parameter(value=45) # degrees
