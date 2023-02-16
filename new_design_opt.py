@@ -1,5 +1,6 @@
 import aerosandbox as asb
 from aerosandbox.library import winds as lib_winds
+import aerosandbox.numpy as np
 
 ##### Section: Initialize Optimization
 opti = asb.Opti(
@@ -52,4 +53,50 @@ radar_length = opti.parameter(value=1)  # meters, given from existing Gamma Remo
 radar_width = opti.parameter(value=0.3)  # meters, given from existing Gamma Remote Sensing instrument
 look_angle = opti.parameter(value=45)  # degrees
 
+# Margins
+structural_mass_margin_multiplier = opti.parameter(value=1.25) # A value greater than 1 represents the structural components as sized are
+energy_generation_margin = opti.parameter(value=1.05) # A value greater than 1 represents aircraft must generate said fractional surplus of energy
+allowable_battery_depth_of_discharge = opti.parameter(value=0.95)  # How much of the battery can you actually use? # updated according to Matthew Berk discussion 10/21/21 # TODO reduce ?
+q_ne_over_q_max = opti.parameter(value=2)  # Chosen on the basis of a paper read by Trevor Long about Helios, 1/16/21 TODO re-evaluate?
+
 ##### Section: Time Discretization
+n_timesteps_per_segment = 180  # number of timesteps in the 25 hour sizing period
+
+if climb_opt:  # roughly 1-day-plus-climb window, starting at ground. Periodicity enforced for last 24 hours.
+    time_start = opti.variable(init_guess=-12 * 3600, scale=3600, category="ops")
+    opti.subject_to([
+        time_start / 3600 < 0,
+        time_start / 3600 > -24,
+    ])
+    time_end = 36 * 3600
+
+    time_periodic_window_start = time_end - 24 * 3600
+    time = np.concatenate((
+        np.linspace(
+            time_start,
+            time_periodic_window_start,
+            n_timesteps_per_segment
+        ),
+        np.linspace(
+            time_periodic_window_start,
+            time_end,
+            n_timesteps_per_segment
+        )
+    ))
+    time_periodic_start_index = time.shape[0] - n_timesteps_per_segment
+    time_periodic_end_index = time.shape[0] - 1
+
+else:  # Normal mode: 24-hour periodic window, starting at altitude.
+    time_start = 0 * 3600
+    time_end = 24 * 3600
+
+    time = np.linspace(
+        time_start,
+        time_end,
+        n_timesteps_per_segment
+    )
+    time_periodic_start_index = 0
+    time_periodic_end_index = time.shape[0] - 1
+
+n_timesteps = time.shape[0]
+hour = time / 3600
