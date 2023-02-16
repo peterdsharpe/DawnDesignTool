@@ -114,6 +114,15 @@ boom_location = 0.80  # as a fraction of the half-span
 break_location = 0.67  # as a fraction of the half-span
 
 # Wing
+wing_span = opti.variable(
+    init_guess=30,
+    scale=10,
+    lower_bound=0.01,
+    **des
+)
+
+boom_offset = boom_location * wing_span / 2  # in real units (meters)
+
 cl_array = np.load(path + '/data/cl_function.npy')
 cd_array = np.load(path + '/data/cd_function.npy')
 cm_array = np.load(path + '/data/cm_function.npy')
@@ -132,3 +141,60 @@ wing_airfoil = asb.geometry.Airfoil(
     CL_function=cl_function,
     CD_function=cd_function,
     CM_function=cm_function)
+
+wing_root_chord = opti.variable(
+    init_guess=1.8,
+    scale=1,
+    lower_bound=0.01,
+    **des
+)
+
+wing_x_quarter_chord = opti.variable(
+    init_guess=0,
+    scale=0.01,
+    lower_bound=0.01,
+    **des
+)
+
+wing_y_taper_break = break_location * wing_span / 2
+
+wing_taper_ratio = 0.5  # TODO analyze this more
+wing_tip_chord = wing_root_chord * wing_taper_ratio
+
+wing_incidence = opti.variable(
+    init_guess=0,
+    lower_bound=-15,
+    upper_bound=15,
+    freeze=True,
+    **des
+)
+
+
+wing = asb.Wing(
+    name="Main Wing",
+    symmetric=True,
+    xsecs=[  # The wing's cross ("X") sections
+        asb.WingXSec(  # Root
+            xyz_le=np.array([-wing_root_chord / 4, 0, 0]),
+            chord=wing_root_chord,
+            twist=wing_incidence,  # degrees
+            airfoil=wing_airfoil,  # Airfoils are blended between a given XSec and the next one.
+            control_surface_is_symmetric=True,
+            # Flap # Control surfaces are applied between a given XSec and the next one.
+            control_surface_deflection=0,  # degrees
+        ),
+        asb.WingXSec(  # Break
+            xyz_le=np.array([-wing_root_chord / 4, wing_y_taper_break, 0]),
+            chord=wing_root_chord,
+            twist=wing_incidence,
+            airfoil=wing_airfoil,
+        ),
+        asb.WingXSec(  # Tip
+            xyz_le=np.array([-wing_root_chord * wing_taper_ratio / 4, wing_span / 2, 0]),
+            chord=wing_tip_chord,
+            twist=wing_incidence,
+            airfoil=wing_airfoil,
+        ),
+    ]
+).translate(np.array([wing_x_quarter_chord, 0, 0]))
+
