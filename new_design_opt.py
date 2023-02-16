@@ -26,6 +26,8 @@ sample_area_height = opti.parameter(value=150000)  # meters, the height of the a
 sample_area_width = opti.parameter(value=100000)  # meters, the width of the area the aircraft must sample
 required_headway_per_day = opti.parameter(value=0)  # meters, the minimum distance the aircraft must cover in the sizing day
 trajectory = 1 # value to determine the particular trajectory
+required_revisit_rate = opti.parameter(value=0) # How many times must the aircraft fully cover the sample area in the sizing day?
+swath_overlap = opti.parameter(value=0.1) # What fraction of the adjacent swaths must overlap? Typically ranges from 0.1 to 0.5
 
 ##### Aircraft Parameters
 battery_specific_energy_Wh_kg = opti.parameter(value=400) # cell level specific energy of the battery
@@ -39,3 +41,11 @@ vertical_cells = "sunpower"  # select cells for vtail, options include ascent_so
 use_propulsion_fits_from_FL2020_1682_undergrads = True  # Warning: Fits not yet validated
 # fits for propeller and motors to derive motor and propeller efficiencies
 
+##### Instrument Parameters
+required_resolution = opti.parameter(value=2)  # meters from conversation with Brent on 2/18/22
+required_snr = opti.parameter(value=6)  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
+center_wavelength = opti.parameter(value=0.024)  # meters given from Brent based on the properties of the ice sampled by the radar
+scattering_cross_sec_db = opti.parameter(value=-10)  # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
+radar_length = opti.parameter(value=1)  # meters, given from existing Gamma Remote Sensing instrument
+radar_width = opti.parameter(value=0.3)  # meters, given from existing Gamma Remote Sensing instrument
+look_angle = opti.parameter(value=45)  # degrees
