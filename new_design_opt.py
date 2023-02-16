@@ -63,11 +63,11 @@ q_ne_over_q_max = opti.parameter(value=2)  # Chosen on the basis of a paper read
 n_timesteps_per_segment = 180  # number of timesteps in the 25 hour sizing period
 
 if climb_opt:  # roughly 1-day-plus-climb window, starting at ground. Periodicity enforced for last 24 hours.
-    time_start = opti.variable(init_guess=-12 * 3600, scale=3600, category="ops")
-    opti.subject_to([
-        time_start / 3600 < 0,
-        time_start / 3600 > -24,
-    ])
+    time_start = opti.variable(init_guess=-12 * 3600,
+                               scale=3600,
+                               upper_bound=0,
+                               lower_bound=-24 * 3600
+                               **tra)
     time_end = 36 * 3600
 
     time_periodic_window_start = time_end - 24 * 3600
@@ -100,3 +100,5 @@ else:  # Normal mode: 24-hour periodic window, starting at altitude.
 
 n_timesteps = time.shape[0]
 hour = time / 3600
+
+##### Section: Vehicle definition
