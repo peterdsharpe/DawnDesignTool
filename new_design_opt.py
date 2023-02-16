@@ -1,6 +1,12 @@
 import aerosandbox as asb
 from aerosandbox.library import winds as lib_winds
 import aerosandbox.numpy as np
+import pathlib
+from aerosandbox.modeling.interpolation import InterpolatedModel
+
+path = str(
+    pathlib.Path(__file__).parent.absolute()
+)
 
 ##### Section: Initialize Optimization
 opti = asb.Opti(
@@ -102,3 +108,27 @@ n_timesteps = time.shape[0]
 hour = time / 3600
 
 ##### Section: Vehicle definition
+
+# overall layout
+boom_location = 0.80  # as a fraction of the half-span
+break_location = 0.67  # as a fraction of the half-span
+
+# Wing
+cl_array = np.load(path + '/data/cl_function.npy')
+cd_array = np.load(path + '/data/cd_function.npy')
+cm_array = np.load(path + '/data/cm_function.npy')
+alpha_array = np.load(path + '/data/alpha.npy')
+reynolds_array = np.load(path + '/data/reynolds.npy')
+cl_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(np.array(reynolds_array)), },
+                                cl_array, "bspline")
+cd_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(np.array(reynolds_array))},
+                                cd_array, "bspline")
+cm_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(np.array(reynolds_array))},
+                                cm_array, "bspline")
+
+wing_airfoil = asb.geometry.Airfoil(
+    name="HALE_03",
+    coordinates=r"studies/airfoil_optimizer/HALE_03.dat",
+    CL_function=cl_function,
+    CD_function=cd_function,
+    CM_function=cm_function)
