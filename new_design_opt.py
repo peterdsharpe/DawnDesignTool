@@ -4,6 +4,7 @@ import aerosandbox.numpy as np
 import pathlib
 from aerosandbox.modeling.interpolation import InterpolatedModel
 from design_opt_utilities.fuselage import make_payload_pod
+import aerosandbox.library.mass_structural as mass_lib
 
 
 path = str(
@@ -432,3 +433,60 @@ propeller_diameter = opti.variable(
 )
 
 n_propellers = opti.parameter(value=4) # TODO reconsider 2 or 4
+
+##### Vehicle Overall Specs
+mass_total = opti.variable(
+    init_guess=110,
+    lower_bound=10,
+    **des
+)
+
+max_power_in = opti.variable(
+    init_guess=5000,
+    lower_bound=10,
+    **des
+)
+
+max_power_out_propulsion = opti.variable(
+    init_guess=1500,
+    lower_bound=10,
+    **des
+)
+
+##### Section: Internal Geometry and Weights
+
+### Wing mass accounting
+wing_n_ribs = opti.variable(
+    init_guess=200,
+    scale=200,
+    lower_bound=0,
+    log_transform=True,
+    **des
+)
+
+wing_mass_primary = mass_lib.mass_wing_spar(
+    span=wing.span(),
+    mass_supported=mass_total,
+    # technically the spar doesn't really have to support its own weight (since it's roughly spanloaded), so this is conservative
+    ultimate_load_factor=structural_load_factor,
+    n_booms=1
+) * 11.382 / 9.222  # scaling factor taken from Daedalus weights to account for real-world effects, non-cap mass, etc.
+
+wing_mass_secondary = mass_lib.mass_hpa_wing(
+        span=wing_span,
+        chord=wing.mean_geometric_chord(),
+        vehicle_mass=mass_total,
+        n_ribs=wing_n_ribs,
+        n_wing_sections=4,
+        ultimate_load_factor=structural_load_factor,
+        type='cantilevered',
+        t_over_c=wing_airfoil.max_thickness(),
+        include_spar=False
+) * 1.5 # scaling factor suggested by Drela
+
+wing_mass = wing_mass_primary + wing_mass_secondary
+
+wing_mass_props = asb.MassProperties(
+    mass=wing_mass,
+    x_cg=0.40 * wing_root_chord
+)
