@@ -3,6 +3,8 @@ from aerosandbox.library import winds as lib_winds
 import aerosandbox.numpy as np
 import pathlib
 from aerosandbox.modeling.interpolation import InterpolatedModel
+from design_opt_utilities.fuselage import make_payload_pod
+
 
 path = str(
     pathlib.Path(__file__).parent.absolute()
@@ -215,8 +217,45 @@ outboard_boom_length = opti.variable(
 
 # values roughly to match the demonstrator fuselage and payload pod
 boom_diameter = 0.2  # meters
-payload_pod_length = 2.5  # meters
+payload_pod_length = 2.0  # meters
 payload_pod_diameter = 0.5  # meters
+payload_pod_y_offset = 1.5 # meters
+
+payload_pod = make_payload_pod( # TODO ask peter if there's a better way to make this an aero shape
+    boom_length=payload_pod_length,
+    nose_length=0.5,
+    tail_length=1,
+    fuse_diameter=payload_pod_diameter,
+).translate(np.array[0, 0, -payload_pod_y_offset])
+center_fuse = asb.Fuselage(
+        name="Fuselage",
+        xsecs=[
+            asb.FuselageXSec(
+                    xyz_c=[0, 0, 0],
+                    radius=boom_diameter/2,
+                ),
+                asb.FuselageXSec(
+                    xyz_c=[center_boom_length, 0, 0],
+                    radius=boom_diameter/2,
+                )
+        ]
+    )
+right_fuse = asb.Fuselage(
+        name="Fuselage",
+        xsecs=[
+            asb.FuselageXSec(
+                    xyz_c=[0, 0, 0],
+                    radius=boom_diameter/2,
+                ),
+                asb.FuselageXSec(
+                    xyz_c=[outboard_boom_length, 0, 0],
+                    radius=boom_diameter/2,
+                )
+        ]
+    )
+right_fuse = right_fuse.translate(np.array([0, boom_offset, 0]))
+left_fuse = right_fuse.translate(np.array([0, -2 * boom_offset, 0]))
+
 
 # tail section
 tail_airfoil = asb.Airfoil("naca0008")
@@ -240,6 +279,29 @@ center_vstab_chord = opti.variable(
     lower_bound=0.1,
     **des
 )
+center_vstab = asb.Wing(
+    name="Vertical Stabilizer",
+    symmetric=False,
+    xsecs=[  # The wing's cross ("X") sections
+        asb.WingXSec(  # Root
+            xyz_le=np.array([0, 0, 0]),
+            chord=center_vstab_chord,
+            twist=0,  # degrees
+            airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
+            control_surface_is_symmetric=True,
+            # Flap # Control surfaces are applied between a given XSec and the next one.
+            control_surface_deflection=0,  # degrees
+        ),
+        asb.WingXSec(  # Tip
+            xyz_le=np.array([0, 0, center_vstab_span]),
+            chord=center_vstab_chord,
+            twist=0,
+            airfoil=tail_airfoil,
+        ),
+    ]
+).translate(
+    np.array([center_boom_length - center_vstab_chord * 0.75, 0, -center_vstab_span / 2 + center_vstab_span * 0.15]))
+
 
 # center hstab
 center_hstab_span = opti.variable(
