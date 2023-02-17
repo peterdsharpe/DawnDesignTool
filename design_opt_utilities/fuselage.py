@@ -70,3 +70,59 @@ def make_fuselage(
     )
 
     return fuse
+
+def make_payload_pod(
+    boom_length,
+    nose_length,
+    tail_length,
+    fuse_diameter,
+    fuse_resolution = 10,
+
+) -> asb.Fuselage:
+    ### Build the fuselage geometry
+    blend = lambda x: (1 - np.cos(np.pi * x)) / 2
+    fuse_x_c = []
+    fuse_z_c = []
+    fuse_radius = []
+    # Nose geometry
+    fuse_nose_theta = np.linspace(0, np.pi / 2, fuse_resolution)
+    fuse_x_c.extend([
+        - nose_length * np.cos(theta) for theta in fuse_nose_theta
+    ])
+    fuse_z_c.extend([-fuse_diameter / 2] * fuse_resolution)
+    fuse_radius.extend([
+        fuse_diameter / 2 * np.sin(theta) for theta in fuse_nose_theta
+    ])
+
+    # center section
+    fuse_x_c.extend([
+        boom_length
+    ])
+    fuse_z_c.extend([
+        (-fuse_diameter / 2)
+    ])
+    fuse_radius.extend([
+        fuse_diameter / 2
+    ])
+    # Tail geometry
+    fuse_tail_theta = np.flip(np.linspace(0, np.pi / 2, fuse_resolution))
+    fuse_x_c.extend([
+        boom_length + tail_length * np.cos(theta) for theta in fuse_tail_theta
+    ])
+    fuse_z_c.extend([-fuse_diameter / 2] * fuse_resolution)
+    fuse_radius.extend([
+        fuse_diameter / 2 * np.sin(theta) for theta in fuse_tail_theta
+    ])
+
+    fuse = asb.Fuselage(
+    name = "payload pod",
+    xsecs = [
+        asb.FuselageXSec(
+            # TODO have Peter check this is the correct change
+            xyz_c=[fuse_x_c[i], 0, fuse_z_c[i]],
+            radius=fuse_radius[i]
+        ) for i in range(len(fuse_x_c))
+    ]
+    )
+
+    return fuse
