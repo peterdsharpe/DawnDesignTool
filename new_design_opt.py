@@ -406,7 +406,7 @@ left_hstab = right_hstab.translate([0, -boom_offset * 2, 0])
 
 # Assemble the airplane
 airplane = asb.Airplane(
-    name="Solar1",
+    name="Dawn1",
     xyz_ref=np.array([0, 0, 0]),
     wings=[
         wing,
@@ -421,3 +421,14 @@ airplane = asb.Airplane(
         left_fuse
     ],
 )
+
+# Propeller
+propeller_diameter = opti.variable(
+    init_guess=1,
+    scale=1,
+    upper_bound=10,
+    lower_bound=0.5,
+    **des
+)
+
+n_propellers = opti.parameter(value=4) # TODO reconsider 2 or 4
