@@ -227,6 +227,7 @@ payload_pod = make_payload_pod( # TODO ask peter if there's a better way to make
     tail_length=1,
     fuse_diameter=payload_pod_diameter,
 ).translate(np.array[0, 0, -payload_pod_y_offset])
+
 center_fuse = asb.Fuselage(
         name="Fuselage",
         xsecs=[
@@ -279,6 +280,16 @@ center_vstab_chord = opti.variable(
     lower_bound=0.1,
     **des
 )
+
+center_vstab_incidence = opti.variable(
+    init_guess=0,
+    scale=1,
+    upper_bound=30,
+    lower_bound=-30,
+    freeze=True,
+    **tra
+)
+
 center_vstab = asb.Wing(
     name="Vertical Stabilizer",
     symmetric=False,
@@ -286,7 +297,7 @@ center_vstab = asb.Wing(
         asb.WingXSec(  # Root
             xyz_le=np.array([0, 0, 0]),
             chord=center_vstab_chord,
-            twist=0,  # degrees
+            twist=center_vstab_incidence,  # degrees
             airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
             control_surface_is_symmetric=True,
             # Flap # Control surfaces are applied between a given XSec and the next one.
@@ -295,13 +306,12 @@ center_vstab = asb.Wing(
         asb.WingXSec(  # Tip
             xyz_le=np.array([0, 0, center_vstab_span]),
             chord=center_vstab_chord,
-            twist=0,
+            twist=center_vstab_incidence,
             airfoil=tail_airfoil,
         ),
     ]
 ).translate(
     np.array([center_boom_length - center_vstab_chord * 0.75, 0, -center_vstab_span / 2 + center_vstab_span * 0.15]))
-
 
 # center hstab
 center_hstab_span = opti.variable(
@@ -311,18 +321,20 @@ center_hstab_span = opti.variable(
     upper_bound=wing_span/6,
     **des
 )
+
 center_hstab_chord = opti.variable(
     init_guess=0.8,
     scale=2,
     lower_bound=0.1
 )
+
 center_hstab_incidence = opti.variable(
     init_guess=0,
     lower_bound=-15,
     upper_bound=15,
-    freeze=True,
-    **des
+    **tra
 )
+
 center_hstab = asb.Wing(
     name="Horizontal Stabilizer",
     symmetric=True,
@@ -345,3 +357,46 @@ opti.subject_to([
     center_boom_length - center_vstab_chord - center_hstab_chord > wing_x_quarter_chord + wing_root_chord * 3 / 4
 ])
 
+# tailerons
+outboard_hstab_span = opti.variable(
+    init_guess=4,
+    scale=4,
+    lower_bound=2,
+    upper_bound=wing_span/6,
+    **des
+)
+
+outboard_hstab_chord = opti.variable(
+    init_guess=0.8,
+    scale=0.5,
+    lower_bound=0.8,
+    upper_bound=wing_root_chord,
+    **des
+)
+
+outboard_hstab_incidence = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=-5,
+    scale=1,
+    upper_bound=30,
+    lower_bound=-30,
+    **tra
+)
+
+# Assemble the airplane
+airplane = asb.Airplane(
+    name="Solar1",
+    xyz_ref=np.array([0, 0, 0]),
+    wings=[
+        wing,
+        center_hstab,
+        right_hstab,
+        left_hstab,
+        center_vstab,
+    ],
+    fuselages=[
+        center_fuse,
+        right_fuse,
+        left_fuse
+    ],
+)
