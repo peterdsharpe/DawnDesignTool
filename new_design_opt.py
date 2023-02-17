@@ -109,7 +109,7 @@ hour = time / 3600
 
 ##### Section: Vehicle definition
 
-# overall layout
+# overall layout wing layout
 boom_location = 0.80  # as a fraction of the half-span
 break_location = 0.67  # as a fraction of the half-span
 
@@ -169,7 +169,6 @@ wing_incidence = opti.variable(
     **des
 )
 
-
 wing = asb.Wing(
     name="Main Wing",
     symmetric=True,
@@ -197,4 +196,90 @@ wing = asb.Wing(
         ),
     ]
 ).translate(np.array([wing_x_quarter_chord, 0, 0]))
+
+# center fuselage
+center_boom_length = opti.variable(
+    init_guess=3,
+    scale=1,
+    lower_bound=0.1,
+    **des
+)
+
+# outboard_fuselage
+outboard_boom_length = opti.variable(
+    init_guess=3,
+    scale=1,
+    lower_bound=wing_root_chord * 3/4
+    **des
+)
+
+# values roughly to match the demonstrator fuselage and payload pod
+boom_diameter = 0.2  # meters
+payload_pod_length = 2.5  # meters
+payload_pod_diameter = 0.5  # meters
+
+# tail section
+tail_airfoil = asb.Airfoil("naca0008")
+tail_airfoil.generate_polars(
+    cache_filename="cache/naca0008.json",
+    include_compressibility_effects=False,
+    make_symmetric_polars=True
+)
+
+# center vstab
+center_vstab_span = opti.variable(
+    init_guess=3,
+    scale=2,
+    lower_bound=0.1
+    **des
+)
+
+center_vstab_chord = opti.variable(
+    init_guess=1,
+    scale=1,
+    lower_bound=0.1,
+    **des
+)
+
+# center hstab
+center_hstab_span = opti.variable(
+    init_guess=2,
+    scale=2,
+    lower_bound=0.1,
+    upper_bound=wing_span/6,
+    **des
+)
+center_hstab_chord = opti.variable(
+    init_guess=0.8,
+    scale=2,
+    lower_bound=0.1
+)
+center_hstab_incidence = opti.variable(
+    init_guess=0,
+    lower_bound=-15,
+    upper_bound=15,
+    freeze=True,
+    **des
+)
+center_hstab = asb.Wing(
+    name="Horizontal Stabilizer",
+    symmetric=True,
+    xsecs=[  # The wing's cross ("X") sections
+        asb.WingXSec(  # Root
+            chord=center_hstab_chord,
+            twist=center_hstab_incidence,  # degrees
+            airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
+        ),
+        asb.WingXSec(  # Tip
+            xyz_le=np.array([0, center_hstab_span / 2, 0]),
+            chord=center_hstab_chord,
+            twist=center_hstab_incidence,
+            airfoil=tail_airfoil,
+        ),
+    ]
+).translate(np.array([center_boom_length - center_vstab_chord * 0.75 - center_hstab_chord, 0, 0.1]))
+
+opti.subject_to([
+    center_boom_length - center_vstab_chord - center_hstab_chord > wing_x_quarter_chord + wing_root_chord * 3 / 4
+])
 
