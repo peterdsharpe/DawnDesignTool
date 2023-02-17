@@ -376,12 +376,33 @@ outboard_hstab_chord = opti.variable(
 
 outboard_hstab_incidence = opti.variable(
     n_vars=n_timesteps,
-    init_guess=-5,
+    init_guess=-3,
     scale=1,
     upper_bound=30,
     lower_bound=-30,
+    freeze=True,
     **tra
 )
+right_hstab = asb.Wing(
+    name="Taileron",
+    symmetric=True,
+    xsecs=[  # The wing's cross ("X") sections
+        asb.WingXSec(  # Root
+            xyz_le=np.array([0, 0, 0]),
+            chord=outboard_hstab_chord,
+            twist=outboard_hstab_incidence,  # degrees
+            airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
+            control_surface_is_symmetric=True,
+        ),
+        asb.WingXSec(  # Tip
+            xyz_le=np.array([0, outboard_hstab_span / 2, 0]),
+            chord=outboard_hstab_chord,
+            twist=outboard_hstab_incidence,
+            airfoil=tail_airfoil,
+        ),
+    ]
+).translate(np.array([outboard_boom_length - outboard_hstab_chord * 0.75, boom_offset, 0.1]))
+left_hstab = right_hstab.translate([0, -boom_offset * 2, 0])
 
 # Assemble the airplane
 airplane = asb.Airplane(
