@@ -267,22 +267,22 @@ tail_airfoil.generate_polars(
     make_symmetric_polars=True
 )
 
-# center vstab
-center_vstab_span = opti.variable(
+#  vstab
+vstab_span = opti.variable(
     init_guess=3,
     scale=2,
     lower_bound=0.1
     **des
 )
 
-center_vstab_chord = opti.variable(
+vstab_chord = opti.variable(
     init_guess=1,
     scale=1,
     lower_bound=0.1,
     **des
 )
 
-center_vstab_incidence = opti.variable(
+vstab_incidence = opti.variable(
     init_guess=0,
     scale=1,
     upper_bound=30,
@@ -291,28 +291,28 @@ center_vstab_incidence = opti.variable(
     **tra
 )
 
-center_vstab = asb.Wing(
+vstab = asb.Wing(
     name="Vertical Stabilizer",
     symmetric=False,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
             xyz_le=np.array([0, 0, 0]),
-            chord=center_vstab_chord,
-            twist=center_vstab_incidence,  # degrees
+            chord=vstab_chord,
+            twist=vstab_incidence,  # degrees
             airfoil=tail_airfoil,  # Airfoils are blended between a given XSec and the next one.
             control_surface_is_symmetric=True,
             # Flap # Control surfaces are applied between a given XSec and the next one.
             control_surface_deflection=0,  # degrees
         ),
         asb.WingXSec(  # Tip
-            xyz_le=np.array([0, 0, center_vstab_span]),
-            chord=center_vstab_chord,
-            twist=center_vstab_incidence,
+            xyz_le=np.array([0, 0, vstab_span]),
+            chord=vstab_chord,
+            twist=vstab_incidence,
             airfoil=tail_airfoil,
         ),
     ]
 ).translate(
-    np.array([center_boom_length - center_vstab_chord * 0.75, 0, -center_vstab_span / 2 + center_vstab_span * 0.15]))
+    np.array([center_boom_length - vstab_chord * 0.75, 0, -vstab_span / 2 + vstab_span * 0.15]))
 
 # center hstab
 center_hstab_span = opti.variable(
@@ -352,10 +352,10 @@ center_hstab = asb.Wing(
             airfoil=tail_airfoil,
         ),
     ]
-).translate(np.array([center_boom_length - center_vstab_chord * 0.75 - center_hstab_chord, 0, 0.1]))
+).translate(np.array([center_boom_length - vstab_chord * 0.75 - center_hstab_chord, 0, 0.1]))
 
 opti.subject_to([
-    center_boom_length - center_vstab_chord - center_hstab_chord > wing_x_quarter_chord + wing_root_chord * 3 / 4
+    center_boom_length - vstab_chord - center_hstab_chord > wing_x_quarter_chord + wing_root_chord * 3 / 4
 ])
 
 # tailerons
@@ -414,7 +414,7 @@ airplane = asb.Airplane(
         center_hstab,
         right_hstab,
         left_hstab,
-        center_vstab,
+        vstab,
     ],
     fuselages=[
         center_fuse,
@@ -490,3 +490,90 @@ wing_mass_props = asb.MassProperties(
     mass=wing_mass,
     x_cg=0.40 * wing_root_chord
 )
+
+### hstab mass accounting
+def mass_hstab(
+        hstab,
+        n_ribs_hstab,
+):
+    mass_hstab_primary = mass_lib.mass_wing_spar(
+        span=hstab.span(),
+        mass_supported=q_ne * 1.5 * hstab.area() / 9.81,
+        ultimate_load_factor=structural_load_factor
+    )
+
+    mass_hstab_secondary = mass_lib.mass_hpa_stabilizer(
+        span=hstab.span(),
+        chord=hstab.mean_geometric_chord(),
+        dynamic_pressure_at_manuever_speed=q_ne,
+        n_ribs=n_ribs_hstab,
+        t_over_c=0.08,
+        include_spar=False
+    )
+    mass_hstab = mass_hstab_primary + mass_hstab_secondary  # per hstab
+    return mass_hstab
+
+q_ne = opti.variable(
+    init_guess=160,
+    lower_bound=0,
+    **des
+)
+
+n_ribs_center_hstab = opti.variable(
+    init_guess=40,
+    scale=40,
+    lower_bound=0,
+    **des
+)
+
+center_hstab_mass_props = asb.MassProperties(
+    mass=mass_hstab(center_hstab, n_ribs_center_hstab)
+)
+
+n_ribs_outboard_hstab = opti.variable(
+    init_guess=40,
+    scale=40,
+    lower_bound=0,
+    **des
+)
+
+right_hstab_mass_props = asb.MassProperties(
+    mass=mass_hstab(right_hstab, n_ribs_outboard_hstab)
+)
+
+left_hstab_mass_props = asb.MassProperties(
+    mass=mass_hstab(left_hstab, n_ribs_outboard_hstab)
+)
+
+# vstab mass accounting
+def mass_vstab(
+        vstab,
+        n_ribs_vstab,
+):
+    mass_vstab_primary = mass_lib.mass_wing_spar(
+        span=vstab.span(),
+        mass_supported=q_ne * 1.5 * vstab.area() / 9.81,
+        ultimate_load_factor=structural_load_factor
+    ) * 1.2  # TODO due to asymmetry, a guess
+    mass_vstab_secondary = mass_lib.mass_hpa_stabilizer(
+        span=vstab.span(),
+        chord=vstab.mean_geometric_chord(),
+        dynamic_pressure_at_manuever_speed=q_ne,
+        n_ribs=n_ribs_vstab,
+        t_over_c=0.08
+    )
+    mass_vstab = mass_vstab_primary + mass_vstab_secondary  # per vstab
+    return mass_vstab
+
+n_ribs_vstab = opti.variable(
+    init_guess=40,
+    scale=40,
+    lower_bound=0,
+    **des
+)
+
+vstab_mass_props = asb.MassProperties(
+    mass=mass_hstab(vstab, n_ribs_vstab)
+)
+
+
