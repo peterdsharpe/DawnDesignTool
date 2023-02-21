@@ -229,8 +229,8 @@ payload_pod = make_payload_pod( # TODO ask peter if there's a better way to make
     fuse_diameter=payload_pod_diameter,
 ).translate(np.array[0, 0, -payload_pod_y_offset])
 
-center_fuse = asb.Fuselage(
-        name="Fuselage",
+center_boom = asb.Fuselage(
+        name="Center Boom",
         xsecs=[
             asb.FuselageXSec(
                     xyz_c=[0, 0, 0],
@@ -242,8 +242,8 @@ center_fuse = asb.Fuselage(
                 )
         ]
     )
-right_fuse = asb.Fuselage(
-        name="Fuselage",
+right_boom = asb.Fuselage(
+        name="Right Boom",
         xsecs=[
             asb.FuselageXSec(
                     xyz_c=[0, 0, 0],
@@ -255,8 +255,8 @@ right_fuse = asb.Fuselage(
                 )
         ]
     )
-right_fuse = right_fuse.translate(np.array([0, boom_offset, 0]))
-left_fuse = right_fuse.translate(np.array([0, -2 * boom_offset, 0]))
+right_boom = right_boom.translate(np.array([0, boom_offset, 0]))
+left_boom = right_boom.translate(np.array([0, -2 * boom_offset, 0]))
 
 
 # tail section
@@ -417,9 +417,9 @@ airplane = asb.Airplane(
         vstab,
     ],
     fuselages=[
-        center_fuse,
-        right_fuse,
-        left_fuse
+        center_boom,
+        right_boom,
+        left_boom
     ],
 )
 
@@ -576,4 +576,26 @@ vstab_mass_props = asb.MassProperties(
     mass=mass_hstab(vstab, n_ribs_vstab)
 )
 
+### boom mass accounting
+center_boom_mass_props = asb.MassProperties(
+    mass=mass_lib.mass_hpa_tail_boom(
+        length_tail_boom=center_boom_length-wing_x_quarter_chord,
+        dynamic_pressure_at_manuever_speed=q_ne,
+        mean_tail_surface_area=center_hstab.area() + vstab.area()
+    )
+)
+left_boom_mass_props = asb.MassProperties(
+    mass=mass_lib.mass_hpa_tail_boom(
+        length_tail_boom=outboard_boom_length - wing_x_quarter_chord,  # support up to the quarter-chord
+        dynamic_pressure_at_manuever_speed=q_ne,
+        mean_tail_surface_area=right_hstab.area()
+    )
+)
+right_boom_mass_props = asb.MassProperties(
+    mass=mass_lib.mass_hpa_tail_boom(
+        length_tail_boom=outboard_boom_length - wing_x_quarter_chord,  # support up to the quarter-chord
+        dynamic_pressure_at_manuever_speed=q_ne,
+        mean_tail_surface_area=left_hstab.area()
+    )
+)
 
