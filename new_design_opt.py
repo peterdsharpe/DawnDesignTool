@@ -112,6 +112,20 @@ hour = time / 3600
 
 ##### Section: Vehicle definition
 
+# Payload pod
+# values roughly to match the demonstrator fuselage and payload pod
+boom_diameter = 0.2  # meters
+payload_pod_length = 2.0  # meters
+payload_pod_diameter = 0.5  # meters
+payload_pod_y_offset = 1.5 # meters
+
+payload_pod = make_payload_pod( # TODO ask peter if there's a better way to make this an aero shape
+    boom_length=payload_pod_length,
+    nose_length=0.5,
+    tail_length=1,
+    fuse_diameter=payload_pod_diameter,
+).translate(np.array[0, 0, -payload_pod_y_offset])
+
 # overall layout wing layout
 boom_location = 0.80  # as a fraction of the half-span
 break_location = 0.67  # as a fraction of the half-span
@@ -121,6 +135,13 @@ wing_span = opti.variable(
     init_guess=30,
     scale=10,
     lower_bound=0.01,
+    **des
+)
+wing_x_le = opti.variable(
+    init_guess=1.2,
+    lower_bound=payload_pod_length,
+    upper_bound=payload_pod_length * 0.75,
+    # freeze=True,
     **des
 )
 
@@ -171,13 +192,13 @@ wing_incidence = opti.variable(
     freeze=True,
     **des
 )
+wing_x_center = wing_x_le + 0.5 * wing_root_chord
 
 wing = asb.Wing(
     name="Main Wing",
     symmetric=True,
     xsecs=[  # The wing's cross ("X") sections
         asb.WingXSec(  # Root
-            xyz_le=np.array([-wing_root_chord / 4, 0, 0]),
             chord=wing_root_chord,
             twist=wing_incidence,  # degrees
             airfoil=wing_airfoil,  # Airfoils are blended between a given XSec and the next one.
@@ -186,19 +207,27 @@ wing = asb.Wing(
             control_surface_deflection=0,  # degrees
         ),
         asb.WingXSec(  # Break
-            xyz_le=np.array([-wing_root_chord / 4, wing_y_taper_break, 0]),
+            xyz_le=np.array([0,
+                             wing_y_taper_break,
+                             0]),
             chord=wing_root_chord,
             twist=wing_incidence,
             airfoil=wing_airfoil,
         ),
         asb.WingXSec(  # Tip
-            xyz_le=np.array([-wing_root_chord * wing_taper_ratio / 4, wing_span / 2, 0]),
+            xyz_le=np.array([0.25 * (wing_root_chord - wing_tip_chord),
+                             wing_span / 2,
+                             0]),
             chord=wing_tip_chord,
             twist=wing_incidence,
             airfoil=wing_airfoil,
         ),
     ]
-).translate(np.array([wing_x_quarter_chord, 0, 0]))
+).translate([
+    wing_x_le,
+    0,
+    0
+])
 
 # center fuselage
 center_boom_length = opti.variable(
@@ -215,19 +244,6 @@ outboard_boom_length = opti.variable(
     lower_bound=wing_root_chord * 3/4
     **des
 )
-
-# values roughly to match the demonstrator fuselage and payload pod
-boom_diameter = 0.2  # meters
-payload_pod_length = 2.0  # meters
-payload_pod_diameter = 0.5  # meters
-payload_pod_y_offset = 1.5 # meters
-
-payload_pod = make_payload_pod( # TODO ask peter if there's a better way to make this an aero shape
-    boom_length=payload_pod_length,
-    nose_length=0.5,
-    tail_length=1,
-    fuse_diameter=payload_pod_diameter,
-).translate(np.array[0, 0, -payload_pod_y_offset])
 
 center_boom = asb.Fuselage(
         name="Center Boom",
@@ -488,7 +504,7 @@ wing_mass = wing_mass_primary + wing_mass_secondary
 
 wing_mass_props = asb.MassProperties(
     mass=wing_mass * structural_mass_margin_multiplier,
-    x_cg=0.40 * wing_root_chord
+    x_cg=wing_x_le + 0.40 * wing_root_chord
 )
 
 ### hstab mass accounting
