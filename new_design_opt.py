@@ -878,4 +878,13 @@ mass_props = (
         propulsion_system_mass_props
 )
 
+remaining_volume = (
+    payload_pod_volume - (
+    payload_volume +
+    avionics_volume +
+    battery_volume
+    )
+)
+
+opti.subject_to(mass_total > mass_props.mass)
 
