@@ -487,7 +487,7 @@ wing_mass_secondary = mass_lib.mass_hpa_wing(
 wing_mass = wing_mass_primary + wing_mass_secondary
 
 wing_mass_props = asb.MassProperties(
-    mass=wing_mass,
+    mass=wing_mass * structural_mass_margin_multiplier,
     x_cg=0.40 * wing_root_chord
 )
 
@@ -527,7 +527,7 @@ n_ribs_center_hstab = opti.variable(
 )
 
 center_hstab_mass_props = asb.MassProperties(
-    mass=mass_hstab(center_hstab, n_ribs_center_hstab)
+    mass=mass_hstab(center_hstab, n_ribs_center_hstab) * structural_mass_margin_multiplier
 )
 
 n_ribs_outboard_hstab = opti.variable(
@@ -538,11 +538,11 @@ n_ribs_outboard_hstab = opti.variable(
 )
 
 right_hstab_mass_props = asb.MassProperties(
-    mass=mass_hstab(right_hstab, n_ribs_outboard_hstab)
+    mass=mass_hstab(right_hstab, n_ribs_outboard_hstab) * structural_mass_margin_multiplier
 )
 
 left_hstab_mass_props = asb.MassProperties(
-    mass=mass_hstab(left_hstab, n_ribs_outboard_hstab)
+    mass=mass_hstab(left_hstab, n_ribs_outboard_hstab) * structural_mass_margin_multiplier
 )
 
 # vstab mass accounting
@@ -573,7 +573,7 @@ n_ribs_vstab = opti.variable(
 )
 
 vstab_mass_props = asb.MassProperties(
-    mass=mass_hstab(vstab, n_ribs_vstab)
+    mass=mass_hstab(vstab, n_ribs_vstab) * structural_mass_margin_multiplier
 )
 
 ### boom mass accounting
@@ -582,20 +582,77 @@ center_boom_mass_props = asb.MassProperties(
         length_tail_boom=center_boom_length-wing_x_quarter_chord,
         dynamic_pressure_at_manuever_speed=q_ne,
         mean_tail_surface_area=center_hstab.area() + vstab.area()
-    )
+    ) * structural_mass_margin_multiplier
 )
 left_boom_mass_props = asb.MassProperties(
     mass=mass_lib.mass_hpa_tail_boom(
         length_tail_boom=outboard_boom_length - wing_x_quarter_chord,  # support up to the quarter-chord
         dynamic_pressure_at_manuever_speed=q_ne,
         mean_tail_surface_area=right_hstab.area()
-    )
+    ) * structural_mass_margin_multiplier
 )
 right_boom_mass_props = asb.MassProperties(
     mass=mass_lib.mass_hpa_tail_boom(
         length_tail_boom=outboard_boom_length - wing_x_quarter_chord,  # support up to the quarter-chord
         dynamic_pressure_at_manuever_speed=q_ne,
         mean_tail_surface_area=left_hstab.area()
-    )
+    ) * structural_mass_margin_multiplier
+)
+
+### payload pod mass accounting
+pod_structure_mass = 20 # kg, corresponds to reduction in pod mass expected for future build
+# assumes approximately same size battery system and payload
+# taken from Daedalus, http://journals.sfu.ca/ts/index.php/ts/article/viewFile/760/718
+mass_daedalus = 103.9  # kg, corresponds to 229 lb gross weight.
+# Total mass of the Daedalus aircraft, used as a reference for scaling.
+mass_fairings = 2.067 * mass_total / mass_daedalus  # Scale fairing mass to same mass fraction as Daedalus
+mass_landing_gear = 0.728 * mass_total / mass_daedalus  # Scale landing gear mass to same mass fraction as Daedalus
+mass_strut = 0.5 # mass per strut to the payload pod roughly baselined to dawn demonstrator build
+
+### avionics mass accounting
+# tons of assumptions made here and taken from other project peter sent over
+# roughly +/- 0.5kg the previous ddt avionics mass assumptions
+actuator_mass = 6 * 0.575
+processor_mass = 0.140
+flight_computer_mass = 0.660
+vhf_transciever_mass = 0.453
+vhf_antenna_mass = 0.227
+radio_transceiver_and_antenna_mass = 0.090
+l_band_blade_antenna_mass = 0.055
+iridium_satellite_transceiver_mass = 0.185
+gps_antenna_mass = 0.176
+emergency_locator_transmitter_mass = 0.908
+transponder_mass = 0.100
+transponder_antenna_mass = 0.109
+wiring_mass = 5.6
+
+avionics_mass_props = asb.MassProperties(
+    mass=(
+            actuator_mass +
+            processor_mass +
+            flight_computer_mass +
+            vhf_transciever_mass +
+            vhf_antenna_mass +
+            radio_transceiver_and_antenna_mass +
+            l_band_blade_antenna_mass +
+            iridium_satellite_transceiver_mass +
+            gps_antenna_mass +
+            emergency_locator_transmitter_mass +
+            transponder_mass +
+            transponder_antenna_mass +
+            wiring_mass
+    ),
+    x_cg=fuselage_pod_length * 0.2,  # right behind payload
+)
+avionics_power = 180 # TODO revisit this number
+
+payload_pod_mass_props = asb.MassProperties(
+    mass=(
+        mass_fairings +
+        mass_landing_gear +
+        mass_strut * 2 +
+        pod_structure_mass
+    ),
+    x_cg=payload_pod_length/2
 )
 
