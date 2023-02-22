@@ -78,7 +78,7 @@ allowable_battery_depth_of_discharge = opti.parameter(value=0.95)  # How much of
 q_ne_over_q_max = opti.parameter(value=2)  # Chosen on the basis of a paper read by Trevor Long about Helios, 1/16/21 TODO re-evaluate?
 
 ##### Section: Time Discretization
-n_timesteps_per_segment = 180  # number of timesteps in the 25 hour sizing period
+n_timesteps_per_segment = 180  # number of timesteps in the 25 hour sizing period #todo increase for trajectory stuff
 
 if climb_opt:  # roughly 1-day-plus-climb window, starting at ground. Periodicity enforced for last 24 hours.
     time_start = opti.variable(init_guess=-12 * 3600,
@@ -913,3 +913,35 @@ remaining_volume = (
 opti.subject_to(mass_total > mass_props.mass)
 
 ##### Section: Setup Dynamics
+guess_altitude = 18000
+guess_u_e = 20
+
+dyn = asb.DynamicsPointMass2DCartesian(
+    mass_props=mass_props,
+    x_e=opti.variable(
+        init_guess=time * guess_u_e,
+        **tra
+    ),
+    z_e=opti.variable(
+        init_guess=-guess_altitude, n_vars=n_timesteps,
+        **tra
+    ),
+    u_e=opti.variable(init_guess=guess_u_e, n_vars=n_timesteps),
+    w_e=opti.variable(init_guess=0, n_vars=n_timesteps),
+    alpha=opti.variable(
+        init_guess=3, n_vars=n_timesteps,
+        **tra
+    ),
+)
+
+dyn.add_gravity_force(g=9.81)
+
+opti.subject_to([
+    dyn.x_e[time_periodic_start_index] == 0,
+    dyn.altitude[time_periodic_start_index:] / min_cruise_altitude > 1,
+    dyn.altitude / guess_altitude > 0,  # stay above ground
+    dyn.altitude / 40000 < 1,  # models break down
+])
+
+if climb_opt:
+    opti.subject_to(dyn.altitude[0] / 1e4 == 0)
