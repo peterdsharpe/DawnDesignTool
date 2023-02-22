@@ -945,3 +945,21 @@ opti.subject_to([
 
 if climb_opt:
     opti.subject_to(dyn.altitude[0] / 1e4 == 0)
+
+##### Section: Aerodynamics
+aero = asb.AeroBuildup(
+    airplane=airplane,
+    op_point=dyn.op_point,
+    xyz_ref=mass_props.xyz_cg
+).run_with_stability_derivatives(
+    alpha=True,
+    beta=True,
+    p=False,
+    q=False,
+    r=False
+)
+
+dyn.add_force(
+    *aero['F_w'],
+    axes="earth"
+)  # Note, this is not a typo: we make the small-angle-approximation on the flight path angle gamma.
