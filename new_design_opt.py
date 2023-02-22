@@ -57,6 +57,8 @@ mass_payload_base = opti.parameter(value=10)
 tail_panels = True # Do we assume we can mount solar cells on the vertical tail?
 wing_cells = "sunpower"  # select cells for wing, options include ascent_solar, sunpower, and microlink
 vstab_cells = "sunpower"  # select cells for vtail, options include ascent_solar, sunpower, and microlink
+max_wing_solar_area_fraction = opti.parameter(0.8)
+max_vstab_solar_area_fraction = opti.parameter(0.8)
 use_propulsion_fits_from_FL2020_1682_undergrads = True  # Warning: Fits not yet validated
 # fits for propeller and motors to derive motor and propeller efficiencies
 
@@ -553,7 +555,7 @@ n_ribs_center_hstab = opti.variable(
 
 center_hstab_mass_props = asb.MassProperties(
     mass=mass_hstab(center_hstab, n_ribs_center_hstab) * structural_mass_margin_multiplier
-)
+) # TODO add cg of stabilizers
 
 n_ribs_outboard_hstab = opti.variable(
     init_guess=40,
@@ -691,8 +693,75 @@ payload_mass_props = asb.MassProperties(
 )
 
 ### Power Systems Mass Accounting
+if vstab_cells == "microlink":
+    vstab_solar_cell_efficiency = 0.285 * 0.9  # Microlink
+    vstab_rho_solar_cells = 0.255 * 1.1  # kg/m^2, solar cell area density. Microlink.
+    vstab_solar_cost_per_watt = 250  # $/W
+    vstab_solar_power_ratio = 1100  # W/kg
 
+if vstab_cells == "sunpower":
+    vstab_solar_cell_efficiency = 0.243 * 0.9  # Sunpower
+    vstab_rho_solar_cells = 0.425 * 1.1 * 1.15  # kg/m^2, solar cell area density. Sunpower.
+    vstab_solar_cost_per_watt = 3  # $/W
+    vstab_solar_power_ratio = 500  # W/kg
 
+if vstab_cells == "ascent_solar":
+    vstab_solar_cell_efficiency = 0.14 * 0.9  # Ascent Solar
+    vstab_rho_solar_cells = 0.300 * 1.1  # kg/m^2, solar cell area density. Ascent Solar
+    vstab_solar_cost_per_watt = 80  # $/W
+    vstab_solar_power_ratio = 300  # W/kg
+
+if wing_cells == "microlink":
+    wing_solar_cell_efficiency = 0.285 * 0.9  # Microlink
+    wing_rho_solar_cells = 0.255 * 1.1  # kg/m^2, solar cell area density. Microlink.
+    wing_solar_cost_per_watt = 250  # $/W
+    wing_solar_power_ratio = 1100  # W/kg
+
+if wing_cells == "sunpower":
+    wing_solar_cell_efficiency = 0.243 * 0.9  # Sunpower
+    wing_rho_solar_cells = 0.425 * 1.1 * 1.15  # kg/m^2, solar cell area density. Sunpower.
+    wing_solar_cost_per_watt = 3  # $/W
+    wing_solar_power_ratio = 500  # W/kg
+
+if wing_cells == "ascent_solar":
+    wing_solar_cell_efficiency = 0.14 * 0.9  # Ascent Solar
+    wing_rho_solar_cells = 0.300 * 1.1  # kg/m^2, solar cell area density. Ascent Solar
+    wing_solar_cost_per_watt = 80  # $/W
+    wing_solar_power_ratio = 300  # W/kg
+
+wing_solar_area_fraction = opti.variable(
+    init_guess=0.8,
+    scale=0.5,
+    lower_bound=0,
+    upper_bound=max_wing_solar_area_fraction
+    **des
+)
+
+vstab_solar_area_fraction = opti.variable(
+    init_guess=0.8,
+    scale=0.5,
+    lower_bound=0,
+    upper_bound=max_vstab_solar_area_fraction,
+    **des
+)
+
+if not tail_panels:
+    opti.subject_to([
+        vstab_solar_area_fraction == 0,
+    ])
+
+area_solar_wing = wing.area() * wing_solar_area_fraction
+area_solar_vstab = vstab.area() * vstab_solar_area_fraction
+
+solar_panel_wing_mass_props = asb.MassProperties(
+    mass=area_solar_wing * wing_rho_solar_cells,
+    x_cg=wing_x_le + 0.50 * wing_root_chord
+)
+
+solar_panel_vstab_mass_props = asb.MassProperties(
+    mass=area_solar_vstab * vstab_rho_solar_cells,
+    x_cg=center_hstab.xsecs[0].xyz_le[0] + center_hstab_chord / 2,
+)
 
 ### MPPT mass accounting
 MPPT_mass_props = asb.MassProperties(
