@@ -282,8 +282,14 @@ right_boom = asb.Fuselage(
                 )
         ]
     )
-right_boom = right_boom.translate(np.array([0, boom_offset, 0]))
-left_boom = right_boom.translate(np.array([0, -2 * boom_offset, 0]))
+right_boom = right_boom.translate(np.array([
+    0,
+    boom_offset,
+    0]))
+left_boom = right_boom.translate(np.array([
+    0,
+    -2 * boom_offset,
+    0]))
 
 
 # tail section
@@ -339,7 +345,11 @@ vstab = asb.Wing(
         ),
     ]
 ).translate(
-    np.array([center_boom_length - vstab_chord * 0.75, 0, -vstab_span / 2 + vstab_span * 0.15]))
+    np.array([
+        center_boom_length - vstab_chord * 0.75,
+        0,
+        -vstab_span / 2 + vstab_span * 0.15
+]))
 
 # center hstab
 center_hstab_span = opti.variable(
@@ -379,7 +389,10 @@ center_hstab = asb.Wing(
             airfoil=tail_airfoil,
         ),
     ]
-).translate(np.array([center_boom_length - vstab_chord * 0.75 - center_hstab_chord, 0, 0.1]))
+).translate(np.array([
+    center_boom_length - vstab_chord * 0.75 - center_hstab_chord,
+    0,
+    0.1]))
 
 opti.subject_to([
     center_boom_length - vstab_chord - center_hstab_chord > wing_x_quarter_chord + wing_root_chord * 3 / 4
@@ -429,8 +442,14 @@ right_hstab = asb.Wing(
             airfoil=tail_airfoil,
         ),
     ]
-).translate(np.array([outboard_boom_length - outboard_hstab_chord * 0.75, boom_offset, 0.1]))
-left_hstab = right_hstab.translate([0, -boom_offset * 2, 0])
+).translate(np.array([
+    outboard_boom_length - outboard_hstab_chord * 0.75,
+    boom_offset,
+    0.1]))
+left_hstab = right_hstab.translate([
+    0,
+    -boom_offset * 2,
+    0])
 
 # Assemble the airplane
 airplane = asb.Airplane(
@@ -554,8 +573,9 @@ n_ribs_center_hstab = opti.variable(
 )
 
 center_hstab_mass_props = asb.MassProperties(
-    mass=mass_hstab(center_hstab, n_ribs_center_hstab) * structural_mass_margin_multiplier
-) # TODO add cg of stabilizers
+    mass=mass_hstab(center_hstab, n_ribs_center_hstab) * structural_mass_margin_multiplier,
+    x_cg=center_hstab.xsecs[0].xyz_le[0] + center_hstab_chord / 2,
+)
 
 n_ribs_outboard_hstab = opti.variable(
     init_guess=40,
@@ -565,11 +585,13 @@ n_ribs_outboard_hstab = opti.variable(
 )
 
 right_hstab_mass_props = asb.MassProperties(
-    mass=mass_hstab(right_hstab, n_ribs_outboard_hstab) * structural_mass_margin_multiplier
+    mass=mass_hstab(right_hstab, n_ribs_outboard_hstab) * structural_mass_margin_multiplier,
+    x_cg=right_hstab.xsecs[0].xyz_le[0] + outboard_hstab_chord / 2,
 )
 
 left_hstab_mass_props = asb.MassProperties(
-    mass=mass_hstab(left_hstab, n_ribs_outboard_hstab) * structural_mass_margin_multiplier
+    mass=mass_hstab(left_hstab, n_ribs_outboard_hstab) * structural_mass_margin_multiplier,
+    x_cg=left_hstab.xsecs[0].xyz_le[0] + outboard_hstab_chord / 2,
 )
 
 # vstab mass accounting
@@ -600,7 +622,9 @@ n_ribs_vstab = opti.variable(
 )
 
 vstab_mass_props = asb.MassProperties(
-    mass=mass_hstab(vstab, n_ribs_vstab) * structural_mass_margin_multiplier
+    mass=mass_hstab(vstab, n_ribs_vstab) * structural_mass_margin_multiplier,
+    x_cg=vstab.xsecs[0].xyz_le[0] + vstab_chord / 2,
+    z_cg=vstab.aerodynamic_center()[2],
 )
 
 ### boom mass accounting
@@ -888,3 +912,4 @@ remaining_volume = (
 
 opti.subject_to(mass_total > mass_props.mass)
 
+##### Section: Setup Dynamics
