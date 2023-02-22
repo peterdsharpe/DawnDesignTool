@@ -5,6 +5,11 @@ import pathlib
 from aerosandbox.modeling.interpolation import InterpolatedModel
 from design_opt_utilities.fuselage import make_payload_pod
 import aerosandbox.library.mass_structural as mass_lib
+from aerosandbox.library import power_solar as solar_lib
+from aerosandbox.library import propulsion_electric as prop_elec_lib
+from aerosandbox.library import propulsion_propeller as prop_prop_lib
+
+
 
 
 path = str(
@@ -658,7 +663,7 @@ avionics_mass_props = asb.MassProperties(
             transponder_antenna_mass +
             wiring_mass
     ),
-    x_cg=fuselage_pod_length * 0.2,  # right behind payload
+    x_cg=payload_pod_length * 0.2,  # right behind payload # TODO revisit this number
 )
 avionics_power = 180 # TODO revisit this number
 
@@ -671,4 +676,40 @@ payload_pod_mass_props = asb.MassProperties(
     ),
     x_cg=payload_pod_length/2
 )
+
+# instrument data storage mass requirements
+mass_of_data_storage = 0.0053 # kg per TB of data
+tb_per_day = 4
+payload_mass_props = asb.MassProperties(
+    mass=mass_payload_base +
+           mission_length * tb_per_day * mass_of_data_storage
+)
+
+### Power Systems
+
+# MPPT mass
+MPPT_mass_props = asb.MassProperties(
+    mass=solar_lib.mass_MPPT(max_power_in)
+)
+
+# battery mass accounting
+battery_capacity = opti.variable(
+    init_guess=5e8,
+    scale=5e8,
+    lower_bound=0,
+    **des
+)
+battery_capacity_watt_hours = battery_capacity / 3600
+battery_mass_props = asb.MassProperties(
+    mass= prop_elec_lib.mass_battery_pack(
+        battery_capacity_Wh=battery_capacity_watt_hours,
+        battery_cell_specific_energy_Wh_kg=battery_specific_energy_Wh_kg,
+        battery_pack_cell_fraction=battery_pack_cell_percentage
+    ),
+    x_cg=wing_x_le, #TODO figure out x cg location
+)
+battery_density = 2000  # kg/m^3, taken from averaged measurements of commercial cells
+battery_volume = battery_mass_props.mass / battery_density
+
+battery_voltage = 125  # From Olek Peraire >4/2, propulsion slack
 
