@@ -534,21 +534,16 @@ wing_mass_secondary = mass_lib.mass_hpa_wing(
 
 wing_mass = wing_mass_primary + wing_mass_secondary
 
-wing_mass_props = asb.MassProperties(
-    mass=wing_mass * structural_mass_margin_multiplier,
-    x_cg=wing_x_le + 0.40 * wing_root_chord
-)
-
 wing_y_field_joint_break = field_joint_location * wing_span / 2
 
 mass_props['wing_center'] = asb.mass_properties_from_radius_of_gyration(
-    mass=wing_mass * wing_y_taper_break,
+    mass=wing_mass * wing_y_taper_break * structural_mass_margin_multiplier,
     x_cg=wing_x_le + 0.40 * wing_root_chord,  # quarter-chord,
     radius_of_gyration_x=(wing_y_field_joint_break * wing_span) / 12,
     radius_of_gyration_z=(wing_y_field_joint_break * wing_span) / 12
 )
 mass_props['wing_tips'] = asb.mass_properties_from_radius_of_gyration(
-    mass=wing_mass * (1 - wing_y_field_joint_break),
+    mass=wing_mass * (1 - wing_y_field_joint_break) * structural_mass_margin_multiplier,
     x_cg=wing_x_le + 0.40 * wing_root_chord,  # quarter-chord,
     radius_of_gyration_x=(1 + wing_y_field_joint_break) / 2 * (wing_span / 2),
     radius_of_gyration_z=(1 + wing_y_field_joint_break) / 2 * (wing_span / 2),
