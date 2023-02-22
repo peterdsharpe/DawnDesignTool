@@ -6,8 +6,10 @@ from aerosandbox.modeling.interpolation import InterpolatedModel
 from design_opt_utilities.fuselage import make_payload_pod
 import aerosandbox.library.mass_structural as mass_lib
 from aerosandbox.library import power_solar as solar_lib
-from aerosandbox.library import propulsion_electric as prop_elec_lib
-from aerosandbox.library import propulsion_propeller as prop_prop_lib
+from aerosandbox.library import propulsion_electric as elec_lib
+from aerosandbox.library import propulsion_propeller as prop_lib
+from aerosandbox.atmosphere import Atmosphere as atmo
+
 
 
 
@@ -36,7 +38,7 @@ mission_length = opti.parameter(value=45)  # days, the length of the mission wit
 strat_offset_value = opti.parameter(value=1000)  # meters, margin above the stratosphere height the aircraft is required to stay above
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 climb_opt = False  # are we optimizing for the climb as well?
-hold_cruise_altitude = True # must we hold the cruise altitude (True) or can we altitude cycle (False)?
+hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we altitude cycle (False)?
 
 # Trajectory Parameters
 sample_area_height = opti.parameter(value=150000)  # meters, the height of the area the aircraft must sample
@@ -54,7 +56,7 @@ structural_load_factor = opti.parameter(value=3)  # over static
 mass_payload_base = opti.parameter(value=10)
 tail_panels = True # Do we assume we can mount solar cells on the vertical tail?
 wing_cells = "sunpower"  # select cells for wing, options include ascent_solar, sunpower, and microlink
-vertical_cells = "sunpower"  # select cells for vtail, options include ascent_solar, sunpower, and microlink
+vstab_cells = "sunpower"  # select cells for vtail, options include ascent_solar, sunpower, and microlink
 use_propulsion_fits_from_FL2020_1682_undergrads = True  # Warning: Fits not yet validated
 # fits for propeller and motors to derive motor and propeller efficiencies
 
@@ -455,7 +457,7 @@ propeller_diameter = opti.variable(
     **des
 )
 
-n_propellers = opti.parameter(value=4) # TODO reconsider 2 or 4
+n_propellers = opti.parameter(value=2) # TODO reconsider 2 or 4
 
 ##### Vehicle Overall Specs
 mass_total = opti.variable(
@@ -665,8 +667,9 @@ avionics_mass_props = asb.MassProperties(
             transponder_antenna_mass +
             avionics_margin
     ),
-    x_cg=payload_pod_length * 0.2,  # right behind payload # TODO revisit this number
+    x_cg=payload_pod_length * 0.4,  # right behind payload # TODO revisit this number
 )
+avionics_volume = avionics_mass_props.mass / 1250  # assumed density of electronics
 avionics_power = 180 # TODO revisit this number
 
 payload_pod_mass_props = asb.MassProperties(
@@ -687,14 +690,16 @@ payload_mass_props = asb.MassProperties(
            mission_length * tb_per_day * mass_of_data_storage
 )
 
-### Power Systems
+### Power Systems Mass Accounting
 
-# MPPT mass
+
+
+### MPPT mass accounting
 MPPT_mass_props = asb.MassProperties(
     mass=solar_lib.mass_MPPT(max_power_in)
 )
 
-# battery mass accounting
+### battery mass accounting
 battery_capacity = opti.variable(
     init_guess=5e8,
     scale=5e8,
@@ -703,7 +708,7 @@ battery_capacity = opti.variable(
 )
 battery_capacity_watt_hours = battery_capacity / 3600
 
-battery_pack_mass = prop_elec_lib.mass_battery_pack(
+battery_pack_mass = elec_lib.mass_battery_pack(
         battery_capacity_Wh=battery_capacity_watt_hours,
         battery_cell_specific_energy_Wh_kg=battery_specific_energy_Wh_kg,
         battery_pack_cell_fraction=battery_pack_cell_percentage
@@ -713,18 +718,58 @@ battery_cell_mass = battery_pack_mass * battery_pack_cell_percentage
 cost_batteries = 4 * battery_capacity_watt_hours
 battery_density = 2000  # kg/m^3, taken from averaged measurements of commercial cells
 battery_volume = battery_pack_mass / battery_density
-
+battery_cg = (battery_volume / payload_pod_volume) * 0.5
 battery_mass_props = asb.MassProperties(
     mass=battery_pack_mass,
-    x_cg=(battery_volume / payload_pod_volume) * 0.5, #TODO figure out if x cg location makes sense
+    x_cg=battery_cg, #TODO figure out if x cg location makes sense
 )
 
 battery_voltage = 125  # From Olek Peraire >4/2, propulsion slack
 
-# wiring mass
-mass_wires = prop_elec_lib.mass_wires(
+### wiring mass acounting
+mass_wires = elec_lib.mass_wires(
     wire_length=wing.span() / 2,
     max_current=max_power_out_propulsion / battery_voltage,
     allowable_voltage_drop=battery_voltage * 0.01,
     material="aluminum"
 )
+
+### propellers mass acounting
+propeller_tip_mach = 0.36  # From Dongjoon, 4/30/20
+propeller_rads_per_sec = propeller_tip_mach * atmo(altitude=20000).speed_of_sound() / (propeller_diameter / 2)
+propeller_rpm = propeller_rads_per_sec * 30 / np.pi
+
+area_propulsive = np.pi / 4 * propeller_diameter ** 2 * n_propellers
+
+propellers_mass_props = asb.MassProperties(
+    mass=n_propellers * prop_lib.mass_hpa_propeller(
+        diameter=propeller_diameter,
+        max_power=max_power_out_propulsion / n_propellers,
+        include_variable_pitch_mechanism=variable_pitch
+    ),
+    x_cg=wing_x_le - 0.25 * propeller_diameter
+)
+
+### motors mass accounting
+propeller_max_torque = (max_power_out_propulsion / n_propellers) / propeller_rads_per_sec
+motor_kv = propeller_rpm / battery_voltage
+motor_mounting_weight_multiplier = 2.0  # Taken from Raymer guidance.
+
+motors_mass_props = asb.MassProperties(
+    mass=n_propellers * elec_lib.mass_motor_electric(
+        max_power=max_power_out_propulsion / n_propellers,
+        kv_rpm_volt=motor_kv,
+        voltage=battery_voltage,
+    ),
+    x_cg=wing_x_le - 0.1 * propeller_diameter
+) * motor_mounting_weight_multiplier
+
+### summation of power system mass
+power_systems_mass_props = (
+        MPPT_mass_props +
+        battery_mass_props +
+        propellers_mass_props +
+        motors_mass_props
+)
+
+
