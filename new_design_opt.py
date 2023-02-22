@@ -139,7 +139,8 @@ payload_pod_volume = payload_pod.volume()
 
 # overall layout wing layout
 boom_location = 0.80  # as a fraction of the half-span
-break_location = 0.67  # as a fraction of the half-span
+taper_break_location = 0.67  # as a fraction of the half-span
+field_joint_location = 0.36 # as fraction of the half-span
 
 # Wing
 wing_span = opti.variable(
@@ -191,7 +192,7 @@ wing_x_quarter_chord = opti.variable(
     **des
 )
 
-wing_y_taper_break = break_location * wing_span / 2
+wing_y_taper_break = taper_break_location * wing_span / 2
 
 wing_taper_ratio = 0.5  # TODO analyze this more
 wing_tip_chord = wing_root_chord * wing_taper_ratio
@@ -500,6 +501,7 @@ max_power_out_propulsion = opti.variable(
 )
 
 ##### Section: Internal Geometry and Weights
+mass_props = {}
 
 ### Wing mass accounting
 wing_n_ribs = opti.variable(
@@ -535,6 +537,21 @@ wing_mass = wing_mass_primary + wing_mass_secondary
 wing_mass_props = asb.MassProperties(
     mass=wing_mass * structural_mass_margin_multiplier,
     x_cg=wing_x_le + 0.40 * wing_root_chord
+)
+
+wing_y_field_joint_break = field_joint_location * wing_span / 2
+
+mass_props['wing_center'] = asb.mass_properties_from_radius_of_gyration(
+    mass=wing_mass * wing_y_taper_break,
+    x_cg=wing_x_le + 0.40 * wing_root_chord,  # quarter-chord,
+    radius_of_gyration_x=(wing_y_field_joint_break * wing_span) / 12,
+    radius_of_gyration_z=(wing_y_field_joint_break * wing_span) / 12
+)
+mass_props['wing_tips'] = asb.mass_properties_from_radius_of_gyration(
+    mass=wing_mass * (1 - wing_y_field_joint_break),
+    x_cg=wing_x_le + 0.40 * wing_root_chord,  # quarter-chord,
+    radius_of_gyration_x=(1 + wing_y_field_joint_break) / 2 * (wing_span / 2),
+    radius_of_gyration_z=(1 + wing_y_field_joint_break) / 2 * (wing_span / 2),
 )
 
 ### hstab mass accounting
