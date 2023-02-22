@@ -131,6 +131,8 @@ payload_pod = make_payload_pod( # TODO ask peter if there's a better way to make
     fuse_diameter=payload_pod_diameter,
 ).translate(np.array[0, 0, -payload_pod_y_offset])
 
+payload_pod_volume = payload_pod.volume()
+
 # overall layout wing layout
 boom_location = 0.80  # as a fraction of the half-span
 break_location = 0.67  # as a fraction of the half-span
@@ -645,7 +647,7 @@ gps_antenna_mass = 0.176
 emergency_locator_transmitter_mass = 0.908
 transponder_mass = 0.100
 transponder_antenna_mass = 0.109
-wiring_mass = 5.6
+avionics_margin = 5.6
 
 avionics_mass_props = asb.MassProperties(
     mass=(
@@ -661,7 +663,7 @@ avionics_mass_props = asb.MassProperties(
             emergency_locator_transmitter_mass +
             transponder_mass +
             transponder_antenna_mass +
-            wiring_mass
+            avionics_margin
     ),
     x_cg=payload_pod_length * 0.2,  # right behind payload # TODO revisit this number
 )
@@ -700,16 +702,29 @@ battery_capacity = opti.variable(
     **des
 )
 battery_capacity_watt_hours = battery_capacity / 3600
-battery_mass_props = asb.MassProperties(
-    mass= prop_elec_lib.mass_battery_pack(
+
+battery_pack_mass = prop_elec_lib.mass_battery_pack(
         battery_capacity_Wh=battery_capacity_watt_hours,
         battery_cell_specific_energy_Wh_kg=battery_specific_energy_Wh_kg,
         battery_pack_cell_fraction=battery_pack_cell_percentage
-    ),
-    x_cg=wing_x_le, #TODO figure out x cg location
-)
+    )
+
+battery_cell_mass = battery_pack_mass * battery_pack_cell_percentage
+cost_batteries = 4 * battery_capacity_watt_hours
 battery_density = 2000  # kg/m^3, taken from averaged measurements of commercial cells
-battery_volume = battery_mass_props.mass / battery_density
+battery_volume = battery_pack_mass / battery_density
+
+battery_mass_props = asb.MassProperties(
+    mass=battery_pack_mass,
+    x_cg=(battery_volume / payload_pod_volume) * 0.5, #TODO figure out if x cg location makes sense
+)
 
 battery_voltage = 125  # From Olek Peraire >4/2, propulsion slack
 
+# wiring mass
+mass_wires = prop_elec_lib.mass_wires(
+    wire_length=wing.span() / 2,
+    max_current=max_power_out_propulsion / battery_voltage,
+    allowable_voltage_drop=battery_voltage * 0.01,
+    material="aluminum"
+)
