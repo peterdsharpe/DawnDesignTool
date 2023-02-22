@@ -636,6 +636,28 @@ mass_fairings = 2.067 * mass_total / mass_daedalus  # Scale fairing mass to same
 mass_landing_gear = 0.728 * mass_total / mass_daedalus  # Scale landing gear mass to same mass fraction as Daedalus
 mass_strut = 0.5 # mass per strut to the payload pod roughly baselined to dawn demonstrator build
 
+payload_pod_mass_props = asb.MassProperties(
+    mass=(
+        mass_fairings +
+        mass_landing_gear +
+        mass_strut * 2 +
+        pod_structure_mass
+    ),
+    x_cg=payload_pod_length/2
+)
+
+### summation of strutrual mass
+structural_mass_props = (
+        wing_mass_props +
+        center_hstab_mass_props +
+        left_hstab_mass_props +
+        right_hstab_mass_props +
+        center_boom_mass_props +
+        left_boom_mass_props +
+        right_boom_mass_props +
+        payload_pod_mass_props
+)
+
 ### avionics mass accounting
 # tons of assumptions made here and taken from other project peter sent over
 # roughly +/- 0.5kg the previous ddt avionics mass assumptions
@@ -674,16 +696,6 @@ avionics_mass_props = asb.MassProperties(
 avionics_volume = avionics_mass_props.mass / 1250  # assumed density of electronics
 avionics_power = 180 # TODO revisit this number
 
-payload_pod_mass_props = asb.MassProperties(
-    mass=(
-        mass_fairings +
-        mass_landing_gear +
-        mass_strut * 2 +
-        pod_structure_mass
-    ),
-    x_cg=payload_pod_length/2
-)
-
 # instrument data storage mass requirements
 mass_of_data_storage = 0.0053 # kg per TB of data
 tb_per_day = 4
@@ -691,6 +703,7 @@ payload_mass_props = asb.MassProperties(
     mass=mass_payload_base +
            mission_length * tb_per_day * mass_of_data_storage
 )
+payload_volume = 0.023 * 0.5 # assuming payload mass from gamma remote sensing with 50% margin on volume
 
 ### Power Systems Mass Accounting
 if vstab_cells == "microlink":
@@ -796,11 +809,14 @@ battery_mass_props = asb.MassProperties(
 battery_voltage = 125  # From Olek Peraire >4/2, propulsion slack
 
 ### wiring mass acounting
-mass_wires = elec_lib.mass_wires(
-    wire_length=wing.span() / 2,
-    max_current=max_power_out_propulsion / battery_voltage,
-    allowable_voltage_drop=battery_voltage * 0.01,
-    material="aluminum"
+wires_mass_props = asb.MassProperties(
+    mass = elec_lib.mass_wires(
+        wire_length=wing.span() / 2,
+        max_current=max_power_out_propulsion / battery_voltage,
+        allowable_voltage_drop=battery_voltage * 0.01,
+        material="aluminum"
+    ),
+    cg=wing_root_chord * 0.25 # assume most wiring is down spar
 )
 
 ### propellers mass acounting
@@ -833,12 +849,33 @@ motors_mass_props = asb.MassProperties(
     x_cg=wing_x_le - 0.1 * propeller_diameter
 ) * motor_mounting_weight_multiplier
 
+esc_mass_props = asb.MassProperties(
+    mass=prop_lib.mass_ESC(
+        max_power=max_power_out_propulsion
+    ),
+    x_cg=wing_x_le - 0.1 * propeller_diameter # co-located with motors
+)
+
 ### summation of power system mass
 power_systems_mass_props = (
+        solar_panel_wing_mass_props +
+        solar_panel_vstab_mass_props +
         MPPT_mass_props +
-        battery_mass_props +
-        propellers_mass_props +
-        motors_mass_props
+        battery_mass_props
+)
+propulsion_system_mass_props = (
+    propellers_mass_props +
+    motors_mass_props +
+    esc_mass_props
+)
+
+#### summation of total system mass
+mass_props = (
+        payload_mass_props +
+        structural_mass_props +
+        avionics_mass_props +
+        power_systems_mass_props +
+        propulsion_system_mass_props
 )
 
 
