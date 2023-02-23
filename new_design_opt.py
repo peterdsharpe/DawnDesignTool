@@ -989,7 +989,86 @@ dyn.add_force(
     axes="earth"
 )  # Note, this is not a typo: we make the small-angle-approximation on the flight path angle gamma.
 
+##### Section: Payload
+
+c = 299792458  # [m/s] speed of light
+k_b = 1.38064852E-23  # [m2 kg s-2 K-1] boltzman constant
+# radar_length = opti.variable(
+#     init_guess=0.1,
+#     scale=1,
+#     category='des',
+#     lower_bound=0.1,
+#     upper_bound=1,
+# ) # meters
+bandwidth = opti.variable(
+    init_guess=1e8,
+    scale=1e6,
+    lower_bound=0,
+    **des
+)  # Hz
+pulse_rep_freq = opti.variable(
+    init_guess=353308,
+    scale=10000,
+    lower_bound=0,
+    **des
+)
+power_trans = opti.variable(
+    init_guess=1e6,
+    scale=1e5,
+    lower_bound=0,
+    upper_bound=1e8,
+    **ops
+) # watts
+groundspeed = opti.variable( # TODO relate to airspeed using windspeed
+    init_guess=10,
+    scale=5,
+    lower_bound=0, # TODO revisit this as lower bound
+    **ops
+)
+
+# define key radar parameters
+radar_area = radar_width * radar_length # meters ** 2
+dist = dyn.altitude / np.cosd(look_angle) # meters
+swath_azimuth = center_wavelength * dist / radar_length # meters
+swath_range = center_wavelength * dist / (radar_width * np.cosd(look_angle)) # meters
+max_length_synth_ap = center_wavelength * dist / radar_length # meters
+ground_area = swath_range * swath_azimuth * np.pi / 4 # meters ** 2
+radius = (swath_azimuth + swath_range) / 4 # meters
+ground_imaging_offset = np.tand(look_angle) * dyn.altitude # meters
+scattering_cross_sec = 10 ** (scattering_cross_sec_db / 10)
+sigma0 = scattering_cross_sec / ground_area
+antenna_gain = 4 * np.pi * radar_area * 0.7 / center_wavelength ** 2
+
+# Assumed constants
+a_hs = 0.88 # aperture-illumination taper factor associated with the synthetic aperture (value from Ulaby and Long)
+F = 4 # receiver noise figure (somewhat randomly chosen value from Ulaby and Long)
+a_B = 1 # pulse-taper factor to relate bandwidth and pulse duration
+
+# # constrain SAR resolution to required value
+pulse_duration = a_B / bandwidth
+range_resolution = c * pulse_duration / (2 * np.sind(look_angle))
+azimuth_resolution = radar_length / 2
+opti.subject_to([
+    range_resolution <= required_resolution,
+    azimuth_resolution <= required_resolution,
+])
+
+# use SAR specific equations from Ulaby and Long
+payload_power = power_trans * pulse_rep_freq * pulse_duration # TODO make a function of location in trajectory
+
+snr = payload_power * antenna_gain ** 2 * center_wavelength ** 3 * a_hs * sigma0 * range_resolution / \
+      ((2 * 4 * np.pi) ** 3 * dist ** 3 * k_b * dyn.op_point.atmosphere.temperature() * F * groundspeed * a_B)
+
+snr_db = 10 * np.log(snr)
+
+opti.subject_to([
+    required_snr <= snr_db,
+    pulse_rep_freq >= 2 * groundspeed / radar_length,
+    pulse_rep_freq <= c / (2 * swath_azimuth),
+])
+
 ##### Section: Propulsion and Power Output
+
 thrust = opti.variable(
     init_guess=600 * 9.81 / 30,
     n_vars=n_timesteps,
