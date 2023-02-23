@@ -24,7 +24,7 @@ opti = asb.Opti(
     # variable_categories_to_freeze='design'
 )
 des = dict(category="design")
-tra = dict(category="trajectory")
+ops = dict(category="operations")
 
 ##### optimization assumptions
 make_plots = False
@@ -85,7 +85,7 @@ if climb_opt:  # roughly 1-day-plus-climb window, starting at ground. Periodicit
                                scale=3600,
                                upper_bound=0,
                                lower_bound=-24 * 3600
-                               **tra)
+                                           ** ops)
     time_end = 36 * 3600
 
     time_periodic_window_start = time_end - 24 * 3600
@@ -322,7 +322,7 @@ vstab_incidence = opti.variable(
     upper_bound=30,
     lower_bound=-30,
     freeze=True,
-    **tra
+    **ops
 )
 
 vstab = asb.Wing(
@@ -371,7 +371,7 @@ center_hstab_incidence = opti.variable(
     init_guess=0,
     lower_bound=-15,
     upper_bound=15,
-    **tra
+    **ops
 )
 
 center_hstab = asb.Wing(
@@ -423,7 +423,7 @@ outboard_hstab_incidence = opti.variable(
     upper_bound=30,
     lower_bound=-30,
     freeze=True,
-    **tra
+    **ops
 )
 right_hstab = asb.Wing(
     name="Taileron",
@@ -945,17 +945,17 @@ dyn = asb.DynamicsPointMass2DCartesian(
     mass_props=mass_props_TOGW,
     x_e=opti.variable(
         init_guess=time * guess_u_e,
-        **tra
+        **ops
     ),
     z_e=opti.variable(
         init_guess=-guess_altitude, n_vars=n_timesteps,
-        **tra
+        **ops
     ),
     u_e=opti.variable(init_guess=guess_u_e, n_vars=n_timesteps),
     w_e=opti.variable(init_guess=0, n_vars=n_timesteps),
     alpha=opti.variable(
         init_guess=3, n_vars=n_timesteps,
-        **tra
+        **ops
     ),
 )
 
@@ -994,7 +994,7 @@ thrust = opti.variable(
     init_guess=600 * 9.81 / 30,
     n_vars=n_timesteps,
     lower_bound=0,
-    **tra
+    **ops
 )
 
 dyn.add_force(
@@ -1021,7 +1021,7 @@ else:
     ### Use Jamie's model
     from design_opt_utilities.new_models import eff_curve_fit
 
-    opti.subject_to(y < 30000)  # Bugs out without this limiter
+    opti.subject_to(dyn.altitude < 30000)  # Bugs out without this limiter
 
     propeller_efficiency, motor_efficiency = eff_curve_fit(
         airspeed=dyn.op_point.velocity,
