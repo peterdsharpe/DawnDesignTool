@@ -1116,4 +1116,60 @@ power_out_propulsion = power_out_propulsion_shaft / motor_efficiency / gearbox_e
 
 opti.subject_to(power_out_propulsion < max_power_out_propulsion)
 
-power_out = power_out_propulsion + payload_power + avionics_power # todo add payload section above
+power_out = power_out_propulsion + payload_power + avionics_power
+
+##### Section: Power Input (Solar)
+
+MPPT_efficiency = 1 / 1.04
+
+left_wing_incident_solar_power = 0.5 * area_solar_wing * solar_lib.solar_flux(
+    latitude=latitude,
+    day_of_year=day_of_year,
+    time=time,
+    altitude=dyn.altitude,
+    panel_azimuth_angle=dyn.beta + 90,  # TODO check beta is applied correctly
+    panel_tilt_angle=10 + dyn.gamma,  # TODO check gamma is applied correctly
+    scattering=True
+)
+
+right_wing_incident_solar_power = 0.5 * area_solar_wing * solar_lib.solar_flux(
+    latitude=latitude,
+    day_of_year=day_of_year,
+    time=time,
+    altitude=dyn.altitude,
+    panel_azimuth_angle=dyn.beta - 90,  # TODO check beta is applied correctly
+    panel_tilt_angle=-10 + dyn.gamma,  # TODO check gamma is applied correctly
+    scattering=True
+)
+
+wing_incident_solar_power = right_wing_incident_solar_power + left_wing_incident_solar_power
+
+vstab_incident_solar_power_left = area_solar_vstab * solar_lib.solar_flux(
+    latitude=latitude,
+    day_of_year=day_of_year,
+    time=time,
+    altitude=dyn.altitude,
+    panel_azimuth_angle=dyn.beta + 90,  # TODO check beta is applied correctly
+    panel_tilt_angle=90,  # TODO check gamma is applied correctly
+    scattering=True
+)
+
+vstab_incident_solar_power_right = area_solar_vstab * solar_lib.solar_flux(
+    latitude=latitude,
+    day_of_year=day_of_year,
+    time=time,
+    altitude=dyn.altitude,
+    panel_azimuth_angle=dyn.beta - 90,  # TODO check beta is applied correctly
+    panel_tilt_angle=90,  # TODO check gamma is applied correctly
+    scattering=True
+)
+
+vstab_incident_solar_power = vstab_incident_solar_power_right + vstab_incident_solar_power_left
+
+power_in = (wing_incident_solar_power * wing_solar_cell_efficiency +
+            vstab_incident_solar_power * vstab_solar_cell_efficiency) \
+           * MPPT_efficiency
+
+opti.subject_to(
+    power_in / 5e3 < max_power_in / 5e3
+)
