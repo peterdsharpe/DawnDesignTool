@@ -537,7 +537,7 @@ wing_mass = wing_mass_primary + wing_mass_secondary
 wing_y_field_joint_break = field_joint_location * wing_span / 2
 
 mass_props['wing_center'] = asb.mass_properties_from_radius_of_gyration(
-    mass=wing_mass * wing_y_taper_break * structural_mass_margin_multiplier,
+    mass=wing_mass * wing_y_field_joint_break * structural_mass_margin_multiplier,
     x_cg=wing_x_le + 0.40 * wing_root_chord,  # quarter-chord,
     radius_of_gyration_x=(wing_y_field_joint_break * wing_span) / 12,
     radius_of_gyration_z=(wing_y_field_joint_break * wing_span) / 12
@@ -584,9 +584,13 @@ n_ribs_center_hstab = opti.variable(
     **des
 )
 
-center_hstab_mass_props = asb.MassProperties(
+mass_props['center_hstab'] = asb.MassProperties(
     mass=mass_hstab(center_hstab, n_ribs_center_hstab) * structural_mass_margin_multiplier,
     x_cg=center_hstab.xsecs[0].xyz_le[0] + center_hstab_chord / 2,
+    z_cg=vstab.aerodynamic_center()[2],
+    radius_of_gyration_x=center_hstab_span / 12,
+    radius_of_gyration_y=center_hstab.xsecs[0].xyz_le[0] + center_hstab_chord / 2,
+    radius_of_gyration_z=center_hstab.xsecs[0].xyz_le[0] + center_hstab_chord / 2
 )
 
 n_ribs_outboard_hstab = opti.variable(
@@ -596,12 +600,12 @@ n_ribs_outboard_hstab = opti.variable(
     **des
 )
 
-right_hstab_mass_props = asb.MassProperties(
+mass_props['right_hstab'] = asb.MassProperties(
     mass=mass_hstab(right_hstab, n_ribs_outboard_hstab) * structural_mass_margin_multiplier,
     x_cg=right_hstab.xsecs[0].xyz_le[0] + outboard_hstab_chord / 2,
 )
 
-left_hstab_mass_props = asb.MassProperties(
+mass_props['left_hstab'] = asb.MassProperties(
     mass=mass_hstab(left_hstab, n_ribs_outboard_hstab) * structural_mass_margin_multiplier,
     x_cg=left_hstab.xsecs[0].xyz_le[0] + outboard_hstab_chord / 2,
 )
@@ -633,33 +637,45 @@ n_ribs_vstab = opti.variable(
     **des
 )
 
-vstab_mass_props = asb.MassProperties(
+mass_props['vstab'] = asb.MassProperties(
     mass=mass_hstab(vstab, n_ribs_vstab) * structural_mass_margin_multiplier,
     x_cg=vstab.xsecs[0].xyz_le[0] + vstab_chord / 2,
     z_cg=vstab.aerodynamic_center()[2],
+    radius_of_gyration_x=vstab_span / 12,
+    radius_of_gyration_y=vstab.xsecs[0].xyz_le[0] + vstab_chord / 2,
+    radius_of_gyration_z=vstab.xsecs[0].xyz_le[0] + vstab_chord / 2
 )
 
 ### boom mass accounting
-center_boom_mass_props = asb.MassProperties(
+mass_props['center_boom'] = asb.MassProperties(
     mass=mass_lib.mass_hpa_tail_boom(
         length_tail_boom=center_boom_length-wing_x_quarter_chord,
         dynamic_pressure_at_manuever_speed=q_ne,
         mean_tail_surface_area=center_hstab.area() + vstab.area()
-    ) * structural_mass_margin_multiplier
+    ) * structural_mass_margin_multiplier,
+    x_cg=center_boom_length / 2,
+    radius_of_gyration_y=center_boom_length / 3,
+    radius_of_gyration_z=center_boom_length / 3,
 )
-left_boom_mass_props = asb.MassProperties(
+mass_props['left_boom'] = asb.MassProperties(
     mass=mass_lib.mass_hpa_tail_boom(
         length_tail_boom=outboard_boom_length - wing_x_quarter_chord,  # support up to the quarter-chord
         dynamic_pressure_at_manuever_speed=q_ne,
         mean_tail_surface_area=right_hstab.area()
-    ) * structural_mass_margin_multiplier
+    ) * structural_mass_margin_multiplier,
+    x_cg=outboard_boom_length / 2,
+    radius_of_gyration_y=outboard_boom_length / 3,
+    radius_of_gyration_z=outboard_boom_length / 3,
 )
-right_boom_mass_props = asb.MassProperties(
+mass_props['right_boom'] = asb.MassProperties(
     mass=mass_lib.mass_hpa_tail_boom(
         length_tail_boom=outboard_boom_length - wing_x_quarter_chord,  # support up to the quarter-chord
         dynamic_pressure_at_manuever_speed=q_ne,
         mean_tail_surface_area=left_hstab.area()
-    ) * structural_mass_margin_multiplier
+    ) * structural_mass_margin_multiplier,
+    x_cg=outboard_boom_length / 2,
+    radius_of_gyration_y=outboard_boom_length / 3,
+    radius_of_gyration_z=outboard_boom_length / 3,
 )
 
 ### payload pod mass accounting
@@ -672,7 +688,7 @@ mass_fairings = 2.067 * mass_total / mass_daedalus  # Scale fairing mass to same
 mass_landing_gear = 0.728 * mass_total / mass_daedalus  # Scale landing gear mass to same mass fraction as Daedalus
 mass_strut = 0.5 # mass per strut to the payload pod roughly baselined to dawn demonstrator build
 
-payload_pod_mass_props = asb.MassProperties(
+mass_props['payload_pod'] = asb.MassProperties(
     mass=(
         mass_fairings +
         mass_landing_gear +
@@ -680,18 +696,19 @@ payload_pod_mass_props = asb.MassProperties(
         pod_structure_mass
     ),
     x_cg=payload_pod_length/2
-)
+) * structural_mass_margin_multiplier
 
-### summation of strutrual mass
+### summation of structural mass
 structural_mass_props = (
-        wing_mass_props +
-        center_hstab_mass_props +
-        left_hstab_mass_props +
-        right_hstab_mass_props +
-        center_boom_mass_props +
-        left_boom_mass_props +
-        right_boom_mass_props +
-        payload_pod_mass_props
+        mass_props['wing_center'] +
+        mass_props['wing_tips'] +
+        mass_props['center_hstab'] +
+        mass_props['left_hstab'] +
+        mass_props['right_hstab'] +
+        mass_props['center_boom'] +
+        mass_props['left_boom'] +
+        mass_props['right_boom'] +
+        mass_props['payload_pod']
 )
 
 ### avionics mass accounting
@@ -711,7 +728,7 @@ transponder_mass = 0.100
 transponder_antenna_mass = 0.109
 avionics_margin = 5.6
 
-avionics_mass_props = asb.MassProperties(
+mass_props['avionics'] = asb.MassProperties(
     mass=(
             actuator_mass +
             processor_mass +
@@ -729,13 +746,13 @@ avionics_mass_props = asb.MassProperties(
     ),
     x_cg=payload_pod_length * 0.4,  # right behind payload # TODO revisit this number
 )
-avionics_volume = avionics_mass_props.mass / 1250  # assumed density of electronics
+avionics_volume = mass_props['avionics'].mass / 1250  # assumed density of electronics
 avionics_power = 180 # TODO revisit this number
 
 # instrument data storage mass requirements
 mass_of_data_storage = 0.0053 # kg per TB of data
 tb_per_day = 4
-payload_mass_props = asb.MassProperties(
+mass_props['payload'] = asb.MassProperties(
     mass=mass_payload_base +
            mission_length * tb_per_day * mass_of_data_storage
 )
@@ -802,18 +819,18 @@ if not tail_panels:
 area_solar_wing = wing.area() * wing_solar_area_fraction
 area_solar_vstab = vstab.area() * vstab_solar_area_fraction
 
-solar_panel_wing_mass_props = asb.MassProperties(
+mass_props['solar_panel_wing'] = asb.MassProperties(
     mass=area_solar_wing * wing_rho_solar_cells,
     x_cg=wing_x_le + 0.50 * wing_root_chord
 )
 
-solar_panel_vstab_mass_props = asb.MassProperties(
+mass_props['solar_panel_vstab'] = asb.MassProperties(
     mass=area_solar_vstab * vstab_rho_solar_cells,
     x_cg=center_hstab.xsecs[0].xyz_le[0] + center_hstab_chord / 2,
 )
 
 ### MPPT mass accounting
-MPPT_mass_props = asb.MassProperties(
+mass_props['MPPT'] = asb.MassProperties(
     mass=solar_lib.mass_MPPT(max_power_in)
 )
 
@@ -837,7 +854,7 @@ cost_batteries = 4 * battery_capacity_watt_hours
 battery_density = 2000  # kg/m^3, taken from averaged measurements of commercial cells
 battery_volume = battery_pack_mass / battery_density
 battery_cg = (battery_volume / payload_pod_volume) * 0.5
-battery_mass_props = asb.MassProperties(
+mass_props['battery_pack'] = asb.MassProperties(
     mass=battery_pack_mass,
     x_cg=battery_cg, #TODO figure out if x cg location makes sense
 )
@@ -845,7 +862,7 @@ battery_mass_props = asb.MassProperties(
 battery_voltage = 125  # From Olek Peraire >4/2, propulsion slack
 
 ### wiring mass acounting
-wires_mass_props = asb.MassProperties(
+mass_props['wires'] = asb.MassProperties(
     mass = elec_lib.mass_wires(
         wire_length=wing.span() / 2,
         max_current=max_power_out_propulsion / battery_voltage,
@@ -862,7 +879,7 @@ propeller_rpm = propeller_rads_per_sec * 30 / np.pi
 
 area_propulsive = np.pi / 4 * propeller_diameter ** 2 * n_propellers
 
-propellers_mass_props = asb.MassProperties(
+mass_props['propellers'] = asb.MassProperties(
     mass=n_propellers * prop_lib.mass_hpa_propeller(
         diameter=propeller_diameter,
         max_power=max_power_out_propulsion / n_propellers,
@@ -876,7 +893,7 @@ propeller_max_torque = (max_power_out_propulsion / n_propellers) / propeller_rad
 motor_kv = propeller_rpm / battery_voltage
 motor_mounting_weight_multiplier = 2.0  # Taken from Raymer guidance.
 
-motors_mass_props = asb.MassProperties(
+mass_props['motors'] = asb.MassProperties(
     mass=n_propellers * elec_lib.mass_motor_electric(
         max_power=max_power_out_propulsion / n_propellers,
         kv_rpm_volt=motor_kv,
@@ -885,7 +902,7 @@ motors_mass_props = asb.MassProperties(
     x_cg=wing_x_le - 0.1 * propeller_diameter
 ) * motor_mounting_weight_multiplier
 
-esc_mass_props = asb.MassProperties(
+mass_props['esc'] = asb.MassProperties(
     mass=prop_lib.mass_ESC(
         max_power=max_power_out_propulsion
     ),
@@ -894,25 +911,21 @@ esc_mass_props = asb.MassProperties(
 
 ### summation of power system mass
 power_systems_mass_props = (
-        solar_panel_wing_mass_props +
-        solar_panel_vstab_mass_props +
-        MPPT_mass_props +
-        battery_mass_props
+        mass_props['solar_panel_wing'] +
+        mass_props['solar_panel_vstab'] +
+        mass_props['MPPT'] +
+        mass_props['battery_pack']
 )
 propulsion_system_mass_props = (
-    propellers_mass_props +
-    motors_mass_props +
-    esc_mass_props
+    mass_props['propellers'] +
+    mass_props['motors'] +
+    mass_props['esc']
 )
 
 #### summation of total system mass
-mass_props = (
-        payload_mass_props +
-        structural_mass_props +
-        avionics_mass_props +
-        power_systems_mass_props +
-        propulsion_system_mass_props
-)
+mass_props_TOGW = asb.MassProperties(mass=0)
+for k, v in mass_props.items():
+    mass_props_TOGW = mass_props_TOGW + v
 
 remaining_volume = (
     payload_pod_volume - (
@@ -922,14 +935,14 @@ remaining_volume = (
     )
 )
 
-opti.subject_to(mass_total > mass_props.mass)
+opti.subject_to(mass_total > mass_props_TOGW.mass)
 
 ##### Section: Setup Dynamics
 guess_altitude = 18000
 guess_u_e = 20
 
 dyn = asb.DynamicsPointMass2DCartesian(
-    mass_props=mass_props,
+    mass_props=mass_props_TOGW,
     x_e=opti.variable(
         init_guess=time * guess_u_e,
         **tra
@@ -962,7 +975,7 @@ if climb_opt:
 aero = asb.AeroBuildup(
     airplane=airplane,
     op_point=dyn.op_point,
-    xyz_ref=mass_props.xyz_cg
+    xyz_ref=mass_props_TOGW.xyz_cg
 ).run_with_stability_derivatives(
     alpha=True,
     beta=True,
