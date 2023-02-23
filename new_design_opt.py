@@ -988,3 +988,53 @@ dyn.add_force(
     *aero['F_w'],
     axes="earth"
 )  # Note, this is not a typo: we make the small-angle-approximation on the flight path angle gamma.
+
+##### Section: Propulsion and Power Output
+thrust = opti.variable(
+    init_guess=600 * 9.81 / 30,
+    n_vars=n_timesteps,
+    lower_bound=0,
+    **tra
+)
+
+dyn.add_force(
+    Fx=thrust,
+    axes="earth"
+)  # Note, this is not a typo: we make the small-angle-approximation on the flight path angle gamma.
+
+if not use_propulsion_fits_from_FL2020_1682_undergrads:
+    ### Use older models
+
+    motor_efficiency = 0.955  # Taken from ThinGap estimates
+
+    power_out_propulsion_shaft = prop_lib.propeller_shaft_power_from_thrust(
+        thrust_force=thrust,
+        area_propulsive=area_propulsive,
+        airspeed=dyn.op_point.velocity,
+        rho=dyn.op_point.atmosphere.density(),
+        propeller_coefficient_of_performance=0.90  # calibrated to QProp output with Dongjoon
+    )
+
+    gearbox_efficiency = 0.986
+
+else:
+    ### Use Jamie's model
+    from design_opt_utilities.new_models import eff_curve_fit
+
+    opti.subject_to(y < 30000)  # Bugs out without this limiter
+
+    propeller_efficiency, motor_efficiency = eff_curve_fit(
+        airspeed=dyn.op_point.velocity,
+        total_thrust=thrust,
+        altitude=dyn.altitude,
+        var_pitch=variable_pitch
+    )
+    power_out_propulsion_shaft = thrust * dyn.op_point.velocity / propeller_efficiency
+
+    gearbox_efficiency = 0.986
+
+power_out_propulsion = power_out_propulsion_shaft / motor_efficiency / gearbox_efficiency
+
+opti.subject_to(power_out_propulsion < max_power_out_propulsion)
+
+power_out = power_out_propulsion + payload_power + avionics_power # todo add payload section above
