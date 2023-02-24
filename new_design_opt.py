@@ -9,7 +9,7 @@ from aerosandbox.library import power_solar as solar_lib
 from aerosandbox.library import propulsion_electric as elec_lib
 from aerosandbox.library import propulsion_propeller as prop_lib
 from aerosandbox.atmosphere import Atmosphere as atmo
-
+import aerosandbox.tools.units as u
 
 
 
@@ -853,11 +853,15 @@ battery_cell_mass = battery_pack_mass * battery_pack_cell_percentage
 cost_batteries = 4 * battery_capacity_watt_hours
 battery_density = 2000  # kg/m^3, taken from averaged measurements of commercial cells
 battery_volume = battery_pack_mass / battery_density
-battery_cg = (battery_volume / payload_pod_volume) * 0.5
+
+battery_cg = (battery_volume / payload_pod_volume) * 0.5 # TODO figure out if x cg location makes sense
 mass_props['battery_pack'] = asb.MassProperties(
     mass=battery_pack_mass,
-    x_cg=battery_cg, #TODO figure out if x cg location makes sense
+    x_cg=battery_cg,
 )
+
+battery_pack_specific_energy = battery_specific_energy_Wh_kg * u.hour * battery_pack_cell_percentage # J/kg #TODO double check this is right
+battery_total_energy = mass_props['battery_pack'].mass * battery_pack_specific_energy  # J
 
 battery_voltage = 125  # From Olek Peraire >4/2, propulsion slack
 
@@ -1172,4 +1176,21 @@ power_in = (wing_incident_solar_power * wing_solar_cell_efficiency +
 
 opti.subject_to(
     power_in / 5e3 < max_power_in / 5e3
+)
+
+##### Section: Battery power
+
+battery_charge_state = opti.variable(
+    init_guess=0.5,
+    n_vars=n_timesteps,
+    lower_bound=allowable_battery_depth_of_discharge,
+    upper_bound=1,
+)
+
+net_power = power_in - power_out
+
+opti.constrain_derivative(
+    derivative=net_power,
+    variable=battery_charge_state * battery_total_energy,
+    with_respect_to=time,
 )
