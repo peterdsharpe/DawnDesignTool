@@ -1266,6 +1266,12 @@ empty_wing_loading = 9.81 * structural_mass_props.mass / wing.area()
 empty_wing_loading_psf = empty_wing_loading / 47.880258888889
 propeller_efficiency = thrust * dyn.u_e / power_out_propulsion_shaft
 cruise_LD = aero['L'] / aero['D']
+avg_cruise_LD = np.mean(cruise_LD)
+avg_CL = np.mean(wing.CL)
+avg_airspeed = np.mean(dyn.u_e)
+sl_atmosphere = atmo(altitude=0)
+rho_ratio = np.sqrt(np.mean(dyn.op_point.atmosphere.density()) / sl_atmosphere.density())
+avg_ias = avg_airspeed * rho_ratio
 
 ##### Add objective
 objective = eval(minimize)
@@ -1318,30 +1324,110 @@ if __name__ == "__main__":
 
     airplane.substitute_solution(sol)
     dyn.substitute_solution(sol)
+    mass_props_TOGW.substitute_solution(sol)
 
     ### Macros
     s = lambda x: sol.value(x)
 
-    def output(x: Union[str, List[str]]) -> None:  # Output a scalar variable (give variable name as a string).
-        if isinstance(x, list):
-            for xi in x:
-                output(xi)
-            return
-        if type(sol.value(eval(x))) is float:
-            print(f"{x}: {sol.value(eval(x)):.3f}")
-        else:
-            print(f"{x}: {sol.value(eval(x)).mean():.3f}")
+    print("\nVolume Accounting\n" + "-" * 50)
+    volumes = {
+        k: s(eval(k))
+        for k in list(vars().keys())
+        if ("volume" in k and
+            k != "payload_pod_volume" and
+            k != "volumes" and
+            "volumetric" not in k
+            )
+    }
+
+    for k, v in sorted(volumes.items(), key=lambda item: -item[1]):
+        print(" | ".join([
+            f"{k:25}",
+            f"{format(v, '8.3g').rjust(9)} m^3",
+            f"{v / s(payload_pod_volume) * 100:.1f}%"
+        ]))
+
+    print("\nMass Accounting\n" + "-" * 50)
+    for v in mass_props.values():
+        v.substitute_solution(sol)
+
+    aero = {
+        k: s(v)
+        for k, v in aero.items() if not isinstance(v, list)
+    }
+
+    import matplotlib.pyplot as plt
+    import aerosandbox.tools.pretty_plots as p
+    from aerosandbox.tools.string_formatting import eng_string
+
+    ##### Section: Printout
+    print_title = lambda s: print(s.upper().join(["*" * 20] * 2))
+
+    def fmt(x):
+        return f"{s(x):.6g}"
 
 
-    def print_title(s: str) -> None:  # Print a nicely formatted title
-        print(f"\n{'*' * 10} {s.upper()} {'*' * 10}")
+    print_title("Outputs")
+    for k, v in {
+        "Wing Span": f"{fmt(wing_span)} meters",
+        "Wing Root Chord": f"{fmt(wing_root_chord)} meters",
+        "mass_TOGW": f"{fmt(mass_props_TOGW.mass)} kg",
+        "Propeller Diameter": f"{fmt(propeller_diameter)} m ({fmt(propeller_diameter)} meters)",
+        "Average Cruise L/D": fmt(avg_cruise_LD),
+        "CG location"           : "(" + ", ".join([fmt(xyz) for xyz in mass_props_TOGW.xyz_cg]) + ") m",
+    }.items():
+        print(f"{k.rjust(25)} = {v}")
 
+    fmtpow = lambda x: fmt(x) + " W"
 
-    print_title("Key Results")
-    output([
-        "mass_total",
-        "wing_span",
-        "wing_root_chord",
-        "revisit_rate"
-        "payload_power",
-    ])
+    print_title("Powers")
+    for k, v in {
+        "max_power_in"        : fmtpow(max_power_in),
+        "max_power_out": fmtpow(max_power_out_propulsion),
+        "battery_total_energy": fmtpow(battery_total_energy),
+        "payload_power": fmtpow(payload_power),
+    }.items():
+        print(f"{k.rjust(25)} = {v}")
+
+    print_title("Mass props")
+    for k, v in mass_props.items():
+        print(f"{k.rjust(25)} = {v.mass:.3f} kg ({v.mass / u.oz:.2f} oz)")
+
+    if make_plots:
+        ##### Section: Geometry
+        airplane.draw_three_view(show=False)
+        p.show_plot(tight_layout=False, savefig="figures/three_view.png")
+
+        ##### Section: Mass Budget
+        # fig, ax = plt.subplots(figsize=(12, 5), subplot_kw=dict(aspect="equal"), dpi=300)
+        #
+        # name_remaps = {
+        #     **{
+        #         k: k.replace("_", " ").title()
+        #         for k in mass_props.keys()
+        #     },
+        #     "apu"                         : "APU",
+        #     "wing"                        : "Wing Structure",
+        #     "hstab"                       : "H-Stab Structure",
+        #     "vstab"                       : "V-Stab Structure",
+        #     "fuselage"                    : "Fuselage Structure",
+        #     "payload_proportional_weights": "FAs, Food, Galleys, Lavatories,\nLuggage Hold, Doors, Lighting,\nAir Cond., Entertainment"
+        # }
+        #
+        # p.pie(
+        #     values=[
+        #         v.mass
+        #         for v in mass_props.values()
+        #     ],
+        #     names=[
+        #         n if n not in name_remaps.keys() else name_remaps[n]
+        #         for n in mass_props.keys()
+        #     ],
+        #     center_text=f"$\\bf{{Mass\\ Budget}}$\nTOGW: {s(mass_props_TOGW.mass):.3f} kg",
+        #     label_format=lambda name, value, percentage: f"{name}, {value:.3f} kg, {percentage:.1f}%",
+        #     startangle=110,
+        #     arm_length=30,
+        #     arm_radius=20,
+        #     y_max_labels=1.1
+        # )
+        # p.show_plot(savefig="figures/mass_budget.png")
