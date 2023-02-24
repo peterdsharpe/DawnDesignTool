@@ -1232,3 +1232,26 @@ opti.subject_to([
     dyn.alpha[time_periodic_end_index] == dyn.alpha[time_periodic_start_index],
     thrust[time_periodic_end_index] == thrust[time_periodic_start_index]
 ])
+
+#### Section: Add imposed constraints
+opti.subject_to([
+    center_hstab_span == outboard_hstab_span,
+    center_hstab_chord == outboard_hstab_chord,
+    # center_hstab_twist_angle == outboard_hstab_twist_angle,
+    center_boom_length >= outboard_boom_length,
+    center_hstab_incidence <= 0,  # essentially enforces downforce, prevents hstab from lifting and exploiting config.
+    outboard_hstab_incidence <= 0,
+    # essentially enforces downforce, prevents hstab from lifting and exploiting config.
+    center_hstab_span < wing_span / 2,
+    aero["CL"] > 0,
+    np.mean(aero["Cm"]) == 0,
+    aero["Cma"] < -0.5,
+    aero["Cnb"] > 0.05,
+    remaining_volume / u.inch ** 3 > 0,
+    dyn.alpha < 12,
+    dyn.alpha > -12,
+    # np.diff(np.degrees(dyn.gamma)) < 5,
+    # np.diff(np.degrees(dyn.gamma)) > -5,
+    np.diff(dyn.alpha) < 2,
+    np.diff(dyn.alpha) > -2,
+])
