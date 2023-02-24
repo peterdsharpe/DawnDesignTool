@@ -975,6 +975,17 @@ opti.subject_to([
 if climb_opt:
     opti.subject_to(dyn.altitude[0] / 1e4 == 0)
 
+if hold_cruise_altitude:
+
+    cruise_altitude = opti.variable(
+        init_guess=guess_altitude,
+        scale=10000,
+        lower_bound=min_cruise_altitude,
+        **des
+    )
+
+    dyn.altitude[time_periodic_start_index:] / cruise_altitude > 1, # stay at cruise altitude after climb
+
 ##### Section: Aerodynamics
 aero = asb.AeroBuildup(
     airplane=airplane,
@@ -1210,3 +1221,14 @@ excess_power = dyn.u_e * dyn.Fx_e
 climb_rate = excess_power / (dyn.mass_props.mass * 9.81)
 opti.subject_to((excess_power + dyn.w_e * dyn.mass_props.mass * 9.81) / 5e3 == 0)
 opti.subject_to(q_ne > dyn.op_point.dynamic_pressure())
+
+##### Section: Perodicity Constraints
+opti.subject_to([
+    dyn.x_e[time_periodic_end_index] / 1e5 > dyn.x_e[time_periodic_start_index] / 1e5 + required_headway_per_day,
+    dyn.altitude[time_periodic_end_index] / 1e4 > dyn.altitude[time_periodic_start_index] / 1e4,
+    dyn.u_e[time_periodic_end_index] / 1e1 > dyn.u_e[time_periodic_start_index] / 1e1,
+    battery_charge_state[time_periodic_end_index] > battery_charge_state[time_periodic_end_index],
+    dyn.gamma[time_periodic_end_index] == dyn.gamma[time_periodic_start_index],
+    dyn.alpha[time_periodic_end_index] == dyn.alpha[time_periodic_start_index],
+    thrust[time_periodic_end_index] == thrust[time_periodic_start_index]
+])
