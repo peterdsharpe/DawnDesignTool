@@ -1242,6 +1242,7 @@ opti.subject_to([
     center_hstab_incidence <= 0,  # essentially enforces downforce, prevents hstab from lifting and exploiting config.
     outboard_hstab_incidence <= 0,
     # essentially enforces downforce, prevents hstab from lifting and exploiting config.
+    # TODO double check below constraints to make sure they are correct for this application
     center_hstab_span < wing_span / 2,
     aero["CL"] > 0,
     np.mean(aero["Cm"]) == 0,
@@ -1255,3 +1256,44 @@ opti.subject_to([
     np.diff(dyn.alpha) < 2,
     np.diff(dyn.alpha) > -2,
 ])
+
+##### Section: Useful metrics
+wing_loading = 9.81 * mass_total / wing.area()
+wing_loading_psf = wing_loading / 47.880258888889
+empty_wing_loading = 9.81 * structural_mass_props.mass / wing.area()
+empty_wing_loading_psf = empty_wing_loading / 47.880258888889
+propeller_efficiency = thrust * dyn.u_e / power_out_propulsion_shaft
+cruise_LD = aero['L'] / aero['D']
+
+##### Section: Add tippers
+things_to_slightly_minimize = 0
+
+for tipper_input in [
+    wing_span / 50,
+    n_propellers / 2,
+    propeller_diameter / 3,
+    battery_capacity_watt_hours / 50000,
+    wing_solar_area_fraction / 0.5,
+    (hour[-1] - hour[0]) / 24,
+]:
+    try:
+        things_to_slightly_minimize += tipper_input
+    except NameError:
+        pass
+
+# Dewiggle
+penalty = 0
+
+for penalty_input in [
+    thrust / 10,
+    groundspeed,
+    dyn.gamma / 2,
+    dyn.alpha / 1,
+]:
+    penalty += np.sum(np.diff(np.diff(penalty_input)) ** 2) / n_timesteps_per_segment
+
+opti.minimize(
+    objective
+    + penalty
+    + 1e-3 * things_to_slightly_minimize
+)
