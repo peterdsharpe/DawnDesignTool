@@ -1194,3 +1194,19 @@ opti.constrain_derivative(
     variable=battery_charge_state * battery_total_energy,
     with_respect_to=time,
 )
+
+##### Section: Constrain Dynamics
+opti.constrain_derivative(
+    variable=dyn.x_e, with_respect_to=time,
+    derivative=dyn.u_e
+)
+opti.constrain_derivative(
+    variable=dyn.z_e, with_respect_to=time,
+    derivative=dyn.w_e,
+)
+
+opti.subject_to(dyn.Fz_e / 1e3 == 0)  # L == W
+excess_power = dyn.u_e * dyn.Fx_e
+climb_rate = excess_power / (dyn.mass_props.mass * 9.81)
+opti.subject_to((excess_power + dyn.w_e * dyn.mass_props.mass * 9.81) / 5e3 == 0)
+opti.subject_to(q_ne > dyn.op_point.dynamic_pressure())
