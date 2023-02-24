@@ -10,6 +10,7 @@ from aerosandbox.library import propulsion_electric as elec_lib
 from aerosandbox.library import propulsion_propeller as prop_lib
 from aerosandbox.atmosphere import Atmosphere as atmo
 import aerosandbox.tools.units as u
+from typing import Union, List
 
 
 
@@ -1301,3 +1302,46 @@ opti.minimize(
     + penalty
     + 1e-3 * things_to_slightly_minimize
 )
+
+if __name__ == "__main__":
+    # Solve
+    try:
+        sol = opti.solve(
+            max_iter=10000,
+            options={
+                "ipopt.max_cpu_time": 3000
+            }
+        )
+    except RuntimeError as e:
+        print(e)
+        sol = opti.debug
+
+    airplane.substitute_solution(sol)
+    dyn.substitute_solution(sol)
+
+    ### Macros
+    s = lambda x: sol.value(x)
+
+    def output(x: Union[str, List[str]]) -> None:  # Output a scalar variable (give variable name as a string).
+        if isinstance(x, list):
+            for xi in x:
+                output(xi)
+            return
+        if type(sol.value(eval(x))) is float:
+            print(f"{x}: {sol.value(eval(x)):.3f}")
+        else:
+            print(f"{x}: {sol.value(eval(x)).mean():.3f}")
+
+
+    def print_title(s: str) -> None:  # Print a nicely formatted title
+        print(f"\n{'*' * 10} {s.upper()} {'*' * 10}")
+
+
+    print_title("Key Results")
+    output([
+        "mass_total",
+        "wing_span",
+        "wing_root_chord",
+        "revisit_rate"
+        "payload_power",
+    ])
