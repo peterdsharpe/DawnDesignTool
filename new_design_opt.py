@@ -27,6 +27,7 @@ des = dict(category="design")
 ops = dict(category="operations")
 
 ##### optimization assumptions
+minimize = 'wingspan'
 make_plots = False
 
 ##### Section: Parameters
@@ -1264,6 +1265,9 @@ empty_wing_loading = 9.81 * structural_mass_props.mass / wing.area()
 empty_wing_loading_psf = empty_wing_loading / 47.880258888889
 propeller_efficiency = thrust * dyn.u_e / power_out_propulsion_shaft
 cruise_LD = aero['L'] / aero['D']
+
+##### Add objective
+objective = eval(minimize)
 
 ##### Section: Add tippers
 things_to_slightly_minimize = 0
