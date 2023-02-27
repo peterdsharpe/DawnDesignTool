@@ -3,6 +3,7 @@ from aerosandbox.library import winds as lib_winds
 import aerosandbox.numpy as np
 import pathlib
 from aerosandbox.modeling.interpolation import InterpolatedModel
+from aerosandbox.modeling.interpolation_unstructured import UnstructuredInterpolatedModel
 from aerosandbox.library.airfoils import naca0008
 from design_opt_utilities.fuselage import make_payload_pod
 import aerosandbox.library.mass_structural as mass_lib
@@ -29,7 +30,7 @@ des = dict(category="design")
 ops = dict(category="operations")
 
 ##### optimization assumptions
-minimize = 'wingspan'
+minimize = 'wing_span'
 make_plots = False
 
 ##### Section: Parameters
@@ -60,8 +61,8 @@ mass_payload_base = opti.parameter(value=10)
 tail_panels = True # Do we assume we can mount solar cells on the vertical tail?
 wing_cells = "sunpower"  # select cells for wing, options include ascent_solar, sunpower, and microlink
 vstab_cells = "sunpower"  # select cells for vtail, options include ascent_solar, sunpower, and microlink
-max_wing_solar_area_fraction = opti.parameter(0.8)
-max_vstab_solar_area_fraction = opti.parameter(0.8)
+max_wing_solar_area_fraction = opti.parameter(value=0.8)
+max_vstab_solar_area_fraction = opti.parameter(value=0.8)
 use_propulsion_fits_from_FL2020_1682_undergrads = True  # Warning: Fits not yet validated
 # fits for propeller and motors to derive motor and propeller efficiencies
 
@@ -162,24 +163,38 @@ wing_x_le = opti.variable(
 
 boom_offset = boom_location * wing_span / 2  # in real units (meters)
 
+# import aero functions to create models for cl, cd, cm
 cl_array = np.load(path + '/data/cl_function.npy')
 cd_array = np.load(path + '/data/cd_function.npy')
 cm_array = np.load(path + '/data/cm_function.npy')
 alpha_array = np.load(path + '/data/alpha.npy')
 reynolds_array = np.load(path + '/data/reynolds.npy')
-cl_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(np.array(reynolds_array)), },
-                                cl_array, "bspline")
-cd_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(np.array(reynolds_array))},
-                                cd_array, "bspline")
-cm_function = InterpolatedModel({"alpha": alpha_array, "reynolds": np.log(np.array(reynolds_array))},
-                                cm_array, "bspline")
+
+cl_function_interpolated_model = InterpolatedModel({'alpha': alpha_array, 'Re': np.log(np.array(reynolds_array))},
+                                cl_array, 'bspline')
+cl_function = lambda alpha, Re, mach, deflection: cl_function_interpolated_model({"alpha": alpha, "Re": Re})
+cd_function_interpolated_model = InterpolatedModel({'alpha': alpha_array, 'Re': np.log(np.array(reynolds_array))},
+                                cd_array, 'bspline')
+cd_function = lambda alpha, Re, mach, deflection: cd_function_interpolated_model({"alpha": alpha, "Re": Re})
+cm_function_interpolated_model = InterpolatedModel({'alpha': alpha_array, 'Re': np.log(np.array(reynolds_array))},
+                                cm_array, 'bspline')
+cm_function = lambda alpha, Re, mach, deflection: cm_function_interpolated_model({"alpha": alpha, "Re": Re})
 
 wing_airfoil = asb.geometry.Airfoil(
     name="HALE_03",
     coordinates=r"studies/airfoil_optimizer/HALE_03.dat",
     CL_function=cl_function,
     CD_function=cd_function,
-    CM_function=cm_function)
+    CM_function=cm_function
+)
+# wing_airfoil = asb.Airfoil(
+#     name='HALE_03',
+#     coordinates="studies/airfoil_optimizer/HALE_03.dat"
+# )
+# wing_airfoil.generate_polars(
+#     cache_filename="studies/airfoil_optimizer/HALE_03.json",
+#     include_compressibility_effects=False,
+# )
 
 wing_root_chord = opti.variable(
     init_guess=1.8,
@@ -997,7 +1012,7 @@ aero = asb.AeroBuildup(
     p=False,
     q=False,
     r=False
-)
+) # TODO add drag penalty
 
 dyn.add_force(
     *aero['F_w'],
@@ -1227,7 +1242,7 @@ opti.subject_to([
     dyn.x_e[time_periodic_end_index] / 1e5 > dyn.x_e[time_periodic_start_index] / 1e5 + required_headway_per_day,
     dyn.altitude[time_periodic_end_index] / 1e4 > dyn.altitude[time_periodic_start_index] / 1e4,
     dyn.u_e[time_periodic_end_index] / 1e1 > dyn.u_e[time_periodic_start_index] / 1e1,
-    battery_charge_state[time_periodic_end_index] > battery_charge_state[time_periodic_end_index],
+    battery_charge_state[-1] > battery_charge_state[0], # todo figure out why other index doesn't work
     dyn.gamma[time_periodic_end_index] == dyn.gamma[time_periodic_start_index],
     dyn.alpha[time_periodic_end_index] == dyn.alpha[time_periodic_start_index],
     thrust[time_periodic_end_index] == thrust[time_periodic_start_index]
@@ -1265,7 +1280,6 @@ empty_wing_loading_psf = empty_wing_loading / 47.880258888889
 propeller_efficiency = thrust * dyn.u_e / power_out_propulsion_shaft
 cruise_LD = aero['L'] / aero['D']
 avg_cruise_LD = np.mean(cruise_LD)
-avg_CL = np.mean(wing.CL)
 avg_airspeed = np.mean(dyn.u_e)
 sl_atmosphere = atmo(altitude=0)
 rho_ratio = np.sqrt(np.mean(dyn.op_point.atmosphere.density()) / sl_atmosphere.density())
@@ -1389,7 +1403,7 @@ if __name__ == "__main__":
 
     print_title("Mass props")
     for k, v in mass_props.items():
-        print(f"{k.rjust(25)} = {v.mass:.3f} kg ({v.mass / u.oz:.2f} oz)")
+        print(f"{k.rjust(25)} = {v.mass:.3f} kg ")
 
     if make_plots:
         ##### Section: Geometry
