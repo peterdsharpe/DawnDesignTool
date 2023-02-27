@@ -3,6 +3,7 @@ from aerosandbox.library import winds as lib_winds
 import aerosandbox.numpy as np
 import pathlib
 from aerosandbox.modeling.interpolation import InterpolatedModel
+from aerosandbox.library.airfoils import naca0008
 from design_opt_utilities.fuselage import make_payload_pod
 import aerosandbox.library.mass_structural as mass_lib
 from aerosandbox.library import power_solar as solar_lib
@@ -35,7 +36,7 @@ make_plots = False
 
 # Mission Operating Parameters
 latitude = opti.parameter(value=-75)  # degrees, the location the sizing occurs
-day_of_year = opti.parameter(vlaue=45)  # Julian day, the day of the year the sizing occurs
+day_of_year = opti.parameter(value=45)  # Julian day, the day of the year the sizing occurs
 mission_length = opti.parameter(value=45)  # days, the length of the mission without landing to download data
 strat_offset_value = opti.parameter(value=1000)  # meters, margin above the stratosphere height the aircraft is required to stay above
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
@@ -135,7 +136,7 @@ payload_pod = make_payload_pod( # TODO ask peter if there's a better way to make
     nose_length=0.5,
     tail_length=1,
     fuse_diameter=payload_pod_diameter,
-).translate(np.array[0, 0, -payload_pod_y_offset])
+).translate([0, 0, -payload_pod_y_offset])
 
 payload_pod_volume = payload_pod.volume()
 
@@ -255,7 +256,7 @@ center_boom_length = opti.variable(
 outboard_boom_length = opti.variable(
     init_guess=3,
     scale=1,
-    lower_bound=wing_root_chord * 3/4
+    lower_bound=wing_root_chord * 3/4,
     **des
 )
 
@@ -296,18 +297,18 @@ left_boom = right_boom.translate(np.array([
 
 
 # tail section
-tail_airfoil = asb.Airfoil("naca0008")
-tail_airfoil.generate_polars(
-    cache_filename="cache/naca0008.json",
-    include_compressibility_effects=False,
-    make_symmetric_polars=True
-)
+tail_airfoil = naca0008
+# tail_airfoil.generate_polars(
+#     cache_filename="cache/naca0008.json",
+#     include_compressibility_effects=False,
+#     make_symmetric_polars=True
+# )
 
 #  vstab
 vstab_span = opti.variable(
     init_guess=3,
     scale=2,
-    lower_bound=0.1
+    lower_bound=0.1,
     **des
 )
 
@@ -419,12 +420,9 @@ outboard_hstab_chord = opti.variable(
 )
 
 outboard_hstab_incidence = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=-3,
-    scale=1,
-    upper_bound=30,
-    lower_bound=-30,
-    freeze=True,
+    init_guess=0,
+    lower_bound=-15,
+    upper_bound=15,
     **ops
 )
 right_hstab = asb.Wing(
@@ -586,7 +584,7 @@ n_ribs_center_hstab = opti.variable(
     **des
 )
 
-mass_props['center_hstab'] = asb.MassProperties(
+mass_props['center_hstab'] = asb.mass_properties_from_radius_of_gyration(
     mass=mass_hstab(center_hstab, n_ribs_center_hstab) * structural_mass_margin_multiplier,
     x_cg=center_hstab.xsecs[0].xyz_le[0] + center_hstab_chord / 2,
     z_cg=vstab.aerodynamic_center()[2],
@@ -639,7 +637,7 @@ n_ribs_vstab = opti.variable(
     **des
 )
 
-mass_props['vstab'] = asb.MassProperties(
+mass_props['vstab'] = asb.mass_properties_from_radius_of_gyration(
     mass=mass_hstab(vstab, n_ribs_vstab) * structural_mass_margin_multiplier,
     x_cg=vstab.xsecs[0].xyz_le[0] + vstab_chord / 2,
     z_cg=vstab.aerodynamic_center()[2],
@@ -649,7 +647,7 @@ mass_props['vstab'] = asb.MassProperties(
 )
 
 ### boom mass accounting
-mass_props['center_boom'] = asb.MassProperties(
+mass_props['center_boom'] = asb.mass_properties_from_radius_of_gyration(
     mass=mass_lib.mass_hpa_tail_boom(
         length_tail_boom=center_boom_length-wing_x_quarter_chord,
         dynamic_pressure_at_manuever_speed=q_ne,
@@ -659,7 +657,7 @@ mass_props['center_boom'] = asb.MassProperties(
     radius_of_gyration_y=center_boom_length / 3,
     radius_of_gyration_z=center_boom_length / 3,
 )
-mass_props['left_boom'] = asb.MassProperties(
+mass_props['left_boom'] = asb.mass_properties_from_radius_of_gyration(
     mass=mass_lib.mass_hpa_tail_boom(
         length_tail_boom=outboard_boom_length - wing_x_quarter_chord,  # support up to the quarter-chord
         dynamic_pressure_at_manuever_speed=q_ne,
@@ -669,7 +667,7 @@ mass_props['left_boom'] = asb.MassProperties(
     radius_of_gyration_y=outboard_boom_length / 3,
     radius_of_gyration_z=outboard_boom_length / 3,
 )
-mass_props['right_boom'] = asb.MassProperties(
+mass_props['right_boom'] = asb.mass_properties_from_radius_of_gyration(
     mass=mass_lib.mass_hpa_tail_boom(
         length_tail_boom=outboard_boom_length - wing_x_quarter_chord,  # support up to the quarter-chord
         dynamic_pressure_at_manuever_speed=q_ne,
