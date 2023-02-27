@@ -799,7 +799,7 @@ wing_solar_area_fraction = opti.variable(
     init_guess=0.8,
     scale=0.5,
     lower_bound=0,
-    upper_bound=max_wing_solar_area_fraction
+    upper_bound=max_wing_solar_area_fraction,
     **des
 )
 
@@ -867,13 +867,13 @@ battery_voltage = 125  # From Olek Peraire >4/2, propulsion slack
 
 ### wiring mass acounting
 mass_props['wires'] = asb.MassProperties(
-    mass = elec_lib.mass_wires(
+    mass=elec_lib.mass_wires(
         wire_length=wing.span() / 2,
         max_current=max_power_out_propulsion / battery_voltage,
         allowable_voltage_drop=battery_voltage * 0.01,
         material="aluminum"
     ),
-    cg=wing_root_chord * 0.25 # assume most wiring is down spar
+    x_cg=wing_root_chord * 0.25 # assume most wiring is down spar
 )
 
 ### propellers mass acounting
@@ -907,7 +907,7 @@ mass_props['motors'] = asb.MassProperties(
 ) * motor_mounting_weight_multiplier
 
 mass_props['esc'] = asb.MassProperties(
-    mass=prop_lib.mass_ESC(
+    mass=elec_lib.mass_ESC(
         max_power=max_power_out_propulsion
     ),
     x_cg=wing_x_le - 0.1 * propeller_diameter # co-located with motors
