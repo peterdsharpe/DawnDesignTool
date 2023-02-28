@@ -14,9 +14,6 @@ from aerosandbox.atmosphere import Atmosphere as atmo
 import aerosandbox.tools.units as u
 from typing import Union, List
 
-
-
-
 path = str(
     pathlib.Path(__file__).parent.absolute()
 )
@@ -39,7 +36,8 @@ make_plots = False
 latitude = opti.parameter(value=-75)  # degrees, the location the sizing occurs
 day_of_year = opti.parameter(value=45)  # Julian day, the day of the year the sizing occurs
 mission_length = opti.parameter(value=45)  # days, the length of the mission without landing to download data
-strat_offset_value = opti.parameter(value=1000)  # meters, margin above the stratosphere height the aircraft is required to stay above
+strat_offset_value = opti.parameter(
+    value=1000)  # meters, margin above the stratosphere height the aircraft is required to stay above
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 climb_opt = False  # are we optimizing for the climb as well?
 hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we altitude cycle (False)?
@@ -47,18 +45,23 @@ hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we
 # Trajectory Parameters
 sample_area_height = opti.parameter(value=150000)  # meters, the height of the area the aircraft must sample
 sample_area_width = opti.parameter(value=100000)  # meters, the width of the area the aircraft must sample
-required_headway_per_day = opti.parameter(value=0)  # meters, the minimum distance the aircraft must cover in the sizing day
-trajectory = 1 # value to determine the particular trajectory
-required_revisit_rate = opti.parameter(value=0) # How many times must the aircraft fully cover the sample area in the sizing day?
-swath_overlap = opti.parameter(value=0.1) # What fraction of the adjacent swaths must overlap? Typically ranges from 0.1 to 0.5
+required_headway_per_day = opti.parameter(
+    value=0)  # meters, the minimum distance the aircraft must cover in the sizing day
+trajectory = 1  # value to determine the particular trajectory
+required_revisit_rate = opti.parameter(
+    value=0)  # How many times must the aircraft fully cover the sample area in the sizing day?
+swath_overlap = opti.parameter(
+    value=0.1)  # What fraction of the adjacent swaths must overlap? Typically ranges from 0.1 to 0.5
 
 # Aircraft Parameters
-battery_specific_energy_Wh_kg = opti.parameter(value=400) # cell level specific energy of the battery
-battery_pack_cell_percentage = opti.parameter(value=0.75)  # What percent of the battery pack consists of the module, by weight?
-variable_pitch = False # Do we assume the propeller is variable pitch?
+battery_specific_energy_Wh_kg = opti.parameter(value=400)  # cell level specific energy of the battery
+battery_pack_cell_percentage = opti.parameter(
+    value=0.75)  # What percent of the battery pack consists of the module, by weight?
+# these roughly correspond to the value for cells we are planning for near-term
+variable_pitch = False  # Do we assume the propeller is variable pitch?
 structural_load_factor = opti.parameter(value=3)  # over static
 mass_payload_base = opti.parameter(value=10)
-tail_panels = True # Do we assume we can mount solar cells on the vertical tail?
+tail_panels = True  # Do we assume we can mount solar cells on the vertical tail?
 wing_cells = "sunpower"  # select cells for wing, options include ascent_solar, sunpower, and microlink
 vstab_cells = "sunpower"  # select cells for vtail, options include ascent_solar, sunpower, and microlink
 max_wing_solar_area_fraction = opti.parameter(value=0.8)
@@ -69,17 +72,23 @@ use_propulsion_fits_from_FL2020_1682_undergrads = True  # Warning: Fits not yet 
 # Instrument Parameters
 required_resolution = opti.parameter(value=2)  # meters from conversation with Brent on 2/18/22
 required_snr = opti.parameter(value=6)  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
-center_wavelength = opti.parameter(value=0.024)  # meters given from Brent based on the properties of the ice sampled by the radar
-scattering_cross_sec_db = opti.parameter(value=-10)  # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
+center_wavelength = opti.parameter(
+    value=0.024)  # meters given from Brent based on the properties of the ice sampled by the radar
+scattering_cross_sec_db = opti.parameter(
+    value=-10)  # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
 radar_length = opti.parameter(value=1)  # meters, given from existing Gamma Remote Sensing instrument
 radar_width = opti.parameter(value=0.3)  # meters, given from existing Gamma Remote Sensing instrument
 look_angle = opti.parameter(value=45)  # degrees
 
 # Margins
-structural_mass_margin_multiplier = opti.parameter(value=1.25) # A value greater than 1 represents the structural components as sized are
-energy_generation_margin = opti.parameter(value=1.05) # A value greater than 1 represents aircraft must generate said fractional surplus of energy
-allowable_battery_depth_of_discharge = opti.parameter(value=0.95)  # How much of the battery can you actually use? # updated according to Matthew Berk discussion 10/21/21 # TODO reduce ?
-q_ne_over_q_max = opti.parameter(value=2)  # Chosen on the basis of a paper read by Trevor Long about Helios, 1/16/21 TODO re-evaluate?
+structural_mass_margin_multiplier = opti.parameter(
+    value=1.25)  # A value greater than 1 represents the structural components as sized are
+energy_generation_margin = opti.parameter(
+    value=1.05)  # A value greater than 1 represents aircraft must generate said fractional surplus of energy
+allowable_battery_depth_of_discharge = opti.parameter(
+    value=0.95)  # How much of the battery can you actually use? # updated according to Matthew Berk discussion 10/21/21 # TODO reduce ?
+q_ne_over_q_max = opti.parameter(
+    value=2)  # Chosen on the basis of a paper read by Trevor Long about Helios, 1/16/21 TODO re-evaluate?
 
 ##### Section: Time Discretization
 n_timesteps_per_segment = 180  # number of timesteps in the 25 hour sizing period #todo increase for trajectory stuff
@@ -130,9 +139,9 @@ hour = time / 3600
 boom_diameter = 0.2  # meters
 payload_pod_length = 2.0  # meters
 payload_pod_diameter = 0.5  # meters
-payload_pod_y_offset = 1.5 # meters
+payload_pod_y_offset = 1.5  # meters
 
-payload_pod = make_payload_pod( # TODO ask peter if there's a better way to make this an aero shape
+payload_pod = make_payload_pod(  # TODO ask peter if there's a better way to make this an aero shape
     boom_length=payload_pod_length,
     nose_length=0.5,
     tail_length=1,
@@ -144,7 +153,7 @@ payload_pod_volume = payload_pod.volume()
 # overall layout wing layout
 boom_location = 0.80  # as a fraction of the half-span
 taper_break_location = 0.67  # as a fraction of the half-span
-field_joint_location = 0.36 # as fraction of the half-span
+field_joint_location = 0.36  # as fraction of the half-span
 
 # Wing
 wing_span = opti.variable(
@@ -171,13 +180,13 @@ alpha_array = np.load(path + '/data/alpha.npy')
 reynolds_array = np.load(path + '/data/reynolds.npy')
 
 cl_function_interpolated_model = InterpolatedModel({'alpha': alpha_array, 'Re': np.log(np.array(reynolds_array))},
-                                cl_array, 'bspline')
+                                                   cl_array, 'bspline')
 cl_function = lambda alpha, Re, mach, deflection: cl_function_interpolated_model({"alpha": alpha, "Re": Re})
 cd_function_interpolated_model = InterpolatedModel({'alpha': alpha_array, 'Re': np.log(np.array(reynolds_array))},
-                                cd_array, 'bspline')
+                                                   cd_array, 'bspline')
 cd_function = lambda alpha, Re, mach, deflection: cd_function_interpolated_model({"alpha": alpha, "Re": Re})
 cm_function_interpolated_model = InterpolatedModel({'alpha': alpha_array, 'Re': np.log(np.array(reynolds_array))},
-                                cm_array, 'bspline')
+                                                   cm_array, 'bspline')
 cm_function = lambda alpha, Re, mach, deflection: cm_function_interpolated_model({"alpha": alpha, "Re": Re})
 
 wing_airfoil = asb.geometry.Airfoil(
@@ -271,36 +280,36 @@ center_boom_length = opti.variable(
 outboard_boom_length = opti.variable(
     init_guess=3,
     scale=1,
-    lower_bound=wing_root_chord * 3/4,
+    lower_bound=wing_root_chord * 3 / 4,
     **des
 )
 
 center_boom = asb.Fuselage(
-        name="Center Boom",
-        xsecs=[
-            asb.FuselageXSec(
-                    xyz_c=[0, 0, 0],
-                    radius=boom_diameter/2,
-                ),
-                asb.FuselageXSec(
-                    xyz_c=[center_boom_length, 0, 0],
-                    radius=boom_diameter/2,
-                )
-        ]
-    )
+    name="Center Boom",
+    xsecs=[
+        asb.FuselageXSec(
+            xyz_c=[0, 0, 0],
+            radius=boom_diameter / 2,
+        ),
+        asb.FuselageXSec(
+            xyz_c=[center_boom_length, 0, 0],
+            radius=boom_diameter / 2,
+        )
+    ]
+)
 right_boom = asb.Fuselage(
-        name="Right Boom",
-        xsecs=[
-            asb.FuselageXSec(
-                    xyz_c=[0, 0, 0],
-                    radius=boom_diameter/2,
-                ),
-                asb.FuselageXSec(
-                    xyz_c=[outboard_boom_length, 0, 0],
-                    radius=boom_diameter/2,
-                )
-        ]
-    )
+    name="Right Boom",
+    xsecs=[
+        asb.FuselageXSec(
+            xyz_c=[0, 0, 0],
+            radius=boom_diameter / 2,
+        ),
+        asb.FuselageXSec(
+            xyz_c=[outboard_boom_length, 0, 0],
+            radius=boom_diameter / 2,
+        )
+    ]
+)
 right_boom = right_boom.translate(np.array([
     0,
     boom_offset,
@@ -309,7 +318,6 @@ left_boom = right_boom.translate(np.array([
     0,
     -2 * boom_offset,
     0]))
-
 
 # tail section
 tail_airfoil = naca0008
@@ -368,14 +376,14 @@ vstab = asb.Wing(
         center_boom_length - vstab_chord * 0.75,
         0,
         -vstab_span / 2 + vstab_span * 0.15
-]))
+    ]))
 
 # center hstab
 center_hstab_span = opti.variable(
     init_guess=2,
     scale=2,
     lower_bound=0.1,
-    upper_bound=wing_span/6,
+    upper_bound=wing_span / 6,
     **des
 )
 
@@ -422,7 +430,7 @@ outboard_hstab_span = opti.variable(
     init_guess=4,
     scale=4,
     lower_bound=2,
-    upper_bound=wing_span/6,
+    upper_bound=wing_span / 6,
     **des
 )
 
@@ -494,7 +502,7 @@ propeller_diameter = opti.variable(
     **des
 )
 
-n_propellers = opti.parameter(value=2) # TODO reconsider 2 or 4
+n_propellers = opti.parameter(value=2)  # TODO reconsider 2 or 4
 
 ##### Vehicle Overall Specs
 mass_total = opti.variable(
@@ -536,16 +544,16 @@ wing_mass_primary = mass_lib.mass_wing_spar(
 ) * 11.382 / 9.222  # scaling factor taken from Daedalus weights to account for real-world effects, non-cap mass, etc.
 
 wing_mass_secondary = mass_lib.mass_hpa_wing(
-        span=wing_span,
-        chord=wing.mean_geometric_chord(),
-        vehicle_mass=mass_total,
-        n_ribs=wing_n_ribs,
-        n_wing_sections=4,
-        ultimate_load_factor=structural_load_factor,
-        type='cantilevered',
-        t_over_c=wing_airfoil.max_thickness(),
-        include_spar=False
-) * 1.5 # scaling factor suggested by Drela
+    span=wing_span,
+    chord=wing.mean_geometric_chord(),
+    vehicle_mass=mass_total,
+    n_ribs=wing_n_ribs,
+    n_wing_sections=4,
+    ultimate_load_factor=structural_load_factor,
+    type='cantilevered',
+    t_over_c=wing_airfoil.max_thickness(),
+    include_spar=False
+) * 1.5  # scaling factor suggested by Drela
 
 wing_mass = wing_mass_primary + wing_mass_secondary
 
@@ -563,6 +571,7 @@ mass_props['wing_tips'] = asb.mass_properties_from_radius_of_gyration(
     radius_of_gyration_x=(1 + field_joint_location) / 2 * (wing_span / 2),
     radius_of_gyration_z=(1 + field_joint_location) / 2 * (wing_span / 2),
 )
+
 
 ### hstab mass accounting
 def mass_hstab(
@@ -585,6 +594,7 @@ def mass_hstab(
     )
     mass_hstab = mass_hstab_primary + mass_hstab_secondary  # per hstab
     return mass_hstab
+
 
 q_ne = opti.variable(
     init_guess=160,
@@ -625,6 +635,7 @@ mass_props['left_hstab'] = asb.MassProperties(
     x_cg=left_hstab.xsecs[0].xyz_le[0] + outboard_hstab_chord / 2,
 )
 
+
 # vstab mass accounting
 def mass_vstab(
         vstab,
@@ -645,6 +656,7 @@ def mass_vstab(
     mass_vstab = mass_vstab_primary + mass_vstab_secondary  # per vstab
     return mass_vstab
 
+
 n_ribs_vstab = opti.variable(
     init_guess=40,
     scale=40,
@@ -664,7 +676,7 @@ mass_props['vstab'] = asb.mass_properties_from_radius_of_gyration(
 ### boom mass accounting
 mass_props['center_boom'] = asb.mass_properties_from_radius_of_gyration(
     mass=mass_lib.mass_hpa_tail_boom(
-        length_tail_boom=center_boom_length-wing_x_quarter_chord,
+        length_tail_boom=center_boom_length - wing_x_quarter_chord,
         dynamic_pressure_at_manuever_speed=q_ne,
         mean_tail_surface_area=center_hstab.area() + vstab.area()
     ) * structural_mass_margin_multiplier,
@@ -694,23 +706,23 @@ mass_props['right_boom'] = asb.mass_properties_from_radius_of_gyration(
 )
 
 ### payload pod mass accounting
-pod_structure_mass = 20 # kg, corresponds to reduction in pod mass expected for future build
+pod_structure_mass = 20  # kg, corresponds to reduction in pod mass expected for future build
 # assumes approximately same size battery system and payload
 # taken from Daedalus, http://journals.sfu.ca/ts/index.php/ts/article/viewFile/760/718
 mass_daedalus = 103.9  # kg, corresponds to 229 lb gross weight.
 # Total mass of the Daedalus aircraft, used as a reference for scaling.
 mass_fairings = 2.067 * mass_total / mass_daedalus  # Scale fairing mass to same mass fraction as Daedalus
 mass_landing_gear = 0.728 * mass_total / mass_daedalus  # Scale landing gear mass to same mass fraction as Daedalus
-mass_strut = 0.5 # mass per strut to the payload pod roughly baselined to dawn demonstrator build
+mass_strut = 0.5  # mass per strut to the payload pod roughly baselined to dawn demonstrator build
 
 mass_props['payload_pod'] = asb.MassProperties(
     mass=(
-        mass_fairings +
-        mass_landing_gear +
-        mass_strut * 2 +
-        pod_structure_mass
+            mass_fairings +
+            mass_landing_gear +
+            mass_strut * 2 +
+            pod_structure_mass
     ),
-    x_cg=payload_pod_length/2
+    x_cg=payload_pod_length / 2
 ) * structural_mass_margin_multiplier
 
 ### summation of structural mass
@@ -762,16 +774,16 @@ mass_props['avionics'] = asb.MassProperties(
     x_cg=payload_pod_length * 0.4,  # right behind payload # TODO revisit this number
 )
 avionics_volume = mass_props['avionics'].mass / 1250  # assumed density of electronics
-avionics_power = 180 # TODO revisit this number
+avionics_power = 180  # TODO revisit this number
 
 # instrument data storage mass requirements
-mass_of_data_storage = 0.0053 # kg per TB of data
+mass_of_data_storage = 0.0053  # kg per TB of data
 tb_per_day = 4
 mass_props['payload'] = asb.MassProperties(
     mass=mass_payload_base +
-           mission_length * tb_per_day * mass_of_data_storage
+         mission_length * tb_per_day * mass_of_data_storage
 )
-payload_volume = 0.023 * 0.5 # assuming payload mass from gamma remote sensing with 50% margin on volume
+payload_volume = 0.023 * 0.5  # assuming payload mass from gamma remote sensing with 50% margin on volume
 
 ### Power Systems Mass Accounting
 if vstab_cells == "microlink":
@@ -859,23 +871,23 @@ battery_capacity = opti.variable(
 battery_capacity_watt_hours = battery_capacity / 3600
 
 battery_pack_mass = elec_lib.mass_battery_pack(
-        battery_capacity_Wh=battery_capacity_watt_hours,
-        battery_cell_specific_energy_Wh_kg=battery_specific_energy_Wh_kg,
-        battery_pack_cell_fraction=battery_pack_cell_percentage
-    )
+    battery_capacity_Wh=battery_capacity_watt_hours,
+    battery_cell_specific_energy_Wh_kg=battery_specific_energy_Wh_kg,
+    battery_pack_cell_fraction=battery_pack_cell_percentage
+)
 
 battery_cell_mass = battery_pack_mass * battery_pack_cell_percentage
 cost_batteries = 4 * battery_capacity_watt_hours
 battery_density = 2000  # kg/m^3, taken from averaged measurements of commercial cells
 battery_volume = battery_pack_mass / battery_density
 
-battery_cg = (battery_volume / payload_pod_volume) * 0.5 # TODO figure out if x cg location makes sense
+battery_cg = (battery_volume / payload_pod_volume) * 0.5  # TODO figure out if x cg location makes sense
 mass_props['battery_pack'] = asb.MassProperties(
     mass=battery_pack_mass,
     x_cg=battery_cg,
 )
 
-battery_pack_specific_energy = battery_specific_energy_Wh_kg * u.hour * battery_pack_cell_percentage # J/kg #TODO double check this is right
+battery_pack_specific_energy = battery_specific_energy_Wh_kg * u.hour * battery_pack_cell_percentage  # J/kg #TODO double check this is right
 battery_total_energy = mass_props['battery_pack'].mass * battery_pack_specific_energy  # J
 
 battery_voltage = 125  # From Olek Peraire >4/2, propulsion slack
@@ -888,7 +900,7 @@ mass_props['wires'] = asb.MassProperties(
         allowable_voltage_drop=battery_voltage * 0.01,
         material="aluminum"
     ),
-    x_cg=wing_root_chord * 0.25 # assume most wiring is down spar
+    x_cg=wing_root_chord * 0.25  # assume most wiring is down spar
 )
 
 ### propellers mass acounting
@@ -925,7 +937,7 @@ mass_props['esc'] = asb.MassProperties(
     mass=elec_lib.mass_ESC(
         max_power=max_power_out_propulsion
     ),
-    x_cg=wing_x_le - 0.1 * propeller_diameter # co-located with motors
+    x_cg=wing_x_le - 0.1 * propeller_diameter  # co-located with motors
 )
 
 ### summation of power system mass
@@ -936,9 +948,9 @@ power_systems_mass_props = (
         mass_props['battery_pack']
 )
 propulsion_system_mass_props = (
-    mass_props['propellers'] +
-    mass_props['motors'] +
-    mass_props['esc']
+        mass_props['propellers'] +
+        mass_props['motors'] +
+        mass_props['esc']
 )
 
 #### summation of total system mass
@@ -947,11 +959,11 @@ for k, v in mass_props.items():
     mass_props_TOGW = mass_props_TOGW + v
 
 remaining_volume = (
-    payload_pod_volume - (
-    payload_volume +
-    avionics_volume +
-    battery_volume
-    )
+        payload_pod_volume - (
+        payload_volume +
+        avionics_volume +
+        battery_volume
+)
 )
 
 opti.subject_to(mass_total > mass_props_TOGW.mass)
@@ -991,7 +1003,6 @@ if climb_opt:
     opti.subject_to(dyn.altitude[0] / 1e4 == 0)
 
 if hold_cruise_altitude:
-
     cruise_altitude = opti.variable(
         init_guess=guess_altitude,
         scale=10000,
@@ -999,7 +1010,7 @@ if hold_cruise_altitude:
         **des
     )
 
-    dyn.altitude[time_periodic_start_index:] / cruise_altitude > 1, # stay at cruise altitude after climb
+    dyn.altitude[time_periodic_start_index:] / cruise_altitude > 1,  # stay at cruise altitude after climb
 
 ##### Section: Aerodynamics
 aero = asb.AeroBuildup(
@@ -1012,7 +1023,7 @@ aero = asb.AeroBuildup(
     p=False,
     q=False,
     r=False
-) # TODO add drag penalty
+)  # TODO add drag penalty
 
 dyn.add_force(
     *aero['F_w'],
@@ -1048,31 +1059,31 @@ power_trans = opti.variable(
     lower_bound=0,
     upper_bound=1e8,
     **ops
-) # watts
-groundspeed = opti.variable( # TODO relate to airspeed using windspeed
+)  # watts
+groundspeed = opti.variable(  # TODO relate to airspeed using windspeed
     init_guess=10,
     scale=5,
-    lower_bound=0, # TODO revisit this as lower bound
+    lower_bound=0,  # TODO revisit this as lower bound
     **ops
 )
 
 # define key radar parameters
-radar_area = radar_width * radar_length # meters ** 2
-dist = dyn.altitude / np.cosd(look_angle) # meters
-swath_azimuth = center_wavelength * dist / radar_length # meters
-swath_range = center_wavelength * dist / (radar_width * np.cosd(look_angle)) # meters
-max_length_synth_ap = center_wavelength * dist / radar_length # meters
-ground_area = swath_range * swath_azimuth * np.pi / 4 # meters ** 2
-radius = (swath_azimuth + swath_range) / 4 # meters
-ground_imaging_offset = np.tand(look_angle) * dyn.altitude # meters
+radar_area = radar_width * radar_length  # meters ** 2
+dist = dyn.altitude / np.cosd(look_angle)  # meters
+swath_azimuth = center_wavelength * dist / radar_length  # meters
+swath_range = center_wavelength * dist / (radar_width * np.cosd(look_angle))  # meters
+max_length_synth_ap = center_wavelength * dist / radar_length  # meters
+ground_area = swath_range * swath_azimuth * np.pi / 4  # meters ** 2
+radius = (swath_azimuth + swath_range) / 4  # meters
+ground_imaging_offset = np.tand(look_angle) * dyn.altitude  # meters
 scattering_cross_sec = 10 ** (scattering_cross_sec_db / 10)
 sigma0 = scattering_cross_sec / ground_area
 antenna_gain = 4 * np.pi * radar_area * 0.7 / center_wavelength ** 2
 
 # Assumed constants
-a_hs = 0.88 # aperture-illumination taper factor associated with the synthetic aperture (value from Ulaby and Long)
-F = 4 # receiver noise figure (somewhat randomly chosen value from Ulaby and Long)
-a_B = 1 # pulse-taper factor to relate bandwidth and pulse duration
+a_hs = 0.88  # aperture-illumination taper factor associated with the synthetic aperture (value from Ulaby and Long)
+F = 4  # receiver noise figure (somewhat randomly chosen value from Ulaby and Long)
+a_B = 1  # pulse-taper factor to relate bandwidth and pulse duration
 
 # # constrain SAR resolution to required value
 pulse_duration = a_B / bandwidth
@@ -1084,7 +1095,7 @@ opti.subject_to([
 ])
 
 # use SAR specific equations from Ulaby and Long
-payload_power = power_trans * pulse_rep_freq * pulse_duration # TODO make a function of location in trajectory
+payload_power = power_trans * pulse_rep_freq * pulse_duration  # TODO make a function of location in trajectory
 
 snr = payload_power * antenna_gain ** 2 * center_wavelength ** 3 * a_hs * sigma0 * range_resolution / \
       ((2 * 4 * np.pi) ** 3 * dist ** 3 * k_b * dyn.op_point.atmosphere.temperature() * F * groundspeed * a_B)
@@ -1242,7 +1253,7 @@ opti.subject_to([
     dyn.x_e[time_periodic_end_index] / 1e5 > dyn.x_e[time_periodic_start_index] / 1e5 + required_headway_per_day,
     dyn.altitude[time_periodic_end_index] / 1e4 > dyn.altitude[time_periodic_start_index] / 1e4,
     dyn.u_e[time_periodic_end_index] / 1e1 > dyn.u_e[time_periodic_start_index] / 1e1,
-    battery_charge_state[-1] > battery_charge_state[0], # todo figure out why other index doesn't work
+    battery_charge_state[-1] > battery_charge_state[0],  # todo figure out why other index doesn't work
     dyn.gamma[time_periodic_end_index] == dyn.gamma[time_periodic_start_index],
     dyn.alpha[time_periodic_end_index] == dyn.alpha[time_periodic_start_index],
     thrust[time_periodic_end_index] == thrust[time_periodic_start_index]
@@ -1359,7 +1370,6 @@ if __name__ == "__main__":
             f"{v / s(payload_pod_volume) * 100:.1f}%"
         ]))
 
-
     aero = {
         k: s(v)
         for k, v in aero.items() if not isinstance(v, list)
@@ -1372,6 +1382,7 @@ if __name__ == "__main__":
     ##### Section: Printout
     print_title = lambda s: print(s.upper().join(["*" * 20] * 2))
 
+
     def fmt(x):
         return f"{s(x):.6g}"
 
@@ -1383,7 +1394,7 @@ if __name__ == "__main__":
         "mass_TOGW": f"{fmt(mass_props_TOGW.mass)} kg",
         "Propeller Diameter": f"{fmt(propeller_diameter)} m ({fmt(propeller_diameter)} meters)",
         "Average Cruise L/D": fmt(avg_cruise_LD),
-        "CG location"           : "(" + ", ".join([fmt(xyz) for xyz in mass_props_TOGW.xyz_cg]) + ") m",
+        "CG location": "(" + ", ".join([fmt(xyz) for xyz in mass_props_TOGW.xyz_cg]) + ") m",
     }.items():
         print(f"{k.rjust(25)} = {v}")
 
@@ -1391,7 +1402,7 @@ if __name__ == "__main__":
 
     print_title("Powers")
     for k, v in {
-        "max_power_in"        : fmtpow(max_power_in),
+        "max_power_in": fmtpow(max_power_in),
         "max_power_out": fmtpow(max_power_out_propulsion),
         "battery_total_energy": fmtpow(battery_total_energy),
         "payload_power": fmtpow(payload_power),
