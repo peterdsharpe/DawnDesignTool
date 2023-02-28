@@ -33,7 +33,7 @@ ops = dict(category="operations")
 minimize = 'wing_span'
 make_plots = False
 
-##### Section: Parameters
+##### Section: Input Parameters
 
 # Mission Operating Parameters
 latitude = opti.parameter(value=-75)  # degrees, the location the sizing occurs
@@ -549,19 +549,19 @@ wing_mass_secondary = mass_lib.mass_hpa_wing(
 
 wing_mass = wing_mass_primary + wing_mass_secondary
 
-wing_y_field_joint_break = field_joint_location * wing_span / 2
+wing_y_field_joint_break = field_joint_location
 
 mass_props['wing_center'] = asb.mass_properties_from_radius_of_gyration(
-    mass=wing_mass * wing_y_field_joint_break * structural_mass_margin_multiplier,
+    mass=wing_mass * field_joint_location * structural_mass_margin_multiplier,
     x_cg=wing_x_le + 0.40 * wing_root_chord,  # quarter-chord,
-    radius_of_gyration_x=(wing_y_field_joint_break * wing_span) / 12,
-    radius_of_gyration_z=(wing_y_field_joint_break * wing_span) / 12
+    radius_of_gyration_x=(field_joint_location * wing_span) / 12,
+    radius_of_gyration_z=(field_joint_location * wing_span) / 12
 )
 mass_props['wing_tips'] = asb.mass_properties_from_radius_of_gyration(
-    mass=wing_mass * (1 - wing_y_field_joint_break) * structural_mass_margin_multiplier,
+    mass=wing_mass * (1 - field_joint_location) * structural_mass_margin_multiplier,
     x_cg=wing_x_le + 0.40 * wing_root_chord,  # quarter-chord,
-    radius_of_gyration_x=(1 + wing_y_field_joint_break) / 2 * (wing_span / 2),
-    radius_of_gyration_z=(1 + wing_y_field_joint_break) / 2 * (wing_span / 2),
+    radius_of_gyration_x=(1 + field_joint_location) / 2 * (wing_span / 2),
+    radius_of_gyration_z=(1 + field_joint_location) / 2 * (wing_span / 2),
 )
 
 ### hstab mass accounting
@@ -1359,9 +1359,6 @@ if __name__ == "__main__":
             f"{v / s(payload_pod_volume) * 100:.1f}%"
         ]))
 
-    print("\nMass Accounting\n" + "-" * 50)
-    for v in mass_props.values():
-        v.substitute_solution(sol)
 
     aero = {
         k: s(v)
