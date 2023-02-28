@@ -1286,18 +1286,20 @@ opti.subject_to([
     outboard_hstab_incidence <= 0,
     # essentially enforces downforce, prevents hstab from lifting and exploiting config.
     # TODO double check below constraints to make sure they are correct for this application
-    # center_hstab_span < wing_span / 2,
-    # aero["CL"] > 0,
-    # np.mean(aero["Cm"]) == 0,
-    # aero["Cma"] < -0.5,
-    # aero["Cnb"] > 0.05,
-    # remaining_volume / u.inch ** 3 > 0,
-    # dyn.alpha < 12,
-    # dyn.alpha > -12,
-    # # np.diff(np.degrees(dyn.gamma)) < 5,
-    # # np.diff(np.degrees(dyn.gamma)) > -5,
-    # np.diff(dyn.alpha) < 2,
-    # np.diff(dyn.alpha) > -2,
+    center_hstab_span < wing_span / 2,
+    aero["CL"] > 0,
+    np.mean(aero["Cm"]) == 0,
+    aero["Cma"] < -0.5,
+    aero["Cnb"] > 0.05,
+    remaining_volume / u.inch ** 3 > 0,
+    dyn.alpha < 12,
+    dyn.alpha > -8,
+    dyn.gamma / 90 < 1,
+    dyn.gamma / 90 > -1,
+    # np.diff(np.degrees(dyn.gamma)) < 5,
+    # np.diff(np.degrees(dyn.gamma)) > -5,
+    np.diff(dyn.alpha) < 2,
+    np.diff(dyn.alpha) > -2,
 ])
 
 ##### Section: Useful metrics
