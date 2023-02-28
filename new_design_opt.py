@@ -164,8 +164,8 @@ wing_span = opti.variable(
     **des
 )
 wing_x_le = opti.variable(
-    init_guess=1.2,
-    lower_bound=payload_pod_length,
+    init_guess=0.1,
+    lower_bound=0,
     upper_bound=payload_pod_length * 0.75,
     # freeze=True,
     **des
@@ -180,13 +180,13 @@ cm_array = np.load(path + '/data/cm_function.npy')
 alpha_array = np.load(path + '/data/alpha.npy')
 reynolds_array = np.load(path + '/data/reynolds.npy')
 
-cl_function_interpolated_model = InterpolatedModel({'alpha': alpha_array, 'Re': np.log(np.array(reynolds_array))},
+cl_function_interpolated_model = InterpolatedModel({'alpha': alpha_array, 'Re': (np.array(reynolds_array))},
                                                    cl_array, 'bspline')
 cl_function = lambda alpha, Re, mach, deflection: cl_function_interpolated_model({"alpha": alpha, "Re": Re})
-cd_function_interpolated_model = InterpolatedModel({'alpha': alpha_array, 'Re': np.log(np.array(reynolds_array))},
+cd_function_interpolated_model = InterpolatedModel({'alpha': alpha_array, 'Re': (np.array(reynolds_array))},
                                                    cd_array, 'bspline')
 cd_function = lambda alpha, Re, mach, deflection: cd_function_interpolated_model({"alpha": alpha, "Re": Re})
-cm_function_interpolated_model = InterpolatedModel({'alpha': alpha_array, 'Re': np.log(np.array(reynolds_array))},
+cm_function_interpolated_model = InterpolatedModel({'alpha': alpha_array, 'Re': (np.array(reynolds_array))},
                                                    cm_array, 'bspline')
 cm_function = lambda alpha, Re, mach, deflection: cm_function_interpolated_model({"alpha": alpha, "Re": Re})
 
