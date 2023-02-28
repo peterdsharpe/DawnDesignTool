@@ -45,13 +45,14 @@ hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we
 # Trajectory Parameters
 sample_area_height = opti.parameter(value=150000)  # meters, the height of the area the aircraft must sample
 sample_area_width = opti.parameter(value=100000)  # meters, the width of the area the aircraft must sample
-required_headway_per_day = opti.parameter(
-    value=0)  # meters, the minimum distance the aircraft must cover in the sizing day
+required_headway_per_day = opti.parameter(value=0)
+# meters, the minimum distance the aircraft must cover in the sizing day
 trajectory = 1  # value to determine the particular trajectory
-required_revisit_rate = opti.parameter(
-    value=0)  # How many times must the aircraft fully cover the sample area in the sizing day?
-swath_overlap = opti.parameter(
-    value=0.1)  # What fraction of the adjacent swaths must overlap? Typically ranges from 0.1 to 0.5
+required_revisit_rate = opti.parameter(value=0)
+# How many times must the aircraft fully cover the sample area in the sizing day?
+swath_overlap = opti.parameter(value=0.1)
+# What fraction of the adjacent swaths must overlap? Typically ranges from 0.1 to 0.5
+min_speed = 0  # specify a minimum speed
 
 # Aircraft Parameters
 battery_specific_energy_Wh_kg = opti.parameter(value=400)  # cell level specific energy of the battery
@@ -72,23 +73,23 @@ use_propulsion_fits_from_FL2020_1682_undergrads = True  # Warning: Fits not yet 
 # Instrument Parameters
 required_resolution = opti.parameter(value=2)  # meters from conversation with Brent on 2/18/22
 required_snr = opti.parameter(value=6)  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
-center_wavelength = opti.parameter(
-    value=0.024)  # meters given from Brent based on the properties of the ice sampled by the radar
-scattering_cross_sec_db = opti.parameter(
-    value=-10)  # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
+center_wavelength = opti.parameter(value=0.024)
+# meters given from Brent based on the properties of the ice sampled by the radar
+scattering_cross_sec_db = opti.parameter(value=-10)
+# meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
 radar_length = opti.parameter(value=1)  # meters, given from existing Gamma Remote Sensing instrument
 radar_width = opti.parameter(value=0.3)  # meters, given from existing Gamma Remote Sensing instrument
 look_angle = opti.parameter(value=45)  # degrees
 
 # Margins
-structural_mass_margin_multiplier = opti.parameter(
-    value=1.25)  # A value greater than 1 represents the structural components as sized are
-energy_generation_margin = opti.parameter(
-    value=1.05)  # A value greater than 1 represents aircraft must generate said fractional surplus of energy
-allowable_battery_depth_of_discharge = opti.parameter(
-    value=0.95)  # How much of the battery can you actually use? # updated according to Matthew Berk discussion 10/21/21 # TODO reduce ?
-q_ne_over_q_max = opti.parameter(
-    value=2)  # Chosen on the basis of a paper read by Trevor Long about Helios, 1/16/21 TODO re-evaluate?
+structural_mass_margin_multiplier = opti.parameter(value=1.25)
+# A value greater than 1 represents the structural components as sized are
+energy_generation_margin = opti.parameter(value=1.05)
+# A value greater than 1 represents aircraft must generate said fractional surplus of energy
+allowable_battery_depth_of_discharge = opti.parameter(value=0.95)
+# How much of the battery can you actually use? # updated according to Matthew Berk discussion 10/21/21 # TODO reduce ?
+q_ne_over_q_max = opti.parameter(value=2)
+# Chosen on the basis of a paper read by Trevor Long about Helios, 1/16/21 TODO re-evaluate?
 
 ##### Section: Time Discretization
 n_timesteps_per_segment = 180  # number of timesteps in the 25 hour sizing period #todo increase for trajectory stuff
@@ -98,7 +99,7 @@ if climb_opt:  # roughly 1-day-plus-climb window, starting at ground. Periodicit
                                scale=3600,
                                upper_bound=0,
                                lower_bound=-24 * 3600
-                                           ** ops)
+                                           **ops)
     time_end = 36 * 3600
 
     time_periodic_window_start = time_end - 24 * 3600
@@ -982,7 +983,7 @@ dyn = asb.DynamicsPointMass2DCartesian(
         init_guess=-guess_altitude, n_vars=n_timesteps,
         **ops
     ),
-    u_e=opti.variable(init_guess=guess_u_e, n_vars=n_timesteps),
+    u_e=opti.variable(init_guess=guess_u_e, n_vars=n_timesteps, lower_bound=min_speed),
     w_e=opti.variable(init_guess=0, n_vars=n_timesteps),
     alpha=opti.variable(
         init_guess=3, n_vars=n_timesteps,
