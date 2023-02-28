@@ -3,7 +3,6 @@ from aerosandbox.library import winds as lib_winds
 import aerosandbox.numpy as np
 import pathlib
 from aerosandbox.modeling.interpolation import InterpolatedModel
-from aerosandbox.modeling.interpolation_unstructured import UnstructuredInterpolatedModel
 from aerosandbox.library.airfoils import naca0008
 from design_opt_utilities.fuselage import make_payload_pod
 import aerosandbox.library.mass_structural as mass_lib
@@ -183,13 +182,13 @@ reynolds_array = np.load(path + '/data/reynolds.npy')
 
 cl_function_interpolated_model = InterpolatedModel({'alpha': alpha_array, 'Re': (np.array(reynolds_array))},
                                                    cl_array, 'bspline')
-cl_function = lambda alpha, Re, mach, deflection: cl_function_interpolated_model({"alpha": alpha, "Re": Re})
+cl_function = lambda alpha, Re, mach: cl_function_interpolated_model({"alpha": alpha, "Re": Re})
 cd_function_interpolated_model = InterpolatedModel({'alpha': alpha_array, 'Re': (np.array(reynolds_array))},
                                                    cd_array, 'bspline')
-cd_function = lambda alpha, Re, mach, deflection: cd_function_interpolated_model({"alpha": alpha, "Re": Re})
+cd_function = lambda alpha, Re, mach: cd_function_interpolated_model({"alpha": alpha, "Re": Re})
 cm_function_interpolated_model = InterpolatedModel({'alpha': alpha_array, 'Re': (np.array(reynolds_array))},
                                                    cm_array, 'bspline')
-cm_function = lambda alpha, Re, mach, deflection: cm_function_interpolated_model({"alpha": alpha, "Re": Re})
+cm_function = lambda alpha, Re, mach: cm_function_interpolated_model({"alpha": alpha, "Re": Re})
 
 wing_airfoil = asb.geometry.Airfoil(
     name="HALE_03",
@@ -509,19 +508,22 @@ n_propellers = opti.parameter(value=2)  # TODO reconsider 2 or 4
 ##### Vehicle Overall Specs
 mass_total = opti.variable(
     init_guess=110,
-    lower_bound=10,
+    scale=100,
+    lower_bound=0,
     **des
 )
 
 max_power_in = opti.variable(
-    init_guess=5000,
-    lower_bound=10,
+    init_guess=3000,
+    lower_bound=0,
+    scale=3000,
     **des
 )
 
 max_power_out_propulsion = opti.variable(
     init_guess=1500,
     lower_bound=10,
+    scale=1e3,
     **des
 )
 
@@ -1128,9 +1130,10 @@ payload_power = opti.parameter(value=100)
 ##### Section: Propulsion and Power Output
 
 thrust = opti.variable(
-    init_guess=600 * 9.81 / 30,
+    init_guess=60,
     n_vars=n_timesteps,
     lower_bound=0,
+    scale=50,
     **ops
 )
 
