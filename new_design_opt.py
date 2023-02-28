@@ -56,6 +56,7 @@ min_speed = 0  # specify a minimum speed
 
 # Aircraft Parameters
 battery_specific_energy_Wh_kg = opti.parameter(value=450)  # cell level specific energy of the battery
+# todo adjust to more reasonable near-term values
 battery_pack_cell_percentage = opti.parameter(
     value=0.89)  # What percent of the battery pack consists of the module, by weight?
 # these roughly correspond to the value for cells we are planning for near-term
@@ -98,8 +99,8 @@ if climb_opt:  # roughly 1-day-plus-climb window, starting at ground. Periodicit
     time_start = opti.variable(init_guess=-12 * 3600,
                                scale=3600,
                                upper_bound=0,
-                               lower_bound=-24 * 3600
-                                           **ops)
+                               lower_bound=-24 * 3600,
+                                **ops)
     time_end = 36 * 3600
 
     time_periodic_window_start = time_end - 24 * 3600
@@ -977,16 +978,31 @@ dyn = asb.DynamicsPointMass2DCartesian(
     mass_props=mass_props_TOGW,
     x_e=opti.variable(
         init_guess=time * guess_u_e,
+        scale=1e5,
         **ops
     ),
     z_e=opti.variable(
-        init_guess=-guess_altitude, n_vars=n_timesteps,
+        init_guess=-guess_altitude,
+        n_vars=n_timesteps,
+        scale=1e4,
         **ops
     ),
-    u_e=opti.variable(init_guess=guess_u_e, n_vars=n_timesteps, lower_bound=min_speed),
-    w_e=opti.variable(init_guess=0, n_vars=n_timesteps),
+    u_e=opti.variable(
+        init_guess=guess_u_e,
+        n_vars=n_timesteps,
+        lower_bound=min_speed,
+        scale=20,
+        **ops
+    ),
+    w_e=opti.variable(
+        init_guess=0,
+        n_vars=n_timesteps,
+        **ops
+    ),
     alpha=opti.variable(
-        init_guess=3, n_vars=n_timesteps,
+        init_guess=5,
+        n_vars=n_timesteps,
+        scale=4,
         **ops
     ),
 )
