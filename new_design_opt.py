@@ -28,7 +28,7 @@ ops = dict(category="operations")
 
 ##### optimization assumptions
 minimize = 'wing_span'
-make_plots = False
+make_plots = True
 
 ##### Section: Input Parameters
 
@@ -55,9 +55,9 @@ swath_overlap = opti.parameter(value=0.1)
 min_speed = 0  # specify a minimum speed
 
 # Aircraft Parameters
-battery_specific_energy_Wh_kg = opti.parameter(value=400)  # cell level specific energy of the battery
+battery_specific_energy_Wh_kg = opti.parameter(value=450)  # cell level specific energy of the battery
 battery_pack_cell_percentage = opti.parameter(
-    value=0.75)  # What percent of the battery pack consists of the module, by weight?
+    value=0.89)  # What percent of the battery pack consists of the module, by weight?
 # these roughly correspond to the value for cells we are planning for near-term
 variable_pitch = False  # Do we assume the propeller is variable pitch?
 structural_load_factor = opti.parameter(value=3)  # over static
@@ -428,8 +428,8 @@ opti.subject_to([
 
 # tailerons
 outboard_hstab_span = opti.variable(
-    init_guess=4,
-    scale=4,
+    init_guess=2,
+    scale=2,
     lower_bound=2,
     upper_bound=wing_span / 6,
     **des
@@ -444,7 +444,7 @@ outboard_hstab_chord = opti.variable(
 )
 
 outboard_hstab_incidence = opti.variable(
-    init_guess=0,
+    init_guess=-2,
     lower_bound=-15,
     upper_bound=15,
     **ops
@@ -1270,18 +1270,18 @@ opti.subject_to([
     outboard_hstab_incidence <= 0,
     # essentially enforces downforce, prevents hstab from lifting and exploiting config.
     # TODO double check below constraints to make sure they are correct for this application
-    center_hstab_span < wing_span / 2,
-    aero["CL"] > 0,
-    np.mean(aero["Cm"]) == 0,
-    aero["Cma"] < -0.5,
-    aero["Cnb"] > 0.05,
-    remaining_volume / u.inch ** 3 > 0,
-    dyn.alpha < 12,
-    dyn.alpha > -12,
-    # np.diff(np.degrees(dyn.gamma)) < 5,
-    # np.diff(np.degrees(dyn.gamma)) > -5,
-    np.diff(dyn.alpha) < 2,
-    np.diff(dyn.alpha) > -2,
+    # center_hstab_span < wing_span / 2,
+    # aero["CL"] > 0,
+    # np.mean(aero["Cm"]) == 0,
+    # aero["Cma"] < -0.5,
+    # aero["Cnb"] > 0.05,
+    # remaining_volume / u.inch ** 3 > 0,
+    # dyn.alpha < 12,
+    # dyn.alpha > -12,
+    # # np.diff(np.degrees(dyn.gamma)) < 5,
+    # # np.diff(np.degrees(dyn.gamma)) > -5,
+    # np.diff(dyn.alpha) < 2,
+    # np.diff(dyn.alpha) > -2,
 ])
 
 ##### Section: Useful metrics
