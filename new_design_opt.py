@@ -160,7 +160,7 @@ field_joint_location = 0.36  # as fraction of the half-span
 wing_span = opti.variable(
     init_guess=30,
     scale=10,
-    lower_bound=0.01,
+    lower_bound=1,
     **des
 )
 wing_x_le = opti.variable(
@@ -209,14 +209,14 @@ wing_airfoil = asb.geometry.Airfoil(
 wing_root_chord = opti.variable(
     init_guess=1.8,
     scale=1,
-    lower_bound=0.01,
+    lower_bound=0.1,
     **des
 )
 
 wing_x_quarter_chord = opti.variable(
     init_guess=0,
     scale=0.01,
-    lower_bound=0.01,
+    lower_bound=0,
     **des
 )
 
@@ -271,7 +271,7 @@ wing = asb.Wing(
 
 # center fuselage
 center_boom_length = opti.variable(
-    init_guess=10,
+    init_guess=3,
     scale=1,
     lower_bound=0.1,
     **des
@@ -279,7 +279,7 @@ center_boom_length = opti.variable(
 
 # outboard_fuselage
 outboard_boom_length = opti.variable(
-    init_guess=5,
+    init_guess=3,
     scale=1,
     lower_bound=wing_root_chord * 3 / 4,
     **des
@@ -1043,6 +1043,8 @@ aero = asb.AeroBuildup(
     r=False
 )  # TODO add drag penalty
 
+aero["Main Wing"] = 1.06 * aero['D']
+
 dyn.add_force(
     *aero['F_w'],
     axes="earth"
@@ -1373,72 +1375,72 @@ if __name__ == "__main__":
 
     ### Macros
     s = lambda x: sol.value(x)
-
-    print("\nVolume Accounting\n" + "-" * 50)
-    volumes = {
-        k: s(eval(k))
-        for k in list(vars().keys())
-        if ("volume" in k and
-            k != "payload_pod_volume" and
-            k != "volumes" and
-            "volumetric" not in k
-            )
-    }
-
-    for k, v in sorted(volumes.items(), key=lambda item: -item[1]):
-        print(" | ".join([
-            f"{k:25}",
-            f"{format(v, '8.3g').rjust(9)} m^3",
-            f"{v / s(payload_pod_volume) * 100:.1f}%"
-        ]))
-
-    aero = {
-        k: s(v)
-        for k, v in aero.items() if not isinstance(v, list)
-    }
-
-    import matplotlib.pyplot as plt
-    import aerosandbox.tools.pretty_plots as p
-    from aerosandbox.tools.string_formatting import eng_string
-
-    ##### Section: Printout
-    print_title = lambda s: print(s.upper().join(["*" * 20] * 2))
-
-
-    def fmt(x):
-        return f"{s(x):.6g}"
-
-
-    print_title("Outputs")
-    for k, v in {
-        "Wing Span": f"{fmt(wing_span)} meters",
-        "Wing Root Chord": f"{fmt(wing_root_chord)} meters",
-        "mass_TOGW": f"{fmt(mass_props_TOGW.mass)} kg",
-        "Propeller Diameter": f"{fmt(propeller_diameter)} m ({fmt(propeller_diameter)} meters)",
-        "Average Cruise L/D": fmt(avg_cruise_LD),
-        "CG location": "(" + ", ".join([fmt(xyz) for xyz in mass_props_TOGW.xyz_cg]) + ") m",
-    }.items():
-        print(f"{k.rjust(25)} = {v}")
-
-    fmtpow = lambda x: fmt(x) + " W"
-
-    print_title("Powers")
-    for k, v in {
-        "max_power_in": fmtpow(max_power_in),
-        "max_power_out": fmtpow(max_power_out_propulsion),
-        "battery_total_energy": fmtpow(battery_total_energy),
-        "payload_power": fmtpow(payload_power),
-    }.items():
-        print(f"{k.rjust(25)} = {v}")
-
-    print_title("Mass props")
-    for k, v in mass_props.items():
-        print(f"{k.rjust(25)} = {v.mass:.3f} kg ")
-
-    if make_plots:
-        ##### Section: Geometry
-        airplane.draw_three_view(show=False)
-        p.show_plot(tight_layout=False, savefig="figures/three_view.png")
+    #
+    # print("\nVolume Accounting\n" + "-" * 50)
+    # volumes = {
+    #     k: s(eval(k))
+    #     for k in list(vars().keys())
+    #     if ("volume" in k and
+    #         k != "payload_pod_volume" and
+    #         k != "volumes" and
+    #         "volumetric" not in k
+    #         )
+    # }
+    #
+    # for k, v in sorted(volumes.items(), key=lambda item: -item[1]):
+    #     print(" | ".join([
+    #         f"{k:25}",
+    #         f"{format(v, '8.3g').rjust(9)} m^3",
+    #         f"{v / s(payload_pod_volume) * 100:.1f}%"
+    #     ]))
+    #
+    # aero = {
+    #     k: s(v)
+    #     for k, v in aero.items() if not isinstance(v, list)
+    # }
+    #
+    # import matplotlib.pyplot as plt
+    # import aerosandbox.tools.pretty_plots as p
+    # from aerosandbox.tools.string_formatting import eng_string
+    #
+    # ##### Section: Printout
+    # print_title = lambda s: print(s.upper().join(["*" * 20] * 2))
+    #
+    #
+    # def fmt(x):
+    #     return f"{s(x):.6g}"
+    #
+    #
+    # print_title("Outputs")
+    # for k, v in {
+    #     "Wing Span": f"{fmt(wing_span)} meters",
+    #     "Wing Root Chord": f"{fmt(wing_root_chord)} meters",
+    #     "mass_TOGW": f"{fmt(mass_props_TOGW.mass)} kg",
+    #     "Propeller Diameter": f"{fmt(propeller_diameter)} m ({fmt(propeller_diameter)} meters)",
+    #     "Average Cruise L/D": fmt(avg_cruise_LD),
+    #     "CG location": "(" + ", ".join([fmt(xyz) for xyz in mass_props_TOGW.xyz_cg]) + ") m",
+    # }.items():
+    #     print(f"{k.rjust(25)} = {v}")
+    #
+    # fmtpow = lambda x: fmt(x) + " W"
+    #
+    # print_title("Powers")
+    # for k, v in {
+    #     "max_power_in": fmtpow(max_power_in),
+    #     "max_power_out": fmtpow(max_power_out_propulsion),
+    #     "battery_total_energy": fmtpow(battery_total_energy),
+    #     "payload_power": fmtpow(payload_power),
+    # }.items():
+    #     print(f"{k.rjust(25)} = {v}")
+    #
+    # print_title("Mass props")
+    # for k, v in mass_props.items():
+    #     print(f"{k.rjust(25)} = {v.mass:.3f} kg ")
+    #
+    # if make_plots:
+    #     ##### Section: Geometry
+    #     airplane.draw_three_view(show=False)
+    #     p.show_plot(tight_layout=False, savefig="figures/three_view.png")
 
         ##### Section: Mass Budget
         # fig, ax = plt.subplots(figsize=(12, 5), subplot_kw=dict(aspect="equal"), dpi=300)
