@@ -30,7 +30,7 @@ minimize = 'wing_span'
 make_plots = True
 
 ##### Debug flags
-draw_initial_guess_config = True
+draw_initial_guess_config = False
 
 ##### Section: Input Parameters
 
@@ -74,7 +74,7 @@ use_propulsion_fits_from_FL2020_1682_undergrads = True  # Warning: Fits not yet 
 # fits for propeller and motors to derive motor and propeller efficiencies
 
 # Instrument Parameters
-required_resolution = opti.parameter(value=2)  # meters from conversation with Brent on 2/18/22
+required_resolution = opti.parameter(value=1)  # meters from conversation with Brent on 3/7/2023
 required_snr = opti.parameter(value=6)  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
 center_wavelength = opti.parameter(value=0.024)
 # meters given from Brent based on the properties of the ice sampled by the radar
@@ -216,12 +216,14 @@ wing_root_chord = opti.variable(
     **des
 )
 
-wing_x_quarter_chord = opti.variable(
+wing_x_quarter_chord = opti.variable( # TODO figure out how to define better
     init_guess=1.8 / 4,
     scale=0.01,
     lower_bound=0,
     **des
 )
+
+opti.subject_to(wing_x_quarter_chord < wing_root_chord / 4)
 
 wing_y_taper_break = taper_break_location * wing_span / 2
 
@@ -267,7 +269,7 @@ wing = asb.Wing(
         ),
     ]
 ).translate([
-    wing_x_le,
+    wing_x_quarter_chord,
     0,
     0
 ])
@@ -356,7 +358,7 @@ vstab_incidence = opti.variable(
     upper_bound=30,
     lower_bound=-30,
     freeze=True,
-    **ops
+    **des
 )
 
 vstab = asb.Wing(
@@ -405,7 +407,7 @@ center_hstab_incidence = opti.variable(
     init_guess=-2,
     lower_bound=-15,
     upper_bound=15,
-    **ops
+    **des
 )
 
 center_hstab = asb.Wing(
@@ -454,7 +456,7 @@ outboard_hstab_incidence = opti.variable(
     init_guess=-2,
     lower_bound=-15,
     upper_bound=15,
-    **ops
+    **des
 )
 right_hstab = asb.Wing(
     name="Taileron",
@@ -883,7 +885,7 @@ mass_props['MPPT'] = asb.MassProperties(
 battery_capacity = opti.variable(
     init_guess=5e8,
     scale=5e8,
-    lower_bound=100,
+    lower_bound=0,
     **des
 )
 battery_capacity_watt_hours = battery_capacity / 3600
@@ -1008,12 +1010,10 @@ dyn = asb.DynamicsPointMass2DCartesian(
         n_vars=n_timesteps,
         lower_bound=min_speed,
         scale=20,
-        **ops
     ),
     w_e=opti.variable(
         init_guess=0,
         n_vars=n_timesteps,
-        **ops
     ),
     alpha=opti.variable(
         init_guess=5,
@@ -1449,7 +1449,7 @@ if __name__ == "__main__":
 
     print_title("Mass props")
     for k, v in mass_props.items():
-        print(f"{k.rjust(25)} = {v.mass:.3f} kg ")
+        print(f"{k.rjust(25)} = {fmt(v.mass)} kg")
 
     if make_plots:
         ##### Section: Geometry
