@@ -141,8 +141,8 @@ hour = time / 3600
 # Payload pod
 # values roughly to match the demonstrator fuselage and payload pod
 boom_diameter = 0.2  # meters
-payload_pod_length = 2.0  # meters
-payload_pod_diameter = 0.5  # meters
+payload_pod_length = 2.0  # meters # todo create free variable
+payload_pod_diameter = 0.5  # meters # todo create free variable
 payload_pod_y_offset = 1.5  # meters
 
 payload_pod = make_payload_pod(  # TODO ask peter if there's a better way to make this an aero shape
@@ -153,6 +153,7 @@ payload_pod = make_payload_pod(  # TODO ask peter if there's a better way to mak
 ).translate([0, 0, -payload_pod_y_offset])
 
 payload_pod_volume = payload_pod.volume()
+# TODO add payload pod to drag buildup
 
 # overall layout wing layout
 boom_location = 0.80  # as a fraction of the half-span
@@ -269,7 +270,7 @@ wing = asb.Wing(
         ),
     ]
 ).translate([
-    wing_x_quarter_chord,
+    wing_x_le,
     0,
     0
 ])
@@ -726,7 +727,7 @@ mass_props['right_boom'] = asb.mass_properties_from_radius_of_gyration(
 )
 
 ### payload pod mass accounting
-pod_structure_mass = 20  # kg, corresponds to reduction in pod mass expected for future build
+paylod_pod_structure_mass = 0 # kg, corresponds to reduction in pod mass expected for future build
 # assumes approximately same size battery system and payload
 # taken from Daedalus, http://journals.sfu.ca/ts/index.php/ts/article/viewFile/760/718
 mass_daedalus = 103.9  # kg, corresponds to 229 lb gross weight.
@@ -735,12 +736,14 @@ mass_fairings = 2.067 * mass_total / mass_daedalus  # Scale fairing mass to same
 mass_landing_gear = 0.728 * mass_total / mass_daedalus  # Scale landing gear mass to same mass fraction as Daedalus
 mass_strut = 0.5  # mass per strut to the payload pod roughly baselined to dawn demonstrator build
 
+# todo add mass_strut drag
+
 mass_props['payload_pod'] = asb.MassProperties(
     mass=(
             mass_fairings +
             mass_landing_gear +
             mass_strut * 2 +
-            pod_structure_mass
+            paylod_pod_structure_mass
     ),
     x_cg=payload_pod_length / 2
 ) * structural_mass_margin_multiplier
@@ -1023,6 +1026,9 @@ dyn = asb.DynamicsPointMass2DCartesian(
     ),
 )
 
+# create airspeed from wind data and beta, u_e, etc.
+
+
 dyn.add_gravity_force(g=9.81)
 
 opti.subject_to([
@@ -1057,7 +1063,8 @@ aero = asb.AeroBuildup(
     r=False
 )  # TODO add drag penalty
 
-aero["Main Wing"] = 1.06 * aero['D']
+# aero['D'] *= # TODO fill in and account for semi-span of tripped flow
+aero.pop("CD")
 
 dyn.add_force(
     *aero['F_w'],
@@ -1310,7 +1317,10 @@ opti.subject_to([
     # np.mean(aero["Cm"]) == 0,
     # aero["Cma"] < -0.5,
     # aero["Cnb"] > 0.05,
-    # remaining_volume / u.inch ** 3 > 0,
+    aero["Cm"][0] == 0,
+    aero["Cma"][0] < -0.5,
+    aero["Cnb"][0] > 0.05,
+    remaining_volume > 0,
     dyn.alpha < 12,
     dyn.alpha > -8,
     dyn.gamma / 90 < 1,
@@ -1430,7 +1440,7 @@ if __name__ == "__main__":
         "Wing Span": f"{fmt(wing_span)} meters",
         "Wing Root Chord": f"{fmt(wing_root_chord)} meters",
         "mass_TOGW": f"{fmt(mass_props_TOGW.mass)} kg",
-        "Propeller Diameter": f"{fmt(propeller_diameter)} m ({fmt(propeller_diameter)} meters)",
+        "Propeller Diameter": f"{fmt(propeller_diameter)}  meters",
         "Average Cruise L/D": fmt(avg_cruise_LD),
         "CG location": "(" + ", ".join([fmt(xyz) for xyz in mass_props_TOGW.xyz_cg]) + ") m",
     }.items():
