@@ -1101,12 +1101,6 @@ dyn.add_force(
 #     upper_bound=1e8,
 #     **ops
 # )  # watts
-# groundspeed = opti.variable(  # TODO relate to airspeed using windspeed
-#     init_guess=10,
-#     scale=5,
-#     lower_bound=0,  # TODO revisit this as lower bound
-#     **ops
-# )
 #
 # # define key radar parameters
 # radar_area = radar_width * radar_length  # meters ** 2
@@ -1139,13 +1133,13 @@ dyn.add_force(
 # payload_power = power_trans * pulse_rep_freq * pulse_duration  # TODO make a function of location in trajectory
 #
 # snr = payload_power * antenna_gain ** 2 * center_wavelength ** 3 * a_hs * sigma0 * range_resolution / \
-#       ((2 * 4 * np.pi) ** 3 * dist ** 3 * k_b * dyn.op_point.atmosphere.temperature() * F * groundspeed * a_B)
+#       ((2 * 4 * np.pi) ** 3 * dist ** 3 * k_b * dyn.op_point.atmosphere.temperature() * F * dyn.u_e * a_B)
 #
 # snr_db = 10 * np.log(snr)
 #
 # opti.subject_to([
 #     required_snr <= snr_db,
-#     pulse_rep_freq >= 2 * groundspeed / radar_length,
+#     pulse_rep_freq >= 2 * dyn.u_e / radar_length,
 #     pulse_rep_freq <= c / (2 * swath_azimuth),
 # ])
 payload_power = opti.parameter(value=100)
@@ -1295,7 +1289,7 @@ opti.subject_to(q_ne > dyn.op_point.dynamic_pressure())
 opti.subject_to([
     dyn.x_e[time_periodic_end_index] / 1e5 > dyn.x_e[time_periodic_start_index] / 1e5 + required_headway_per_day,
     dyn.altitude[time_periodic_end_index] / 1e4 > dyn.altitude[time_periodic_start_index] / 1e4,
-    dyn.u_e[time_periodic_end_index] / 1e1 > dyn.u_e[time_periodic_start_index] / 1e1,
+    dyn.u_e[time_periodic_end_index] / 1e1 > dyn.u_e[time_periodic_start_index] / 1e1, # todo change to airspeed
     battery_charge_state[-1] > battery_charge_state[0],  # todo figure out why other index doesn't work
     dyn.gamma[time_periodic_end_index] == dyn.gamma[time_periodic_start_index],
     dyn.alpha[time_periodic_end_index] == dyn.alpha[time_periodic_start_index],
@@ -1368,7 +1362,7 @@ penalty = 0
 
 for penalty_input in [
     thrust / 10,
-    # groundspeed,
+    # dyn.u_e,
     dyn.gamma / 2,
     dyn.alpha / 1,
 ]:
