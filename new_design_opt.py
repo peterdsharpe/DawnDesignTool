@@ -1034,10 +1034,7 @@ def wind_speed_func(alt):
     return speed_func
 
 wind_speed = wind_speed_func(dyn.z_e)
-# create airspeed variable from u_e (groundspeed), wind_speed, and beta (sideslip angle)
-airspeed = dyn.u_e + wind_speed * np.sin(dyn.beta)
-
-
+airspeed = dyn.u_e + wind_speed # only considers headwind case
 
 dyn.add_gravity_force(g=9.81)
 
@@ -1061,9 +1058,14 @@ if hold_cruise_altitude:
     dyn.altitude[time_periodic_start_index:] / cruise_altitude > 1,  # stay at cruise altitude after climb
 
 ##### Section: Aerodynamics
+op_point = asb.OperatingPoint(
+    velocity=airspeed,
+    alpha=dyn.alpha,
+    beta=0,
+)
 aero = asb.AeroBuildup(
     airplane=airplane,
-    op_point=dyn.op_point, # replace with airspeed not groundspeed
+    op_point=op_point, # replace with airspeed not groundspeed
     xyz_ref=mass_props_TOGW.xyz_cg
 ).run_with_stability_derivatives(
     alpha=True,
@@ -1073,7 +1075,9 @@ aero = asb.AeroBuildup(
     r=False
 )  # TODO add drag penalty
 
-# aero['D'] *= # TODO fill in and account for semi-span of tripped flow
+# drag penalty for semi span of tripped flow behind the propeller
+
+aero['D'] *= aero['D'] * 1.2 * (1.5 * 2 * propeller_diameter) / wing_span
 aero.pop("CD")
 
 dyn.add_force(
