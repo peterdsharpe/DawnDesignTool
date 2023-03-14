@@ -995,14 +995,9 @@ opti.subject_to(mass_total > mass_props_TOGW.mass)
 guess_altitude = 18000
 guess_u_e = 20
 
-dyn = asb.DynamicsPointMass3DSpeedGammaTrack(
+dyn = asb.DynamicsPointMass2DCartesian(
     mass_props=mass_props_TOGW,
     x_e=opti.variable(
-        init_guess=time * guess_u_e,
-        scale=1e5,
-        **ops
-    ),
-    y_e=opti.variable(
         init_guess=time * guess_u_e,
         scale=1e5,
         **ops
@@ -1013,34 +1008,20 @@ dyn = asb.DynamicsPointMass3DSpeedGammaTrack(
         scale=1e4,
         **ops
     ),
-    speed=opti.variable(
+    u_e=opti.variable(
         init_guess=guess_u_e,
         n_vars=n_timesteps,
-        scale=1e2,
-        **ops
+        lower_bound=min_speed,
+        scale=20,
     ),
-    track=opti.variable(
-        init_guess=np.linspece(0, 2 * np.pi, n_timesteps),
+    w_e=opti.variable(
+        init_guess=0,
         n_vars=n_timesteps,
-        scale=10,
-        **ops
     ),
     alpha=opti.variable(
         init_guess=5,
         n_vars=n_timesteps,
         scale=4,
-        **ops
-    ),
-    beta=opti.variable(
-        init_guess=0,
-        n_vars=n_timesteps,
-        scale=10,
-        **ops
-    ),
-    gamma=opti.variable(
-        init_guess=0,
-        n_vars=n_timesteps,
-        scale=1e1,
         **ops
     ),
 )
