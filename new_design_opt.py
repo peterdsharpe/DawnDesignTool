@@ -64,7 +64,6 @@ battery_pack_cell_percentage = opti.parameter(
 # these roughly correspond to the value for cells we are planning for near-term
 variable_pitch = False  # Do we assume the propeller is variable pitch?
 structural_load_factor = opti.parameter(value=3)  # over static
-mass_payload_base = opti.parameter(value=10)
 tail_panels = True  # Do we assume we can mount solar cells on the vertical tail?
 wing_cells = "sunpower"  # select cells for wing, options include ascent_solar, sunpower, and microlink
 vstab_cells = "sunpower"  # select cells for vtail, options include ascent_solar, sunpower, and microlink
@@ -74,6 +73,7 @@ use_propulsion_fits_from_FL2020_1682_undergrads = True  # Warning: Fits not yet 
 # fits for propeller and motors to derive motor and propeller efficiencies
 
 # Instrument Parameters
+mass_payload_base = opti.parameter(value=10)
 required_resolution = opti.parameter(value=1)  # meters from conversation with Brent on 3/7/2023
 required_snr = opti.parameter(value=6)  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
 center_wavelength = opti.parameter(value=0.024)
@@ -995,9 +995,14 @@ opti.subject_to(mass_total > mass_props_TOGW.mass)
 guess_altitude = 18000
 guess_u_e = 20
 
-dyn = asb.DynamicsPointMass2DCartesian(
+dyn = asb.DynamicsPointMass3DSpeedGammaTrack(
     mass_props=mass_props_TOGW,
     x_e=opti.variable(
+        init_guess=time * guess_u_e,
+        scale=1e5,
+        **ops
+    ),
+    y_e=opti.variable(
         init_guess=time * guess_u_e,
         scale=1e5,
         **ops
@@ -1008,15 +1013,17 @@ dyn = asb.DynamicsPointMass2DCartesian(
         scale=1e4,
         **ops
     ),
-    u_e=opti.variable(
+    speed=opti.variable(
         init_guess=guess_u_e,
         n_vars=n_timesteps,
-        lower_bound=min_speed,
-        scale=20,
+        scale=1e2,
+        **ops
     ),
-    w_e=opti.variable(
-        init_guess=0,
+    track=opti.variable(
+        init_guess=np.linspece(0, 2 * np.pi, n_timesteps),
         n_vars=n_timesteps,
+        scale=10,
+        **ops
     ),
     alpha=opti.variable(
         init_guess=5,
@@ -1024,9 +1031,31 @@ dyn = asb.DynamicsPointMass2DCartesian(
         scale=4,
         **ops
     ),
+    beta=opti.variable(
+        init_guess=0,
+        n_vars=n_timesteps,
+        scale=10,
+        **ops
+    ),
+    gamma=opti.variable(
+        init_guess=0,
+        n_vars=n_timesteps,
+        scale=1e1,
+        **ops
+    ),
 )
 
-# create airspeed from wind data and beta, u_e, etc.
+# windspeed function
+def wind_speed_func(alt):
+    day_array = np.full(shape=alt.shape[0], fill_value=1) * day_of_year
+    latitude_array = np.full(shape=alt.shape[0], fill_value=1) * latitude
+    speed_func = lib_winds.wind_speed_world_95(alt, latitude_array, day_array)
+    return speed_func
+
+wind_speed = wind_speed_func(dyn.z_e)
+# create airspeed variable from u_e (groundspeed), wind_speed, and beta (sideslip angle)
+airspeed = dyn.u_e + wind_speed * np.sin(dyn.beta)
+
 
 
 dyn.add_gravity_force(g=9.81)
@@ -1053,7 +1082,7 @@ if hold_cruise_altitude:
 ##### Section: Aerodynamics
 aero = asb.AeroBuildup(
     airplane=airplane,
-    op_point=dyn.op_point,
+    op_point=dyn.op_point, # replace with airspeed not groundspeed
     xyz_ref=mass_props_TOGW.xyz_cg
 ).run_with_stability_derivatives(
     alpha=True,
