@@ -585,15 +585,15 @@ pulse_rep_freq = opti.variable(
     category='des'
 )
 power_out_payload = opti.variable(
-    init_guess=200,
-    scale=100,
+    init_guess=100,
+    scale=10,
     lower_bound=0,
     category='des'
 )
 groundspeed = opti.variable(
     n_vars=n_timesteps,
-    init_guess=1,
-    scale=0.1,
+    init_guess=25,
+    scale=1,
     category="ops",
     lower_bound=1,
 )
@@ -642,7 +642,7 @@ opti.subject_to([
     pulse_rep_freq >= 2 * groundspeed / radar_length,
     pulse_rep_freq <= c / (2 * swath_azimuth),
 ])
-
+# power_out_payload = 67
 # region Flight Path Optimization
 wind_speed = wind_speed_func(y)
 wind_direction = opti.parameter(value=0)
@@ -655,7 +655,7 @@ revisit_rate = opti.variable(
 )
 airspeed = opti.variable(
     n_vars=n_timesteps,
-    init_guess=23,
+    init_guess=30,
     scale=20,
     category="ops"
 )
