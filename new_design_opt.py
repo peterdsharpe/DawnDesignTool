@@ -1,3 +1,5 @@
+import copy
+
 import aerosandbox as asb
 from aerosandbox.library import winds as lib_winds
 import aerosandbox.numpy as np
@@ -177,38 +179,15 @@ wing_x_le = opti.variable(
 
 boom_offset = boom_location * wing_span / 2  # in real units (meters)
 
-# import aero functions to create models for cl, cd, cm
-cl_array = np.load(path + '/data/cl_function.npy')
-cd_array = np.load(path + '/data/cd_function.npy')
-cm_array = np.load(path + '/data/cm_function.npy')
-alpha_array = np.load(path + '/data/alpha.npy')
-reynolds_array = np.load(path + '/data/reynolds.npy')
-
-cl_function_interpolated_model = InterpolatedModel({'alpha': alpha_array, 'Re': (np.array(reynolds_array))},
-                                                   cl_array, 'bspline')
-cl_function = lambda alpha, Re, mach: cl_function_interpolated_model({"alpha": alpha, "Re": Re})
-cd_function_interpolated_model = InterpolatedModel({'alpha': alpha_array, 'Re': (np.array(reynolds_array))},
-                                                   cd_array, 'bspline')
-cd_function = lambda alpha, Re, mach: cd_function_interpolated_model({"alpha": alpha, "Re": Re})
-cm_function_interpolated_model = InterpolatedModel({'alpha': alpha_array, 'Re': (np.array(reynolds_array))},
-                                                   cm_array, 'bspline')
-cm_function = lambda alpha, Re, mach: cm_function_interpolated_model({"alpha": alpha, "Re": Re})
-
-wing_airfoil = asb.geometry.Airfoil(
-    name="HALE_03",
-    coordinates=r"studies/airfoil_optimizer/HALE_03.dat",
-    CL_function=cl_function,
-    CD_function=cd_function,
-    CM_function=cm_function
+# Wing Airfoil
+wing_airfoil = asb.Airfoil(
+    name='HALE_03',
+    coordinates="studies/airfoil_optimizer/HALE_03.dat"
 )
-# wing_airfoil = asb.Airfoil(
-#     name='HALE_03',
-#     coordinates="studies/airfoil_optimizer/HALE_03.dat"
-# )
-# wing_airfoil.generate_polars(
-#     cache_filename="studies/airfoil_optimizer/HALE_03.json",
-#     include_compressibility_effects=False,
-# )
+wing_airfoil.generate_polars(
+    cache_filename="HALE_03.json",
+    include_compressibility_effects=False,
+)
 
 wing_root_chord = opti.variable(
     init_guess=1.8,
@@ -993,7 +972,7 @@ opti.subject_to(mass_total > mass_props_TOGW.mass)
 
 ##### Section: Setup Dynamics
 guess_altitude = 18000
-guess_u_e = 20
+guess_u_e = 35
 
 dyn = asb.DynamicsPointMass2DCartesian(
     mass_props=mass_props_TOGW,
@@ -1033,7 +1012,7 @@ def wind_speed_func(alt):
     speed_func = lib_winds.wind_speed_world_95(alt, latitude_array, day_array)
     return speed_func
 
-wind_speed = wind_speed_func(dyn.z_e)
+wind_speed = wind_speed_func(-dyn.z_e)
 airspeed = dyn.u_e + wind_speed # only considers headwind case
 
 dyn.add_gravity_force(g=9.81)
@@ -1065,7 +1044,7 @@ op_point = asb.OperatingPoint(
 )
 aero = asb.AeroBuildup(
     airplane=airplane,
-    op_point=op_point, # replace with airspeed not groundspeed
+    op_point=op_point,
     xyz_ref=mass_props_TOGW.xyz_cg
 ).run_with_stability_derivatives(
     alpha=True,
@@ -1073,11 +1052,10 @@ aero = asb.AeroBuildup(
     p=False,
     q=False,
     r=False
-)  # TODO add drag penalty
+)
 
-# drag penalty for semi span of tripped flow behind the propeller
-
-aero['D'] *= aero['D'] * 1.2 * (1.5 * 2 * propeller_diameter) / wing_span
+# drag penalty for tripped flow behind the propeller
+aero['D'] *= 1.06
 aero.pop("CD")
 
 dyn.add_force(
@@ -1394,9 +1372,11 @@ if __name__ == "__main__":
         sol = opti.solve(
             max_iter=10000,
             options={
-                "ipopt.max_cpu_time": 3000
+                "ipopt.max_cpu_time": 10000
             }
         )
+        opti.set_initial_from_sol(sol)
+        ff_sol = copy.deepcopy()
     except RuntimeError as e:
         print(e)
         sol = opti.debug
