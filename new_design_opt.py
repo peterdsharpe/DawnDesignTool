@@ -301,7 +301,7 @@ right_boom = asb.Fuselage(
     ]
 )
 right_boom = right_boom.translate(np.array([
-    0.4,
+    wing_x_le + wing_x_quarter_chord,
     boom_offset,
     0]))
 left_boom = right_boom.translate(np.array([
@@ -368,6 +368,10 @@ vstab = asb.Wing(
         -vstab_span / 2 + vstab_span * 0.15
     ]))
 
+opti.subject_to([
+    vstab.aspect_ratio() == 2.5, #TODO review
+])
+
 # center hstab
 center_hstab_span = opti.variable(
     init_guess=2,
@@ -412,7 +416,8 @@ center_hstab = asb.Wing(
     0.1]))
 
 opti.subject_to([
-    center_boom_length - vstab_chord - center_hstab_chord > wing_x_quarter_chord + wing_root_chord * 3 / 4
+    center_boom_length - vstab_chord - center_hstab_chord > wing_x_quarter_chord + wing_root_chord * 3 / 4,
+    vstab.area() < 0.1 * wing.area(),
 ])
 
 # tailerons
@@ -465,6 +470,9 @@ left_hstab = right_hstab.translate([
     -boom_offset * 2,
     0])
 
+# opti.subject_to([
+#     outboard_boom_length > wing_root_chord * 3 / 4 + outboard_hstab_chord
+# ])
 # Assemble the airplane
 airplane = asb.Airplane(
     name="Dawn1",
@@ -1375,8 +1383,8 @@ if __name__ == "__main__":
                 "ipopt.max_cpu_time": 10000
             }
         )
-        opti.set_initial_from_sol(sol)
-        ff_sol = copy.deepcopy()
+        # opti.set_initial_from_sol(sol)
+        # ff_sol = copy.deepcopy()
     except RuntimeError as e:
         print(e)
         sol = opti.debug
@@ -1452,7 +1460,7 @@ if __name__ == "__main__":
     if make_plots:
         ##### Section: Geometry
         airplane.draw_three_view(show=False)
-        p.show_plot(tight_layout=False, savefig="figures/three_view.png")
+        p.show_plot(tight_layout=False, savefig="outputs/three_view.png")
 
         #### Section: Mass Budget
         fig, ax = plt.subplots(figsize=(12, 5), subplot_kw=dict(aspect="equal"), dpi=300)
@@ -1476,7 +1484,8 @@ if __name__ == "__main__":
                 for v in mass_props.values()
             ],
             names=[
-                n if n not in name_remaps.keys() else name_remaps[n]
+                n
+                # n if n not in name_remaps.keys() else name_remaps[n]
                 for n in mass_props.keys()
             ],
             center_text=f"$\\bf{{Mass\\ Budget}}$\nTOGW: {s(mass_props_TOGW.mass):.3f} kg",
@@ -1486,7 +1495,7 @@ if __name__ == "__main__":
             arm_radius=20,
             y_max_labels=1.1
         )
-        p.show_plot(savefig="figures/mass_budget.png")
+        p.show_plot(savefig="outputs/mass_budget.png")
 
     def draw():  # Draw the geometry of the optimal airplane
         airplane.substitute_solution(sol)
