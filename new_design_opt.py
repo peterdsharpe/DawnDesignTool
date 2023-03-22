@@ -1034,6 +1034,8 @@ opti.subject_to([
     dyn.altitude / 40000 < 1,  # models break down
 ])
 
+y_km = dyn.altitude / 1e3
+
 if climb_opt:
     opti.subject_to(dyn.altitude[0] / 1e4 == 0)
 
@@ -1299,7 +1301,7 @@ opti.subject_to(q_ne > dyn.op_point.dynamic_pressure())
 opti.subject_to([
     dyn.x_e[time_periodic_end_index] / 1e5 > dyn.x_e[time_periodic_start_index] / 1e5 + required_headway_per_day,
     dyn.altitude[time_periodic_end_index] / 1e4 > dyn.altitude[time_periodic_start_index] / 1e4,
-    dyn.u_e[time_periodic_end_index] / 1e1 > dyn.u_e[time_periodic_start_index] / 1e1, # todo change to airspeed
+    airspeed[time_periodic_end_index] / 1e1 > airspeed[time_periodic_start_index] / 1e1,
     battery_charge_state[-1] > battery_charge_state[0],  # todo figure out why other index doesn't work
     dyn.gamma[time_periodic_end_index] == dyn.gamma[time_periodic_start_index],
     dyn.alpha[time_periodic_end_index] == dyn.alpha[time_periodic_start_index],
@@ -1467,6 +1469,73 @@ if __name__ == "__main__":
     for k, v in mass_props.items():
         print(f"{k.rjust(25)} = {fmt(v.mass)} kg")
 
+    #### Standard plot function
+    def plot(
+            x_name: str,
+            y_name: str,
+            xlabel: str,
+            ylabel: str,
+            title: str,
+            save_name: str = None,
+            show: bool = True,
+            plot_day_color=(103 / 255, 155 / 255, 240 / 255),
+            plot_night_color=(7 / 255, 36 / 255, 84 / 255),
+    ) -> None:  # Plot a variable x and variable y, highlighting where day and night occur
+
+        # Make the plot axes
+        fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
+
+        # Evaluate the data, and plot it. Shade according to whether it's day/night.
+        x = s(eval(x_name))
+        y = s(eval(y_name))
+        plot_average_color = tuple([
+            (d + n) / 2
+            for d, n in zip(plot_day_color, plot_night_color)
+        ])
+        plt.plot(  # Plot a black line through all points
+            x,
+            y,
+            '-',
+            color=plot_average_color,
+        )
+        plt.plot(  # Emphasize daytime points
+            x[is_daytime],
+            y[is_daytime],
+            '.',
+            color=plot_day_color,
+            label="Day"
+        )
+        plt.plot(  # Emphasize nighttime points
+            x[is_nighttime],
+            y[is_nighttime],
+            '.',
+            color=plot_night_color,
+            label="Night"
+        )
+
+        # Disable offset notation, which makes things hard to read.
+        ax.ticklabel_format(useOffset=False)
+
+        # Do specific things for certain variable names.
+        if x_name == "hour":
+            ax.xaxis.set_major_locator(
+                ticker.MultipleLocator(base=3)
+            )
+
+        # Do the usual plot things.
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+        plt.title(title)
+        plt.legend()
+        plt.tight_layout()
+        if save_name is not None:
+            plt.savefig(save_name)
+        if show:
+            plt.show()
+
+        return fig, ax
+
+
     if make_plots:
         ##### Section: Geometry
         airplane.draw_three_view(show=False)
@@ -1480,114 +1549,47 @@ if __name__ == "__main__":
         is_daytime = s(solar_flux_on_horizontal) >= 1  # 1 W/m^2 or greater insolation
         is_nighttime = np.logical_not(is_daytime)
 
-        def plot(
-                x_name: str,
-                y_name: str,
-                xlabel: str,
-                ylabel: str,
-                title: str,
-                save_name: str = None,
-                show: bool = True,
-                plot_day_color=(103 / 255, 155 / 255, 240 / 255),
-                plot_night_color=(7 / 255, 36 / 255, 84 / 255),
-        ) -> None:  # Plot a variable x and variable y, highlighting where day and night occur
-
-            # Make the plot axes
-            fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
-
-            # Evaluate the data, and plot it. Shade according to whether it's day/night.
-            x = s(eval(x_name))
-            y = s(eval(y_name))
-            plot_average_color = tuple([
-                (d + n) / 2
-                for d, n in zip(plot_day_color, plot_night_color)
-            ])
-            plt.plot(  # Plot a black line through all points
-                x,
-                y,
-                '-',
-                color=plot_average_color,
-            )
-            plt.plot(  # Emphasize daytime points
-                x[is_daytime],
-                y[is_daytime],
-                '.',
-                color=plot_day_color,
-                label="Day"
-            )
-            plt.plot(  # Emphasize nighttime points
-                x[is_nighttime],
-                y[is_nighttime],
-                '.',
-                color=plot_night_color,
-                label="Night"
-            )
-
-            # Disable offset notation, which makes things hard to read.
-            ax.ticklabel_format(useOffset=False)
-
-            # Do specific things for certain variable names.
-            if x_name == "hour":
-                ax.xaxis.set_major_locator(
-                    ticker.MultipleLocator(base=3)
-                )
-
-            # Do the usual plot things.
-            plt.xlabel(xlabel)
-            plt.ylabel(ylabel)
-            plt.title(title)
-            plt.legend()
-            plt.tight_layout()
-            if save_name is not None:
-                plt.savefig(save_name)
-            if show:
-                plt.show()
-
-            return fig, ax
-
-
-        if make_plots:
-            plot("hour", "y_km",
-                 xlabel="Hours after Solar Noon",
-                 ylabel="Altitude [km]",
-                 title="Altitude over Simulation",
-                 save_name="outputs/altitude.png"
-                 )
-            plot("hour", "airspeed",
-                 xlabel="Hours after Solar Noon",
-                 ylabel="True Airspeed [m/s]",
-                 title="True Airspeed over Simulation",
-                 save_name="outputs/airspeed.png"
-                 )
-            plot("hour", "net_power_to_battery",
-                 xlabel="Hours after Solar Noon",
-                 ylabel="Net Power [W] (positive is charging)",
-                 title="Net Power to Battery over Simulation",
-                 save_name="outputs/net_powerJuly15.png"
-                 )
-            plot("hour", "battery_state_of_charge_percentage",
-                 xlabel="Hours after Solar Noon",
-                 ylabel="State of Charge [%]",
-                 title="Battery Charge State over Simulation",
-                 save_name="outputs/battery_charge.png"
-                 )
-            # plot("hour", "x_km",
-            #      xlabel="hours after Solar Noon",
-            #      ylabel="Downrange Distance [km]",
-            #      title="Optimal Trajectory over Simulation",
-            #      save_name="outputs/trajectory.png"
-            #      )
-            plot("hour", "groundspeed",
-                 xlabel="hours after Solar Noon",
-                 ylabel="Groundspeed [m/s]",
-                 title="Groundspeed over Simulation",
-                 save_name="outputs/groundspeed.png"
-                 )
-            plot("plot_pos[0]", "plot_pos[1]",
-                 xlabel="East/West Axis [m]",
-                 ylabel='North/Sounth Axis [m]',
-                 title="Vehicle Flight Path",
-                 save_name='outputs/flight_path.png')
+        plot("hour", "y_km",
+             xlabel="Hours after Solar Noon",
+             ylabel="Altitude [km]",
+             title="Altitude over Simulation",
+             save_name="outputs/altitude.png"
+             )
+        plot("hour", "airspeed",
+             xlabel="Hours after Solar Noon",
+             ylabel="True Airspeed [m/s]",
+             title="True Airspeed over Simulation",
+             save_name="outputs/airspeed.png"
+             )
+        plot("hour", "net_power_to_battery",
+             xlabel="Hours after Solar Noon",
+             ylabel="Net Power [W] (positive is charging)",
+             title="Net Power to Battery over Simulation",
+             save_name="outputs/net_powerJuly15.png"
+             )
+        plot("hour", "battery_state_of_charge_percentage",
+             xlabel="Hours after Solar Noon",
+             ylabel="State of Charge [%]",
+             title="Battery Charge State over Simulation",
+             save_name="outputs/battery_charge.png"
+             )
+        # plot("hour", "x_km",
+        #      xlabel="hours after Solar Noon",
+        #      ylabel="Downrange Distance [km]",
+        #      title="Optimal Trajectory over Simulation",
+        #      save_name="outputs/trajectory.png"
+        #      )
+        plot("hour", "groundspeed",
+             xlabel="hours after Solar Noon",
+             ylabel="Groundspeed [m/s]",
+             title="Groundspeed over Simulation",
+             save_name="outputs/groundspeed.png"
+             )
+        # plot("plot_pos[0]", "plot_pos[1]",
+        #      xlabel="East/West Axis [m]",
+        #      ylabel='North/Sounth Axis [m]',
+        #      title="Vehicle Flight Path",
+        #      save_name='outputs/flight_path.png')
 
         #### Section: Mass Budget
         fig = plt.figure(figsize=(10, 8), dpi=plot_dpi)
