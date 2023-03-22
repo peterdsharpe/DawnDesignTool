@@ -13,6 +13,8 @@ from aerosandbox.library import propulsion_electric as elec_lib
 from aerosandbox.library import propulsion_propeller as prop_lib
 from aerosandbox.atmosphere import Atmosphere as atmo
 import aerosandbox.tools.units as u
+import matplotlib.ticker as ticker
+import matplotlib.pyplot as plt
 from typing import Union, List
 
 path = str(
@@ -1200,6 +1202,14 @@ power_out = power_out_propulsion + payload_power + avionics_power
 
 MPPT_efficiency = 1 / 1.04
 
+solar_flux_on_horizontal = solar_lib.solar_flux(
+    latitude=latitude,
+    day_of_year=day_of_year,
+    time=time,
+    altitude=dyn.altitude,
+    scattering=True,
+)
+
 left_wing_incident_solar_power = 0.5 * area_solar_wing * solar_lib.solar_flux(
     latitude=latitude,
     day_of_year=day_of_year,
@@ -1462,42 +1472,270 @@ if __name__ == "__main__":
         airplane.draw_three_view(show=False)
         p.show_plot(tight_layout=False, savefig="outputs/three_view.png")
 
+        ##### Section: Trajectory Plots
+        ### Draw plots
+        plot_dpi = 200
+
+        # Find dusk and dawn
+        is_daytime = s(solar_flux_on_horizontal) >= 1  # 1 W/m^2 or greater insolation
+        is_nighttime = np.logical_not(is_daytime)
+
+        def plot(
+                x_name: str,
+                y_name: str,
+                xlabel: str,
+                ylabel: str,
+                title: str,
+                save_name: str = None,
+                show: bool = True,
+                plot_day_color=(103 / 255, 155 / 255, 240 / 255),
+                plot_night_color=(7 / 255, 36 / 255, 84 / 255),
+        ) -> None:  # Plot a variable x and variable y, highlighting where day and night occur
+
+            # Make the plot axes
+            fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8), dpi=plot_dpi)
+
+            # Evaluate the data, and plot it. Shade according to whether it's day/night.
+            x = s(eval(x_name))
+            y = s(eval(y_name))
+            plot_average_color = tuple([
+                (d + n) / 2
+                for d, n in zip(plot_day_color, plot_night_color)
+            ])
+            plt.plot(  # Plot a black line through all points
+                x,
+                y,
+                '-',
+                color=plot_average_color,
+            )
+            plt.plot(  # Emphasize daytime points
+                x[is_daytime],
+                y[is_daytime],
+                '.',
+                color=plot_day_color,
+                label="Day"
+            )
+            plt.plot(  # Emphasize nighttime points
+                x[is_nighttime],
+                y[is_nighttime],
+                '.',
+                color=plot_night_color,
+                label="Night"
+            )
+
+            # Disable offset notation, which makes things hard to read.
+            ax.ticklabel_format(useOffset=False)
+
+            # Do specific things for certain variable names.
+            if x_name == "hour":
+                ax.xaxis.set_major_locator(
+                    ticker.MultipleLocator(base=3)
+                )
+
+            # Do the usual plot things.
+            plt.xlabel(xlabel)
+            plt.ylabel(ylabel)
+            plt.title(title)
+            plt.legend()
+            plt.tight_layout()
+            if save_name is not None:
+                plt.savefig(save_name)
+            if show:
+                plt.show()
+
+            return fig, ax
+
+
+        if make_plots:
+            plot("hour", "y_km",
+                 xlabel="Hours after Solar Noon",
+                 ylabel="Altitude [km]",
+                 title="Altitude over Simulation",
+                 save_name="outputs/altitude.png"
+                 )
+            plot("hour", "airspeed",
+                 xlabel="Hours after Solar Noon",
+                 ylabel="True Airspeed [m/s]",
+                 title="True Airspeed over Simulation",
+                 save_name="outputs/airspeed.png"
+                 )
+            plot("hour", "net_power_to_battery",
+                 xlabel="Hours after Solar Noon",
+                 ylabel="Net Power [W] (positive is charging)",
+                 title="Net Power to Battery over Simulation",
+                 save_name="outputs/net_powerJuly15.png"
+                 )
+            plot("hour", "battery_state_of_charge_percentage",
+                 xlabel="Hours after Solar Noon",
+                 ylabel="State of Charge [%]",
+                 title="Battery Charge State over Simulation",
+                 save_name="outputs/battery_charge.png"
+                 )
+            # plot("hour", "x_km",
+            #      xlabel="hours after Solar Noon",
+            #      ylabel="Downrange Distance [km]",
+            #      title="Optimal Trajectory over Simulation",
+            #      save_name="outputs/trajectory.png"
+            #      )
+            plot("hour", "groundspeed",
+                 xlabel="hours after Solar Noon",
+                 ylabel="Groundspeed [m/s]",
+                 title="Groundspeed over Simulation",
+                 save_name="outputs/groundspeed.png"
+                 )
+            plot("plot_pos[0]", "plot_pos[1]",
+                 xlabel="East/West Axis [m]",
+                 ylabel='North/Sounth Axis [m]',
+                 title="Vehicle Flight Path",
+                 save_name='outputs/flight_path.png')
+
         #### Section: Mass Budget
-        fig, ax = plt.subplots(figsize=(12, 5), subplot_kw=dict(aspect="equal"), dpi=300)
+        fig = plt.figure(figsize=(10, 8), dpi=plot_dpi)
+        plt.suptitle("Mass Budget")
 
-        name_remaps = {
-            **{
-                k: k.replace("_", " ").title()
-                for k in mass_props.keys()
-            },
-            "apu"                         : "APU",
-            "wing"                        : "Wing Structure",
-            "hstab"                       : "H-Stab Structure",
-            "vstab"                       : "V-Stab Structure",
-            "fuselage"                    : "Fuselage Structure",
-            "payload_proportional_weights": "FAs, Food, Galleys, Lavatories,\nLuggage Hold, Doors, Lighting,\nAir Cond., Entertainment"
-        }
-
-        p.pie(
-            values=[
-                v.mass
-                for v in mass_props.values()
-            ],
-            names=[
-                n
-                # n if n not in name_remaps.keys() else name_remaps[n]
-                for n in mass_props.keys()
-            ],
-            center_text=f"$\\bf{{Mass\\ Budget}}$\nTOGW: {s(mass_props_TOGW.mass):.3f} kg",
-            label_format=lambda name, value, percentage: f"{name}, {value:.3f} kg, {percentage:.1f}%",
-            startangle=110,
-            arm_length=30,
-            arm_radius=20,
-            y_max_labels=1.1
+        ax_main = fig.add_axes([0.2, 0.3, 0.6, 0.6], aspect=1)
+        pie_labels = [
+            "Payload",
+            "Structural",
+            "Propulsion",
+            "Power Systems",
+            "Avionics"
+        ]
+        pie_values = [
+            s(mass_payload),
+            s(mass_structural),
+            s(mass_propulsion),
+            np.max(s(mass_power_systems)),
+            s(mass_avionics),
+        ]
+        colors = plt.cm.Set2(np.arange(5))
+        pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (x * s(mass_total) / 100, x)
+        ax_main.pie(
+            pie_values,
+            labels=pie_labels,
+            autopct=pie_format,
+            pctdistance=0.7,
+            colors=colors,
+            startangle=120
         )
-        p.show_plot(savefig="outputs/mass_budget.png")
+        plt.title("Overall Mass")
 
-    def draw():  # Draw the geometry of the optimal airplane
+        ax_structural = fig.add_axes([0.05, 0.05, 0.3, 0.3], aspect=1)
+        pie_labels = [
+            "Wing",
+            "Stabilizers",
+            "Fuses & Booms",
+            "Margin"
+        ]
+        pie_values = [
+            s(mass_wing),
+            s(
+                mass_center_hstab +
+                mass_right_hstab +
+                mass_left_hstab +
+                mass_center_vstab
+            ),
+            s(
+                mass_center_fuse +
+                mass_right_fuse +
+                mass_left_fuse
+            ),
+            s(mass_structural - (
+                    mass_wing +
+                    mass_center_hstab +
+                    mass_right_hstab +
+                    mass_left_hstab +
+                    mass_center_vstab +
+                    mass_center_fuse +
+                    mass_right_fuse +
+                    mass_left_fuse
+            )
+              ),
+        ]
+        colors = plt.cm.Set2(np.arange(5))
+        colors = np.clip(
+            colors[1, :3] + np.expand_dims(
+                np.linspace(-0.1, 0.2, len(pie_labels)),
+                1),
+            0, 1
+        )
+        pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (
+            x * s(mass_structural) / 100, x * s(mass_structural / mass_total))
+        ax_structural.pie(
+            pie_values,
+            labels=pie_labels,
+            autopct=pie_format,
+            pctdistance=0.7,
+            colors=colors,
+            startangle=60,
+        )
+        plt.title("Structural Mass*")
+
+        ax_power_systems = fig.add_axes([0.65, 0.05, 0.3, 0.3], aspect=1)
+        pie_labels = [
+            "Batt. Pack (Cells)",
+            "Batt. Pack (Non-cell)",
+            "Solar Cells",
+            "Misc. & Wires"
+        ]
+        pie_values = [
+            s(mass_battery_cells),
+            s(mass_battery_pack - mass_battery_cells),
+            s(mass_solar_cells),
+            s(mass_power_systems - mass_battery_pack - mass_solar_cells),
+        ]
+        colors = plt.cm.Set2(np.arange(5))
+        colors = np.clip(
+            colors[3, :3] + np.expand_dims(
+                np.linspace(-0.1, 0.2, len(pie_labels)),
+                1),
+            0, 1
+        )[::-1]
+        pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (
+            x * s(mass_power_systems) / 100, x * s(mass_power_systems / mass_total))
+        ax_power_systems.pie(
+            pie_values,
+            labels=pie_labels,
+            autopct=pie_format,
+            pctdistance=0.7,
+            colors=colors,
+            startangle=15,
+        )
+        plt.title("Power Systems Mass*")
+
+        plt.annotate(
+            text="* percentages referenced to total aircraft mass",
+            xy=(0.01, 0.01),
+            # xytext=(0.03, 0.03),
+            xycoords="figure fraction",
+            # arrowprops={
+            #     "color"     : "k",
+            #     "width"     : 0.25,
+            #     "headwidth" : 4,
+            #     "headlength": 6,
+            # }
+        )
+        plt.annotate(
+            text="""
+                    Total mass: %.1f kg
+                    Wing span: %.2f m
+                    """ % (s(mass_total), s(wing.span())),
+            xy=(0.03, 0.70),
+            # xytext=(0.03, 0.03),
+            xycoords="figure fraction",
+            # arrowprops={
+            #     "color"     : "k",
+            #     "width"     : 0.25,
+            #     "headwidth" : 4,
+            #     "headlength": 6,
+            # }
+        )
+
+        plt.savefig("outputs/mass_pie_chart.png")
+        plt.show() if make_plots else plt.close(fig)
+
+
+def draw():  # Draw the geometry of the optimal airplane
         airplane.substitute_solution(sol)
         airplane.draw()
     if make_plots == True:
