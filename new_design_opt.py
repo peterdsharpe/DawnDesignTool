@@ -997,7 +997,7 @@ dyn = asb.DynamicsPointMass2DCartesian(
         scale=1e4,
         **ops
     ),
-    u_e=opti.variable(
+    u_e=opti.variable( # groundspeed
         init_guess=guess_u_e,
         n_vars=n_timesteps,
         lower_bound=min_speed,
@@ -1561,13 +1561,13 @@ if __name__ == "__main__":
              title="True Airspeed over Simulation",
              save_name="outputs/airspeed.png"
              )
-        plot("hour", "net_power_to_battery",
+        plot("hour", "net_power",
              xlabel="Hours after Solar Noon",
              ylabel="Net Power [W] (positive is charging)",
              title="Net Power to Battery over Simulation",
-             save_name="outputs/net_powerJuly15.png"
+             save_name="outputs/net_power.png"
              )
-        plot("hour", "battery_state_of_charge_percentage",
+        plot("hour", "battery_charge_state",
              xlabel="Hours after Solar Noon",
              ylabel="State of Charge [%]",
              title="Battery Charge State over Simulation",
@@ -1579,7 +1579,7 @@ if __name__ == "__main__":
         #      title="Optimal Trajectory over Simulation",
         #      save_name="outputs/trajectory.png"
         #      )
-        plot("hour", "groundspeed",
+        plot("hour", "dyn.u_e",
              xlabel="hours after Solar Noon",
              ylabel="Groundspeed [m/s]",
              title="Groundspeed over Simulation",
