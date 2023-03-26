@@ -38,7 +38,7 @@ opti = asb.Opti(  # Normal mode - Design Optimization
 #     load_frozen_variables_from_cache=True,
 #     ignore_violated_parametric_constraints=True
 # )
-lam = opti.parameter(value=0.3)
+lam = opti.parameter(value=0.8)
 # minimize = "wing.span() / 50"  # any "eval-able" expression
 # minimize = "max_mass_total / 300" # any "eval-able" expression
 # minimize = "wing.span() / 50 * 0.9 + max_mass_total / 300 * 0.1"
@@ -56,7 +56,7 @@ sample_area_width = opti.parameter(value=100000)  # meters
 required_headway_per_day = opti.parameter(value=0)
 allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
-make_plots = False
+make_plots = True
 mass_payload_base = opti.parameter(value=10)
 tail_panels = True
 fuselage_billboard = False
@@ -895,13 +895,12 @@ def compute_wing_aerodynamics(
                                                       sweep=surface.mean_sweep_angle())  # Compressible 3D moment coefficient
         surface.moment = surface.CM * q * surface.area() * surface.mean_geometric_chord()
     except TypeError:
-        surface.Cl_inc = surface.airfoil.CL_function(surface.alpha_eff, surface.Re, 0,
-                                                     0)  # Incompressible 2D lift coefficient
+        surface.Cl_inc = surface.airfoil.CL_function(surface.alpha_eff, surface.Re, 0)  # Incompressible 2D lift coefficient
         surface.CL = surface.Cl_inc * aero.CL_over_Cl(surface.aspect_ratio(), mach=mach,
                                                       sweep=surface.mean_sweep_angle())  # Compressible 3D lift coefficient
         surface.lift = surface.CL * q * surface.area()
 
-        surface.Cd_profile = surface.airfoil.CD_function(surface.alpha_eff, surface.Re, mach, 0)
+        surface.Cd_profile = surface.airfoil.CD_function(surface.alpha_eff, surface.Re, mach)
         surface.drag_profile = surface.Cd_profile * q * surface.area()
 
         surface.oswalds_efficiency = aero.oswalds_efficiency(
@@ -918,8 +917,7 @@ def compute_wing_aerodynamics(
 
         surface.drag = surface.drag_profile + surface.drag_induced
 
-        surface.Cm_inc = surface.airfoil.CM_function(surface.alpha_eff, surface.Re, 0,
-                                                     0)  # Incompressible 2D moment coefficient
+        surface.Cm_inc = surface.airfoil.CM_function(surface.alpha_eff, surface.Re, 0)  # Incompressible 2D moment coefficient
         surface.CM = surface.Cm_inc * aero.CL_over_Cl(surface.aspect_ratio(), mach=mach,
                                                       sweep=surface.mean_sweep_angle())  # Compressible 3D moment coefficient
         surface.moment = surface.CM * q * surface.area() * surface.mean_geometric_chord()
@@ -950,7 +948,7 @@ strut_span = (strut_y_location ** 2 + (propeller_diameter / 2 + 0.25) ** 2) ** 0
 strut_chord = 0.167 * (strut_span * (propeller_diameter / 2 + 0.25)) ** 0.25  # Formula from Jamie
 strut_Re = rho / mu * airspeed * strut_chord
 strut_airfoil = flat_plate
-strut_Cd_profile = flat_plate.CD_function(0, strut_Re, mach, 0)
+strut_Cd_profile = flat_plate.CD_function(0, strut_Re, mach)
 drag_strut_profile = strut_Cd_profile * q * strut_chord * strut_span
 drag_strut = drag_strut_profile  # per strut
 
