@@ -1269,7 +1269,7 @@ opti.subject_to(
 battery_charge_state = opti.variable(
     init_guess=0.5,
     n_vars=n_timesteps,
-    lower_bound=allowable_battery_depth_of_discharge,
+    lower_bound=1-allowable_battery_depth_of_discharge,
     upper_bound=1,
 )
 
