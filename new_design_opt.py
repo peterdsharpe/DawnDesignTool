@@ -1046,7 +1046,7 @@ if hold_cruise_altitude:
         lower_bound=min_cruise_altitude,
         **des
     )
-    dyn.altitude[time_periodic_start_index:] / cruise_altitude > 1,  # stay at cruise altitude after climb
+    dyn.altitude[time_periodic_start_index:] / cruise_altitude == 1,  # stay at cruise altitude after climb
 
 ##### Section: Aerodynamics
 op_point = asb.OperatingPoint(
