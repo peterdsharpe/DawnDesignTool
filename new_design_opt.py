@@ -1604,11 +1604,11 @@ if __name__ == "__main__":
             "Avionics"
         ]
         pie_values = [
-            s(mass_payload),
-            s(mass_structural),
-            s(mass_propulsion),
-            np.max(s(mass_power_systems)),
-            s(mass_avionics),
+            s(mass_props['payload'].mass),
+            s(structural_mass_props),
+            s(propulsion_system_mass_props),
+            s(power_systems_mass_props),
+            s(mass_props['avionics'].mass),
         ]
         colors = plt.cm.Set2(np.arange(5))
         pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (x * s(mass_total) / 100, x)
@@ -1630,27 +1630,27 @@ if __name__ == "__main__":
             "Margin"
         ]
         pie_values = [
-            s(mass_wing),
+            s(mass_props['wing_center'].mass + mass_props['wing_tip'].mass),
             s(
-                mass_center_hstab +
-                mass_right_hstab +
-                mass_left_hstab +
-                mass_center_vstab
+                mass_props['center_hstab'].mass +
+                mass_props['right_hstab'].mass +
+                mass_props['left_hstab'].mass +
+                mass_props['vstab'].mass
             ),
             s(
-                mass_center_fuse +
-                mass_right_fuse +
-                mass_left_fuse
+                mass_props['center_boom'].mass +
+                mass_props['right_boom'].mass +
+                mass_props['left_boom'].mass
             ),
-            s(mass_structural - (
-                    mass_wing +
-                    mass_center_hstab +
-                    mass_right_hstab +
-                    mass_left_hstab +
-                    mass_center_vstab +
-                    mass_center_fuse +
-                    mass_right_fuse +
-                    mass_left_fuse
+            s(structural_mass_props - (
+                    mass_props['wing_center'].mass + mass_props['wing_tip'].mass +
+                    mass_props['center_hstab'].mass +
+                    mass_props['right_hstab'].mass +
+                    mass_props['left_hstab'].mass +
+                    mass_props['vstab'].mass +
+                    mass_props['center_boom'].mass +
+                    mass_props['right_boom'].mass +
+                    mass_props['left_boom'].mass
             )
               ),
         ]
@@ -1662,7 +1662,7 @@ if __name__ == "__main__":
             0, 1
         )
         pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (
-            x * s(mass_structural) / 100, x * s(mass_structural / mass_total))
+            x * s(structural_mass_props.mass) / 100, x * s(structural_mass_props.mass / mass_total))
         ax_structural.pie(
             pie_values,
             labels=pie_labels,
@@ -1681,10 +1681,10 @@ if __name__ == "__main__":
             "Misc. & Wires"
         ]
         pie_values = [
-            s(mass_battery_cells),
-            s(mass_battery_pack - mass_battery_cells),
-            s(mass_solar_cells),
-            s(mass_power_systems - mass_battery_pack - mass_solar_cells),
+            s(mass_props['battery_cell'].mass),
+            s(mass_props['battery_pack'].mass - mass_props['battery_cell'].mass),
+            s(mass_props['solar_cell'].mass),
+            s(power_systems_mass_props.mass - mass_props['battery_pack'].mass - mass_props['solar_cell'].mass),
         ]
         colors = plt.cm.Set2(np.arange(5))
         colors = np.clip(
@@ -1694,7 +1694,7 @@ if __name__ == "__main__":
             0, 1
         )[::-1]
         pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (
-            x * s(mass_power_systems) / 100, x * s(mass_power_systems / mass_total))
+            x * s(power_systems_mass_props.mass) / 100, x * s(power_systems_mass_props.mass / mass_total))
         ax_power_systems.pie(
             pie_values,
             labels=pie_labels,
@@ -1740,5 +1740,5 @@ if __name__ == "__main__":
 def draw():  # Draw the geometry of the optimal airplane
         airplane.substitute_solution(sol)
         airplane.draw()
-    if make_plots == True:
+if make_plots:
         draw()
