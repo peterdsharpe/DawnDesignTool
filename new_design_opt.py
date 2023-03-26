@@ -1171,8 +1171,8 @@ if not use_propulsion_fits_from_FL2020_1682_undergrads:
     power_out_propulsion_shaft = prop_lib.propeller_shaft_power_from_thrust(
         thrust_force=thrust,
         area_propulsive=area_propulsive,
-        airspeed=dyn.op_point.velocity,
-        rho=dyn.op_point.atmosphere.density(),
+        airspeed=op_point.velocity,
+        rho=op_point.atmosphere.density(),
         propeller_coefficient_of_performance=0.90  # calibrated to QProp output with Dongjoon
     )
 
@@ -1185,12 +1185,12 @@ else:
     opti.subject_to(dyn.altitude < 30000)  # Bugs out without this limiter
 
     propeller_efficiency, motor_efficiency = eff_curve_fit(
-        airspeed=dyn.op_point.velocity,
+        airspeed=airspeed,
         total_thrust=thrust,
         altitude=dyn.altitude,
         var_pitch=variable_pitch
     )
-    power_out_propulsion_shaft = thrust * dyn.op_point.velocity / propeller_efficiency
+    power_out_propulsion_shaft = thrust * airspeed / propeller_efficiency
 
     gearbox_efficiency = 0.986
 
@@ -1295,7 +1295,7 @@ opti.subject_to(dyn.Fz_e / 1e3 == 0)  # L == W
 excess_power = dyn.u_e * dyn.Fx_e
 climb_rate = excess_power / (dyn.mass_props.mass * 9.81)
 opti.subject_to((excess_power + dyn.w_e * dyn.mass_props.mass * 9.81) / 5e3 == 0)
-opti.subject_to(q_ne > dyn.op_point.dynamic_pressure())
+opti.subject_to(q_ne > op_point.dynamic_pressure())
 
 ##### Section: Perodicity Constraints
 opti.subject_to([
