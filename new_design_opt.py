@@ -1302,7 +1302,7 @@ opti.subject_to([
     dyn.x_e[time_periodic_end_index] / 1e5 > dyn.x_e[time_periodic_start_index] / 1e5 + required_headway_per_day,
     dyn.altitude[time_periodic_end_index] / 1e4 > dyn.altitude[time_periodic_start_index] / 1e4,
     airspeed[time_periodic_end_index] / 1e1 > airspeed[time_periodic_start_index] / 1e1,
-    battery_charge_state[-1] > battery_charge_state[0],  # todo figure out why other index doesn't work
+    battery_charge_state[time_periodic_end_index] > battery_charge_state[time_periodic_start_index],
     dyn.gamma[time_periodic_end_index] == dyn.gamma[time_periodic_start_index],
     dyn.alpha[time_periodic_end_index] == dyn.alpha[time_periodic_start_index],
     thrust[time_periodic_end_index] == thrust[time_periodic_start_index]
