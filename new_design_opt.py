@@ -1022,7 +1022,7 @@ def wind_speed_func(alt):
     speed_func = lib_winds.wind_speed_world_95(alt, latitude_array, day_array)
     return speed_func
 
-wind_speed = wind_speed_func(-dyn.z_e)
+wind_speed = wind_speed_func(dyn.altitude)
 airspeed = dyn.u_e + wind_speed # only considers headwind case
 
 dyn.add_gravity_force(g=9.81)
