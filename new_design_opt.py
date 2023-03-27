@@ -1171,7 +1171,7 @@ if not use_propulsion_fits_from_FL2020_1682_undergrads:
     power_out_propulsion_shaft = prop_lib.propeller_shaft_power_from_thrust(
         thrust_force=thrust,
         area_propulsive=area_propulsive,
-        airspeed=op_point.velocity,
+        airspeed=airspeed,
         rho=op_point.atmosphere.density(),
         propeller_coefficient_of_performance=0.90  # calibrated to QProp output with Dongjoon
     )
