@@ -1039,7 +1039,7 @@ y_km = dyn.altitude / 1e3
 if climb_opt:
     opti.subject_to(dyn.altitude[0] / 1e4 == 0)
 
-if hold_cruise_altitude:
+if hold_cruise_altitude == True:
     cruise_altitude = opti.variable(
         init_guess=guess_altitude,
         scale=10000,
