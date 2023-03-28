@@ -1347,7 +1347,7 @@ cruise_LD = aero['L'] / aero['D']
 avg_cruise_LD = np.mean(cruise_LD)
 avg_airspeed = np.mean(dyn.u_e)
 sl_atmosphere = atmo(altitude=0)
-rho_ratio = np.sqrt(np.mean(dyn.op_point.atmosphere.density()) / sl_atmosphere.density())
+rho_ratio = np.sqrt(np.mean(op_point.atmosphere.density()) / sl_atmosphere.density())
 avg_ias = avg_airspeed * rho_ratio
 
 ##### Add objective
