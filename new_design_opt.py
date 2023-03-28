@@ -145,11 +145,21 @@ hour = time / 3600
 # Payload pod
 # values roughly to match the demonstrator fuselage and payload pod
 boom_diameter = 0.2  # meters
-payload_pod_length = 2.0  # meters # todo create free variable
-payload_pod_diameter = 0.5  # meters # todo create free variable
+# payload_pod_length = opti.variable(
+#     init_guess=2,
+#     scale=1,
+#     lower_bound=0,
+# ) # meters
+# payload_pod_diameter = opti.variable(
+#     init_guess=0.5,
+#     scale=0.1,
+#     lower_bound=0,
+# )  # meters # todo create free variable
+payload_pod_length = 2
+payload_pod_diameter = 0.5
 payload_pod_y_offset = 1.5  # meters
 
-payload_pod = make_payload_pod(  # TODO ask peter if there's a better way to make this an aero shape
+payload_pod = make_payload_pod( # TODO make an aero shape using splines and add to drag buildup
     boom_length=payload_pod_length,
     nose_length=0.5,
     tail_length=1,
@@ -977,8 +987,10 @@ remaining_volume = (
         battery_volume
 )
 )
-
-opti.subject_to(mass_total > mass_props_TOGW.mass)
+opti.subject_to([
+    mass_total > mass_props_TOGW.mass,
+    remaining_volume > 0,
+])
 
 ##### Section: Setup Dynamics
 guess_altitude = 18000
