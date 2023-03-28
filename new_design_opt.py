@@ -51,7 +51,7 @@ hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we
 # Trajectory Parameters
 sample_area_height = opti.parameter(value=150000)  # meters, the height of the area the aircraft must sample
 sample_area_width = opti.parameter(value=100000)  # meters, the width of the area the aircraft must sample
-required_headway_per_day = opti.parameter(value=0)
+required_headway_per_day = opti.parameter(value=10000)
 # meters, the minimum distance the aircraft must cover in the sizing day
 trajectory = 1  # value to determine the particular trajectory
 required_revisit_rate = opti.parameter(value=0)
