@@ -1062,6 +1062,7 @@ if hold_cruise_altitude == True:
 
 ##### Section: Aerodynamics
 op_point = asb.OperatingPoint(
+    atmosphere=dyn.op_point.atmosphere,
     velocity=airspeed,
     alpha=dyn.alpha,
     beta=0,
