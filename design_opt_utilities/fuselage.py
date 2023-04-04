@@ -72,7 +72,7 @@ def make_fuselage(
     return fuse
 
 def make_payload_pod(
-    boom_length,
+    total_length,
     nose_length,
     tail_length,
     fuse_diameter,
@@ -96,7 +96,7 @@ def make_payload_pod(
 
     # center section
     fuse_x_c.extend([
-        boom_length
+        total_length
     ])
     fuse_z_c.extend([
         (-fuse_diameter / 2)
@@ -107,7 +107,7 @@ def make_payload_pod(
     # Tail geometry
     fuse_tail_theta = np.flip(np.linspace(0, np.pi / 2, fuse_resolution))
     fuse_x_c.extend([
-        boom_length + tail_length * np.cos(theta) for theta in fuse_tail_theta
+        total_length + tail_length * np.cos(theta) for theta in fuse_tail_theta
     ])
     fuse_z_c.extend([-fuse_diameter / 2] * fuse_resolution)
     fuse_radius.extend([
