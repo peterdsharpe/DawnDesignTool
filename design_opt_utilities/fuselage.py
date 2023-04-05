@@ -1,6 +1,6 @@
 import aerosandbox as asb
 import aerosandbox.numpy as np
-
+import asb.modeling.splines as splines
 
 def make_fuselage(
         boom_length,
@@ -126,3 +126,53 @@ def make_payload_pod(
     )
 
     return fuse
+
+#Below is a function that takes in the diameter and length of the payload pod and returns a fuselage object with
+# an aerodynamic shape defined from the bezier spline function in aerosandbox
+def aero_payload_pod(
+    body_length, #length of the payload pod
+    diameter, #maximum diameter of the payload pod
+    nose_length, #length of the nose of the payload pod
+    tail_length, #length of the tail of the payload pod
+    resolution = 10,
+) -> asb.Fuselage:
+    fuse_x_c = []
+    fuse_z_c = []
+    fuse_radius = []
+    # define a bezier spline for the nose of the payload pod
+    x_n, y_n = splines.quadratic_bezier_patch_from_tangents(
+        t=np.linspace(0, 1, resolution),
+        x_a=0,
+        x_b=nose_length,
+        y_a=0,
+        y_b=diameter/2,
+        dydx_a=4,
+        dydx_b=0,
+    )
+    z_n = [-diameter/2] * resolution
+    # define a bezier spline for the tail of the payload pod
+    x_t, y_t = splines.quadratic_bezier_patch_from_tangents(
+        t=np.linspace(0, 1, resolution),
+        x_a=body_length,
+        x_b=body_length+tail_length,
+        y_a=diameter/2,
+        y_b=0,
+        dydx_a=0,
+        dydx_b=-0.3,
+    )
+    z_t = [-diameter/2] * resolution
+    fuse_x_c.extend(x_n, x_t)
+    fuse_z_c.extend(z_n, z_t)
+    fuse_radius.extend(y_n, y_t)
+    fuse = asb.Fuselage(
+    name = "payload pod",
+    xsecs = [
+        asb.FuselageXSec(
+            xyz_c=[fuse_x_c[i], 0, fuse_z_c[i]],
+            radius=fuse_radius[i]
+        ) for i in range(len(fuse_x_c))
+    ]
+    )
+
+
+
