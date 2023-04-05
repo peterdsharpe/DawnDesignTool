@@ -879,8 +879,9 @@ mass_props['solar_panel_vstab'] = asb.MassProperties(
 )
 
 ### MPPT mass accounting
+n_MPPT = 5
 mass_props['MPPT'] = asb.MassProperties(
-    mass=solar_lib.mass_MPPT(max_power_in)
+    mass=n_MPPT * solar_lib.mass_MPPT(max_power_in / n_MPPT),
 )
 
 ### battery mass accounting
@@ -989,7 +990,6 @@ remaining_volume = (
 )
 opti.subject_to([
     mass_total > mass_props_TOGW.mass,
-    remaining_volume > 0,
 ])
 
 ##### Section: Setup Dynamics
@@ -1312,7 +1312,7 @@ opti.subject_to(q_ne > op_point.dynamic_pressure())
 
 ##### Section: Perodicity Constraints
 opti.subject_to([
-    dyn.x_e[time_periodic_end_index] / 1e5 > (dyn.x_e[time_periodic_start_index] + required_headway_per_day) / 1e5,
+    dyn.x_e[time_periodic_end_index] / 1e5 > (dyn.x_e[time_periodic_start_index]) / 1e5,
     dyn.altitude[time_periodic_end_index] / 1e4 > dyn.altitude[time_periodic_start_index] / 1e4,
     airspeed[time_periodic_end_index] / 1e1 > airspeed[time_periodic_start_index] / 1e1,
     battery_charge_state[time_periodic_end_index] > battery_charge_state[time_periodic_start_index],
