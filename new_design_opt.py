@@ -499,7 +499,8 @@ airplane = asb.Airplane(
     fuselages=[
         center_boom,
         right_boom,
-        left_boom
+        left_boom,
+        payload_pod
     ],
 )
 
