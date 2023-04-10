@@ -1,6 +1,6 @@
 import aerosandbox as asb
 import aerosandbox.numpy as np
-import asb.modeling.splines as splines
+import aerosandbox.modeling.splines as splines
 
 def make_fuselage(
         boom_length,
@@ -124,6 +124,9 @@ def make_payload_pod(
         ) for i in range(len(fuse_x_c))
     ]
     )
+    # print(fuse_x_c)
+    # print(fuse_z_c)
+    # print(fuse_radius)
 
     return fuse
 
@@ -144,26 +147,29 @@ def aero_payload_pod(
         t=np.linspace(0, 1, resolution),
         x_a=0,
         x_b=nose_length,
-        y_a=0,
+        y_a=0.00001,
         y_b=diameter/2,
         dydx_a=4,
         dydx_b=0,
     )
     z_n = [-diameter/2] * resolution
+    fuse_x_c.extend([x_n])
+    fuse_z_c.extend([z_n])
+    fuse_radius.extend([y_n])
     # define a bezier spline for the tail of the payload pod
     x_t, y_t = splines.quadratic_bezier_patch_from_tangents(
         t=np.linspace(0, 1, resolution),
         x_a=body_length,
         x_b=body_length+tail_length,
         y_a=diameter/2,
-        y_b=0,
+        y_b=0.001,
         dydx_a=0,
         dydx_b=-0.3,
     )
     z_t = [-diameter/2] * resolution
-    fuse_x_c.extend(x_n, x_t)
-    fuse_z_c.extend(z_n, z_t)
-    fuse_radius.extend(y_n, y_t)
+    fuse_x_c.extend([x_t])
+    fuse_z_c.extend([z_t])
+    fuse_radius.extend([y_t])
     fuse = asb.Fuselage(
     name = "payload pod",
     xsecs = [
@@ -173,6 +179,24 @@ def aero_payload_pod(
         ) for i in range(len(fuse_x_c))
     ]
     )
+
+    return fuse
+
+if __name__ == "__main__":
+
+    opti = asb.Opti()
+    length= opti.variable(init_guess=2,lower_bound=1,upper_bound=3)
+    diameter = opti.variable(init_guess=0.5,lower_bound=0.3,upper_bound=0.7)
+    payload_pod = aero_payload_pod(
+        body_length=length,
+        nose_length=0.5,
+        tail_length=1,
+        diameter=diameter
+    )
+    volume = payload_pod.volume()
+    opti.minimize(-volume)
+    sol = opti.solve()
+
 
 
 
