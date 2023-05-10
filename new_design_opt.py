@@ -160,7 +160,7 @@ payload_pod_diameter = 0.5
 payload_pod_y_offset = 1.5  # meters
 
 payload_pod = make_payload_pod( # TODO make an aero shape using splines and add to drag buildup
-    boom_length=payload_pod_length,
+    total_length=payload_pod_length,
     nose_length=0.5,
     tail_length=1,
     fuse_diameter=payload_pod_diameter,
@@ -978,9 +978,8 @@ propulsion_system_mass_props = (
 )
 
 #### summation of total system mass
-mass_props_TOGW = asb.MassProperties(mass=0)
-for k, v in mass_props.items():
-    mass_props_TOGW = mass_props_TOGW + v
+
+mass_props_TOGW = sum(mass_props.values())
 
 remaining_volume = (
         payload_pod_volume - (
@@ -995,7 +994,7 @@ opti.subject_to([
 
 ##### Section: Setup Dynamics
 guess_altitude = 18000
-guess_u_e = 35
+guess_u_e = 30
 
 dyn = asb.DynamicsPointMass2DCartesian(
     mass_props=mass_props_TOGW,
@@ -1317,7 +1316,7 @@ opti.subject_to([
     dyn.altitude[time_periodic_end_index] / 1e4 > dyn.altitude[time_periodic_start_index] / 1e4,
     airspeed[time_periodic_end_index] / 1e1 > airspeed[time_periodic_start_index] / 1e1,
     battery_charge_state[time_periodic_end_index] > battery_charge_state[time_periodic_start_index],
-    dyn.gamma[time_periodic_end_index] == dyn.gamma[time_periodic_start_index],
+    climb_rate[time_periodic_end_index] == climb_rate[time_periodic_start_index],
     dyn.alpha[time_periodic_end_index] == dyn.alpha[time_periodic_start_index],
     thrust[time_periodic_end_index] == thrust[time_periodic_start_index]
 ])
@@ -1413,11 +1412,12 @@ if __name__ == "__main__":
         # ff_sol = copy.deepcopy()
     except RuntimeError as e:
         print(e)
-        sol = opti.debug
+        sol = asb.OptiSol(opti=opti, cas_optisol=opti.debug)
 
-    airplane.substitute_solution(sol)
-    dyn.substitute_solution(sol)
-    mass_props_TOGW.substitute_solution(sol)
+    airplane = sol(airplane)
+    dyn = sol(dyn)
+    mass_props_TOGW = sol(mass_props_TOGW)
+    aero = sol(aero)
 
     ### Macros
     s = lambda x: sol.value(x)
@@ -1440,10 +1440,7 @@ if __name__ == "__main__":
             f"{v / s(payload_pod_volume) * 100:.1f}%"
         ]))
 
-    aero = {
-        k: s(v)
-        for k, v in aero.items() if not isinstance(v, list)
-    }
+
 
     import matplotlib.pyplot as plt
     import aerosandbox.tools.pretty_plots as p
