@@ -38,7 +38,7 @@ opti = asb.Opti(  # Normal mode - Design Optimization
 #     load_frozen_variables_from_cache=True,
 #     ignore_violated_parametric_constraints=True
 # )
-lam = opti.parameter(value=0.8)
+lam = opti.parameter(value=0.3)
 # minimize = "wing.span() / 50"  # any "eval-able" expression
 # minimize = "max_mass_total / 300" # any "eval-able" expression
 # minimize = "wing.span() / 50 * 0.9 + max_mass_total / 300 * 0.1"
@@ -48,7 +48,6 @@ minimize = "wing.span() / 30 * lam - revisit_rate    * (1-lam)"
 climb_opt = False  # are we optimizing for the climb as well?
 latitude = opti.parameter(value=-75)  # degrees (49 deg is top of CONUS, 26 deg is bottom of CONUS)
 day_of_year = opti.parameter(value=45)  # Julian day. June 1 is 153, June 22 is 174, Aug. 31 is 244
-mission_length = opti.parameter(value=45) # sets storage requirement based on how long you need to remain flying without landing to download data
 strat_offset_value = opti.parameter(value=1000)
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 sample_area_height = opti.parameter(value=150000)  # meters
@@ -56,7 +55,7 @@ sample_area_width = opti.parameter(value=100000)  # meters
 required_headway_per_day = opti.parameter(value=0)
 allow_trajectory_optimization = False
 structural_load_factor = 3  # over static
-make_plots = True
+make_plots = False
 mass_payload_base = opti.parameter(value=10)
 tail_panels = True
 fuselage_billboard = False
@@ -550,7 +549,7 @@ k_b = 1.38064852E-23  # [m2 kg s-2 K-1]
 required_resolution = opti.parameter(value=2)  # meters from conversation with Brent on 2/18/22
 required_snr = opti.parameter(value=6)  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
 center_wavelength = opti.parameter(value=0.024)  # meters
-scattering_cross_sec_db = opti.parameter(value=0)  # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
+sigma_db = opti.parameter(value=0)  # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
 radar_length = 1
 radar_width = 0.3
 radar_length = opti.variable(
@@ -585,25 +584,17 @@ pulse_rep_freq = opti.variable(
     category='des'
 )
 power_out_payload = opti.variable(
-    init_guess=100,
-    scale=10,
+    init_guess=200,
+    scale=100,
     lower_bound=0,
     category='des'
 )
 groundspeed = opti.variable(
     n_vars=n_timesteps,
-    init_guess=25,
-    scale=1,
-    category="ops",
-    lower_bound=1,
+    init_guess=0,
+    scale=0.1,
+    category="ops"
 )
-power_trans = opti.variable(
-    init_guess=1e6,
-    scale=1e5,
-    lower_bound=0,
-    upper_bound=1e8,
-    category='des',
-) # watts
 # # define key radar parameters
 radar_area = radar_width * radar_length # meters ** 2
 look_angle = opti.parameter(value=45) # degrees
@@ -615,34 +606,32 @@ max_length_synth_ap = center_wavelength * dist / radar_length # meters
 ground_area = swath_range * swath_azimuth * np.pi / 4 # meters ** 2
 radius = (swath_azimuth + swath_range) / 4 # meters
 ground_imaging_offset = np.tand(look_angle) * y # meters
-scattering_cross_sec = 10 ** (scattering_cross_sec_db / 10)
-sigma0 = scattering_cross_sec / (ground_area)
+sigma = 10 ** (sigma_db / 10)
+sigma0 = sigma / ground_area
 antenna_gain = 4 * np.pi * radar_area * 0.7 / center_wavelength ** 2
-a_hs = 0.88 # aperture-illumination taper factor associated with the synthetic aperture (value from Ulaby and Long)
-F = 4 # receiver noise figure (somewhat randomly chosen value from Ulaby and Long)
-a_B = 1 # pulse-taper factor to relate bandwidth and pulse duration
-# doppler_bandwidth = 2 * groundspeed * horz_beamwidth / (center_wavelength * y)
+pulse_duration = 1 / bandwidth
 #
 # # constrain SAR resolution to required value
-pulse_duration = a_B / bandwidth
 range_resolution = c * pulse_duration / (2 * np.sind(look_angle))
 azimuth_resolution = radar_length / 2
 opti.subject_to([
     range_resolution <= required_resolution,
     azimuth_resolution <= required_resolution,
 ])
-
-# use SAR specific equations from Ulaby and Long
-power_out_payload = power_trans * pulse_rep_freq * pulse_duration
-snr = power_out_payload * antenna_gain ** 2 * center_wavelength ** 3 * a_hs * sigma0 * range_resolution / ((2 * 4 * np.pi) ** 3 * dist ** 3 * k_b * T * F * groundspeed * a_B)
-
+#
+# account for snr
+noise_power_density = k_b * T * bandwidth / (center_wavelength ** 2)
+power_trans = peak_power * pulse_duration
+power_received = power_trans * center_wavelength ** 2 * antenna_gain ** 2 * radar_area * sigma0 / ((4 * np.pi) ** 3 * dist ** 4)
+power_out_payload = power_trans * pulse_rep_freq
+snr = power_received / noise_power_density
 snr_db = 10 * np.log(snr)
 opti.subject_to([
     required_snr <= snr_db,
     pulse_rep_freq >= 2 * groundspeed / radar_length,
     pulse_rep_freq <= c / (2 * swath_azimuth),
 ])
-# power_out_payload = 67
+
 # region Flight Path Optimization
 wind_speed = wind_speed_func(y)
 wind_direction = opti.parameter(value=0)
@@ -655,7 +644,7 @@ revisit_rate = opti.variable(
 )
 airspeed = opti.variable(
     n_vars=n_timesteps,
-    init_guess=30,
+    init_guess=23,
     scale=20,
     category="ops"
 )
@@ -782,7 +771,7 @@ solar_flux_on_wing_left = lib_solar.solar_flux(
     latitude=latitude,
     day_of_year=day_of_year,
     time=time,
-    panel_azimuth_angle=vehicle_heading + 90,
+    panel_azimuth_angle=panel_heading,
     panel_tilt_angle=10,
     scattering=True,
 )
@@ -790,7 +779,7 @@ solar_flux_on_wing_right = lib_solar.solar_flux(
     latitude=latitude,
     day_of_year=day_of_year,
     time=time,
-    panel_azimuth_angle=vehicle_heading - 90,
+    panel_azimuth_angle=panel_heading,
     panel_tilt_angle=-10,
     scattering=True,
 )
@@ -798,7 +787,7 @@ solar_flux_on_vertical_left = lib_solar.solar_flux(
     latitude=latitude,
     day_of_year=day_of_year,
     time=time,
-    panel_azimuth_angle=vehicle_heading + 90,
+    panel_azimuth_angle=panel_heading,
     panel_tilt_angle=90,
     scattering=True,
 )
@@ -806,8 +795,8 @@ solar_flux_on_vertical_right = lib_solar.solar_flux(
     latitude=latitude,
     day_of_year=day_of_year,
     time=time,
-    panel_azimuth_angle=vehicle_heading - 90,
-    panel_tilt_angle=90,
+    panel_azimuth_angle=panel_heading,
+    panel_tilt_angle=-90,
     scattering=True,
 )
 billboard_angle = opti.variable(
@@ -895,12 +884,13 @@ def compute_wing_aerodynamics(
                                                       sweep=surface.mean_sweep_angle())  # Compressible 3D moment coefficient
         surface.moment = surface.CM * q * surface.area() * surface.mean_geometric_chord()
     except TypeError:
-        surface.Cl_inc = surface.airfoil.CL_function(surface.alpha_eff, surface.Re, 0)  # Incompressible 2D lift coefficient
+        surface.Cl_inc = surface.airfoil.CL_function(surface.alpha_eff, surface.Re, 0,
+                                                     0)  # Incompressible 2D lift coefficient
         surface.CL = surface.Cl_inc * aero.CL_over_Cl(surface.aspect_ratio(), mach=mach,
                                                       sweep=surface.mean_sweep_angle())  # Compressible 3D lift coefficient
         surface.lift = surface.CL * q * surface.area()
 
-        surface.Cd_profile = surface.airfoil.CD_function(surface.alpha_eff, surface.Re, mach)
+        surface.Cd_profile = surface.airfoil.CD_function(surface.alpha_eff, surface.Re, mach, 0)
         surface.drag_profile = surface.Cd_profile * q * surface.area()
 
         surface.oswalds_efficiency = aero.oswalds_efficiency(
@@ -917,7 +907,8 @@ def compute_wing_aerodynamics(
 
         surface.drag = surface.drag_profile + surface.drag_induced
 
-        surface.Cm_inc = surface.airfoil.CM_function(surface.alpha_eff, surface.Re, 0)  # Incompressible 2D moment coefficient
+        surface.Cm_inc = surface.airfoil.CM_function(surface.alpha_eff, surface.Re, 0,
+                                                     0)  # Incompressible 2D moment coefficient
         surface.CM = surface.Cm_inc * aero.CL_over_Cl(surface.aspect_ratio(), mach=mach,
                                                       sweep=surface.mean_sweep_angle())  # Compressible 3D moment coefficient
         surface.moment = surface.CM * q * surface.area() * surface.mean_geometric_chord()
@@ -948,7 +939,7 @@ strut_span = (strut_y_location ** 2 + (propeller_diameter / 2 + 0.25) ** 2) ** 0
 strut_chord = 0.167 * (strut_span * (propeller_diameter / 2 + 0.25)) ** 0.25  # Formula from Jamie
 strut_Re = rho / mu * airspeed * strut_chord
 strut_airfoil = flat_plate
-strut_Cd_profile = flat_plate.CD_function(0, strut_Re, mach)
+strut_Cd_profile = flat_plate.CD_function(0, strut_Re, mach, 0)
 drag_strut_profile = strut_Cd_profile * q * strut_chord * strut_span
 drag_strut = drag_strut_profile  # per strut
 
@@ -1026,7 +1017,7 @@ opti.subject_to([
     # center_vstab.aspect_ratio() > 1.9, # from Jamie, based on ASWing
     # center_vstab.aspect_ratio() < 2.5 # from Jamie, based on ASWing
 ])
-# TODO implement stability derivatives directly
+
 # endregion
 
 # region Propulsion
@@ -1306,7 +1297,7 @@ area_solar_horz = wing.area() * solar_area_fraction
 area_solar_vert = center_vstab.area() * vtail_solar_area_fraction
 
 # Energy generation cascade accounting for different horizontal and vertical cell assumptions
-power_in_from_sun_horz = solar_flux_on_wing_left * area_solar_horz * 0.5 + solar_flux_on_wing_right * area_solar_horz * 0.5
+power_in_from_sun_horz = solar_flux_on_wing_left * area_solar_horz + solar_flux_on_wing_right * area_solar_horz
 power_in_from_sun_vert = solar_flux_on_vertical_left * area_solar_vert + solar_flux_on_vertical_right * area_solar_vert
 power_in_from_sun_fuselage = solar_flux_on_billboard_left * billboard_area + solar_flux_on_billboard_right * area_solar_vert
 power_in_from_sun_horz = power_in_from_sun_horz / energy_generation_margin
@@ -1434,7 +1425,7 @@ def estimate_mass_wing_secondary(
     W_wer = n_end_ribs * (chord ** 2 * t_over_c * 6.62e-1 + chord * 6.57e-3)
 
     # LE sheeting mass
-    W_wLE = 0.456/2 * (span ** 2 * ratio_of_rib_spacing_to_chord ** (4 / 3) / span)
+    # W_wLE = 0.456/2 * (span ** 2 * ratio_of_rib_spacing_to_chord ** (4 / 3) / span)
 
     # Skin Panel Mass
     W_wsp = area * skin_density * 1.05  # assumed constant thickness from 0.9c around LE to 0.15c
@@ -1445,7 +1436,7 @@ def estimate_mass_wing_secondary(
     # Covering
     W_wc = area * 0.076  # 0.033 kg/m2 Tedlar covering on 2 sides, with 1.1 coverage factor
 
-    mass_secondary = (W_wr + W_wLE + W_whr + W_wer + W_wTE) * scaling_factor + W_wsp + W_wc
+    mass_secondary = (W_wr + W_whr + W_wer + W_wTE) * scaling_factor + W_wsp + W_wc
 
     return mass_secondary
 
@@ -1588,11 +1579,11 @@ mass_avionics = 12.153  # Pulled from Avionics team spreadsheet on 5/13
 # consider data storage weight
 mass_of_data_storage = 0.0053 # kg per TB of data
 tb_per_day = 4
-mass_payload = mass_payload_base + mission_length * tb_per_day * mass_of_data_storage
+mass_payload = mass_payload_base + day_of_year * tb_per_day * mass_of_data_storage
 
 # consider data storage power requirements
 power_of_data_storage = 0.1 # watt per tb of data
-power_out_payload_adjusted = power_out_payload + mission_length * tb_per_day * power_of_data_storage
+power_out_payload_adjusted = power_out_payload + day_of_year * tb_per_day * power_of_data_storage
 opti.subject_to([
     mass_total / 250 == (
             mass_payload + mass_structural + mass_propulsion + mass_power_systems + mass_avionics
