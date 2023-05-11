@@ -558,7 +558,7 @@ wing_n_ribs = opti.variable(
 )
 
 wing_mass_primary = mass_lib.mass_wing_spar(
-    span=wing.span(),
+    span=wing_span,
     mass_supported=mass_total,
     # technically the spar doesn't really have to support its own weight (since it's roughly spanloaded), so this is conservative
     ultimate_load_factor=structural_load_factor,
