@@ -62,7 +62,7 @@ min_speed = 0  # specify a minimum speed
 
 # Aircraft Parameters
 battery_specific_energy_Wh_kg = opti.parameter(value=450)  # cell level specific energy of the battery
-# todo adjust to more reasonable near-term values
+# todo adjust to more reasonable near-term values maybe like 300-350
 battery_pack_cell_percentage = opti.parameter(
     value=0.89)  # What percent of the battery pack consists of the module, by weight?
 # these roughly correspond to the value for cells we are planning for near-term
@@ -78,6 +78,7 @@ use_propulsion_fits_from_FL2020_1682_undergrads = True  # Warning: Fits not yet 
 
 # Instrument Parameters
 mass_payload_base = opti.parameter(value=10)
+#todo change these from requirements to part of the objective function
 required_resolution = opti.parameter(value=1)  # meters from conversation with Brent on 3/7/2023
 required_snr = opti.parameter(value=6)  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
 center_wavelength = opti.parameter(value=0.024)
@@ -154,12 +155,12 @@ boom_diameter = 0.2  # meters
 #     init_guess=0.5,
 #     scale=0.1,
 #     lower_bound=0,
-# )  # meters # todo create free variable
+# )  # meters # todo figure out why making this a variable breaks the code
 payload_pod_length = 2
 payload_pod_diameter = 0.5
 payload_pod_y_offset = 1.5  # meters
 
-payload_pod = make_payload_pod( # TODO make an aero shape using splines and add to drag buildup
+payload_pod = make_payload_pod( # todo switch to aero_payload_pod as this is more aero shape
     total_length=payload_pod_length,
     nose_length=0.5,
     tail_length=1,
