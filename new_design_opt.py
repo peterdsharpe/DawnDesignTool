@@ -1323,6 +1323,7 @@ opti.subject_to([
     dyn.alpha[time_periodic_end_index] == dyn.alpha[time_periodic_start_index],
     thrust[time_periodic_end_index] == thrust[time_periodic_start_index]
 ])
+# todo figure out why periodicity constraints are acting funky
 
 #### Section: Add imposed constraints
 opti.subject_to([
