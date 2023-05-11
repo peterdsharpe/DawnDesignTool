@@ -1,10 +1,10 @@
 import copy
-
+import sys
+sys.path.append("C:\\Users\\AnnickDewald\\PycharmProjects\\AeroSandbox")
 import aerosandbox as asb
 from aerosandbox.library import winds as lib_winds
 import aerosandbox.numpy as np
 import pathlib
-from aerosandbox.modeling.interpolation import InterpolatedModel
 from aerosandbox.library.airfoils import naca0008
 from design_opt_utilities.fuselage import make_payload_pod
 import aerosandbox.library.mass_structural as mass_lib
