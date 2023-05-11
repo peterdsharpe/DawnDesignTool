@@ -209,7 +209,7 @@ wing_root_chord = opti.variable(
     **des
 )
 
-wing_x_quarter_chord = opti.variable( # TODO figure out how to define better
+wing_x_quarter_chord = opti.variable( # TODO determine if both quarter chord and le location are needed
     init_guess=1.8 / 4,
     scale=0.01,
     lower_bound=0,
