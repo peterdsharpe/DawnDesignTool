@@ -1053,6 +1053,7 @@ if climb_opt:
     opti.subject_to(dyn.altitude[0] / 1e4 == 0)
 
 if hold_cruise_altitude == True:
+    # todo figure out why this breaks code
     cruise_altitude = opti.variable(
         init_guess=guess_altitude,
         scale=10000,
