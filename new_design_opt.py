@@ -1035,8 +1035,9 @@ def wind_speed_func(alt):
     speed_func = lib_winds.wind_speed_world_95(alt, latitude_array, day_array)
     return speed_func
 
-wind_speed = wind_speed_func(dyn.altitude) * 0# todo figure out why non-zero windspeed breaks code
-airspeed = dyn.u_e + wind_speed # only considers headwind case
+wind_speed = wind_speed_func(dyn.altitude)
+# todo figure out why non-zero windspeed breaks code, seems like initial dyn.u_e guess needs to be smaller
+airspeed = dyn.u_e + wind_speed * 0 # only considers headwind case
 
 dyn.add_gravity_force(g=9.81)
 
@@ -1620,9 +1621,9 @@ if __name__ == "__main__":
         ]
         pie_values = [
             s(mass_props['payload'].mass),
-            s(structural_mass_props),
-            s(propulsion_system_mass_props),
-            s(power_systems_mass_props),
+            s(structural_mass_props.mass),
+            s(propulsion_system_mass_props.mass),
+            s(power_systems_mass_props.mass),
             s(mass_props['avionics'].mass),
         ]
         colors = plt.cm.Set2(np.arange(5))
