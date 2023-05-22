@@ -700,7 +700,7 @@ passes_required = sample_area_width / single_track_coverage
 total_track_length = single_track_length * passes_required * trajectory
 
 opti.subject_to([
-    place_on_track == asb.cas.mod(x,  single_track_length),
+    place_on_track == np.mod(x,  single_track_length),
 ])
 loc = np.where(place_on_track > single_track_length,
                            place_on_track - single_track_length,
