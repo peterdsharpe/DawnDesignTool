@@ -1293,8 +1293,8 @@ battery_charge_state = opti.variable(
 net_power = power_in - power_out
 
 opti.constrain_derivative(
-    derivative=net_power,
-    variable=battery_charge_state * battery_total_energy,
+    derivative=net_power / battery_total_energy,
+    variable=battery_charge_state,
     with_respect_to=time,
 )
 
@@ -1312,7 +1312,7 @@ opti.subject_to(dyn.Fz_e / 1e3 == 0)  # L == W
 excess_power = dyn.u_e * dyn.Fx_e
 climb_rate = excess_power / (dyn.mass_props.mass * 9.81)
 opti.subject_to((excess_power + dyn.w_e * dyn.mass_props.mass * 9.81) / 5e3 == 0)
-opti.subject_to(q_ne > op_point.dynamic_pressure())
+opti.subject_to(op_point.dynamic_pressure() / q_ne < 1)
 
 ##### Section: Perodicity Constraints
 opti.subject_to([
