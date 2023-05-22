@@ -6,7 +6,7 @@ from aerosandbox.library import winds as lib_winds
 import aerosandbox.numpy as np
 import pathlib
 from aerosandbox.library.airfoils import naca0008
-from design_opt_utilities.fuselage import make_payload_pod
+from design_opt_utilities.fuselage import make_payload_pod, aero_payload_pod
 import aerosandbox.library.mass_structural as mass_lib
 from aerosandbox.library import power_solar as solar_lib
 from aerosandbox.library import propulsion_electric as elec_lib
@@ -144,21 +144,21 @@ hour = time / 3600
 # Payload pod
 # values roughly to match the demonstrator fuselage and payload pod
 boom_diameter = 0.2  # meters
-# payload_pod_length = opti.variable(
-#     init_guess=2,
-#     scale=1,
-#     lower_bound=0,
-# ) # meters
-# payload_pod_diameter = opti.variable(
-#     init_guess=0.5,
-#     scale=0.1,
-#     lower_bound=0,
-# )  # meters # todo figure out why making this a variable breaks the code
-payload_pod_length = 2
-payload_pod_diameter = 0.5
+payload_pod_length = opti.variable(
+    init_guess=2,
+    scale=1,
+    lower_bound=0,
+) # meters
+payload_pod_diameter = opti.variable(
+    init_guess=0.5,
+    scale=0.1,
+    lower_bound=boom_diameter,
+)  # meters
+# payload_pod_length = 2
+# payload_pod_diameter = 0.5
 payload_pod_y_offset = 1.5  # meters
 
-payload_pod = make_payload_pod( # todo switch to aero_payload_pod as this is more aero shape
+payload_pod = aero_payload_pod(
     total_length=payload_pod_length,
     nose_length=0.5,
     tail_length=1,
@@ -166,7 +166,7 @@ payload_pod = make_payload_pod( # todo switch to aero_payload_pod as this is mor
 ).translate([0, 0, -payload_pod_y_offset])
 
 payload_pod_volume = payload_pod.volume()
-# TODO add payload pod to drag buildup
+payload_pod_structure_volume = payload_pod_volume * 0.20  # 20% of the volume is structure a guess for now
 
 # overall layout wing layout
 boom_location = 0.80  # as a fraction of the half-span
@@ -975,11 +975,13 @@ propulsion_system_mass_props = (
 
 mass_props_TOGW = sum(mass_props.values())
 
+
 remaining_volume = (
         payload_pod_volume - (
         payload_volume +
         avionics_volume +
-        battery_volume
+        battery_volume +
+        payload_pod_structure_volume
 )
 )
 opti.subject_to([
@@ -1145,7 +1147,7 @@ dyn.add_force(
 # ])
 #
 # # use SAR specific equations from Ulaby and Long
-# payload_power = power_trans * pulse_rep_freq * pulse_duration  # TODO make a function of location in trajectory
+# payload_power = power_trans * pulse_rep_freq * pulse_duration
 #
 # snr = payload_power * antenna_gain ** 2 * center_wavelength ** 3 * a_hs * sigma0 * range_resolution / \
 #       ((2 * 4 * np.pi) ** 3 * dist ** 3 * k_b * dyn.op_point.atmosphere.temperature() * F * dyn.u_e * a_B)
