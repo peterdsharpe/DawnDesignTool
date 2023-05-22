@@ -39,64 +39,62 @@ draw_initial_guess_config = False
 ##### Section: Input Parameters
 
 # Mission Operating Parameters
-latitude = opti.parameter(value=-75)  # degrees, the location the sizing occurs
-day_of_year = opti.parameter(value=45)  # Julian day, the day of the year the sizing occurs
-mission_length = opti.parameter(value=45)  # days, the length of the mission without landing to download data
-strat_offset_value = opti.parameter(
-    value=1000)  # meters, margin above the stratosphere height the aircraft is required to stay above
+latitude = -75  # degrees, the location the sizing occurs
+day_of_year = 45  # Julian day, the day of the year the sizing occurs
+mission_length = 45  # days, the length of the mission without landing to download data
+strat_offset_value = 1000  # meters, margin above the stratosphere height the aircraft is required to stay above
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 climb_opt = False  # are we optimizing for the climb as well?
-hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we altitude cycle (False)?
+hold_cruise_altitude = False  # must we hold the cruise altitude (True) or can we altitude cycle (False)?
 
 # Trajectory Parameters
-sample_area_height = opti.parameter(value=150000)  # meters, the height of the area the aircraft must sample
-sample_area_width = opti.parameter(value=100000)  # meters, the width of the area the aircraft must sample
-required_headway_per_day = opti.parameter(value=1000)
+sample_area_height = 150000  # meters, the height of the area the aircraft must sample
+sample_area_width = 100000  # meters, the width of the area the aircraft must sample
+required_headway_per_day = 1000
 # meters, the minimum distance the aircraft must cover in the sizing day
 trajectory = 1  # value to determine the particular trajectory
-required_revisit_rate = opti.parameter(value=0)
+required_revisit_rate = 0
 # How many times must the aircraft fully cover the sample area in the sizing day?
-swath_overlap = opti.parameter(value=0.1)
+swath_overlap = 0.1
 # What fraction of the adjacent swaths must overlap? Typically ranges from 0.1 to 0.5
 min_speed = 0  # specify a minimum speed
 
 # Aircraft Parameters
-battery_specific_energy_Wh_kg = opti.parameter(value=450)  # cell level specific energy of the battery
+battery_specific_energy_Wh_kg = 450  # cell level specific energy of the battery
 # todo adjust to more reasonable near-term values maybe like 300-350
-battery_pack_cell_percentage = opti.parameter(
-    value=0.89)  # What percent of the battery pack consists of the module, by weight?
+battery_pack_cell_percentage = 0.89  # What percent of the battery pack consists of the module, by weight?
 # these roughly correspond to the value for cells we are planning for near-term
 variable_pitch = False  # Do we assume the propeller is variable pitch?
-structural_load_factor = opti.parameter(value=3)  # over static
+structural_load_factor = 3  # over static
 tail_panels = True  # Do we assume we can mount solar cells on the vertical tail?
 wing_cells = "sunpower"  # select cells for wing, options include ascent_solar, sunpower, and microlink
 vstab_cells = "sunpower"  # select cells for vtail, options include ascent_solar, sunpower, and microlink
-max_wing_solar_area_fraction = opti.parameter(value=0.8)
-max_vstab_solar_area_fraction = opti.parameter(value=0.8)
+max_wing_solar_area_fraction = 0.8
+max_vstab_solar_area_fraction = 0.8
 use_propulsion_fits_from_FL2020_1682_undergrads = True  # Warning: Fits not yet validated
 # fits for propeller and motors to derive motor and propeller efficiencies
 
 # Instrument Parameters
-mass_payload_base = opti.parameter(value=10)
+mass_payload_base = 10
 #todo change these from requirements to part of the objective function
-required_resolution = opti.parameter(value=1)  # meters from conversation with Brent on 3/7/2023
-required_snr = opti.parameter(value=6)  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
-center_wavelength = opti.parameter(value=0.024)
+required_resolution = 1  # meters from conversation with Brent on 3/7/2023
+required_snr = 6  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
+center_wavelength = 0.024
 # meters given from Brent based on the properties of the ice sampled by the radar
-scattering_cross_sec_db = opti.parameter(value=-10)
+scattering_cross_sec_db = -10
 # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
-radar_length = opti.parameter(value=1)  # meters, given from existing Gamma Remote Sensing instrument
-radar_width = opti.parameter(value=0.3)  # meters, given from existing Gamma Remote Sensing instrument
-look_angle = opti.parameter(value=45)  # degrees
+radar_length = 1  # meters, given from existing Gamma Remote Sensing instrument
+radar_width = 0.3  # meters, given from existing Gamma Remote Sensing instrument
+look_angle = 45  # degrees
 
 # Margins
-structural_mass_margin_multiplier = opti.parameter(value=1.25)
+structural_mass_margin_multiplier = 1.25
 # A value greater than 1 represents the structural components as sized are
-energy_generation_margin = opti.parameter(value=1.05)
+energy_generation_margin = 1.05
 # A value greater than 1 represents aircraft must generate said fractional surplus of energy
-allowable_battery_depth_of_discharge = opti.parameter(value=0.95)
+allowable_battery_depth_of_discharge = 0.95
 # How much of the battery can you actually use? # updated according to Matthew Berk discussion 10/21/21 # TODO reduce ?
-q_ne_over_q_max = opti.parameter(value=2)
+q_ne_over_q_max = 2
 # Chosen on the basis of a paper read by Trevor Long about Helios, 1/16/21 TODO re-evaluate?
 
 ##### Section: Time Discretization
@@ -209,14 +207,9 @@ wing_root_chord = opti.variable(
     **des
 )
 
-wing_x_quarter_chord = opti.variable( # TODO determine if both quarter chord and le location are needed
-    init_guess=1.8 / 4,
-    scale=0.01,
-    lower_bound=0,
-    **des
-)
+wing_x_quarter_chord = wing_root_chord / 4
 
-opti.subject_to(wing_x_quarter_chord < wing_root_chord / 4)
+# opti.subject_to(wing_x_quarter_chord < wing_root_chord / 4)
 
 wing_y_taper_break = taper_break_location * wing_span / 2
 
@@ -514,7 +507,7 @@ propeller_diameter = opti.variable(
     **des
 )
 
-n_propellers = opti.parameter(value=2)  # TODO reconsider 2 or 4
+n_propellers = 2  # TODO reconsider 2 or 4
 
 if draw_initial_guess_config:
     try:
@@ -990,7 +983,7 @@ remaining_volume = (
 )
 )
 opti.subject_to([
-    mass_total > mass_props_TOGW.mass,
+    mass_total / 100 > mass_props_TOGW.mass / 100,
 ])
 
 ##### Section: Setup Dynamics
@@ -1042,7 +1035,7 @@ airspeed = dyn.u_e + wind_speed * 0 # only considers headwind case
 dyn.add_gravity_force(g=9.81)
 
 opti.subject_to([
-    dyn.x_e[time_periodic_start_index] == 0,
+    dyn.x_e[time_periodic_start_index] / 1e5 == 0,
     dyn.altitude[time_periodic_start_index:] / min_cruise_altitude > 1,
     dyn.altitude / guess_altitude > 0,  # stay above ground
     dyn.altitude / 40000 < 1,  # models break down
@@ -1074,7 +1067,8 @@ op_point = asb.OperatingPoint(
 aero = asb.AeroBuildup(
     airplane=airplane,
     op_point=op_point,
-    xyz_ref=mass_props_TOGW.xyz_cg
+    xyz_ref=mass_props_TOGW.xyz_cg,
+    include_wave_drag=False,
 ).run_with_stability_derivatives(
     alpha=True,
     beta=True,
@@ -1163,7 +1157,7 @@ dyn.add_force(
 #     pulse_rep_freq >= 2 * dyn.u_e / radar_length,
 #     pulse_rep_freq <= c / (2 * swath_azimuth),
 # ])
-payload_power = opti.parameter(value=100)
+payload_power = 100
 
 ##### Section: Propulsion and Power Output
 
@@ -1199,7 +1193,7 @@ else:
     ### Use Jamie's model
     from design_opt_utilities.new_models import eff_curve_fit
 
-    opti.subject_to(dyn.altitude < 30000)  # Bugs out without this limiter
+    opti.subject_to(dyn.altitude / 30000 < 1)  # Bugs out without this limiter
 
     propeller_efficiency, motor_efficiency = eff_curve_fit(
         airspeed=airspeed,
@@ -1213,7 +1207,7 @@ else:
 
 power_out_propulsion = power_out_propulsion_shaft / motor_efficiency / gearbox_efficiency
 
-opti.subject_to(power_out_propulsion < max_power_out_propulsion)
+opti.subject_to(power_out_propulsion / 1e3 < max_power_out_propulsion / 1e3)
 
 power_out = power_out_propulsion + payload_power + avionics_power
 
@@ -1322,7 +1316,7 @@ opti.subject_to([
     battery_charge_state[time_periodic_end_index] > battery_charge_state[time_periodic_start_index],
     climb_rate[time_periodic_end_index] == climb_rate[time_periodic_start_index],
     dyn.alpha[time_periodic_end_index] == dyn.alpha[time_periodic_start_index],
-    thrust[time_periodic_end_index] == thrust[time_periodic_start_index]
+    thrust[time_periodic_end_index] / 100 == thrust[time_periodic_start_index] / 100
 ])
 # todo figure out why periodicity constraints are acting funky
 
@@ -1347,8 +1341,8 @@ opti.subject_to([
     remaining_volume > 0,
     dyn.alpha < 12,
     dyn.alpha > -8,
-    dyn.gamma / 90 < 1,
-    dyn.gamma / 90 > -1,
+    # dyn.gamma / 90 < 1,
+    # dyn.gamma / 90 > -1,
     # # np.diff(np.degrees(dyn.gamma)) < 5,
     # # np.diff(np.degrees(dyn.gamma)) > -5,
     np.diff(dyn.alpha) < 2,
