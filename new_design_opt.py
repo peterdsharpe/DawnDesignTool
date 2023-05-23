@@ -424,7 +424,7 @@ center_hstab = asb.Wing(
     center_boom_diameter / 2]))
 
 opti.subject_to([
-    center_boom_length - vstab_chord - center_hstab_chord > wing_x_quarter_chord + wing_root_chord * 3 / 4,
+    center_boom_length - vstab_chord - center_hstab_chord > wing_x_quarter_chord + wing_root_chord * 3 / 4, #todo review this constraint
     vstab.area() < 0.1 * wing.area(),
 ])
 
@@ -451,6 +451,7 @@ outboard_hstab_incidence = opti.variable(
     upper_bound=15,
     **des
 )
+outboard_hstab_x_location = spar_x_location + center_boom_length - outboard_hstab_chord * 0.75
 right_hstab = asb.Wing(
     name="Taileron",
     symmetric=True,
@@ -470,9 +471,9 @@ right_hstab = asb.Wing(
         ),
     ]
 ).translate(np.array([
-    outboard_boom_length - outboard_hstab_chord * 0.75,
+    outboard_hstab_x_location,
     boom_offset,
-    0.1]))
+    center_boom_diameter / 2]))
 left_hstab = right_hstab.translate([
     0,
     -boom_offset * 2,
