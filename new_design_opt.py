@@ -1660,8 +1660,9 @@ if __name__ == "__main__":
                 mass_props['right_boom'].mass +
                 mass_props['left_boom'].mass
             ),
-            s(structural_mass_props - (
-                    mass_props['wing_center'].mass + mass_props['wing_tips'].mass +
+            s(structural_mass_props.mass - (
+                    mass_props['wing_center'].mass +
+                    mass_props['wing_tips'].mass +
                     mass_props['center_hstab'].mass +
                     mass_props['right_hstab'].mass +
                     mass_props['left_hstab'].mass +
