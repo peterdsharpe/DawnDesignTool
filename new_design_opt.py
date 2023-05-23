@@ -1699,9 +1699,9 @@ if __name__ == "__main__":
             "Misc. & Wires"
         ]
         pie_values = [
-            s(mass_props['battery_cell'].mass),
-            s(mass_props['battery_pack'].mass - mass_props['battery_cell'].mass),
-            s(mass_props['solar_cell'].mass),
+            s(battery_cell_mass),
+            s(mass_props['battery_pack'].mass - battery_cell_mass),
+            s(mass_props['solar_panel_wing'].mass + mass_props['solar_panel_vstab'].mass),
             s(power_systems_mass_props.mass - mass_props['battery_pack'].mass - mass_props['solar_cell'].mass),
         ]
         colors = plt.cm.Set2(np.arange(5))
