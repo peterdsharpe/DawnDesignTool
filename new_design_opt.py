@@ -159,7 +159,10 @@ payload_pod_y_offset = 1.5  # meters
 x_payload_pod = opti.variable(
     init_guess=-0.2,
     scale=0.1,
+    lower_bound=0-payload_pod_length,
+    upper_bound=0+payload_pod_length,
 )
+#todo add mass of strut to payload pod as a funciton of length
 
 payload_pod = aero_payload_pod(
     total_length=payload_pod_length,
