@@ -272,7 +272,7 @@ center_boom_length = opti.variable(
 outboard_boom_length = opti.variable(
     init_guess=5,
     scale=1,
-    lower_bound=wing_root_chord * 3 / 4,
+    lower_bound=wing_root_chord,
     **des
 )
 
