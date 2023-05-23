@@ -347,6 +347,7 @@ vstab_incidence = opti.variable(
     **des
 )
 
+vstab_x_location = spar_x_location + center_boom_length - vstab_chord * 0.75
 vstab = asb.Wing(
     name="Vertical Stabilizer",
     symmetric=False,
@@ -369,7 +370,7 @@ vstab = asb.Wing(
     ]
 ).translate(
     np.array([
-        center_boom_length - vstab_chord * 0.75,
+        vstab_x_location,
         0,
         -vstab_span / 2 + vstab_span * 0.15
     ]))
@@ -400,6 +401,7 @@ center_hstab_incidence = opti.variable(
     **des
 )
 
+center_hstab_x_location = vstab_x_location - center_hstab_chord
 center_hstab = asb.Wing(
     name="Horizontal Stabilizer",
     symmetric=True,
@@ -417,9 +419,9 @@ center_hstab = asb.Wing(
         ),
     ]
 ).translate(np.array([
-    center_boom_length - vstab_chord * 0.75 - center_hstab_chord,
+    center_hstab_x_location,
     0,
-    0.1]))
+    center_boom_diameter / 2]))
 
 opti.subject_to([
     center_boom_length - vstab_chord - center_hstab_chord > wing_x_quarter_chord + wing_root_chord * 3 / 4,
