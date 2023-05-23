@@ -207,9 +207,7 @@ wing_root_chord = opti.variable(
 )
 
 wing_x_quarter_chord = wing_root_chord / 4
-
-# opti.subject_to(wing_x_quarter_chord < wing_root_chord / 4)
-
+spar_x_location = wing_x_le + wing_x_quarter_chord
 wing_y_taper_break = taper_break_location * wing_span / 2
 
 wing_taper_ratio = 0.5  # TODO analyze this more
@@ -290,7 +288,7 @@ center_boom = asb.Fuselage(
     ]
 )
 center_boom = center_boom.translate(np.array([
-    wing_x_le + wing_x_quarter_chord,
+    spar_x_location,
     0,
     0]))
 
@@ -309,7 +307,7 @@ right_boom = asb.Fuselage(
     ]
 )
 right_boom = right_boom.translate(np.array([
-    wing_x_le + wing_x_quarter_chord,
+    spar_x_location,
     boom_offset,
     0]))
 left_boom = right_boom.translate(np.array([
