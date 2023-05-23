@@ -350,7 +350,7 @@ vstab_incidence = opti.variable(
     **des
 )
 
-vstab_x_location = spar_x_location + center_boom_length - vstab_chord * 0.75
+vstab_x_location = spar_x_location + center_boom_length - vstab_chord * 0.25
 vstab = asb.Wing(
     name="Vertical Stabilizer",
     symmetric=False,
@@ -374,7 +374,7 @@ vstab = asb.Wing(
 ).translate(
     np.array([
         vstab_x_location,
-        0,
+        center_boom_diameter / 2,
         -vstab_span / 2 + vstab_span * 0.15
     ]))
 
