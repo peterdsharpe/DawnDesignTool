@@ -143,7 +143,6 @@ hour = time / 3600
 
 # Payload pod
 # values roughly to match the demonstrator fuselage and payload pod
-boom_diameter = 0.2  # meters
 payload_pod_length = opti.variable(
     init_guess=2,
     scale=1,
@@ -276,16 +275,17 @@ outboard_boom_length = opti.variable(
     **des
 )
 
+center_boom_diameter = 0.2  # meters
 center_boom = asb.Fuselage(
     name="Center Boom",
     xsecs=[
         asb.FuselageXSec(
             xyz_c=[0, 0, 0],
-            radius=boom_diameter / 2,
+            radius=center_boom_diameter / 2,
         ),
         asb.FuselageXSec(
             xyz_c=[center_boom_length, 0, 0],
-            radius=boom_diameter / 2,
+            radius=center_boom_diameter / 2,
         )
     ]
 )
@@ -293,16 +293,18 @@ center_boom = center_boom.translate(np.array([
     wing_x_le + wing_x_quarter_chord,
     0,
     0]))
+
+outboard_boom_diameter = 0.1  # meters
 right_boom = asb.Fuselage(
     name="Right Boom",
     xsecs=[
         asb.FuselageXSec(
             xyz_c=[0, 0, 0],
-            radius=boom_diameter / 2,
+            radius=outboard_boom_diameter / 2,
         ),
         asb.FuselageXSec(
             xyz_c=[outboard_boom_length, 0, 0],
-            radius=boom_diameter / 2,
+            radius=outboard_boom_diameter / 2,
         )
     ]
 )
