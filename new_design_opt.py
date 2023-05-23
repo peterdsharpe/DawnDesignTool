@@ -157,13 +157,17 @@ payload_pod_diameter = opti.variable(
 # payload_pod_length = 2
 # payload_pod_diameter = 0.5
 payload_pod_y_offset = 1.5  # meters
+x_payload_pod = opti.variable(
+    init_guess=-0.2,
+    scale=0.1,
+)
 
 payload_pod = aero_payload_pod(
     total_length=payload_pod_length,
     nose_length=0.5,
     tail_length=1,
     fuse_diameter=payload_pod_diameter,
-).translate([0, 0, -payload_pod_y_offset])
+).translate([x_payload_pod, 0, -payload_pod_y_offset])
 
 payload_pod_shell_thickness = 0.003 # meters
 # account for the shell thickness to find the internal volume
@@ -182,13 +186,7 @@ wing_span = opti.variable(
     lower_bound=1,
     **des
 )
-wing_x_le = opti.variable(
-    init_guess=0.1,
-    lower_bound=0.01,
-    upper_bound=payload_pod_length * 0.75,
-    # freeze=True,
-    **des
-)
+wing_x_le = 0 # meters
 
 boom_offset = boom_location * wing_span / 2  # in real units (meters)
 
