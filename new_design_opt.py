@@ -454,7 +454,7 @@ outboard_hstab_incidence = opti.variable(
     upper_bound=15,
     **des
 )
-outboard_hstab_x_location = spar_x_location + center_boom_length - outboard_hstab_chord * 0.75
+outboard_hstab_x_location = spar_x_location + outboard_boom_length - outboard_hstab_chord * 0.75
 right_hstab = asb.Wing(
     name="Taileron",
     symmetric=True,
