@@ -152,7 +152,7 @@ payload_pod_length = opti.variable(
 payload_pod_diameter = opti.variable(
     init_guess=0.5,
     scale=0.1,
-    lower_bound=boom_diameter,
+    lower_bound=0.2,
 )  # meters
 # payload_pod_length = 2
 # payload_pod_diameter = 0.5
@@ -165,7 +165,9 @@ payload_pod = aero_payload_pod(
     fuse_diameter=payload_pod_diameter,
 ).translate([0, 0, -payload_pod_y_offset])
 
-payload_pod_volume = payload_pod.volume()
+payload_pod_shell_thickness = 0.003 # meters
+# account for the shell thickness to find the internal volume
+payload_pod_volume = payload_pod.volume() - payload_pod_shell_thickness * payload_pod.area_wetted()
 payload_pod_structure_volume = payload_pod_volume * 0.20  # 20% of the volume is structure a guess for now
 
 # overall layout wing layout
