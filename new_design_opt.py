@@ -162,7 +162,6 @@ x_payload_pod = opti.variable(
     lower_bound=0-payload_pod_length,
     upper_bound=0+payload_pod_length,
 )
-#todo add mass of strut to payload pod as a funciton of length
 
 payload_pod = aero_payload_pod(
     total_length=payload_pod_length,
@@ -484,9 +483,7 @@ left_hstab = right_hstab.translate([
     -boom_offset * 2,
     0])
 
-# opti.subject_to([
-#     outboard_boom_length > wing_root_chord * 3 / 4 + outboard_hstab_chord
-# ])
+
 # Assemble the airplane
 airplane = asb.Airplane(
     name="Dawn1",
@@ -1062,7 +1059,6 @@ if climb_opt:
     opti.subject_to(dyn.altitude[0] / 1e4 == 0)
 
 if hold_cruise_altitude == True:
-    # todo figure out why this breaks code
     cruise_altitude = opti.variable(
         init_guess=guess_altitude,
         scale=10000,
@@ -1325,7 +1321,6 @@ opti.subject_to([
     dyn.alpha[time_periodic_end_index] == dyn.alpha[time_periodic_start_index],
     thrust[time_periodic_end_index] / 100 == thrust[time_periodic_start_index] / 100
 ])
-# todo figure out why periodicity constraints are acting funky
 
 #### Section: Add imposed constraints
 opti.subject_to([
