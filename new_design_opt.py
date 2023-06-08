@@ -726,7 +726,7 @@ mass_props['right_boom'] = asb.mass_properties_from_radius_of_gyration(
 )
 
 ### payload pod mass accounting
-paylod_pod_structure_mass = 0 # kg, corresponds to reduction in pod mass expected for future build
+paylod_pod_structure_mass = 19 # kg, corresponds to reduction in pod mass expected for future build
 # assumes approximately same size battery system and payload
 # taken from Daedalus, http://journals.sfu.ca/ts/index.php/ts/article/viewFile/760/718
 mass_daedalus = 103.9  # kg, corresponds to 229 lb gross weight.
