@@ -1066,7 +1066,7 @@ if hold_cruise_altitude == True:
         **des
     )
     opti.subject_to([
-        dyn.altitude[time_periodic_start_index:] / cruise_altitude == 1,  # stay at cruise altitude after climb
+        dyn.gamma[time_periodic_start_index:] == 0,  # stay at cruise altitude after climb
     ])
 ##### Section: Aerodynamics
 op_point = asb.OperatingPoint(
