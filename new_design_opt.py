@@ -736,7 +736,10 @@ mass_daedalus = 103.9  # kg, corresponds to 229 lb gross weight.
 # Total mass of the Daedalus aircraft, used as a reference for scaling.
 mass_fairings = 2.067 * mass_total / mass_daedalus  # Scale fairing mass to same mass fraction as Daedalus
 mass_landing_gear = 0.728 * mass_total / mass_daedalus  # Scale landing gear mass to same mass fraction as Daedalus
-mass_strut_forward
+mass_strut_forward = payload_pod_forward_strut_length * 0.55 # assumed mass per meter of carbon fiber tube length (about 10 cm diameter)
+mass_strut_rear = payload_pod_rear_strut_length * 0.55
+payload_pod_shell_mass = payload_pod.area_wetted() * 2 * 0.2 # 0.2 kg/m^2 is the mass of kevlar sheet
+
 
 # todo add mass_strut drag
 
@@ -744,8 +747,10 @@ mass_props['payload_pod'] = asb.MassProperties(
     mass=(
             mass_fairings +
             mass_landing_gear +
-            mass_strut * 2 +
-            paylod_pod_structure_mass
+            mass_strut_forward +
+            mass_strut_rear +
+            paylod_pod_structure_mass +
+            payload_pod_shell_mass
     ),
     x_cg=payload_pod_length / 2
 ) * structural_mass_margin_multiplier
