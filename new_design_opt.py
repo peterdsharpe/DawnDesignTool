@@ -428,7 +428,7 @@ center_hstab = asb.Wing(
     center_boom_diameter / 2]))
 
 opti.subject_to([
-    center_boom_length - vstab_chord - center_hstab_chord > wing_x_quarter_chord + wing_root_chord * 3 / 4, #todo review this constraint
+    center_boom_length - vstab_chord - center_hstab_chord > wing_root_chord, #todo review this constraint
     vstab.area() < 0.1 * wing.area(),
 ])
 
@@ -696,7 +696,7 @@ mass_props['vstab'] = asb.mass_properties_from_radius_of_gyration(
 ### boom mass accounting
 mass_props['center_boom'] = asb.mass_properties_from_radius_of_gyration(
     mass=mass_lib.mass_hpa_tail_boom(
-        length_tail_boom=center_boom_length - wing_x_quarter_chord,
+        length_tail_boom=center_boom_length,
         dynamic_pressure_at_manuever_speed=q_ne,
         mean_tail_surface_area=center_hstab.area() + vstab.area()
     ) * structural_mass_margin_multiplier,
@@ -706,7 +706,7 @@ mass_props['center_boom'] = asb.mass_properties_from_radius_of_gyration(
 )
 mass_props['left_boom'] = asb.mass_properties_from_radius_of_gyration(
     mass=mass_lib.mass_hpa_tail_boom(
-        length_tail_boom=outboard_boom_length - wing_x_quarter_chord,  # support up to the quarter-chord
+        length_tail_boom=outboard_boom_length ,  # support up to the quarter-chord
         dynamic_pressure_at_manuever_speed=q_ne,
         mean_tail_surface_area=right_hstab.area()
     ) * structural_mass_margin_multiplier,
@@ -716,7 +716,7 @@ mass_props['left_boom'] = asb.mass_properties_from_radius_of_gyration(
 )
 mass_props['right_boom'] = asb.mass_properties_from_radius_of_gyration(
     mass=mass_lib.mass_hpa_tail_boom(
-        length_tail_boom=outboard_boom_length - wing_x_quarter_chord,  # support up to the quarter-chord
+        length_tail_boom=outboard_boom_length,  # support up to the quarter-chord
         dynamic_pressure_at_manuever_speed=q_ne,
         mean_tail_surface_area=left_hstab.area()
     ) * structural_mass_margin_multiplier,
