@@ -45,7 +45,7 @@ mission_length = 45  # days, the length of the mission without landing to downlo
 strat_offset_value = 1000  # meters, margin above the stratosphere height the aircraft is required to stay above
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 climb_opt = False  # are we optimizing for the climb as well?
-hold_cruise_altitude = False  # must we hold the cruise altitude (True) or can we altitude cycle (False)?
+hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we altitude cycle (False)?
 
 # Trajectory Parameters
 sample_area_height = 150000  # meters, the height of the area the aircraft must sample
@@ -146,7 +146,7 @@ hour = time / 3600
 payload_pod_length = opti.variable(
     init_guess=2,
     scale=1,
-    lower_bound=0,
+    lower_bound=0.5,
 ) # meters
 payload_pod_diameter = opti.variable(
     init_guess=0.5,
@@ -810,7 +810,7 @@ mass_props['payload'] = asb.MassProperties(
     mass=mass_payload_base +
          mission_length * tb_per_day * mass_of_data_storage
 )
-payload_volume = 0.023 * 0.5  # assuming payload mass from gamma remote sensing with 50% margin on volume
+payload_volume = 0.023 * 1.5  # assuming payload volume from gamma remote sensing with 50% margin on volume
 
 ### Power Systems Mass Accounting
 if vstab_cells == "microlink":
