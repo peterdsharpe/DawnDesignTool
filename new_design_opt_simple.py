@@ -880,7 +880,7 @@ mass_structural = (
 )
 
 ### Avionics
-# todo verify against avionics buildup for SBIR Phase 2 ask Jason/Andrew
+# todo verify against avionics buildup
 number_of_actuators = 4
 actuator_mass = number_of_actuators * 0.760
 processor_mass = 0.140
@@ -914,7 +914,7 @@ mass_props['avionics'] = asb.MassProperties(
     x_cg=payload_pod_length * 0.75,  # right behind payload # TODO revisit this number
 ) # todo verify location
 avionics_volume = mass_props['avionics'].mass / 1250  # assumed density of electronics
-avionics_power = 180  # TODO revisit this number with input from Jason and Andrew
+avionics_power = 180  # TODO revisit this number
 
 ### instrument data storage mass requirements
 mass_of_data_storage = 0.0053  # kg per TB of data
@@ -1245,12 +1245,6 @@ q = 1 / 2 * rho * dyn.u_e ** 2  # Solar calculations
 # endregion
 
 ##### Section: Aerodynamics
-op_point = asb.OperatingPoint(
-    atmosphere=dyn.op_point.atmosphere,
-    velocity=dyn.u_e,
-    alpha=dyn.alpha,
-    beta=0,
-)
 aero = asb.AeroBuildup(
     airplane=airplane,
     op_point=dyn.op_point,
@@ -1547,6 +1541,17 @@ opti.subject_to([
 # climb_rate = excess_power / (dyn.mass_props.mass * 9.81)
 # opti.subject_to((excess_power + dyn.w_e * dyn.mass_props.mass * 9.81) / 5e3 == 0)
 ground_speed = dyn.u_e - wind_speed
+opti.subject_to(q_ne / 100 > q * q_ne_over_q_max / 100)
+
+if hold_cruise_altitude == True:
+    cruise_altitude = opti.variable(
+        init_guess=guess_altitude,
+        scale=1e3,
+        category='des',
+    )
+    opti.subject_to([
+        dyn.altitude[time_periodic_start_index:] == cruise_altitude,  # stay at cruise altitude after climb
+    ])
 
 ##### Section: Battery power
 
@@ -1594,6 +1599,7 @@ opti.subject_to([
     dyn.alpha > -8,
     np.diff(dyn.alpha) < 2,
     np.diff(dyn.alpha) > -2,
+    aero["CL"] > 0,
     # aero["Cm"][0] == 0,
     # aero["Cma"][0] < -0.5,
     # aero["Cnb"][0] > 0.05,
