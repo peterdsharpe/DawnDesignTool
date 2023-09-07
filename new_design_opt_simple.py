@@ -58,7 +58,7 @@ hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we
 # Trajectory Parameters
 # todo finalize trajectory parameterization
 straight_line_trajectory = True  # do we want to assume a straight line trajectory?
-required_headway_per_day = 10000
+required_headway_per_day = 0
 min_speed = 0.5  # specify a minimum speed
 
 circular_trajectory = False  # do we want to assume a circular trajectory?
@@ -72,7 +72,7 @@ sample_area_width = 1000  # meters, the width of the area the aircraft must samp
 required_revisit_rate = 1  # How many times must the aircraft fully cover the sample area in the sizing day?
 
 # Aircraft Parameters
-battery_specific_energy_Wh_kg = 450  # cell level specific energy of the battery
+battery_specific_energy_Wh_kg = 390  # cell level specific energy of the battery
 battery_pack_cell_percentage = 0.85  # What percent of the battery pack consists of the module, by weight?
 # these roughly correspond to the value for cells we are planning for near-term
 variable_pitch = False  # Do we assume the propeller is variable pitch?
@@ -185,7 +185,7 @@ payload_pod_length = opti.variable(
     init_guess=2,
     scale=1,
     lower_bound=0.5,
-    upper_bound=5,
+    # upper_bound=5,
     category="des",
 ) # meters
 payload_pod_diameter = opti.variable(
@@ -200,7 +200,8 @@ x_payload_pod = opti.variable(
     init_guess=-0.2,
     scale=0.1,
     category="des",
-    lower_bound=-10,
+    lower_bound=0 - payload_pod_length,
+    upper_bound=0 + payload_pod_length,
 ) # x location of payload pod constrained to be no more or less than the length of the pod from the wing LE
 
 payload_pod_nose_length = 0.5
@@ -214,7 +215,7 @@ payload_pod = aero_payload_pod(
 payload_pod_shell_thickness = 0.003 # meters
 # account for the shell thickness to find the internal volume
 payload_pod_volume = payload_pod.volume() - payload_pod_shell_thickness * payload_pod.area_wetted()
-payload_pod_structure_volume = payload_pod_volume * 0.40  # 20% of the volume is structure a guess for now
+payload_pod_structure_volume = payload_pod_volume * 0.20  # 20% of the volume is structure a guess for now
 
 # overall layout
 boom_location = 0.80  # as a fraction of the half-span
@@ -234,11 +235,14 @@ opti.subject_to([wing_span > 1])
 wing_root_chord = opti.variable(
     init_guess=3,
     scale=4,
+    category="des",
+    lower_bound=0.1,
+)
+wing_x_quarter_chord = opti.variable(
+    init_guess=0,
+    scale=0.1,
     category="des"
 )
-opti.subject_to([wing_root_chord > 0.1])
-wing_x_le = 0
-wing_x_quarter_chord = wing_x_le + wing_root_chord / 4
 wing_y_taper_break = break_location * wing_span / 2
 wing_taper_ratio = 0.5  # TODO analyze this more
 
@@ -246,55 +250,50 @@ wing_taper_ratio = 0.5  # TODO analyze this more
 center_hstab_span = opti.variable(
     init_guess=4,
     scale=4,
-    category="des"
+    category="des",
+    lower_bound=0.1,
 )
-opti.subject_to([
-    center_hstab_span > 0.1,
-    center_hstab_span < wing_span / 6
-])
+opti.subject_to(center_hstab_span < wing_span / 6)
 
 center_hstab_chord = opti.variable(
     init_guess=3,
     scale=2,
-    category="des"
+    category="des",
+    lower_bound=0.1,
 )
-opti.subject_to(center_hstab_chord > 0.1)
 
 center_hstab_twist = opti.variable(
     n_vars=n_timesteps,
     init_guess=-3,
     scale=2,
     category="ops",
-    lower_bound=-30,
-    upper_bound=30,
+    lower_bound=-15,
+    upper_bound=0,
 )
 
 # center hstab
 outboard_hstab_span = opti.variable(
     init_guess=4,
     scale=4,
-    category="des"
+    category="des",
+    lower_bound=2, # TODO review this, driven by Trevor's ASWing findings on turn radius sizing, 8/16/20
+
 )
-opti.subject_to([
-    outboard_hstab_span > 2,  # TODO review this, driven by Trevor's ASWing findings on turn radius sizing, 8/16/20
-    outboard_hstab_span < wing_span / 6,
-])
+opti.subject_to(outboard_hstab_span < wing_span / 6)
 
 outboard_hstab_chord = opti.variable(
     init_guess=3,
     scale=2,
-    category="des"
+    category="des",
+    lower_bound=0.8, # TODO review this, driven by Trevor's ASWing findings on turn radius sizing, 8/16/20
 )
-opti.subject_to([
-    outboard_hstab_chord > 0.8,  # TODO review this, driven by Trevor's ASWing findings on turn radius sizing, 8/16/20
-])
 
 outboard_hstab_twist = opti.variable(
     n_vars=n_timesteps,
     init_guess=-3,
     scale=2,
-    lower_bound=-30,
-    upper_bound=30,
+    lower_bound=-15,
+    upper_bound=0,
     category="ops"
 )
 
@@ -302,16 +301,16 @@ outboard_hstab_twist = opti.variable(
 center_vstab_span = opti.variable(
     init_guess=7,
     scale=8,
-    category="des"
+    category="des",
+    lower_bound=0.1,
 )
-opti.subject_to(center_vstab_span > 0.1)
 
 center_vstab_chord = opti.variable(
     init_guess=2.5,
     scale=2,
-    category="des"
+    category="des",
+    lower_bound=0.1,
 )
-opti.subject_to([center_vstab_chord > 0.1])
 
 # center_fuselage
 center_boom_length = opti.variable(
@@ -320,7 +319,7 @@ center_boom_length = opti.variable(
     category="des"
 )
 opti.subject_to([
-    center_boom_length - center_vstab_chord - center_hstab_chord > wing_root_chord
+    center_boom_length - center_vstab_chord - center_hstab_chord > wing_x_quarter_chord + wing_root_chord * 3 / 4
 ])
 
 # outboard_fuselage
@@ -330,8 +329,8 @@ outboard_boom_length = opti.variable(
     category="des"
 )
 opti.subject_to([
-    outboard_boom_length > wing_root_chord * 3 / 4,
-    outboard_boom_length < center_boom_length / 3,
+    outboard_boom_length > wing_root_chord,
+    outboard_boom_length < center_boom_length,
     # outboard_boom_length < 3.5, # TODO review this, driven by Trevor's ASWing findings on turn radius sizing, 8/16/20
 ])
 
@@ -339,12 +338,10 @@ opti.subject_to([
 propeller_diameter = opti.variable(
     init_guess=5,
     scale=5,
-    category="des"
+    category="des",
+    upper_bound=10,
+    lower_bound=1
 )
-opti.subject_to([
-    propeller_diameter / 1 > 1,
-    propeller_diameter / 10 < 1
-])
 
 n_propellers = opti.parameter(value=2)
 
@@ -413,7 +410,7 @@ right_hstab = asb.Wing(
         ),
     ]
 ).translate(np.array([
-    outboard_hstab_x_location,
+    outboard_boom_length - outboard_hstab_chord * 0.75,
     boom_offset,
     center_boom_diameter / 2]))
 
@@ -448,8 +445,8 @@ center_vstab = asb.Wing(
         ),
     ]
 ).translate(
-    np.array([center_vstab_x_location,
-              center_boom_diameter / 2,
+    np.array([center_boom_length - center_vstab_chord * 0.75,
+              0,
               -center_vstab_span * 0.35])
 )
 
@@ -478,7 +475,7 @@ center_hstab = asb.Wing(
         ),
     ]
 ).translate(
-    np.array([center_hstab_x_location,
+    np.array([center_boom_length - center_vstab_chord * 0.75 - center_hstab_chord,
               0,
               center_boom_diameter / 2])
 )
@@ -697,6 +694,7 @@ mass_props['wing_primary'] = asb.mass_properties_from_radius_of_gyration(
     radius_of_gyration_y=wing.xsecs[0].xyz_le[0] + wing_root_chord / 2,
     radius_of_gyration_z=wing.xsecs[0].xyz_le[0] + wing_root_chord / 2
 )
+wing_x_le = wing_x_quarter_chord - wing_root_chord / 4
 mass_props['wing_secondary'] = asb.mass_properties_from_radius_of_gyration(
     mass=mass_wing_secondary * structural_mass_margin_multiplier,
     x_cg=wing_x_le + wing_root_chord / 2,
