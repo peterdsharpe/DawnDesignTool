@@ -185,6 +185,7 @@ payload_pod_length = opti.variable(
     init_guess=2,
     scale=1,
     lower_bound=0.5,
+    upper_bound=5,
     category="des",
 ) # meters
 payload_pod_diameter = opti.variable(
@@ -199,6 +200,7 @@ x_payload_pod = opti.variable(
     init_guess=-0.2,
     scale=0.1,
     category="des",
+    lower_bound=-10,
 ) # x location of payload pod constrained to be no more or less than the length of the pod from the wing LE
 
 payload_pod_nose_length = 0.5
@@ -262,7 +264,9 @@ center_hstab_twist = opti.variable(
     n_vars=n_timesteps,
     init_guess=-3,
     scale=2,
-    category="ops"
+    category="ops",
+    lower_bound=-30,
+    upper_bound=30,
 )
 
 # center hstab
@@ -289,6 +293,8 @@ outboard_hstab_twist = opti.variable(
     n_vars=n_timesteps,
     init_guess=-3,
     scale=2,
+    lower_bound=-30,
+    upper_bound=30,
     category="ops"
 )
 
@@ -314,7 +320,7 @@ center_boom_length = opti.variable(
     category="des"
 )
 opti.subject_to([
-    center_boom_length - center_vstab_chord - center_hstab_chord > wing_x_quarter_chord + wing_root_chord * 3 / 4
+    center_boom_length - center_vstab_chord - center_hstab_chord > wing_root_chord
 ])
 
 # outboard_fuselage
@@ -1245,37 +1251,210 @@ q = 1 / 2 * rho * dyn.u_e ** 2  # Solar calculations
 # endregion
 
 ##### Section: Aerodynamics
-aero = asb.AeroBuildup(
-    airplane=airplane,
-    op_point=dyn.op_point,
-    xyz_ref=mass_props_TOGW.xyz_cg,
-    include_wave_drag=False,
-).run_with_stability_derivatives(
-    alpha=True,
-    beta=True,
-    p=False,
-    q=False,
-    r=False
+##### Aerodynamics
+
+# Fuselage
+def compute_fuse_aerodynamics(fuse: asb.Fuselage):
+    fuse.Re = rho / mu * dyn.u_e * fuse.length()
+    fuse.CLA = 0
+    fuse.CDA = aero_lib.Cf_flat_plate(fuse.Re) * fuse.area_wetted() * 1.2  # wetted area with form factor
+
+    fuse.lift = fuse.CLA * q  # per fuse
+    fuse.drag = fuse.CDA * q  # per fuse
+
+
+compute_fuse_aerodynamics(center_boom)
+compute_fuse_aerodynamics(left_boom)
+compute_fuse_aerodynamics(right_boom)
+compute_fuse_aerodynamics(payload_pod)
+
+
+# Wing
+def compute_wing_aerodynamics(
+        surface: asb.Wing,
+        incidence_angle: float = 0,
+        is_horizontal_surface: bool = True
+):
+    surface.alpha_eff = incidence_angle + surface.mean_twist_angle()
+    if is_horizontal_surface:
+        surface.alpha_eff += dyn.alpha
+
+    surface.Re = rho / mu * dyn.u_e * surface.mean_geometric_chord()
+    surface.airfoil = surface.xsecs[0].airfoil
+    try:
+        surface.Cl_inc = surface.airfoil.CL_function(
+            {'alpha': surface.alpha_eff, 'reynolds': np.log(surface.Re)})  # Incompressible 2D lift coefficient
+        surface.CL = surface.Cl_inc * aero_lib.CL_over_Cl(surface.aspect_ratio(), mach=mach,
+                                                      sweep=surface.mean_sweep_angle())  # Compressible 3D lift coefficient
+        surface.lift = surface.CL * q * surface.area()
+
+        surface.Cd_profile = np.exp(
+            surface.airfoil.CD_function({'alpha': surface.alpha_eff, 'reynolds': np.log(surface.Re)}))
+        surface.drag_profile = surface.Cd_profile * q * surface.area()
+
+        surface.oswalds_efficiency = aero_lib.oswalds_efficiency(
+            taper_ratio=surface.taper_ratio(),
+            aspect_ratio=surface.aspect_ratio(),
+            sweep=surface.mean_sweep_angle()
+        )
+        surface.drag_induced = aero_lib.induced_drag(
+            lift=surface.lift,
+            span=surface.span(),
+            dynamic_pressure=q,
+            oswalds_efficiency=surface.oswalds_efficiency
+        )
+
+        surface.drag = surface.drag_profile + surface.drag_induced
+
+        surface.Cm_inc = surface.airfoil.CM_function(
+            {'alpha': surface.alpha_eff, 'reynolds': np.log(surface.Re)})  # Incompressible 2D moment coefficient
+        surface.CM = surface.Cm_inc * aero_lib.CL_over_Cl(surface.aspect_ratio(), mach=mach,
+                                                      sweep=surface.mean_sweep_angle())  # Compressible 3D moment coefficient
+        surface.moment = surface.CM * q * surface.area() * surface.mean_geometric_chord()
+    except TypeError:
+        surface.Cl_inc = surface.airfoil.CL_function(surface.alpha_eff, surface.Re, 0)  # Incompressible 2D lift coefficient
+        surface.CL = surface.Cl_inc * aero_lib.CL_over_Cl(surface.aspect_ratio(), mach=mach,
+                                                      sweep=surface.mean_sweep_angle())  # Compressible 3D lift coefficient
+        surface.lift = surface.CL * q * surface.area()
+
+        surface.Cd_profile = surface.airfoil.CD_function(surface.alpha_eff, surface.Re, mach)
+        surface.drag_profile = surface.Cd_profile * q * surface.area()
+
+        surface.oswalds_efficiency = aero_lib.oswalds_efficiency(
+            taper_ratio=surface.taper_ratio(),
+            aspect_ratio=surface.aspect_ratio(),
+            sweep=surface.mean_sweep_angle()
+        )
+        surface.drag_induced = aero_lib.induced_drag(
+            lift=surface.lift,
+            span=surface.span(),
+            dynamic_pressure=q,
+            oswalds_efficiency=surface.oswalds_efficiency
+        )
+
+        surface.drag = surface.drag_profile + surface.drag_induced
+
+        surface.Cm_inc = surface.airfoil.CM_function(surface.alpha_eff, surface.Re, 0)  # Incompressible 2D moment coefficient
+        surface.CM = surface.Cm_inc * aero_lib.CL_over_Cl(surface.aspect_ratio(), mach=mach,
+                                                      sweep=surface.mean_sweep_angle())  # Compressible 3D moment coefficient
+        surface.moment = surface.CM * q * surface.area() * surface.mean_geometric_chord()
+
+
+compute_wing_aerodynamics(wing)
+compute_wing_aerodynamics(center_hstab, incidence_angle=center_hstab_twist)
+compute_wing_aerodynamics(right_hstab, incidence_angle=outboard_hstab_twist)
+compute_wing_aerodynamics(left_hstab, incidence_angle=outboard_hstab_twist)
+compute_wing_aerodynamics(center_vstab, is_horizontal_surface=False)
+compute_wing_aerodynamics(payload_pod_forward_strut)
+compute_wing_aerodynamics(payload_pod_rear_strut)
+
+# Increase the wing drag due to tripped flow (8/17/20)
+wing_drag_multiplier = opti.parameter(value=1.06)  # TODO review
+wing.drag *= wing_drag_multiplier
+
+# Force totals
+lift_force = (
+        wing.lift +
+        center_hstab.lift +
+        right_hstab.lift +
+        left_hstab.lift +
+        center_boom.lift +
+        right_boom.lift +
+        left_boom.lift +
+        payload_pod.lift
+)
+drag_force = (
+        wing.drag +
+        center_hstab.drag +
+        right_hstab.drag +
+        left_hstab.drag +
+        center_vstab.drag +
+        center_boom.drag +
+        right_boom.drag +
+        left_boom.drag +
+        payload_pod_forward_strut.drag +
+        payload_pod_rear_strut.drag +
+        payload_pod.drag
 )
 
-# drag penalty for tripped flow behind the propeller
-aero['D'] *= 1.06
-aero.pop("CD")
+drag_induced = (
+        wing.drag_induced +
+        center_hstab.drag_induced +
+        right_hstab.drag_induced +
+        left_hstab.drag_induced +
+        center_vstab.drag_induced
+)
+
+drag_parasite = drag_force - drag_induced
+
+moment = (
+        -wing.aerodynamic_center()[0] * wing.lift + wing.moment +
+        -center_hstab.aerodynamic_center()[0] * center_hstab.lift + center_hstab.moment +
+        -right_hstab.aerodynamic_center()[0] * right_hstab.lift + right_hstab.moment +
+        -left_hstab.aerodynamic_center()[0] * left_hstab.lift + left_hstab.moment
+)
+
+# endregion
 #
-# dyn.add_force(
-#     *aero['F_w'],
-#     axes="earth"
-# )  # Note, this is not a typo: we make the small-angle-approximation on the flight path angle gamma.
+# # region Stability
+# ### Estimate aerodynamic center
+x_ac = (
+               wing.aerodynamic_center()[0] * wing.area() +
+               center_hstab.aerodynamic_center()[0] * center_hstab.area() +
+               right_hstab.aerodynamic_center()[0] * right_hstab.area() +
+               left_hstab.aerodynamic_center()[0] * left_hstab.area()
+       ) / (
+               wing.area() +
+               center_hstab.area() +
+               right_hstab.area() +
+               left_hstab.area()
+       )
+static_margin_fraction = (x_ac - airplane.xyz_ref[0]) / wing.mean_aerodynamic_chord()
+opti.subject_to([
+    static_margin_fraction == 0.2,  # Stability condition
+    # moment / 1e4 == 0  # Trim condition
+])
+
+### Size the tails off of tail volume coefficients
+Vv = center_vstab.area() * (
+        center_vstab.aerodynamic_center()[0] - wing.aerodynamic_center()[0]
+) / (wing.area() * wing.span())
+Vh = center_hstab.area() * (
+        center_hstab.aerodynamic_center()[0] - wing.aerodynamic_center()[0]
+) / (wing.area() * wing.mean_aerodynamic_chord())
+
+# vstab_effectiveness_factor = aero.CL_over_Cl(center_vstab.aspect_ratio()) / aero.CL_over_Cl(wing.aspect_ratio())
+# hstab_effectiveness_factor = aero.CL_over_Cl(center_hstab.aspect_ratio()) / aero.CL_over_Cl(wing.aspect_ratio())
+
+opti.subject_to([
+    # Vh * hstab_effectiveness_factor > 0.3,
+    # Vh * hstab_effectiveness_factor < 0.6,
+    # Vh * hstab_effectiveness_factor == 0.45,
+    # Vv * vstab_effectiveness_factor > 0.02,
+    # Vv * vstab_effectiveness_factor < 0.05,
+    # Vv * vstab_effectiveness_factor == 0.035,
+    Vh > 0.2,
+    # Vh < 0.6,
+    # Vh == 0.45,
+    Vv > 0.02,
+    # Vv < 0.05,
+    # Vv == 0.035,
+    # center_hstab.aspect_ratio() >= 3,  # TODO review this aspect ratio limit
+    # center_vstab.aspect_ratio() == 3.5,  # TODO review this
+    # center_vstab.area() < 0.1 * wing.area(),  # checked with Matt on 12/10/21
+    # center_vstab.aspect_ratio() > 1.9, # from Jamie, based on ASWing
+    # center_vstab.aspect_ratio() < 2.5 # from Jamie, based on ASWing
+])
 
 gamma = np.arctan2d(dyn.w_e, dyn.u_e)
 dyn.add_force(
-    Fx=-np.cosd(gamma) * aero['D'],
-    Fz=np.sind(gamma) * aero['D'],
+    Fx=-np.cosd(gamma) * drag_force,
+    Fz=np.sind(gamma) * drag_force,
     axes="earth"
 )
 dyn.add_force(
-    Fx=np.sind(gamma) * aero['L'],
-    Fz=-np.cosd(gamma) * aero['L'],
+    Fx=np.sind(gamma) * lift_force,
+    Fz=-np.cosd(gamma) * lift_force,
     axes='earth'
 )
 
@@ -1341,9 +1520,9 @@ snr = payload_power * antenna_gain ** 2 * center_wavelength ** 3 * a_hs * sigma0
 snr_db = 10 * np.log(snr)
 
 opti.subject_to([
-    required_snr <= snr_db,
-    pulse_rep_freq >= 2 * dyn.u_e / radar_length,
-    pulse_rep_freq <= c / (2 * swath_azimuth),
+    # required_snr <= snr_db,
+    # pulse_rep_freq >= 2 * dyn.u_e / radar_length,
+    # pulse_rep_freq <= c / (2 * swath_azimuth),
 ])
 
 # region Propulsion
@@ -1494,7 +1673,6 @@ opti.subject_to([
 
 # endregion
 
-
 #### Section: Dynamics
 
 net_accel_parallel = opti.variable(
@@ -1588,8 +1766,9 @@ objective = eval(minimize)
 
 #### Add additional constraints
 opti.subject_to([
-    center_hstab_span == outboard_hstab_span,
-    center_hstab_chord == outboard_hstab_chord,
+    # center_hstab_chord <= wing_root_chord,
+    # center_hstab_span == outboard_hstab_span,
+    # center_hstab_chord == outboard_hstab_chord,
     center_hstab_twist <= 0,  # essentially enforces downforce, prevents hstab from lifting and exploiting config.
     outboard_hstab_twist <= 0, # essentially enforces downforce, prevents hstab from lifting and exploiting config.
     center_hstab_twist >= -15,
@@ -1599,10 +1778,11 @@ opti.subject_to([
     dyn.alpha > -8,
     np.diff(dyn.alpha) < 2,
     np.diff(dyn.alpha) > -2,
-    aero["CL"] > 0,
-    # aero["Cm"][0] == 0,
-    # aero["Cma"][0] < -0.5,
-    # aero["Cnb"][0] > 0.05,
+    center_boom_length >= outboard_boom_length,
+    # outboard_hstab_chord == center_hstab_chord,
+    # outboard_hstab_span == center_hstab_span,
+    outboard_hstab_chord < wing_root_chord,
+    center_vstab.area() <= 0.2 * wing.area(),
 ])
 
 ##### Useful metrics
@@ -1611,7 +1791,7 @@ wing_loading_psf = wing_loading / 47.880258888889
 empty_wing_loading = 9.81 * mass_structural / wing.area()
 empty_wing_loading_psf = empty_wing_loading / 47.880258888889
 propeller_efficiency = thrust * dyn.u_e / power_out_propulsion_shaft
-cruise_LD = aero['L'] / aero['D']
+cruise_LD = lift_force / drag_force
 avg_cruise_LD = np.mean(cruise_LD)
 avg_airspeed = np.mean(dyn.u_e)
 sl_atmosphere = atmo(altitude=0)
@@ -1664,12 +1844,16 @@ if draw_initial_guess_config:
 
 if __name__ == "__main__":
     # Solve
-    sol = opti.solve(
+    try:
+        sol = opti.solve(
             max_iter=10000,
             options={
                 "ipopt.max_cpu_time": 6000
             }
-    )
+        )
+    except:
+        sol = opti.debug
+
 
     # Print a warning if the penalty term is unreasonably high
     penalty_objective_ratio = np.abs(sol.value(penalty / objective))
