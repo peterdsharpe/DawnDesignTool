@@ -56,7 +56,7 @@ climb_opt = False  # are we optimizing for the climb as well?
 hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we altitude cycle (False)?
 
 # Trajectory Parameters
-min_speed = 0.5  # specify a minimum airspeed
+min_speed = 0.5 # specify a minimum groundspeed (bad convergence if less than 0.5 m/s)
 
 # todo finalize trajectory parameterization
 straight_line_trajectory = True  # do we want to assume a straight line trajectory?
@@ -1157,10 +1157,10 @@ if climb_opt:
 
 # add trajectory constraints depending on trajectory type
 if straight_line_trajectory == True:
-    opti.subject_to([
-        dyn.x_e[time_periodic_end_index] / 1e5 > (dyn.x_e[time_periodic_start_index] + required_headway_per_day) / 1e5
-    ])
-    vehicle_heading = 0
+    opti.subject_to(dyn.x_e[time_periodic_end_index] / 1e5 >
+                    (dyn.x_e[time_periodic_start_index] + required_headway_per_day) / 1e5)
+    groundspeed = dyn.u_e - wind_speed
+    opti.subject_to(groundspeed > min_speed)
 
 if circular_trajectory == True:
     # start_angle = opti.variable(
