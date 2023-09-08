@@ -56,12 +56,14 @@ climb_opt = False  # are we optimizing for the climb as well?
 hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we altitude cycle (False)?
 
 # Trajectory Parameters
-# todo finalize trajectory parameterization
-straight_line_trajectory = False  # do we want to assume a straight line trajectory?
-required_headway_per_day = 100000
-min_speed = 0.5  # specify a minimum speed
+min_speed = 0.5  # specify a minimum airspeed
 
-circular_trajectory = True  # do we want to assume a circular trajectory?
+# todo finalize trajectory parameterization
+straight_line_trajectory = True  # do we want to assume a straight line trajectory?
+required_headway_per_day = 100
+vehicle_heading = 0  # degrees, the heading of the aircraft wind is assumed opposite vehicle heading
+
+circular_trajectory = False  # do we want to assume a circular trajectory?
 flight_path_radius = 50000  # only relevant if circular_trajectory is True
 wind_direction = 0
 required_revisit_rate = 1  # How many times must the aircraft complete the circular trajectory in the sizing day?
@@ -1127,18 +1129,6 @@ dyn = asb.DynamicsPointMass2DCartesian( # todo add in 3D dynamics
         category='ops'
     ),
 )
-net_accel_parallel = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=0,
-    scale=1e-4,
-    category="ops"
-)
-net_accel_perpendicular = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=0,
-    scale=1e-5,
-    category="ops"
-)
 dyn.add_gravity_force(g=9.81)
 
 # add dynamics constraints
@@ -1149,7 +1139,7 @@ opti.subject_to([
     dyn.altitude / 40000 < 1,  # models break down
 ])
 
-y_km = dyn.altitude / 1e3
+z_km = dyn.altitude / 1e3
 x_km = dyn.x_e / 1e3
 
 #account for winds
@@ -1160,7 +1150,6 @@ def wind_speed_func(alt):
     return speed_func
 
 wind_speed = wind_speed_func(dyn.altitude)
-groundspeed = dyn.u_e - wind_speed
 
 # start on the ground if doing climb optimization
 if climb_opt:
@@ -1185,11 +1174,8 @@ if circular_trajectory == True:
     # arc_length = np.radians(angular_displacement) * flight_path_radius
     vehicle_bearing = 360 - angular_displacement
 
-    num_laps = opti.variable(init_guess=1, scale=1, category='ops', lower_bound=0)
-    opti.subject_to([
-        num_laps <= dyn.x_e[-1] / circular_trajectory_length,
-        num_laps >= required_revisit_rate
-    ])
+    num_laps = dyn.x_e[-1] / circular_trajectory_length
+    opti.subject_to(num_laps >= required_revisit_rate)
 
     groundspeed_x = groundspeed * np.cosd(vehicle_bearing)
     groundspeed_y = groundspeed * np.sind(vehicle_bearing)
@@ -1233,6 +1219,24 @@ if lawnmower_trajectory == True:
         initial_vehicle_bearing + 180 + ((place_on_track - (2 * straight_segment_length + turn_length)) * 180 / (np.pi * turn_radius)),
         vehicle_bearing
     )
+    groundspeed_x = groundspeed * np.cosd(vehicle_bearing)
+    groundspeed_y = groundspeed * np.sind(vehicle_bearing)
+    windspeed_x = wind_speed * np.cosd(wind_direction)
+    windspeed_y = wind_speed * np.sind(wind_direction)
+    airspeed_x = groundspeed_x - windspeed_x
+    airspeed_y = groundspeed_y - windspeed_y
+    opti.subject_to(dyn.u_e ** 2 == airspeed_x ** 2 + airspeed_y ** 2)
+    vehicle_heading = np.arctan2d(airspeed_y, airspeed_x)
+
+if hold_cruise_altitude == True:
+    cruise_altitude = opti.variable(
+        init_guess=guess_altitude,
+        scale=1e3,
+        category='des',
+    )
+    opti.subject_to([
+        dyn.altitude[time_periodic_start_index:] == cruise_altitude,  # stay at cruise altitude after climb
+    ])
 
 # region Atmosphere
 ##### Atmosphere
@@ -1245,6 +1249,8 @@ a = my_atmosphere.speed_of_sound()
 mach = dyn.u_e / a
 g = 9.81  # gravitational acceleration, m/s^2
 q = 1 / 2 * rho * dyn.u_e ** 2  # Solar calculations
+opti.subject_to(q_ne / 100 > q * q_ne_over_q_max / 100)
+
 
 # endregion
 
@@ -1670,27 +1676,20 @@ opti.subject_to([
 
 # endregion
 
-#### Section: Dynamics
-
-net_accel_parallel = opti.variable(
+#### section: Constrain Dynamics
+net_accel_x_e = opti.variable(
     n_vars=n_timesteps,
     init_guess=0,
     scale=1e-4,
     category="ops"
 )
-net_accel_perpendicular = opti.variable(
+net_accel_z_e = opti.variable(
     n_vars=n_timesteps,
     init_guess=0,
     scale=1e-5,
     category="ops"
 )
-def wind_speed_func(alt):
-    day_array = np.full(shape=alt.shape[0], fill_value=1) * day_of_year
-    latitude_array = np.full(shape=alt.shape[0], fill_value=1) * latitude
-    speed_func = lib_winds.wind_speed_world_95(alt, latitude_array, day_array)
-    return speed_func
 
-wind_speed = wind_speed_func(dyn.altitude)
 opti.constrain_derivative(
     variable=dyn.x_e, with_respect_to=time,
     derivative=(dyn.u_e - wind_speed)
@@ -1701,31 +1700,16 @@ opti.constrain_derivative(
 )
 opti.constrain_derivative(
     variable=dyn.u_e, with_respect_to=time,
-    derivative=net_accel_parallel,
+    derivative=net_accel_x_e,
 )
 opti.constrain_derivative(
     variable=dyn.w_e, with_respect_to=time,
-    derivative=net_accel_perpendicular,
+    derivative=net_accel_z_e,
 )
 opti.subject_to([
-    net_accel_parallel * mass_total / 1e1 == dyn.Fx_e / 1e1,
-    net_accel_perpendicular * mass_total / 1e2 == dyn.Fz_e / 1e2
+    net_accel_x_e * mass_total / 1e1 == dyn.Fx_e / 1e1,
+    net_accel_z_e * mass_total / 1e2 == dyn.Fz_e / 1e2
 ])
-# opti.subject_to(dyn.Fz_e / 1e3 == 0)  # L == W
-# excess_power = dyn.u_e * dyn.Fx_e
-# climb_rate = excess_power / (dyn.mass_props.mass * 9.81)
-# opti.subject_to((excess_power + dyn.w_e * dyn.mass_props.mass * 9.81) / 5e3 == 0)
-opti.subject_to(q_ne / 100 > q * q_ne_over_q_max / 100)
-
-if hold_cruise_altitude == True:
-    cruise_altitude = opti.variable(
-        init_guess=guess_altitude,
-        scale=1e3,
-        category='des',
-    )
-    opti.subject_to([
-        dyn.altitude[time_periodic_start_index:] == cruise_altitude,  # stay at cruise altitude after climb
-    ])
 
 ##### Section: Battery power
 
@@ -2013,7 +1997,7 @@ if __name__ == "__main__":
 
 
     if make_plots:
-        plot("hour", "y_km",
+        plot("hour", "z_km",
              xlabel="Hours after Solar Noon",
              ylabel="Altitude [km]",
              title="Altitude over Simulation",
