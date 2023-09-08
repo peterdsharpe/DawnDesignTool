@@ -57,11 +57,11 @@ hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we
 
 # Trajectory Parameters
 # todo finalize trajectory parameterization
-straight_line_trajectory = True  # do we want to assume a straight line trajectory?
-required_headway_per_day = 0
+straight_line_trajectory = False  # do we want to assume a straight line trajectory?
+required_headway_per_day = 100000
 min_speed = 0.5  # specify a minimum speed
 
-circular_trajectory = False  # do we want to assume a circular trajectory?
+circular_trajectory = True  # do we want to assume a circular trajectory?
 flight_path_radius = 50000  # only relevant if circular_trajectory is True
 wind_direction = 0
 required_revisit_rate = 1  # How many times must the aircraft complete the circular trajectory in the sizing day?
@@ -1092,7 +1092,7 @@ remaining_volume = (
 
 ##### Section: Setup Dynamics
 guess_altitude = 18000
-guess_u_e = 5
+guess_u_e = 30
 
 dyn = asb.DynamicsPointMass2DCartesian( # todo add in 3D dynamics
     mass_props=mass_props_TOGW,
@@ -1509,18 +1509,17 @@ opti.subject_to([
 ])
 
 # use SAR specific equations from Ulaby and Long
-# payload_power = power_trans * pulse_rep_freq * pulse_duration
-payload_power = 100
+payload_power = power_trans * pulse_rep_freq * pulse_duration
 
 snr = payload_power * antenna_gain ** 2 * center_wavelength ** 3 * a_hs * sigma0 * range_resolution / \
-      ((2 * 4 * np.pi) ** 3 * dist ** 3 * k_b * my_atmosphere.temperature() * F * dyn.u_e * a_B)
+      ((2 * 4 * np.pi) ** 3 * dist ** 3 * k_b * my_atmosphere.temperature() * F * groundspeed * a_B)
 
 snr_db = 10 * np.log(snr)
 
 opti.subject_to([
-    # required_snr <= snr_db,
-    # pulse_rep_freq >= 2 * dyn.u_e / radar_length,
-    # pulse_rep_freq <= c / (2 * swath_azimuth),
+    required_snr <= snr_db,
+    pulse_rep_freq >= 2 * dyn.u_e / radar_length,
+    pulse_rep_freq <= c / (2 * swath_azimuth),
 ])
 
 # region Propulsion
@@ -1716,7 +1715,6 @@ opti.subject_to([
 # excess_power = dyn.u_e * dyn.Fx_e
 # climb_rate = excess_power / (dyn.mass_props.mass * 9.81)
 # opti.subject_to((excess_power + dyn.w_e * dyn.mass_props.mass * 9.81) / 5e3 == 0)
-ground_speed = dyn.u_e - wind_speed
 opti.subject_to(q_ne / 100 > q * q_ne_over_q_max / 100)
 
 if hold_cruise_altitude == True:
