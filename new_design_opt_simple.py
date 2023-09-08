@@ -1095,11 +1095,17 @@ remaining_volume = (
 ##### Section: Setup Dynamics
 guess_altitude = 18000
 guess_u_e = 30
+guess_v_e = 5
 
-dyn = asb.DynamicsPointMass2DCartesian( # todo add in 3D dynamics
+dyn = asb.DynamicsPointMass3DCartesian( # todo add in 3D dynamics
     mass_props=mass_props_TOGW,
     x_e=opti.variable(
         init_guess=time * guess_u_e,
+        scale=1e5,
+        category='ops'
+    ),
+    y_e=opti.variable(
+        init_guess=time * guess_v_e,
         scale=1e5,
         category='ops'
     ),
@@ -1111,6 +1117,13 @@ dyn = asb.DynamicsPointMass2DCartesian( # todo add in 3D dynamics
     ),
     u_e=opti.variable( # airspeed
         init_guess=guess_u_e,
+        n_vars=n_timesteps,
+        scale=1,
+        category='ops',
+        lower_bound=min_speed,
+    ),
+    v_e = opti.variable(
+        init_guess=guess_v_e,
         n_vars=n_timesteps,
         scale=1,
         category='ops',
@@ -1134,12 +1147,14 @@ dyn.add_gravity_force(g=9.81)
 # add dynamics constraints
 opti.subject_to([
     dyn.x_e[time_periodic_start_index] / 1e5 == 0,
+    dyn.y_e[time_periodic_start_index] / 1e5 == 0,
     dyn.altitude[time_periodic_start_index:] / min_cruise_altitude > 1,
     dyn.altitude / guess_altitude > 0,  # stay above ground
     dyn.altitude / 40000 < 1,  # models break down
 ])
 
 z_km = dyn.altitude / 1e3
+y_km = dyn.y_e / 1e3
 x_km = dyn.x_e / 1e3
 
 #account for winds
@@ -1157,9 +1172,13 @@ if climb_opt:
 
 # add trajectory constraints depending on trajectory type
 if straight_line_trajectory == True:
-    opti.subject_to(dyn.x_e[time_periodic_end_index] / 1e5 >
-                    (dyn.x_e[time_periodic_start_index] + required_headway_per_day) / 1e5)
-    groundspeed = dyn.u_e - wind_speed
+    opti.subject_to([
+        dyn.x_e[time_periodic_end_index] / 1e5 > (dyn.x_e[time_periodic_start_index] + required_headway_per_day) / 1e5,
+        dyn.Fy_e == 0,
+    ])
+    wind_speed_x = wind_speed
+    groundspeed = dyn.speed - wind_speed_x
+    wind_speed_y = 0
     opti.subject_to(groundspeed > min_speed)
 
 if circular_trajectory == True:
@@ -1683,6 +1702,12 @@ net_accel_x_e = opti.variable(
     scale=1e-4,
     category="ops"
 )
+net_accel_y_e = opti.variable(
+    n_vars=n_timesteps,
+    init_guess=0,
+    scale=1e-4,
+    category="ops"
+)
 net_accel_z_e = opti.variable(
     n_vars=n_timesteps,
     init_guess=0,
@@ -1692,7 +1717,11 @@ net_accel_z_e = opti.variable(
 
 opti.constrain_derivative(
     variable=dyn.x_e, with_respect_to=time,
-    derivative=(dyn.u_e - wind_speed)
+    derivative=(dyn.u_e - wind_speed_x)
+)
+opti.constrain_derivative(
+    variable=dyn.y_e, with_respect_to=time,
+    derivative=dyn.v_e - wind_speed_y,
 )
 opti.constrain_derivative(
     variable=dyn.z_e, with_respect_to=time,
@@ -1703,11 +1732,16 @@ opti.constrain_derivative(
     derivative=net_accel_x_e,
 )
 opti.constrain_derivative(
+    variable=dyn.v_e, with_respect_to=time,
+    derivative=net_accel_y_e,
+)
+opti.constrain_derivative(
     variable=dyn.w_e, with_respect_to=time,
     derivative=net_accel_z_e,
 )
 opti.subject_to([
     net_accel_x_e * mass_total / 1e1 == dyn.Fx_e / 1e1,
+    net_accel_y_e * mass_total / 1e1 == dyn.Fy_e / 1e1,
     net_accel_z_e * mass_total / 1e2 == dyn.Fz_e / 1e2
 ])
 
