@@ -1319,7 +1319,7 @@ opti.subject_to(q_ne / 100 > q * q_ne_over_q_max / 100)
 
 # Fuselage
 def compute_fuse_aerodynamics(fuse: asb.Fuselage):
-    fuse.Re = rho / mu * dyn.u_e * fuse.length()
+    fuse.Re = rho / mu * dyn.speed * fuse.length()
     fuse.CLA = 0
     fuse.CDA = aero_lib.Cf_flat_plate(fuse.Re) * fuse.area_wetted() * 1.2  # wetted area with form factor
 
