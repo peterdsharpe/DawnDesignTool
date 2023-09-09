@@ -1146,8 +1146,6 @@ dyn.add_gravity_force(g=9.81)
 
 # add dynamics constraints
 opti.subject_to([
-    dyn.x_e[time_periodic_start_index] / 1e5 == 0,
-    dyn.y_e[time_periodic_start_index] / 1e5 == 0,
     dyn.altitude[time_periodic_start_index:] / min_cruise_altitude > 1,
     dyn.altitude / guess_altitude > 0,  # stay above ground
     dyn.altitude / 40000 < 1,  # models break down
@@ -1175,6 +1173,8 @@ if straight_line_trajectory == True:
     opti.subject_to([
         dyn.x_e[time_periodic_end_index] / 1e5 > (dyn.x_e[time_periodic_start_index] + required_headway_per_day) / 1e5,
         dyn.Fy_e == 0,
+        dyn.x_e[time_periodic_start_index] / 1e5 == 0,
+        dyn.y_e[time_periodic_start_index] / 1e5 == 0,
     ])
     wind_speed_x = wind_speed
     groundspeed = dyn.speed - wind_speed_x
