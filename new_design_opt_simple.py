@@ -59,7 +59,7 @@ hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we
 min_speed = 0.5 # specify a minimum groundspeed (bad convergence if less than 0.5 m/s)
 
 # todo finalize trajectory parameterization
-straight_line_trajectory = True  # do we want to assume a straight line trajectory?
+straight_line_trajectory = False  # do we want to assume a straight line trajectory?
 required_headway_per_day = 100
 vehicle_heading = 0  # degrees, the heading of the aircraft wind is assumed opposite vehicle heading
 
@@ -68,7 +68,7 @@ flight_path_radius = 50000  # only relevant if circular_trajectory is True
 wind_direction = 0
 required_revisit_rate = 1  # How many times must the aircraft complete the circular trajectory in the sizing day?
 
-lawnmower_trajectory = False  # do we want to assume a lawnmower trajectory?
+lawnmower_trajectory = True  # do we want to assume a lawnmower trajectory?
 sample_area_height = 1500  # meters, the height of the area the aircraft must sample
 sample_area_width = 1000  # meters, the width of the area the aircraft must sample
 required_revisit_rate = 1  # How many times must the aircraft fully cover the sample area in the sizing day?
@@ -1095,7 +1095,7 @@ remaining_volume = (
 ##### Section: Setup Dynamics
 guess_altitude = 18000
 guess_u_e = 30
-guess_v_e = 5
+guess_v_e = 30
 
 dyn = asb.DynamicsPointMass3DCartesian( # todo add in 3D dynamics
     mass_props=mass_props_TOGW,
@@ -1205,15 +1205,6 @@ if circular_trajectory == True:
     vehicle_heading = np.arctan2d(airspeed_y, airspeed_x)
 
 if lawnmower_trajectory == True:
-    straight_segment_length = sample_area_height
-    turn_radius = dyn.u_e ** 2 / (9.81 * np.tan(np.radians(10)))
-    turn_length = 2 * np.pi * turn_radius
-    racetrack_length = 2 * straight_segment_length + 2 * turn_length
-    place_on_track = np.mod(dyn.x_e, racetrack_length)
-    single_track_coverage = 4 * turn_radius
-    passes_required = sample_area_width / single_track_coverage
-    total_track_length = racetrack_length * passes_required
-    opti.subject_to(dyn.x_e[-1] / total_track_length > required_revisit_rate)
 
     initial_vehicle_bearing = opti.variable(
         init_guess=0,
@@ -1222,30 +1213,60 @@ if lawnmower_trajectory == True:
         upper_bound=360,
         category='ops',
     )
-    vehicle_bearing = initial_vehicle_bearing
-    vehicle_bearing = np.where(
-        place_on_track > straight_segment_length,
-        initial_vehicle_bearing + (place_on_track - straight_segment_length) * 180 / (np.pi * turn_radius),
-        initial_vehicle_bearing
+    groundspeed = opti.variable(
+        init_guess=5,
+        n_vars=n_timesteps,
+        scale=1,
+        category='ops',
     )
-    vehicle_bearing = np.where(
-        place_on_track > (straight_segment_length + turn_length),
-        initial_vehicle_bearing + 180,
-        vehicle_bearing
+    distance = opti.variable(
+        init_guess=1e6,
+        n_vars=n_timesteps,
+        scale=1e5,
+        category='ops',
     )
-    vehicle_bearing = np.where(
-        place_on_track > (2 * straight_segment_length + turn_length),
-        initial_vehicle_bearing + 180 + ((place_on_track - (2 * straight_segment_length + turn_length)) * 180 / (np.pi * turn_radius)),
-        vehicle_bearing
-    )
-    groundspeed_x = groundspeed * np.cosd(vehicle_bearing)
-    groundspeed_y = groundspeed * np.sind(vehicle_bearing)
-    windspeed_x = wind_speed * np.cosd(wind_direction)
-    windspeed_y = wind_speed * np.sind(wind_direction)
-    airspeed_x = groundspeed_x - windspeed_x
-    airspeed_y = groundspeed_y - windspeed_y
-    opti.subject_to(dyn.u_e ** 2 == airspeed_x ** 2 + airspeed_y ** 2)
-    vehicle_heading = np.arctan2d(airspeed_y, airspeed_x)
+    straight_segment_length = sample_area_height
+    turn_radius = dyn.speed ** 2 / (9.81 * np.tan(np.radians(10)))
+    turn_length = 2 * np.pi * turn_radius
+    racetrack_length = 2 * straight_segment_length + 2 * turn_length
+    place_on_track = np.mod(distance, racetrack_length)
+    single_track_coverage = 4 * turn_radius
+    passes_required = sample_area_width / single_track_coverage
+    total_track_length = racetrack_length * passes_required
+    opti.subject_to(distance[-1] / total_track_length > required_revisit_rate)
+
+    opti.subject_to([
+        groundspeed > min_speed,
+        # groundspeed == dyn.speed,
+    ])
+    # opti.subject_to(dyn.track == initial_vehicle_bearing)
+    # vehicle_bearing = np.where(
+    #     place_on_track > straight_segment_length,
+    #     initial_vehicle_bearing + (place_on_track - straight_segment_length) * 180 / (np.pi * turn_radius),
+    #     initial_vehicle_bearing
+    # )
+    # vehicle_bearing = np.where(
+    #     place_on_track > (straight_segment_length + turn_length),
+    #     initial_vehicle_bearing + 180,
+    #     vehicle_bearing
+    # )
+    # vehicle_bearing = np.where(
+    #     place_on_track > (2 * straight_segment_length + turn_length),
+    #     initial_vehicle_bearing + 180 + ((place_on_track - (2 * straight_segment_length + turn_length)) * 180 / (np.pi * turn_radius)),
+    #     vehicle_bearing
+    # )
+
+    # groundspeed_x = groundspeed * np.cosd(vehicle_bearing)
+    # groundspeed_y = groundspeed * np.sind(vehicle_bearing)
+    # wind_speed_x = wind_speed * np.cosd(wind_direction)
+    # wind_speed_y = wind_speed * np.sind(wind_direction)
+    #
+    # opti.subject_to([
+    # dyn.x_e == groundspeed_x + wind_speed_x,
+    # dyn.y_e == groundspeed_y + wind_speed_y,
+    # groundspeed ** 2 == groundspeed_x ** 2 + groundspeed_y ** 2,
+    # ])
+    # vehicle_heading = dyn.track
 
 if hold_cruise_altitude == True:
     cruise_altitude = opti.variable(
