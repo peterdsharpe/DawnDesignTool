@@ -1187,22 +1187,42 @@ if circular_trajectory == True:
     #     scale=10,
     #     category='ops'
     # )
+    distance = opti.variable(
+        init_guess=1e6,
+        n_vars=n_timesteps,
+        scale=1e5,
+        category='ops',
+    )
+    groundspeed = opti.variable(
+        init_guess=5,
+        n_vars=n_timesteps,
+        scale=1,
+        category='ops',
+    )
     circular_trajectory_length = 2 * np.pi * flight_path_radius
-    place_on_track = np.mod(dyn.x_e, circular_trajectory_length)
+    place_on_track = np.mod(dyn.speed, circular_trajectory_length)
     angular_displacement = place_on_track / circular_trajectory_length * 360 # + start_angle
-    # arc_length = np.radians(angular_displacement) * flight_path_radius
     vehicle_bearing = 360 - angular_displacement
 
-    num_laps = dyn.x_e[-1] / circular_trajectory_length
-    opti.subject_to(num_laps >= required_revisit_rate)
+    num_laps = distance[-1] / circular_trajectory_length
+    opti.subject_to([
+        num_laps >= required_revisit_rate,
+    #     dyn.x_e == dyn.x_e[0] + flight_path_radius * np.cosd(angular_displacement),
+    #     dyn.y_e == dyn.y_e[0] + flight_path_radius * np.sind(angular_displacement),
+    ])
 
-    groundspeed_x = groundspeed * np.cosd(vehicle_bearing)
-    groundspeed_y = groundspeed * np.sind(vehicle_bearing)
-    windspeed_x = wind_speed * np.cosd(wind_direction)
-    windspeed_y = wind_speed * np.sind(wind_direction)
-    airspeed_x = groundspeed_x - windspeed_x
-    airspeed_y = groundspeed_y - windspeed_y
-    vehicle_heading = np.arctan2d(airspeed_y, airspeed_x)
+    # groundspeed_x = groundspeed * np.cosd(vehicle_bearing)
+    # groundspeed_y = groundspeed * np.sind(vehicle_bearing)
+    wind_speed_x = 0
+    wind_speed_y = 0
+    vehicle_heading = np.arctan2d(dyn.v_e, dyn.u_e)
+    #
+    opti.subject_to([
+    #     dyn.u_e == groundspeed_x - wind_speed_x,
+    #     dyn.v_e == groundspeed_y - wind_speed_y,
+    #     groundspeed ** 2 == groundspeed_x ** 2 + groundspeed_y ** 2,
+    #      groundspeed == dyn.speed,
+                      ])
 
 if lawnmower_trajectory == True:
 
