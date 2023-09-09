@@ -1265,9 +1265,9 @@ rho = my_atmosphere.density()
 T = my_atmosphere.temperature()
 mu = my_atmosphere.dynamic_viscosity()
 a = my_atmosphere.speed_of_sound()
-mach = dyn.u_e / a
+mach = dyn.speed / a
 g = 9.81  # gravitational acceleration, m/s^2
-q = 1 / 2 * rho * dyn.u_e ** 2  # Solar calculations
+q = 1 / 2 * rho * dyn.speed ** 2  # Solar calculations
 opti.subject_to(q_ne / 100 > q * q_ne_over_q_max / 100)
 
 
@@ -1302,7 +1302,7 @@ def compute_wing_aerodynamics(
     if is_horizontal_surface:
         surface.alpha_eff += dyn.alpha
 
-    surface.Re = rho / mu * dyn.u_e * surface.mean_geometric_chord()
+    surface.Re = rho / mu * dyn.speed * surface.mean_geometric_chord()
     surface.airfoil = surface.xsecs[0].airfoil
     try:
         surface.Cl_inc = surface.airfoil.CL_function(
@@ -1469,7 +1469,7 @@ opti.subject_to([
     # center_vstab.aspect_ratio() < 2.5 # from Jamie, based on ASWing
 ])
 
-gamma = np.arctan2d(dyn.w_e, dyn.u_e)
+gamma = np.arctan2d(dyn.w_e, dyn.speed)
 dyn.add_force(
     Fx=-np.cosd(gamma) * drag_force,
     Fz=np.sind(gamma) * drag_force,
@@ -1543,7 +1543,7 @@ snr_db = 10 * np.log(snr)
 
 opti.subject_to([
     required_snr <= snr_db,
-    pulse_rep_freq >= 2 * dyn.u_e / radar_length,
+    pulse_rep_freq >= 2 * dyn.speed / radar_length,
     pulse_rep_freq <= c / (2 * swath_azimuth),
 ])
 
@@ -1574,7 +1574,7 @@ if not use_propulsion_fits_from_FL2020_1682_undergrads:
     power_out_propulsion_shaft = lib_prop_prop.propeller_shaft_power_from_thrust(
         thrust_force=thrust,
         area_propulsive=area_propulsive,
-        airspeed=dyn.u_e,
+        airspeed=dyn.speed,
         rho=rho,
         propeller_coefficient_of_performance=0.90  # calibrated to QProp output with Dongjoon
     )
@@ -1588,12 +1588,12 @@ else:
     opti.subject_to(dyn.altitude < 30000)  # Bugs out without this limiter
 
     propeller_efficiency, motor_efficiency = eff_curve_fit(
-        airspeed=dyn.u_e,
+        airspeed=dyn.speed,
         total_thrust=thrust,
         altitude=dyn.altitude,
         var_pitch=variable_pitch
     )
-    power_out_propulsion_shaft = thrust * dyn.u_e / propeller_efficiency
+    power_out_propulsion_shaft = thrust * dyn.speed / propeller_efficiency
 
     gearbox_efficiency = 0.986
 
@@ -1767,7 +1767,7 @@ opti.constrain_derivative(
 ##### Add periodic constraints
 opti.subject_to([
     dyn.altitude[time_periodic_end_index] / 1e4 > dyn.altitude[time_periodic_start_index] / 1e4,
-    dyn.u_e[time_periodic_end_index] / 2e1 > dyn.u_e[time_periodic_start_index] / 2e1,
+    dyn.speed[time_periodic_end_index] / 2e1 > dyn.speed[time_periodic_start_index] / 2e1,
     battery_charge_state[time_periodic_end_index] > battery_charge_state[time_periodic_start_index],
     gamma[time_periodic_end_index] == gamma[time_periodic_start_index],
     dyn.alpha[time_periodic_end_index] == dyn.alpha[time_periodic_start_index],
@@ -1804,10 +1804,10 @@ wing_loading = 9.81 * mass_total / wing.area()
 wing_loading_psf = wing_loading / 47.880258888889
 empty_wing_loading = 9.81 * mass_structural / wing.area()
 empty_wing_loading_psf = empty_wing_loading / 47.880258888889
-propeller_efficiency = thrust * dyn.u_e / power_out_propulsion_shaft
+propeller_efficiency = thrust * dyn.speed/ power_out_propulsion_shaft
 cruise_LD = lift_force / drag_force
 avg_cruise_LD = np.mean(cruise_LD)
-avg_airspeed = np.mean(dyn.u_e)
+avg_airspeed = np.mean(dyn.speed)
 sl_atmosphere = atmo(altitude=0)
 rho_ratio = np.sqrt(np.mean(my_atmosphere.density()) / sl_atmosphere.density())
 avg_ias = avg_airspeed * rho_ratio
@@ -1835,7 +1835,7 @@ for penalty_input in [
     thrust / 10,
     # dyn.Fz_e / 1e-1,
     # dyn.Fx_e / 1e-1,
-    dyn.u_e / 1e-1,
+    dyn.speed / 1e-1,
     dyn.alpha / 1,
     dyn.x_e / 500,
 ]:
@@ -2037,7 +2037,7 @@ if __name__ == "__main__":
              title="Altitude over Simulation",
              save_name="outputs/altitude.png"
              )
-        plot("hour", "dyn.u_e",
+        plot("hour", "dyn.speed",
              xlabel="Hours after Solar Noon",
              ylabel="True Airspeed [m/s]",
              title="True Airspeed over Simulation",
