@@ -1758,11 +1758,11 @@ net_accel_z_e = opti.variable(
 
 opti.constrain_derivative(
     variable=dyn.x_e, with_respect_to=time,
-    derivative=(dyn.u_e - wind_speed_x)
+    derivative=(dyn.u_e)
 )
 opti.constrain_derivative(
     variable=dyn.y_e, with_respect_to=time,
-    derivative=dyn.v_e - wind_speed_y,
+    derivative=dyn.v_e,
 )
 opti.constrain_derivative(
     variable=dyn.z_e, with_respect_to=time,
