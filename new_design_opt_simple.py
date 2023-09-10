@@ -1766,6 +1766,10 @@ opti.constrain_derivative(
     derivative=dyn.w_e,
 )
 opti.constrain_derivative(
+    variable=distance, with_respect_to=time,
+    derivative=dyn.speed
+)
+opti.constrain_derivative(
     variable=dyn.u_e, with_respect_to=time,
     derivative=net_accel_x_e,
 )
