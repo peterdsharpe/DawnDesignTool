@@ -69,9 +69,9 @@ wind_direction = 0
 required_revisit_rate = 1  # How many times must the aircraft complete the circular trajectory in the sizing day?
 
 lawnmower_trajectory = True  # do we want to assume a lawnmower trajectory?
-sample_area_height = 1500  # meters, the height of the area the aircraft must sample
-sample_area_width = 1000  # meters, the width of the area the aircraft must sample
-required_revisit_rate = 1  # How many times must the aircraft fully cover the sample area in the sizing day?
+sample_area_height = 3000  # meters, the height of the area the aircraft must sample
+sample_area_width = 3000  # meters, the width of the area the aircraft must sample
+required_revisit_rate = 40  # How many times must the aircraft fully cover the sample area in the sizing day?
 
 # Aircraft Parameters
 battery_specific_energy_Wh_kg = 390  # cell level specific energy of the battery
