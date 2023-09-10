@@ -194,6 +194,7 @@ payload_pod_diameter = opti.variable(
     init_guess=0.3,
     scale=0.1,
     lower_bound=0.2,
+    upper_bound=1,
     category="des",
 )  # meters
 
