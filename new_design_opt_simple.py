@@ -1144,12 +1144,19 @@ dyn = asb.DynamicsPointMass3DCartesian( # todo add in 3D dynamics
     ),
 )
 dyn.add_gravity_force(g=9.81)
-
+distance = opti.variable(
+    init_guess=1e6,
+    n_vars=n_timesteps,
+    scale=1e5,
+    category='ops',
+    lower_bound=0,
+)
 # add dynamics constraints
 opti.subject_to([
     dyn.altitude[time_periodic_start_index:] / min_cruise_altitude > 1,
     dyn.altitude / guess_altitude > 0,  # stay above ground
     dyn.altitude / 40000 < 1,  # models break down
+    distance[time_periodic_start_index] / 1e5 == 0
 ])
 
 z_km = dyn.altitude / 1e3
@@ -1188,12 +1195,7 @@ if circular_trajectory == True:
     #     scale=10,
     #     category='ops'
     # )
-    distance = opti.variable(
-        init_guess=1e6,
-        n_vars=n_timesteps,
-        scale=1e5,
-        category='ops',
-    )
+
     groundspeed = opti.variable(
         init_guess=5,
         n_vars=n_timesteps,
@@ -1222,7 +1224,7 @@ if circular_trajectory == True:
     #     dyn.u_e == groundspeed_x - wind_speed_x,
     #     dyn.v_e == groundspeed_y - wind_speed_y,
     #     groundspeed ** 2 == groundspeed_x ** 2 + groundspeed_y ** 2,
-    #      groundspeed == dyn.speed,
+    #      groundspeed == speed,
                       ])
 
 if lawnmower_trajectory == True:
@@ -1238,12 +1240,6 @@ if lawnmower_trajectory == True:
         init_guess=5,
         n_vars=n_timesteps,
         scale=1,
-        category='ops',
-    )
-    distance = opti.variable(
-        init_guess=1e6,
-        n_vars=n_timesteps,
-        scale=1e5,
         category='ops',
     )
     straight_segment_length = sample_area_height
