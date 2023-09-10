@@ -1253,37 +1253,37 @@ if lawnmower_trajectory == True:
     opti.subject_to(distance[-1] / total_track_length > required_revisit_rate)
 
     opti.subject_to([
-        groundspeed > min_speed,
-        # groundspeed == dyn.speed,
+        # groundspeed > min_speed,
+        # groundspeed == speed,
     ])
     # opti.subject_to(dyn.track == initial_vehicle_bearing)
-    # vehicle_bearing = np.where(
-    #     place_on_track > straight_segment_length,
-    #     initial_vehicle_bearing + (place_on_track - straight_segment_length) * 180 / (np.pi * turn_radius),
-    #     initial_vehicle_bearing
-    # )
-    # vehicle_bearing = np.where(
-    #     place_on_track > (straight_segment_length + turn_length),
-    #     initial_vehicle_bearing + 180,
-    #     vehicle_bearing
-    # )
-    # vehicle_bearing = np.where(
-    #     place_on_track > (2 * straight_segment_length + turn_length),
-    #     initial_vehicle_bearing + 180 + ((place_on_track - (2 * straight_segment_length + turn_length)) * 180 / (np.pi * turn_radius)),
-    #     vehicle_bearing
-    # )
-
+    vehicle_bearing = np.where(
+        place_on_track > straight_segment_length,
+        initial_vehicle_bearing + (place_on_track - straight_segment_length) * 180 / (np.pi * turn_radius),
+        initial_vehicle_bearing
+    )
+    vehicle_bearing = np.where(
+        place_on_track > (straight_segment_length + turn_length),
+        initial_vehicle_bearing + 180,
+        vehicle_bearing
+    )
+    vehicle_bearing = np.where(
+        place_on_track > (2 * straight_segment_length + turn_length),
+        initial_vehicle_bearing + 180 + ((place_on_track - (2 * straight_segment_length + turn_length)) * 180 / (np.pi * turn_radius)),
+        vehicle_bearing
+    )
+    #
     # groundspeed_x = groundspeed * np.cosd(vehicle_bearing)
     # groundspeed_y = groundspeed * np.sind(vehicle_bearing)
     # wind_speed_x = wind_speed * np.cosd(wind_direction)
     # wind_speed_y = wind_speed * np.sind(wind_direction)
     #
-    # opti.subject_to([
-    # dyn.x_e == groundspeed_x + wind_speed_x,
-    # dyn.y_e == groundspeed_y + wind_speed_y,
+    opti.subject_to([
+        # dyn.u_e == groundspeed * np.cosd(vehicle_bearing),
+        # dyn.v_e == groundspeed * np.sind(vehicle_bearing),
     # groundspeed ** 2 == groundspeed_x ** 2 + groundspeed_y ** 2,
-    # ])
-    # vehicle_heading = dyn.track
+    ])
+    vehicle_heading = vehicle_bearing
 
 if hold_cruise_altitude == True:
     cruise_altitude = opti.variable(
