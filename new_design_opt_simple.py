@@ -65,7 +65,6 @@ vehicle_heading = 0  # degrees, the heading of the aircraft wind is assumed oppo
 
 circular_trajectory = False  # do we want to assume a circular trajectory?
 flight_path_radius = 50000  # only relevant if circular_trajectory is True
-wind_direction = 0
 required_revisit_rate_circ = 1  # How many times must the aircraft complete the circular trajectory in the sizing day?
 
 lawnmower_trajectory = False  # do we want to assume a lawnmower trajectory?
@@ -1178,9 +1177,11 @@ if climb_opt:
 # add trajectory constraints depending on trajectory type
 if straight_line_trajectory == True:
     opti.subject_to([
-        dyn.x_e[time_periodic_end_index] / 1e5 > (dyn.x_e[time_periodic_start_index] + required_headway_per_day) / 1e5,
+        distance[time_periodic_end_index] / 1e5 > (distance[time_periodic_start_index] + required_headway_per_day) / 1e5,
         dyn.x_e[time_periodic_start_index] / 1e5 == 0,
-        dyn.v_e == 0,
+        dyn.y_e[time_periodic_start_index] / 1e5 == 0,
+        # dyn.v_e == 0,
+        dyn.track[time_periodic_start_index:] == vehicle_heading * np.pi / 180,
     ])
     # wind_speed_x = wind_speed
     # wind_speed_y = 0
@@ -1199,9 +1200,6 @@ if circular_trajectory == True:
         num_laps >= required_revisit_rate_circ,
         # dyn.track == 360 - angular_displacement,
     ])
-    groundspeed = dyn.speed
-    wind_speed_x = 0
-    wind_speed_y = 0
     # vehicle_heading = np.arctan2d(dyn.v_e, dyn.u_e)
     #
     opti.subject_to([
