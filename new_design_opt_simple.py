@@ -59,8 +59,8 @@ hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we
 min_speed = 0.5 # specify a minimum groundspeed (bad convergence if less than 0.5 m/s)
 
 # todo finalize trajectory parameterization
-straight_line_trajectory = False  # do we want to assume a straight line trajectory?
-required_headway_per_day = 100
+straight_line_trajectory = True  # do we want to assume a straight line trajectory?
+required_headway_per_day = 1000
 vehicle_heading = 0  # degrees, the heading of the aircraft wind is assumed opposite vehicle heading
 
 circular_trajectory = False  # do we want to assume a circular trajectory?
@@ -68,7 +68,7 @@ flight_path_radius = 50000  # only relevant if circular_trajectory is True
 wind_direction = 0
 required_revisit_rate_circ = 1  # How many times must the aircraft complete the circular trajectory in the sizing day?
 
-lawnmower_trajectory = True  # do we want to assume a lawnmower trajectory?
+lawnmower_trajectory = False  # do we want to assume a lawnmower trajectory?
 sample_area_height = 3000  # meters, the height of the area the aircraft must sample
 sample_area_width = 3000  # meters, the width of the area the aircraft must sample
 required_revisit_rate = 1  # How many times must the aircraft fully cover the sample area in the sizing day?
@@ -239,7 +239,7 @@ wing_root_chord = opti.variable(
     init_guess=3,
     scale=4,
     category="des",
-    lower_bound=0.1,
+    lower_bound=1,
 )
 wing_x_quarter_chord = opti.variable(
     init_guess=0,
@@ -1098,7 +1098,7 @@ guess_altitude = 18000
 guess_u_e = 30
 guess_v_e = 30
 
-dyn = asb.DynamicsPointMass3dCartesian( # todo add in 3D dynamics
+dyn = asb.DynamicsPointMass3DSpeedGammaTrack( # todo add in 3D dynamics
     mass_props=mass_props_TOGW,
     x_e=opti.variable(
         init_guess=time * guess_u_e,
@@ -1116,24 +1116,23 @@ dyn = asb.DynamicsPointMass3dCartesian( # todo add in 3D dynamics
         scale=1e4,
         category='ops'
     ),
-    u_e=opti.variable( # airspeed
+    speed=opti.variable(
         init_guess=guess_u_e,
         n_vars=n_timesteps,
-        scale=1,
+        scale=1e2,
         category='ops',
-        lower_bound=min_speed,
+        lower_bound=min_speed
     ),
-    v_e = opti.variable(
-        init_guess=guess_v_e,
-        n_vars=n_timesteps,
-        scale=1,
-        category='ops',
-        lower_bound=min_speed,
-    ),
-    w_e=opti.variable(
+    gamma=opti.variable(
         init_guess=0,
         n_vars=n_timesteps,
         scale=1e-1,
+        category='ops'
+    ),
+    track=opti.variable(
+        init_guess=0,
+        n_vars=n_timesteps,
+        scale=1,
         category='ops'
     ),
     alpha=opti.variable(
@@ -1180,29 +1179,27 @@ if climb_opt:
 if straight_line_trajectory == True:
     opti.subject_to([
         dyn.x_e[time_periodic_end_index] / 1e5 > (dyn.x_e[time_periodic_start_index] + required_headway_per_day) / 1e5,
-        dyn.Fy_e == 0,
         dyn.x_e[time_periodic_start_index] / 1e5 == 0,
-        dyn.y_e[time_periodic_start_index] / 1e5 == 0,
+        dyn.v_e == 0,
     ])
-    wind_speed_x = wind_speed
-    groundspeed = dyn.speed - wind_speed_x
-    wind_speed_y = 0
-    opti.subject_to(groundspeed > min_speed)
+    # wind_speed_x = wind_speed
+    # wind_speed_y = 0
+    # groundspeed_x = dyn.u_e - wind_speed_x
+    # groundspeed_y = dyn.v_e - wind_speed_y
 
 if circular_trajectory == True:
 
     circular_trajectory_length = 2 * np.pi * flight_path_radius
     place_on_track = np.mod(distance, circular_trajectory_length)
     angular_displacement = place_on_track / circular_trajectory_length * 360 # + start_angle
-    vehicle_bearing = 360 - angular_displacement
+    vehicle_hearing = 360 - angular_displacement
 
     num_laps = distance[-1] / circular_trajectory_length
     opti.subject_to([
         num_laps >= required_revisit_rate_circ,
-        dyn.u_e == dyn.speed * np.cosd(vehicle_bearing),
-        dyn.v_e == dyn.speed * np.sind(vehicle_bearing),
+        # dyn.track == 360 - angular_displacement,
     ])
-
+    groundspeed = dyn.speed
     wind_speed_x = 0
     wind_speed_y = 0
     # vehicle_heading = np.arctan2d(dyn.v_e, dyn.u_e)
@@ -1564,7 +1561,7 @@ opti.subject_to([
 payload_power = power_trans * pulse_rep_freq * pulse_duration
 
 snr = payload_power * antenna_gain ** 2 * center_wavelength ** 3 * a_hs * sigma0 * range_resolution / \
-      ((2 * 4 * np.pi) ** 3 * dist ** 3 * k_b * my_atmosphere.temperature() * F * groundspeed * a_B)
+      ((2 * 4 * np.pi) ** 3 * dist ** 3 * k_b * my_atmosphere.temperature() * F * dyn.u_e * a_B)
 
 snr_db = 10 * np.log(snr)
 
@@ -1748,7 +1745,7 @@ opti.constrain_derivative(
 )
 opti.constrain_derivative(
     variable=dyn.y_e, with_respect_to=time,
-    derivative=dyn.v_e,
+    derivative=(dyn.v_e)
 )
 opti.constrain_derivative(
     variable=dyn.z_e, with_respect_to=time,
@@ -1770,10 +1767,11 @@ opti.constrain_derivative(
     variable=dyn.w_e, with_respect_to=time,
     derivative=net_accel_z_e,
 )
+Fx_e, Fy_e, Fz_e = dyn.convert_axes(dyn.Fx_w, dyn.Fy_w, dyn.Fz_w,'wind','earth')
 opti.subject_to([
-    net_accel_x_e * mass_total / 1e1 == dyn.Fx_e / 1e1,
-    net_accel_y_e * mass_total / 1e1 == dyn.Fy_e / 1e1,
-    net_accel_z_e * mass_total / 1e2 == dyn.Fz_e / 1e2
+    net_accel_x_e * mass_total / 1e1 == Fx_e / 1e1,
+    net_accel_y_e * mass_total / 1e1 == Fy_e / 1e1,
+    net_accel_z_e * mass_total / 1e2 == Fz_e / 1e2
 ])
 
 ##### Section: Battery power
@@ -1868,7 +1866,7 @@ for penalty_input in [
     # dyn.Fx_e / 1e-1,
     dyn.speed / 1e-1,
     dyn.alpha / 1,
-    dyn.x_e / 500,
+    distance / 500,
 ]:
     penalty += np.sum(np.diff(np.diff(penalty_input)) ** 2) / n_timesteps_per_segment
 
@@ -2092,12 +2090,12 @@ if __name__ == "__main__":
              title="Optimal Trajectory over Simulation",
              save_name="outputs/trajectory.png"
              )
-        plot("hour", "groundspeed",
-             xlabel="hours after Solar Noon",
-             ylabel="Groundspeed [m/s]",
-             title="Groundspeed over Simulation",
-             save_name="outputs/trajectory.png"
-             )
+        # plot("hour", "groundspeed",
+        #      xlabel="hours after Solar Noon",
+        #      ylabel="Groundspeed [m/s]",
+        #      title="Groundspeed over Simulation",
+        #      save_name="outputs/trajectory.png"
+        #      )
 
         # Draw mass breakdown
         fig = plt.figure(figsize=(10, 8), dpi=plot_dpi)
