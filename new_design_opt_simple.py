@@ -66,12 +66,12 @@ vehicle_heading = 0  # degrees, the heading of the aircraft wind is assumed oppo
 circular_trajectory = False  # do we want to assume a circular trajectory?
 flight_path_radius = 50000  # only relevant if circular_trajectory is True
 wind_direction = 0
-required_revisit_rate = 1  # How many times must the aircraft complete the circular trajectory in the sizing day?
+required_revisit_rate_circ = 1  # How many times must the aircraft complete the circular trajectory in the sizing day?
 
 lawnmower_trajectory = True  # do we want to assume a lawnmower trajectory?
 sample_area_height = 3000  # meters, the height of the area the aircraft must sample
 sample_area_width = 3000  # meters, the width of the area the aircraft must sample
-required_revisit_rate = 40  # How many times must the aircraft fully cover the sample area in the sizing day?
+required_revisit_rate = 1  # How many times must the aircraft fully cover the sample area in the sizing day?
 
 # Aircraft Parameters
 battery_specific_energy_Wh_kg = 390  # cell level specific energy of the battery
@@ -1098,7 +1098,7 @@ guess_altitude = 18000
 guess_u_e = 30
 guess_v_e = 30
 
-dyn = asb.DynamicsPointMass3DCartesian( # todo add in 3D dynamics
+dyn = asb.DynamicsPointMass3dCartesian( # todo add in 3D dynamics
     mass_props=mass_props_TOGW,
     x_e=opti.variable(
         init_guess=time * guess_u_e,
@@ -1190,35 +1190,22 @@ if straight_line_trajectory == True:
     opti.subject_to(groundspeed > min_speed)
 
 if circular_trajectory == True:
-    # start_angle = opti.variable(
-    #     init_guess=0,
-    #     scale=10,
-    #     category='ops'
-    # )
 
-    groundspeed = opti.variable(
-        init_guess=5,
-        n_vars=n_timesteps,
-        scale=1,
-        category='ops',
-    )
     circular_trajectory_length = 2 * np.pi * flight_path_radius
-    place_on_track = np.mod(dyn.speed, circular_trajectory_length)
+    place_on_track = np.mod(distance, circular_trajectory_length)
     angular_displacement = place_on_track / circular_trajectory_length * 360 # + start_angle
     vehicle_bearing = 360 - angular_displacement
 
     num_laps = distance[-1] / circular_trajectory_length
     opti.subject_to([
-        num_laps >= required_revisit_rate,
-    #     dyn.x_e == dyn.x_e[0] + flight_path_radius * np.cosd(angular_displacement),
-    #     dyn.y_e == dyn.y_e[0] + flight_path_radius * np.sind(angular_displacement),
+        num_laps >= required_revisit_rate_circ,
+        dyn.u_e == dyn.speed * np.cosd(vehicle_bearing),
+        dyn.v_e == dyn.speed * np.sind(vehicle_bearing),
     ])
 
-    # groundspeed_x = groundspeed * np.cosd(vehicle_bearing)
-    # groundspeed_y = groundspeed * np.sind(vehicle_bearing)
     wind_speed_x = 0
     wind_speed_y = 0
-    vehicle_heading = np.arctan2d(dyn.v_e, dyn.u_e)
+    # vehicle_heading = np.arctan2d(dyn.v_e, dyn.u_e)
     #
     opti.subject_to([
     #     dyn.u_e == groundspeed_x - wind_speed_x,
@@ -1279,8 +1266,10 @@ if lawnmower_trajectory == True:
     # wind_speed_y = wind_speed * np.sind(wind_direction)
     #
     opti.subject_to([
-        # dyn.u_e == groundspeed * np.cosd(vehicle_bearing),
-        # dyn.v_e == groundspeed * np.sind(vehicle_bearing),
+        # dyn.x_e[time_periodic_start_index] == 0,
+        # dyn.y_e[time_periodic_start_index] == 0,
+        dyn.u_e == dyn.speed * np.cosd(vehicle_bearing),
+        dyn.v_e == dyn.speed * np.sind(vehicle_bearing),
     # groundspeed ** 2 == groundspeed_x ** 2 + groundspeed_y ** 2,
     ])
     vehicle_heading = vehicle_bearing
