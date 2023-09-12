@@ -61,7 +61,7 @@ min_speed = 0.5 # specify a minimum groundspeed (bad convergence if less than 0.
 # todo finalize trajectory parameterization
 straight_line_trajectory = True  # do we want to assume a straight line trajectory?
 required_headway_per_day = 1000
-vehicle_heading = 0  # degrees, the heading of the aircraft wind is assumed opposite vehicle heading
+vehicle_heading = 70 # degrees, the heading of the aircraft wind is assumed opposite vehicle heading
 
 circular_trajectory = False  # do we want to assume a circular trajectory?
 flight_path_radius = 50000  # only relevant if circular_trajectory is True
@@ -1093,74 +1093,6 @@ remaining_volume = (
 )
 
 ##### Section: Setup Dynamics
-guess_altitude = 18000
-guess_u_e = 30
-guess_v_e = 30
-
-dyn = asb.DynamicsPointMass3DSpeedGammaTrack( # todo add in 3D dynamics
-    mass_props=mass_props_TOGW,
-    x_e=opti.variable(
-        init_guess=time * guess_u_e,
-        scale=1e5,
-        category='ops'
-    ),
-    y_e=opti.variable(
-        init_guess=time * guess_v_e,
-        scale=1e5,
-        category='ops'
-    ),
-    z_e=opti.variable(
-        init_guess=-guess_altitude,
-        n_vars=n_timesteps,
-        scale=1e4,
-        category='ops'
-    ),
-    speed=opti.variable(
-        init_guess=guess_u_e,
-        n_vars=n_timesteps,
-        scale=1e2,
-        category='ops',
-        lower_bound=min_speed
-    ),
-    gamma=opti.variable(
-        init_guess=0,
-        n_vars=n_timesteps,
-        scale=1e-1,
-        category='ops'
-    ),
-    track=opti.variable(
-        init_guess=0,
-        n_vars=n_timesteps,
-        scale=1,
-        category='ops'
-    ),
-    alpha=opti.variable(
-        init_guess=5,
-        n_vars=n_timesteps,
-        scale=4,
-        category='ops'
-    ),
-)
-dyn.add_gravity_force(g=9.81)
-distance = opti.variable(
-    init_guess=1e6,
-    n_vars=n_timesteps,
-    scale=1e5,
-    category='ops',
-    lower_bound=0,
-)
-# add dynamics constraints
-opti.subject_to([
-    dyn.altitude[time_periodic_start_index:] / min_cruise_altitude > 1,
-    dyn.altitude / guess_altitude > 0,  # stay above ground
-    dyn.altitude / 40000 < 1,  # models break down
-    distance[time_periodic_start_index] / 1e5 == 0
-])
-
-z_km = dyn.altitude / 1e3
-y_km = dyn.y_e / 1e3
-x_km = dyn.x_e / 1e3
-
 #account for winds
 def wind_speed_func(alt):
     day_array = np.full(shape=alt.shape[0], fill_value=1) * day_of_year
@@ -1168,25 +1100,92 @@ def wind_speed_func(alt):
     speed_func = lib_winds.wind_speed_world_95(alt, latitude_array, day_array)
     return speed_func
 
-wind_speed = wind_speed_func(dyn.altitude)
+# add trajectory constraints depending on trajectory type
+if straight_line_trajectory == True:
+    guess_altitude = 18000
+    guess_u_e = 30
+    guess_v_e = 30
+    dyn = asb.DynamicsPointMass3DSpeedGammaTrack(
+        mass_props=mass_props_TOGW,
+        x_e=opti.variable(
+            init_guess=time * guess_u_e,
+            scale=1e5,
+            category='ops'
+        ),
+        y_e=opti.variable(
+            init_guess=time * guess_v_e,
+            scale=1e5,
+            category='ops'
+        ),
+        z_e=opti.variable(
+            init_guess=-guess_altitude,
+            n_vars=n_timesteps,
+            scale=1e4,
+            category='ops'
+        ),
+        speed=opti.variable(
+            init_guess=guess_u_e,
+            n_vars=n_timesteps,
+            scale=1e2,
+            category='ops',
+            lower_bound=min_speed
+        ),
+        gamma=opti.variable(
+            init_guess=0,
+            n_vars=n_timesteps,
+            scale=1e-1,
+            category='ops'
+        ),
+        track=vehicle_heading * np.pi / 180,
+        alpha=opti.variable(
+            init_guess=5,
+            n_vars=n_timesteps,
+            scale=4,
+            category='ops'
+        ),
+    )
+    # add dynamics constraints
+
+    dyn.add_gravity_force(g=9.81)
+    distance = opti.variable(
+        init_guess=1e6,
+        n_vars=n_timesteps,
+        scale=1e5,
+        category='ops',
+        lower_bound=0,
+    )
+    ground_speed = opti.variable(
+        init_guess=5,
+        n_vars=n_timesteps,
+        scale=0.1,
+        category='ops',
+        lower_bound=min_speed,
+    )
+    opti.subject_to([
+        dyn.altitude[time_periodic_start_index:] / min_cruise_altitude > 1,
+        dyn.altitude / guess_altitude > 0,  # stay above ground
+        dyn.altitude / 40000 < 1,  # models break down
+        distance[time_periodic_start_index] / 1e5 == 0,
+        distance[time_periodic_end_index] / 1e5 > (distance[time_periodic_start_index] + required_headway_per_day) / 1e5,
+        dyn.x_e[time_periodic_start_index] / 1e5 == 0,
+        dyn.y_e[time_periodic_start_index] / 1e5 == 0,
+        dyn.speed >= min_speed,
+    ])
+    wind_speed = wind_speed_func(dyn.altitude)
+    wind_speed_x = np.cos(dyn.track) * wind_speed
+    wind_speed_y = np.sin(dyn.track) * wind_speed
+    ground_speed_x = dyn.u_e - wind_speed_x
+    ground_speed_y = dyn.v_e - wind_speed_y
+    opti.subject_to(ground_speed ** 2 == (ground_speed_x ** 2 + ground_speed_y ** 2))
+
+z_km = dyn.altitude / 1e3
+y_km = dyn.y_e / 1e3
+x_km = dyn.x_e / 1e3
 
 # start on the ground if doing climb optimization
 if climb_opt:
     opti.subject_to(dyn.altitude[0] / 1e4 == 0)
 
-# add trajectory constraints depending on trajectory type
-if straight_line_trajectory == True:
-    opti.subject_to([
-        distance[time_periodic_end_index] / 1e5 > (distance[time_periodic_start_index] + required_headway_per_day) / 1e5,
-        dyn.x_e[time_periodic_start_index] / 1e5 == 0,
-        dyn.y_e[time_periodic_start_index] / 1e5 == 0,
-        # dyn.v_e == 0,
-        dyn.track[time_periodic_start_index:] == vehicle_heading * np.pi / 180,
-    ])
-    # wind_speed_x = wind_speed
-    # wind_speed_y = 0
-    # groundspeed_x = dyn.u_e - wind_speed_x
-    # groundspeed_y = dyn.v_e - wind_speed_y
 
 if circular_trajectory == True:
 
@@ -1559,7 +1558,7 @@ opti.subject_to([
 payload_power = power_trans * pulse_rep_freq * pulse_duration
 
 snr = payload_power * antenna_gain ** 2 * center_wavelength ** 3 * a_hs * sigma0 * range_resolution / \
-      ((2 * 4 * np.pi) ** 3 * dist ** 3 * k_b * my_atmosphere.temperature() * F * dyn.u_e * a_B)
+      ((2 * 4 * np.pi) ** 3 * dist ** 3 * k_b * my_atmosphere.temperature() * F * ground_speed * a_B)
 
 snr_db = 10 * np.log(snr)
 
@@ -1739,11 +1738,11 @@ net_accel_z_e = opti.variable(
 
 opti.constrain_derivative(
     variable=dyn.x_e, with_respect_to=time,
-    derivative=(dyn.u_e)
+    derivative=(dyn.u_e - ground_speed_x)
 )
 opti.constrain_derivative(
     variable=dyn.y_e, with_respect_to=time,
-    derivative=(dyn.v_e)
+    derivative=(dyn.v_e - ground_speed_y)
 )
 opti.constrain_derivative(
     variable=dyn.z_e, with_respect_to=time,
