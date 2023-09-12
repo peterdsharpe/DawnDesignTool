@@ -1103,17 +1103,16 @@ def wind_speed_func(alt):
 # add trajectory constraints depending on trajectory type
 if straight_line_trajectory == True:
     guess_altitude = 18000
-    guess_u_e = 30
-    guess_v_e = 30
+    guess_speed = 30
     dyn = asb.DynamicsPointMass3DSpeedGammaTrack(
         mass_props=mass_props_TOGW,
         x_e=opti.variable(
-            init_guess=time * guess_u_e,
+            init_guess=time * guess_speed,
             scale=1e5,
             category='ops'
         ),
         y_e=opti.variable(
-            init_guess=time * guess_v_e,
+            init_guess=time * guess_speed,
             scale=1e5,
             category='ops'
         ),
@@ -1124,7 +1123,7 @@ if straight_line_trajectory == True:
             category='ops'
         ),
         speed=opti.variable(
-            init_guess=guess_u_e,
+            init_guess=guess_speed,
             n_vars=n_timesteps,
             scale=1e2,
             category='ops',
