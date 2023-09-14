@@ -59,11 +59,11 @@ hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we
 min_speed = 0.5 # specify a minimum groundspeed (bad convergence if less than 0.5 m/s)
 
 # todo finalize trajectory parameterization
-straight_line_trajectory = True  # do we want to assume a straight line trajectory?
+straight_line_trajectory = False  # do we want to assume a straight line trajectory?
 required_headway_per_day = 1000
-vehicle_heading = 70 # degrees, the heading of the aircraft wind is assumed opposite vehicle heading
+vehicle_heading = 240 # degrees, the heading of the aircraft wind is assumed opposite vehicle heading
 
-circular_trajectory = False  # do we want to assume a circular trajectory?
+circular_trajectory = True  # do we want to assume a circular trajectory?
 flight_path_radius = 50000  # only relevant if circular_trajectory is True
 required_revisit_rate_circ = 1  # How many times must the aircraft complete the circular trajectory in the sizing day?
 
@@ -1177,6 +1177,102 @@ if straight_line_trajectory == True:
     ground_speed_y = dyn.v_e - wind_speed_y
     opti.subject_to(ground_speed ** 2 == (ground_speed_x ** 2 + ground_speed_y ** 2))
 
+if circular_trajectory == True:
+    guess_altitude = 18000
+    guess_speed = 30
+    dyn = asb.DynamicsPointMass3DSpeedGammaTrack(
+        mass_props=mass_props_TOGW,
+        x_e=opti.variable(
+            init_guess=time * guess_speed,
+            scale=1e5,
+            category='ops'
+        ),
+        y_e=opti.variable(
+            init_guess=time * guess_speed,
+            scale=1e5,
+            category='ops'
+        ),
+        z_e=opti.variable(
+            init_guess=-guess_altitude,
+            n_vars=n_timesteps,
+            scale=1e4,
+            category='ops'
+        ),
+        speed=opti.variable(
+            init_guess=guess_speed,
+            n_vars=n_timesteps,
+            scale=1e2,
+            category='ops',
+            lower_bound=min_speed
+        ),
+        gamma=opti.variable(
+            init_guess=0,
+            n_vars=n_timesteps,
+            scale=1e-1,
+            category='ops'
+        ),
+        track=opti.variable(
+            init_guess=vehicle_heading * np.pi / 180,
+            n_vars=n_timesteps,
+            scale=1e-1,
+            category='ops'
+        ),
+        alpha=opti.variable(
+            init_guess=5,
+            n_vars=n_timesteps,
+            scale=4,
+            category='ops'
+        ),
+        beta=opti.variable(
+            init_guess=np.radians(10),
+            n_vars=n_timesteps,
+            scale=1e-1,
+            category='ops',
+            lower_bound=np.radians(-30),
+            upper_bound=np.radians(30),
+        ),
+    )
+
+    dyn.add_gravity_force(g=9.81)
+    distance = opti.variable(
+        init_guess=1e6,
+        n_vars=n_timesteps,
+        scale=1e5,
+        category='ops',
+        lower_bound=0,
+    )
+    ground_speed = opti.variable(
+        init_guess=5,
+        n_vars=n_timesteps,
+        scale=0.1,
+        category='ops',
+        lower_bound=min_speed,
+    )
+
+    circular_trajectory_length = 2 * np.pi * flight_path_radius
+    place_on_track = np.mod(distance, circular_trajectory_length)
+    angular_displacement = place_on_track / circular_trajectory_length * 360 # + start_angle
+    vehicle_heading = 360 - angular_displacement
+
+    # add dynamics constraints
+    opti.subject_to([
+        dyn.altitude[time_periodic_start_index:] / min_cruise_altitude > 1,
+        dyn.altitude / guess_altitude > 0,  # stay above ground
+        dyn.altitude / 40000 < 1,  # models break down
+        distance[time_periodic_start_index] / 1e5 == 0,
+        dyn.x_e[time_periodic_start_index] / 1e5 == 0,
+        dyn.y_e[time_periodic_start_index] / 1e5 == 0,
+        dyn.speed >= min_speed,
+        distance[time_periodic_end_index] / circular_trajectory_length > required_revisit_rate_circ,
+        dyn.track[time_periodic_start_index:time_periodic_end_index] == np.radians(vehicle_heading),
+    ])
+    wind_speed = wind_speed_func(dyn.altitude)
+    wind_speed_x = np.cos(dyn.track) * wind_speed
+    wind_speed_y = np.sin(dyn.track) * wind_speed
+    ground_speed_x = dyn.u_e - wind_speed_x
+    ground_speed_y = dyn.v_e - wind_speed_y
+    opti.subject_to(ground_speed ** 2 == (ground_speed_x ** 2 + ground_speed_y ** 2))
+
 z_km = dyn.altitude / 1e3
 y_km = dyn.y_e / 1e3
 x_km = dyn.x_e / 1e3
@@ -1186,26 +1282,6 @@ if climb_opt:
     opti.subject_to(dyn.altitude[0] / 1e4 == 0)
 
 
-if circular_trajectory == True:
-
-    circular_trajectory_length = 2 * np.pi * flight_path_radius
-    place_on_track = np.mod(distance, circular_trajectory_length)
-    angular_displacement = place_on_track / circular_trajectory_length * 360 # + start_angle
-    vehicle_hearing = 360 - angular_displacement
-
-    num_laps = distance[-1] / circular_trajectory_length
-    opti.subject_to([
-        num_laps >= required_revisit_rate_circ,
-        # dyn.track == 360 - angular_displacement,
-    ])
-    # vehicle_heading = np.arctan2d(dyn.v_e, dyn.u_e)
-    #
-    opti.subject_to([
-    #     dyn.u_e == groundspeed_x - wind_speed_x,
-    #     dyn.v_e == groundspeed_y - wind_speed_y,
-    #     groundspeed ** 2 == groundspeed_x ** 2 + groundspeed_y ** 2,
-    #      groundspeed == speed,
-                      ])
 
 if lawnmower_trajectory == True:
 
