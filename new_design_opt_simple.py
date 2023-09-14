@@ -2155,9 +2155,15 @@ if __name__ == "__main__":
              title="Battery Charge State over Simulation",
              save_name="outputs/battery_charge.png"
              )
-        plot("hour", "x_km",
+        plot("hour", "distance",
              xlabel="hours after Solar Noon",
              ylabel="Downrange Distance [km]",
+             title="Optimal Trajectory over Simulation",
+             save_name="outputs/trajectory.png"
+             )
+        plot("x_km", "y_km",
+             xlabel="Downrange Distance in X [km]",
+             ylabel="Downrange Distance in Y [km]",
              title="Optimal Trajectory over Simulation",
              save_name="outputs/trajectory.png"
              )
