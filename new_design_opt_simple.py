@@ -1565,15 +1565,14 @@ opti.subject_to([
     # center_vstab.aspect_ratio() < 2.5 # from Jamie, based on ASWing
 ])
 
-gamma = np.arctan2d(dyn.w_e, dyn.speed)
 dyn.add_force(
-    Fx=-np.cosd(gamma) * drag_force,
-    Fz=np.sind(gamma) * drag_force,
+    Fx=-np.cosd(dyn.gamma) * drag_force,
+    Fz=np.sind(dyn.gamma) * drag_force,
     axes="earth"
 )
 dyn.add_force(
-    Fx=np.sind(gamma) * lift_force,
-    Fz=-np.cosd(gamma) * lift_force,
+    Fx=np.sind(dyn.gamma) * lift_force,
+    Fz=-np.cosd(dyn.gamma) * lift_force,
     axes='earth'
 )
 
@@ -1657,8 +1656,8 @@ opti.subject_to([
 ])
 
 dyn.add_force(
-    Fx=np.cosd(gamma + dyn.alpha) * thrust,
-    Fz=np.sind(gamma + dyn.alpha) * thrust,
+    Fx=np.cosd(dyn.gamma + dyn.alpha) * thrust,
+    Fz=np.sind(dyn.gamma + dyn.alpha) * thrust,
     axes="earth"
 )  # Note, this is not a typo: we make the small-angle-approximation on the flight path angle gamma.
 
@@ -1870,7 +1869,7 @@ opti.subject_to([
     dyn.altitude[time_periodic_end_index] / 1e4 > dyn.altitude[time_periodic_start_index] / 1e4,
     dyn.speed[time_periodic_end_index] / 2e1 > dyn.speed[time_periodic_start_index] / 2e1,
     battery_charge_state[time_periodic_end_index] > battery_charge_state[time_periodic_start_index],
-    gamma[time_periodic_end_index] == gamma[time_periodic_start_index],
+    dyn.gamma[time_periodic_end_index] == dyn.gamma[time_periodic_start_index],
     dyn.alpha[time_periodic_end_index] == dyn.alpha[time_periodic_start_index],
     thrust[time_periodic_end_index] / 1e2 == thrust[time_periodic_start_index] / 1e2,
 ])
