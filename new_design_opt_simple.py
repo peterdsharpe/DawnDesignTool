@@ -1180,7 +1180,6 @@ if straight_line_trajectory == True:
 if circular_trajectory == True:
     guess_altitude = 18000
     guess_speed = 30
-    flight_speed = opti.variable(init_guess=guess_speed, scale=1e2, category='ops', lower_bound=min_speed)
     distance = opti.variable(
         init_guess=1e6,
         n_vars=n_timesteps,
@@ -1200,7 +1199,13 @@ if circular_trajectory == True:
             scale=1e4,
             category='ops'
         ),
-        speed=flight_speed * np.ones(n_timesteps),
+        speed=opti.variable(
+            init_guess=guess_speed,
+            n_vars=n_timesteps,
+            scale=1e2,
+            category='ops',
+            lower_bound=min_speed
+        ),
         gamma=opti.variable(
             init_guess=0,
             n_vars=n_timesteps,
