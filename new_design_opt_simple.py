@@ -1383,13 +1383,13 @@ def compute_wing_aerodynamics(
     surface.airfoil = surface.xsecs[0].airfoil
     try:
 
-        # surface.Cl_inc = surface.airfoil.CL_function(
-        #     {'alpha': surface.alpha_eff, 'reynolds': np.log(surface.Re)})  # Incompressible 2D lift coefficient
+        surface.Cl_inc = surface.airfoil.CL_function(
+            {'alpha': surface.alpha_eff, 'reynolds': np.log(surface.Re)})  # Incompressible 2D lift coefficient
 
-        airfoil_aero = surface.airfoil.get_aero_from_neuralfoil(
-            alpha=surface.alpha_eff, Re=surface.Re, model_size="medium"
-        )
-        surface.Cl_inc = airfoil_aero["CL"]
+        # airfoil_aero = surface.airfoil.get_aero_from_neuralfoil(
+        #     alpha=surface.alpha_eff, Re=surface.Re, model_size="medium"
+        # )
+        # surface.Cl_inc = airfoil_aero["CL"]
 
         surface.CL = surface.Cl_inc * aero_lib.CL_over_Cl(surface.aspect_ratio(), mach=mach,
                                                       sweep=surface.mean_sweep_angle())  # Compressible 3D lift coefficient
@@ -1815,37 +1815,37 @@ opti.constrain_derivative(
     variable=distance, with_respect_to=time,
     derivative=dyn.speed
 )
-# opti.constrain_derivative(
-#     variable=dyn.u_e, with_respect_to=time,
-#     derivative=net_accel_x_e,
-# )
-# opti.constrain_derivative(
-#     variable=dyn.v_e, with_respect_to=time,
-#     derivative=net_accel_y_e,
-# )
-# opti.constrain_derivative(
-#     variable=dyn.w_e, with_respect_to=time,
-#     derivative=net_accel_z_e,
-# )
-# Fx_e, Fy_e, Fz_e = dyn.convert_axes(dyn.Fx_w, dyn.Fy_w, dyn.Fz_w,'wind','earth')
-# opti.subject_to([
-#     net_accel_x_e * mass_total / 1e1 == Fx_e / 1e1,
-#     net_accel_y_e * mass_total / 1e1 == Fy_e / 1e1,
-#     net_accel_z_e * mass_total / 1e2 == Fz_e / 1e2
-# ])
-opti.subject_to(
-    dyn.altitude / flight_speed == dyn.gamma,
-)
-opti.subject_to([
-    dyn.Fy_w == 0,
-    dyn.Fz_w == 0,
-])
-excess_power = dyn.Fx_w * flight_speed
-climb_rate = excess_power / 9.81 / mass_total
 opti.constrain_derivative(
-    variable=dyn.altitude, with_respect_to=time,
-    derivative=climb_rate,
+    variable=dyn.u_e, with_respect_to=time,
+    derivative=net_accel_x_e,
 )
+opti.constrain_derivative(
+    variable=dyn.v_e, with_respect_to=time,
+    derivative=net_accel_y_e,
+)
+opti.constrain_derivative(
+    variable=dyn.w_e, with_respect_to=time,
+    derivative=net_accel_z_e,
+)
+Fx_e, Fy_e, Fz_e = dyn.convert_axes(dyn.Fx_w, dyn.Fy_w, dyn.Fz_w,'wind','earth')
+opti.subject_to([
+    net_accel_x_e * mass_total / 1e1 == Fx_e / 1e1,
+    net_accel_y_e * mass_total / 1e1 == Fy_e / 1e1,
+    net_accel_z_e * mass_total / 1e2 == Fz_e / 1e2
+])
+# opti.subject_to(
+#     dyn.altitude / flight_speed == dyn.gamma,
+# )
+# opti.subject_to([
+#     dyn.Fy_w == 0,
+#     dyn.Fz_w == 0,
+# ])
+# excess_power = dyn.Fx_w * flight_speed
+# climb_rate = excess_power / 9.81 / mass_total
+# opti.constrain_derivative(
+#     variable=dyn.altitude, with_respect_to=time,
+#     derivative=climb_rate,
+# )
 
 ##### Section: Battery power
 
