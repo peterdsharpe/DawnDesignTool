@@ -1388,13 +1388,13 @@ def compute_wing_aerodynamics(
     surface.airfoil = surface.xsecs[0].airfoil
     try:
 
-        surface.Cl_inc = surface.airfoil.CL_function(
-            {'alpha': surface.alpha_eff, 'reynolds': np.log(surface.Re)})  # Incompressible 2D lift coefficient
+        # surface.Cl_inc = surface.airfoil.CL_function(
+        #     {'alpha': surface.alpha_eff, 'reynolds': np.log(surface.Re)})  # Incompressible 2D lift coefficient
 
-        # airfoil_aero = surface.airfoil.get_aero_from_neuralfoil(
-        #     alpha=surface.alpha_eff, Re=surface.Re, model_size="medium"
-        # )
-        # surface.Cl_inc = airfoil_aero["CL"]
+        airfoil_aero = surface.airfoil.get_aero_from_neuralfoil(
+            alpha=surface.alpha_eff, Re=surface.Re, model_size="medium"
+        )
+        surface.Cl_inc = airfoil_aero["CL"]
 
         surface.CL = surface.Cl_inc * aero_lib.CL_over_Cl(surface.aspect_ratio(), mach=mach,
                                                       sweep=surface.mean_sweep_angle())  # Compressible 3D lift coefficient
@@ -1402,6 +1402,7 @@ def compute_wing_aerodynamics(
 
         surface.Cd_profile = np.exp(
             surface.airfoil.CD_function({'alpha': surface.alpha_eff, 'reynolds': np.log(surface.Re)}))
+        surface.Cd_profile = airfoil_aero["CD"]
         surface.drag_profile = surface.Cd_profile * q * surface.area()
 
         surface.oswalds_efficiency = aero_lib.oswalds_efficiency(
@@ -1420,6 +1421,7 @@ def compute_wing_aerodynamics(
 
         surface.Cm_inc = surface.airfoil.CM_function(
             {'alpha': surface.alpha_eff, 'reynolds': np.log(surface.Re)})  # Incompressible 2D moment coefficient
+        surface.Cm_inc = airfoil_aero["CM"]
         surface.CM = surface.Cm_inc * aero_lib.CL_over_Cl(surface.aspect_ratio(), mach=mach,
                                                       sweep=surface.mean_sweep_angle())  # Compressible 3D moment coefficient
         surface.moment = surface.CM * q * surface.area() * surface.mean_geometric_chord()
