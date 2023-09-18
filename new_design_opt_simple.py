@@ -1712,6 +1712,8 @@ power_out = power_out_propulsion + payload_power + power_out_avionics
 ##### Section: Power Input (Solar)
 
 MPPT_efficiency = 0.975 # todo revisit efficiency value
+# wing_panel_azimuth = 90 # 90 is worst case
+wing_panel_azimuth = vehicle_bearing + 90
 solar_flux_on_horizontal = lib_solar.solar_flux(
     latitude=latitude,
     day_of_year=day_of_year,
@@ -1723,7 +1725,7 @@ left_wing_incident_solar_power = 0.5 * area_solar_wing * lib_solar.solar_flux(
     latitude=latitude,
     day_of_year=day_of_year,
     time=time,
-    panel_azimuth_angle=90,
+    panel_azimuth_angle=wing_panel_azimuth,
     panel_tilt_angle=10,
     scattering=True
 )
@@ -1732,12 +1734,10 @@ right_wing_incident_solar_power = 0.5 * area_solar_wing * lib_solar.solar_flux(
     latitude=latitude,
     day_of_year=day_of_year,
     time=time,
-    panel_azimuth_angle=90,
+    panel_azimuth_angle=wing_panel_azimuth,
     panel_tilt_angle=-10,
     scattering=True
 )
-# wing_panel_azimuth = 90 # 90 is worst case
-wing_panel_azimuth = vehicle_heading + 90
 
 wing_incident_solar_power = right_wing_incident_solar_power + left_wing_incident_solar_power
 
@@ -1745,7 +1745,7 @@ vstab_incident_solar_power_left = area_solar_vstab * lib_solar.solar_flux(
     latitude=latitude,
     day_of_year=day_of_year,
     time=time,
-    panel_azimuth_angle=90,
+    panel_azimuth_angle=wing_panel_azimuth,
     panel_tilt_angle=90,
     scattering=True
 )
@@ -1754,7 +1754,7 @@ vstab_incident_solar_power_right = area_solar_vstab * lib_solar.solar_flux(
     latitude=latitude,
     day_of_year=day_of_year,
     time=time,
-    panel_azimuth_angle=-90,
+    panel_azimuth_angle=-wing_panel_azimuth,
     panel_tilt_angle=90,
     scattering=True
 )
