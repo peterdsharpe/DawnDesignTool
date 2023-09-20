@@ -62,7 +62,7 @@ wind_direction = 90 # degrees, the direction the wind is blowing from 0 being No
 # todo finalize trajectory parameterization
 straight_line_trajectory = True   # do we want to assume a straight line trajectory?
 required_headway_per_day = 1000
-vehicle_heading = opti.parameter(value = 90) # degrees
+vehicle_heading = opti.parameter(value=90) # degrees
 
 circular_trajectory = False  # do we want to assume a circular trajectory?
 flight_path_radius = 100000  # only relevant if circular_trajectory is True
@@ -161,21 +161,21 @@ hour = time / 3600
 
 ##### Section: Vehicle Overall Specs
 mass_total = opti.variable(
-    init_guess=110,
+    init_guess=300,
     scale=100,
     lower_bound=0,
     **des
 )
 
 power_in_after_panels_max = opti.variable(
-    init_guess=3000,
+    init_guess=7000,
     lower_bound=0,
     scale=3000,
     **des
 )
 
 power_out_propulsion_max = opti.variable(
-    init_guess=1500,
+    init_guess=2100,
     lower_bound=10,
     scale=1e3,
     **des
@@ -184,14 +184,14 @@ power_out_propulsion_max = opti.variable(
 ##### Initialize design optimization variables (all units in base SI or derived units)
 # start with defining payload pod variables
 payload_pod_length = opti.variable(
-    init_guess=2,
+    init_guess=0.5,
     scale=1,
     lower_bound=0.5,
     # upper_bound=5,
     category="des",
 ) # meters
 payload_pod_diameter = opti.variable(
-    init_guess=0.3,
+    init_guess=0.7,
     scale=0.1,
     lower_bound=0.2,
     upper_bound=1,
@@ -200,7 +200,7 @@ payload_pod_diameter = opti.variable(
 
 payload_pod_y_offset = 1.5  # meters # this matches the demonstrator vehicle configuration
 x_payload_pod = opti.variable(
-    init_guess=-0.2,
+    init_guess=-0.5,
     scale=0.1,
     category="des",
     lower_bound=0 - payload_pod_length,
@@ -226,8 +226,8 @@ break_location = 0.67  # as a fraction of the half-span
 
 # wing
 wing_span = opti.variable(
-    init_guess=40,
-    scale=60,
+    init_guess=30,
+    scale=6,
     category="des"
 )
 
@@ -236,8 +236,8 @@ boom_offset = boom_location * wing_span / 2  # in real units (meters)
 opti.subject_to([wing_span > 1])
 
 wing_root_chord = opti.variable(
-    init_guess=3,
-    scale=4,
+    init_guess=2,
+    scale=0.1,
     category="des",
     lower_bound=1,
 )
@@ -251,23 +251,23 @@ wing_taper_ratio = 0.5  # TODO analyze this more
 
 # center hstab
 center_hstab_span = opti.variable(
-    init_guess=4,
-    scale=4,
+    init_guess=5.3,
+    scale=1,
     category="des",
     lower_bound=0.1,
 )
 opti.subject_to(center_hstab_span < wing_span / 6)
 
 center_hstab_chord = opti.variable(
-    init_guess=3,
-    scale=2,
+    init_guess=1,
+    scale=0.1,
     category="des",
     lower_bound=0.1,
 )
 
 center_hstab_twist = opti.variable(
     n_vars=n_timesteps,
-    init_guess=-3,
+    init_guess=0,
     scale=2,
     category="ops",
     lower_bound=-15,
@@ -276,8 +276,8 @@ center_hstab_twist = opti.variable(
 
 # center hstab
 outboard_hstab_span = opti.variable(
-    init_guess=4,
-    scale=4,
+    init_guess=2,
+    scale=1,
     category="des",
     lower_bound=2, # TODO review this, driven by Trevor's ASWing findings on turn radius sizing, 8/16/20
 
@@ -285,16 +285,16 @@ outboard_hstab_span = opti.variable(
 opti.subject_to(outboard_hstab_span < wing_span / 6)
 
 outboard_hstab_chord = opti.variable(
-    init_guess=3,
-    scale=2,
+    init_guess=0.8,
+    scale=0.1,
     category="des",
     lower_bound=0.8, # TODO review this, driven by Trevor's ASWing findings on turn radius sizing, 8/16/20
 )
 
 outboard_hstab_twist = opti.variable(
     n_vars=n_timesteps,
-    init_guess=-3,
-    scale=2,
+    init_guess=-0.3,
+    scale=0.1,
     lower_bound=-15,
     upper_bound=0,
     category="ops"
@@ -302,22 +302,22 @@ outboard_hstab_twist = opti.variable(
 
 # center_vstab
 center_vstab_span = opti.variable(
-    init_guess=7,
-    scale=8,
+    init_guess=4,
+    scale=2,
     category="des",
     lower_bound=0.1,
 )
 
 center_vstab_chord = opti.variable(
-    init_guess=2.5,
-    scale=2,
+    init_guess=1.6,
+    scale=0.5,
     category="des",
     lower_bound=0.1,
 )
 
 # center_fuselage
 center_boom_length = opti.variable(
-    init_guess=10,
+    init_guess=7.2,
     scale=2,
     category="des"
 )
@@ -327,7 +327,7 @@ opti.subject_to([
 
 # outboard_fuselage
 outboard_boom_length = opti.variable(
-    init_guess=10,
+    init_guess=2.3,
     scale=2,
     category="des"
 )
@@ -339,8 +339,8 @@ opti.subject_to([
 
 # Propeller
 propeller_diameter = opti.variable(
-    init_guess=5,
-    scale=5,
+    init_guess=1,
+    scale=1,
     category="des",
     upper_bound=10,
     lower_bound=1
@@ -1221,7 +1221,7 @@ if circular_trajectory == True:
         lower_bound=min_speed,
     )
 
-
+    vehicle_bearing = dyn.track * 180 / np.pi
     # add dynamics constraints initial conditions
     opti.subject_to([
         dyn.altitude[time_periodic_start_index:] / min_cruise_altitude > 1,
@@ -1967,6 +1967,7 @@ if __name__ == "__main__":
                 }
             )
             opti.set_initial_from_sol(sol)
+            opti.set_value(vehicle_heading, heading)
         except:
             sol = opti.debug
 
@@ -2375,7 +2376,7 @@ if __name__ == "__main__":
                 f.write(f"{var_name}, {value},\n")
         # opti.value(net_power)
         # opti.value(time)
-        opti.set_value(vehicle_heading, heading)
+        # opti.set_value(vehicle_heading, heading)
         #
         # def draw():  # Draw the geometry of the optimal airplane
         #     airplane.substitute_solution(sol)
