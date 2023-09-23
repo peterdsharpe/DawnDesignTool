@@ -1777,24 +1777,24 @@ opti.subject_to([
 # endregion
 
 #### section: Constrain Dynamics
-net_accel_x_e = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=0,
-    scale=1e-4,
-    category="ops"
-)
-net_accel_y_e = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=0,
-    scale=1e-4,
-    category="ops"
-)
-net_accel_z_e = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=0,
-    scale=1e-5,
-    category="ops"
-)
+# net_accel_x_e = opti.variable(
+#     n_vars=n_timesteps,
+#     init_guess=0,
+#     scale=1e-4,
+#     category="ops"
+# )
+# net_accel_y_e = opti.variable(
+#     n_vars=n_timesteps,
+#     init_guess=0,
+#     scale=1e-4,
+#     category="ops"
+# )
+# net_accel_z_e = opti.variable(
+#     n_vars=n_timesteps,
+#     init_guess=0,
+#     scale=1e-5,
+#     category="ops"
+# )
 
 # start by defining speed, then groundspeed vector,then constrain position on circle as a function of time, track angle is then
 opti.constrain_derivative(
