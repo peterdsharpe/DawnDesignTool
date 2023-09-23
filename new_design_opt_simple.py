@@ -599,10 +599,10 @@ airplane = asb.Airplane(
 mass_props = {}
 
 wing_n_ribs = opti.variable(
-    init_guess=200,
-    scale=200,
+    init_guess=100,
+    scale=50,
     lower_bound=1,
-    log_transform=True,
+    upper_bound=500,
     **des
 )
 
@@ -709,7 +709,8 @@ mass_props['wing_secondary'] = asb.mass_properties_from_radius_of_gyration(
 
 # Stabilizers
 q_ne = opti.variable(
-    init_guess=70,
+    init_guess=93,
+    scale=10,
     category="des"
 )  # Never-exceed dynamic pressure [Pa].
 
@@ -736,8 +737,8 @@ def mass_hstab(
 
 
 n_ribs_center_hstab = opti.variable(
-    init_guess=40,
-    scale=40,
+    init_guess=17,
+    scale=10,
     category="des",
     log_transform=True
 )
@@ -752,8 +753,8 @@ mass_props['center_hstab'] = asb.mass_properties_from_radius_of_gyration(
 )
 
 n_ribs_outboard_hstab = opti.variable(
-    init_guess=40,
-    scale=30,
+    init_guess=7.5,
+    scale=1,
     category="des",
     log_transform=True,
 )
@@ -802,8 +803,8 @@ def mass_vstab(
 
 
 n_ribs_vstab = opti.variable(
-    init_guess=35,
-    scale=20,
+    init_guess=10,
+    scale=1,
     category="des"
 )
 opti.subject_to(n_ribs_vstab > 0)
@@ -985,8 +986,8 @@ mass_props['MPPT'] = asb.MassProperties(
 
 ### Battery mass accounting
 battery_capacity = opti.variable(
-    init_guess=5e8,
-    scale=5e8,
+    init_guess=114072085,
+    scale=1e8,
     lower_bound=0,
     category="des",
 )
@@ -1567,19 +1568,19 @@ dyn.add_force(
 c = 299792458  # [m/s] speed of light
 k_b = 1.38064852E-23  # [m2 kg s-2 K-1] boltzman constant
 bandwidth = opti.variable(
-    init_guess=1e8,
-    scale=1e6,
+    init_guess=211985277,
+    scale=1e7,
     lower_bound=0,
     **des
 )  # Hz
 pulse_rep_freq = opti.variable(
-    init_guess=353308,
+    init_guess=141676,
     scale=10000,
     lower_bound=0,
     **des
 )
 power_trans = opti.variable(
-    init_guess=1e6,
+    init_guess=862445,
     scale=1e5,
     lower_bound=0,
     upper_bound=1e8,
@@ -1632,7 +1633,7 @@ opti.subject_to([
 ### Propeller calculations
 thrust = opti.variable(
     n_vars=n_timesteps,
-    init_guess=60,
+    init_guess=100,
     scale=20,
     category="ops",
 )
