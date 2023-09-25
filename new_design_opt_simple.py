@@ -86,7 +86,7 @@ vehicle_heading = opti.parameter(value=90) # degrees
 
 circular_trajectory = True  # do we want to assume a circular trajectory?
 flight_path_radius = 100000  # only relevant if circular_trajectory is True
-temporal_resolution = opti.variable(init_guess=12, scale=1, upper_bound=24, category='des')  # hours
+temporal_resolution = opti.variable(init_guess=6, scale=1, upper_bound=12, category='des')  # hours
 
 lawnmower_trajectory = False  # do we want to assume a lawnmower trajectory?
 sample_area_height = 3000  # meters, the height of the area the aircraft must sample
