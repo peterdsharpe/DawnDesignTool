@@ -2018,25 +2018,6 @@ if draw_initial_guess_config:
         airplane.draw()
 
 if __name__ == "__main__":
-    # Solve
-    import pandas as pd
-
-    # Read the CSV file into a DataFrame
-    df = pd.read_csv('parameter_combinations.csv')
-
-    # Create empty lists to store the results
-    wingspans = []
-    temporal_resolutions = []
-    spatial_resolutions = []
-
-    # read from df and set values
-    for index, row in df.iterrows():
-                wingspan_scale = row['Wingspan']
-                temporal_scale = row['Temporal']
-                spatial_scale = row['Spatial']
-                opti.set_value(wingspan_optimization_scaling_term, wingspan_scale)
-                opti.set_value(temporal_resolution_optimization_scaling_term, temporal_scale)
-                opti.set_value(spatial_resolution_optimization_scaling_term, spatial_scale)
 
                 try:
                     sol = opti.solve(
@@ -2045,9 +2026,6 @@ if __name__ == "__main__":
                             "ipopt.max_cpu_time": 600
                         }
                     )
-                    wingspans.append(opti.value(wing_span))
-                    temporal_resolutions.append(opti.value(temporal_resolution))
-                    spatial_resolutions.append(opti.value(spatial_resolution))
                     # opti.set_value(vehicle_heading, heading)
                 except:
                     sol = opti.debug
@@ -2458,7 +2436,7 @@ if __name__ == "__main__":
                             value = eval(var_name)
                         f.write(f"{var_name}, {value},\n")
 
-                opti.set_initial_from_sol(sol)
+                # opti.set_initial_from_sol(sol)
 
 
                 # opti.value(net_power)
