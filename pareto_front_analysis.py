@@ -55,6 +55,28 @@ def run(day_val, lat_val):
 def run_wrapped(input):
     return run(*input)
 
+def plot_results():
+    import pandas as pd
+    import plotly.express as px
+    import plotly.io as pio
+    pio.renderers.default = "browser"
+
+    # Read the CSV file into a DataFrame
+    df = pd.read_csv('pareto_front.csv')
+
+    # Create an interactive 3D scatter plot
+    fig = px.scatter_3d(df, x='wing_span', y='temporal_resolution', z='spatial_resolution')
+
+    # Customize the appearance if needed
+    fig.update_traces(marker=dict(size=5))
+
+    # Set axis labels
+    fig.update_layout(
+        scene=dict(xaxis_title='Wing Span', yaxis_title='Temporal Resolution', zaxis_title='Spatial Resolution'))
+
+    # Show the interactive plot
+    fig.show()
+
 
 if __name__ == '__main__':
 
