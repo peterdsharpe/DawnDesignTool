@@ -74,7 +74,7 @@ def plot_results(filename):
 if __name__ == '__main__':
 
     ### Make a data file
-    filename = f"cache/{run_name}.csv"
+    filename = f"cache/pareto_front_analysis/{run_name}.csv"
     l = 20
     with open(filename, "w+") as f:
         f.write(
