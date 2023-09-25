@@ -1,68 +1,61 @@
 import multiprocessing as mp
-from design_opt import *
+from new_design_opt_simple import *
 import aerosandbox.numpy as np
+import pandas as pd
+import plotly.express as px
+import plotly.io as pio
+
+pio.renderers.default = "browser"
 
 ### Set the run ID
-run_name = "new/6kg_payload_100W_sunpower_450batt"
+run_name = "sweep"
 
 ### Turn parallelization on/off.
 parallel = True
 
 
-def run(day_val, lat_val):
+def run(wingspan_scale, time_scale, space_scale):
     print("\n".join([
         "-" * 50,
-        f"day of year: {day_val}",
-        f"latitude: {lat_val}",
+        f"Wingspan  Scaling: {wingspan_scale}",
+        f"Temporal Resolution Scaling: {time_scale}",
+        f"Spatial Resolution Scaling: {space_scale}",
     ]))
 
-    opti.set_value(day_of_year, day_val)
-    opti.set_value(latitude, lat_val)
+    opti.set_value(wingspan_optimization_scaling_term, wingspan_scale)
+    opti.set_value(temporal_resolution_optimization_scaling_term, temporal_scale)
+    opti.set_value(spatial_resolution_optimization_scaling_term, spatial_scale)
 
     try:
-        # sol = func_timeout(
-        #     timeout=60,
-        #     func=opti.solve,
-        #     args=(),
-        #     kwargs={
-        #         "max_iter": 200,
-        #         "options" : {
-        #             "ipopt.max_cpu_time": 60,
-        #         },
-        #         "verbose" : False
-        #     }
-        # )
         sol = opti.solve(
-            max_iter=500,
-            max_runtime=60,
+            max_iter=1000,
+            max_runtime=600,
             verbose=False
         )
 
         print("Success!")
-        if not parallel:
-            opti.set_initial_from_sol(sol)
+        time = opti.value(temporal_resolution)
+        space = opti.value(spatial_resolution)
+        span = opti.value(wing_span)
+        opti.set_initial_from_sol(sol)
 
-        span = sol.value(wing_span)
+
     except Exception as e:
         print("Fail!")
         print(e)
 
+        time = np.NaN
+        space = np.NaN
         span = np.NaN
 
-    return day_val, lat_val, span
+    return time, space, span
 
 
-def run_wrapped(input):
-    return run(*input)
 
-def plot_results():
-    import pandas as pd
-    import plotly.express as px
-    import plotly.io as pio
-    pio.renderers.default = "browser"
+def plot_results(filename):
 
     # Read the CSV file into a DataFrame
-    df = pd.read_csv('pareto_front.csv')
+    df = pd.read_csv(filename)
 
     # Create an interactive 3D scatter plot
     fig = px.scatter_3d(df, x='wing_span', y='temporal_resolution', z='spatial_resolution')
@@ -85,42 +78,27 @@ if __name__ == '__main__':
     l = 20
     with open(filename, "w+") as f:
         f.write(
-            f"{'Days'.ljust(l)},"
-            f"{'Latitudes'.ljust(l)},"
-            f"{'Spans'.ljust(l)}\n"
+            f"{'temporal_resolution'.ljust(l)},"
+            f"{'spatial_resolution'.ljust(l)},"
+            f"{'wing_span'.ljust(l)}\n"
         )
 
     ### Define sweep space
-    day_of_years = np.linspace(0, 365, 60)
-    latitudes = np.linspace(-80, 80, 40)
+    df = pd.read_csv('parameter_combinations.csv')
 
-    ### Make inputs into 1D lists of inputs
-    Day_of_years, Latitudes = np.meshgrid(day_of_years, latitudes)
-    inputs = [
-        (day, lat)
-        for day, lat in zip(Day_of_years.flatten(), Latitudes.flatten())
-    ]
+    # read from df and set values
+    for index, row in df.iterrows():
+        wingspan_scale = row['Wingspan']
+        temporal_scale = row['Temporal']
+        spatial_scale = row['Spatial']
+        time, space, span = run(wingspan_scale,
+                                temporal_scale,
+                                spatial_scale)
+        with open(filename, "a") as f:
+            f.write(
+                f"{str(time).ljust(l)},"
+                f"{str(space).ljust(l)},"
+                f"{str(span).ljust(l)}\n"
+            )
 
-    ### Crunch the numbers
-    if parallel:
-        with mp.Pool(mp.cpu_count()) as p:
-            for day_val, lat_val, span_val in p.imap_unordered(
-                    func=run_wrapped,
-                    iterable=inputs
-            ):
-                with open(filename, "a") as f:
-                    f.write(
-                        f"{str(day_val).ljust(l)},"
-                        f"{str(lat_val).ljust(l)},"
-                        f"{str(span_val).ljust(l)}\n"
-                    )
-
-    else:
-        for input in inputs:
-            day_val, lat_val, span_val = run_wrapped(input)
-            with open(filename, "a") as f:
-                f.write(
-                    f"{str(day_val).ljust(l)},"
-                    f"{str(lat_val).ljust(l)},"
-                    f"{str(span_val).ljust(l)}\n"
-                )
+    plot_results(filename)
