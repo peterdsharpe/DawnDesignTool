@@ -36,7 +36,9 @@ des = dict(category="design")
 ops = dict(category="operations")
 
 ##### optimization assumptions
-minimize = 'wing_span'
+minimize = ('wingspan_optimization_scaling_term * wing_span / 30 '
+            '+ spatial_resolution_optimization_scaling_term * spatial_resolution / 10 '
+            '+ temporal_resolution_optimization_scaling_term * temporal_resolution / 12')
 make_plots = True
 
 ##### Debug flags
@@ -45,6 +47,24 @@ draw_initial_guess_config = False
 ##### end section
 
 ##### Section: Input Parameters
+
+# Objective Function Scaling Parameters
+wingspan_optimization_scaling_term = opti.parameter(value=0.1) # scale from 0 to 1 to adjust the relative importance of wingspan in the objective function
+temporal_resolution_optimization_scaling_term = opti.parameter(value=0.8) # scale from 0 to 1 to adjust the relative importance of temporal resolution in the objective function
+spatial_resolution_optimization_scaling_term = opti.parameter(value=0.1) # scale from 0 to 1 to adjust the relative importance of spatial resolution in the objective function
+
+# Aircraft Parameters
+battery_specific_energy_Wh_kg = 390  # cell level specific energy of the battery
+battery_pack_cell_percentage = 0.85  # What percent of the battery pack consists of the module, by weight?
+# these roughly correspond to the value for cells we are planning for near-term
+variable_pitch = False  # Do we assume the propeller is variable pitch?
+structural_load_factor = 3  # over static
+tail_panels = True  # Do we assume we can mount solar cells on the vertical tail?
+max_wing_solar_area_fraction = 0.8
+max_vstab_solar_area_fraction = 0.8
+use_propulsion_fits_from_FL2020_1682_undergrads = True  # Warning: Fits not yet validated
+# fits for propeller and motors to derive motor and propeller efficiencies
+# todo validate fits from FL2020 1682 undergrads or replace with better propulsion model
 
 # Mission Operating Parameters
 latitude = -73  # degrees, the location the sizing occurs
@@ -66,32 +86,19 @@ vehicle_heading = opti.parameter(value=90) # degrees
 
 circular_trajectory = True  # do we want to assume a circular trajectory?
 flight_path_radius = 100000  # only relevant if circular_trajectory is True
-required_revisit_rate_circ = 1  # How many times must the aircraft complete the circular trajectory in the sizing day?
+temporal_resolution = opti.variable(init_guess=12, scale=1, upper_bound=24, category='des')  # hours
 
 lawnmower_trajectory = False  # do we want to assume a lawnmower trajectory?
 sample_area_height = 3000  # meters, the height of the area the aircraft must sample
 sample_area_width = 3000  # meters, the width of the area the aircraft must sample
 required_revisit_rate = 1  # How many times must the aircraft fully cover the sample area in the sizing day?
 
-# Aircraft Parameters
-battery_specific_energy_Wh_kg = 390  # cell level specific energy of the battery
-battery_pack_cell_percentage = 0.85  # What percent of the battery pack consists of the module, by weight?
-# these roughly correspond to the value for cells we are planning for near-term
-variable_pitch = False  # Do we assume the propeller is variable pitch?
-structural_load_factor = 3  # over static
-tail_panels = True  # Do we assume we can mount solar cells on the vertical tail?
-max_wing_solar_area_fraction = 0.8
-max_vstab_solar_area_fraction = 0.8
-use_propulsion_fits_from_FL2020_1682_undergrads = True  # Warning: Fits not yet validated
-# fits for propeller and motors to derive motor and propeller efficiencies
-# todo validate fits from FL2020 1682 undergrads or replace with better propulsion model
-
 # Instrument Parameters
 mass_payload_base = 6
 payload_volume = 0.023 * 1.5  # assuming payload mass from gamma remote sensing with 50% margin on volume
 #todo change these from requirements to part of the objective function
 tb_per_day = 4 # terabytes per day, the amount of data the payload collects per day, to account for storage
-required_resolution = 1  # meters from conversation with Brent on 3/7/2023
+spatial_resolution = opti.variable(init_guess=10, scale=1, upper_bound=10, category='des')  # meters from conversation with Brent on 3/7/2023
 required_snr = 6  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
 center_wavelength = 0.024
 # meters given from Brent based on the properties of the ice sampled by the radar
@@ -1195,6 +1202,7 @@ if circular_trajectory == True:
         category='ops'
     )
     vehicle_bearing = track * 180 / np.pi
+    required_revisit_rate_circ = 24 / temporal_resolution
     opti.subject_to([
         altitude[time_periodic_start_index:] / min_cruise_altitude > 1,
         distance[time_periodic_start_index] / 1e5 == 0,
@@ -1628,8 +1636,8 @@ pulse_duration = a_B / bandwidth
 range_resolution = c * pulse_duration / (2 * np.sind(look_angle))
 azimuth_resolution = radar_length / 2
 opti.subject_to([
-    range_resolution <= required_resolution,
-    azimuth_resolution <= required_resolution,
+    range_resolution <= spatial_resolution,
+    azimuth_resolution <= spatial_resolution,
 ])
 
 # use SAR specific equations from Ulaby and Long
@@ -2058,6 +2066,8 @@ if __name__ == "__main__":
         print_title("Outputs")
         for k, v in {
                 "Wing Span": f"{fmt(wing_span)} meters",
+                "Spatial Resolution": f"{fmt(spatial_resolution)} meters",
+                "Temporal Resolution": f"{fmt(temporal_resolution)} hours",
                 "Wing Root Chord": f"{fmt(wing_root_chord)} meters",
                 "mass_TOGW": f"{fmt(mass_total)} kg",
                 "Average Cruise L/D": fmt(avg_cruise_LD),
@@ -2431,10 +2441,10 @@ if __name__ == "__main__":
         # opti.value(time)
         # opti.set_value(vehicle_heading, heading)
         #
-        # def draw():  # Draw the geometry of the optimal airplane
-        #     airplane.substitute_solution(sol)
-        #     airplane.draw()
-        #
-        #
-        # if make_plots == True:
-        #     draw()
+        def draw():  # Draw the geometry of the optimal airplane
+            airplane.substitute_solution(sol)
+            airplane.draw()
+
+
+        if make_plots == True:
+            draw()
