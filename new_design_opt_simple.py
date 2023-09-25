@@ -1169,9 +1169,10 @@ if circular_trajectory == True:
     guess_altitude = 18000
     guess_speed = 30
     flight_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10)
+    start_angle = opti.variable(init_guess=0, scale=1, category='ops')
     distance = time * flight_speed
     circular_trajectory_length = 2 * np.pi * flight_path_radius
-    angle_radians = distance / flight_path_radius
+    angle_radians = distance / flight_path_radius + start_angle
     track = angle_radians + np.pi / 2
     x_e = flight_path_radius * np.cos(angle_radians)
     y_e = flight_path_radius * np.sin(angle_radians)
