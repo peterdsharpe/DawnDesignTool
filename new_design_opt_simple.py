@@ -37,8 +37,8 @@ ops = dict(category="operations")
 
 ##### optimization assumptions
 minimize = ('wingspan_optimization_scaling_term * wing_span / 30 '
-            '+ spatial_resolution_optimization_scaling_term * spatial_resolution / 10 '
-            '+ temporal_resolution_optimization_scaling_term * temporal_resolution / 12')
+            '+ spatial_resolution_optimization_scaling_term * spatial_resolution / 10 ')
+            # '+ temporal_resolution_optimization_scaling_term * temporal_resolution / 12')
 make_plots = True
 
 ##### Debug flags
@@ -80,11 +80,11 @@ min_speed = 0.5 # specify a minimum groundspeed (bad convergence if less than 0.
 wind_direction = 90 # degrees, the direction the wind is blowing from 0 being North and aligned with the x-axis
 
 # todo finalize trajectory parameterization
-straight_line_trajectory = False   # do we want to assume a straight line trajectory?
-required_headway_per_day = 1000
+straight_line_trajectory = True   # do we want to assume a straight line trajectory?
+required_headway_per_day = 100000
 vehicle_heading = opti.parameter(value=90) # degrees
 
-circular_trajectory = True  # do we want to assume a circular trajectory?
+circular_trajectory = False  # do we want to assume a circular trajectory?
 flight_path_radius = 100000  # only relevant if circular_trajectory is True
 temporal_resolution = opti.variable(init_guess=6, scale=1, upper_bound=12, category='des')  # hours
 
@@ -1113,34 +1113,36 @@ def wind_speed_func(alt):
 if straight_line_trajectory == True:
     guess_altitude = 14000
     guess_speed = 20
-    flight_speed = guess_speed * np.ones(n_timesteps) # opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10)
-    dyn = asb.DynamicsPointMass3DSpeedGammaTrack(
-        mass_props=mass_props_TOGW,
-        x_e=np.cosd(vehicle_heading) * flight_speed * time,
-        y_e=np.sind(vehicle_heading) * flight_speed * time,
-        z_e=opti.variable(
-            init_guess=-guess_altitude,
-            n_vars=n_timesteps,
-            scale=1e4,
-            category='ops'
-        ),
-        speed=flight_speed,
-        track=vehicle_heading * np.pi / 180,
-        alpha=opti.variable(
-            init_guess=5,
-            n_vars=n_timesteps,
-            scale=4,
-            category='ops',
-        ),
-    )
-    # add dynamics constraints
-
-    dyn.add_gravity_force(g=9.81)
-    distance = opti.variable(
-        init_guess=np.linspace(0, 1e6, n_timesteps),
-        scale=1e5,
+    flight_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10)
+    distance = time * flight_speed
+    track = vehicle_heading * np.pi / 180
+    x_e = distance * np.cos(track)
+    y_e = distance * np.sin(track)
+    z_e = opti.variable(
+        init_guess=-guess_altitude,
+        n_vars=n_timesteps,
+        scale=1e4,
         category='ops',
-        lower_bound=0,
+        upper_bound=0,
+        lower_bound=-40000,
+    )
+    u_e = flight_speed * np.cos(track)
+    v_e = flight_speed * np.sin(track)
+    w_e = opti.variable(
+        init_guess=0,
+        n_vars=n_timesteps,
+        scale=1e-4,
+        category='ops',
+        lower_bound=min_speed,
+    )
+    altitude = -z_e
+    speed = (u_e ** 2 + v_e ** 2) ** 0.5
+    gamma = np.arctan2(-w_e, speed)
+    alpha = opti.variable(
+        init_guess=5,
+        n_vars=n_timesteps,
+        scale=4,
+        category='ops'
     )
     # ground_speed = opti.variable(
     #     init_guess=5,
@@ -1150,9 +1152,7 @@ if straight_line_trajectory == True:
     #     lower_bound=min_speed,
     # )
     opti.subject_to([
-        dyn.altitude[time_periodic_start_index:] / min_cruise_altitude > 1,
-        # dyn.altitude / guess_altitude > 0,  # stay above ground
-        dyn.altitude / 40000 < 1,  # models break down
+        altitude[time_periodic_start_index:] / min_cruise_altitude > 1,
         distance[time_periodic_start_index] / 1e5 == 0,
         distance[time_periodic_end_index] / 1e5 > (distance[time_periodic_start_index] + required_headway_per_day) / 1e5,
     ])
