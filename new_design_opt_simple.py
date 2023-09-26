@@ -36,9 +36,9 @@ des = dict(category="design")
 ops = dict(category="operations")
 
 ##### optimization assumptions
-minimize = ('wingspan_optimization_scaling_term * wing_span / 30 ')
-            # '+ spatial_resolution_optimization_scaling_term * spatial_resolution / 10 '
-            # '+ temporal_resolution_optimization_scaling_term * temporal_resolution / 12')
+minimize = ('wingspan_optimization_scaling_term * wing_span / 30 '
+            '+ spatial_resolution_optimization_scaling_term * spatial_resolution / 10 '
+            '+ temporal_resolution_optimization_scaling_term * temporal_resolution / 12')
 make_plots = True
 
 ##### Debug flags
@@ -49,9 +49,9 @@ draw_initial_guess_config = False
 ##### Section: Input Parameters
 
 # Objective Function Scaling Parameters
-wingspan_optimization_scaling_term = opti.parameter(value=0.1) # scale from 0 to 1 to adjust the relative importance of wingspan in the objective function
-temporal_resolution_optimization_scaling_term = opti.parameter(value=0.8) # scale from 0 to 1 to adjust the relative importance of temporal resolution in the objective function
-spatial_resolution_optimization_scaling_term = opti.parameter(value=0.1) # scale from 0 to 1 to adjust the relative importance of spatial resolution in the objective function
+wingspan_optimization_scaling_term = opti.parameter(value=0.33) # scale from 0 to 1 to adjust the relative importance of wingspan in the objective function
+temporal_resolution_optimization_scaling_term = opti.parameter(value=0.33) # scale from 0 to 1 to adjust the relative importance of temporal resolution in the objective function
+spatial_resolution_optimization_scaling_term = opti.parameter(value=0.33) # scale from 0 to 1 to adjust the relative importance of spatial resolution in the objective function
 
 # Aircraft Parameters
 battery_specific_energy_Wh_kg = 390  # cell level specific energy of the battery
@@ -78,7 +78,7 @@ hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we
 # Trajectory Parameters
 min_speed = 0.5 # specify a minimum groundspeed (bad convergence if less than 0.5 m/s)
 wind_direction = 0 # degrees, the direction the wind is blowing from 0 being North and aligned with the x-axis
-run_with_95th_percentile_wind_condition = True # do we want to run the sizing with the 95th percentile wind condition?
+run_with_95th_percentile_wind_condition = False # do we want to run the sizing with the 95th percentile wind condition?
 
 # todo finalize trajectory parameterization
 straight_line_trajectory = False   # do we want to assume a straight line trajectory?
@@ -1166,9 +1166,9 @@ if straight_line_trajectory == True:
 if circular_trajectory == True:
     guess_altitude = 18000
     guess_speed = 30
-    air_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10)
+    ground_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10)
     start_angle = opti.variable(init_guess=0, scale=1, category='ops')
-    distance = time * air_speed
+    distance = time * ground_speed
     circular_trajectory_length = 2 * np.pi * flight_path_radius
     angle_radians = distance / flight_path_radius + start_angle
     track = angle_radians + np.pi / 2
@@ -1182,8 +1182,18 @@ if circular_trajectory == True:
         upper_bound=0,
         lower_bound=-40000,
     )
-    u_e = air_speed * np.cos(angle_radians)
-    v_e = air_speed * np.sin(angle_radians)
+    altitude = -z_e
+    wind_speed = wind_speed_func(altitude)
+    if run_with_95th_percentile_wind_condition == False:
+        wind_speed = np.zeros(n_timesteps)
+    wind_speed_x = np.cosd(wind_direction) * wind_speed
+    wind_speed_y = np.sind(wind_direction) * wind_speed
+    ground_speed_x = ground_speed * np.cos(track)
+    ground_speed_y = ground_speed * np.sin(track)
+    vehicle_bearing = np.arctan2d(ground_speed_y, ground_speed_x)
+    u_e = ground_speed_x + wind_speed_x
+    v_e = ground_speed_y + wind_speed_y
+    air_speed = (u_e ** 2 + v_e ** 2) ** 0.5
     w_e = opti.variable(
         init_guess=0,
         n_vars=n_timesteps,
@@ -1191,8 +1201,6 @@ if circular_trajectory == True:
         category='ops',
         lower_bound=min_speed,
     )
-    altitude = -z_e
-    # speed = (u_e ** 2 + v_e ** 2) ** 0.5
     gamma = np.arctan2(-w_e, air_speed)
     alpha = opti.variable(
         init_guess=5,
@@ -1200,7 +1208,6 @@ if circular_trajectory == True:
         scale=4,
         category='ops'
     )
-    vehicle_bearing = track * 180 / np.pi
     required_revisit_rate_circ = 24 / temporal_resolution
     opti.subject_to([
         altitude[time_periodic_start_index:] / min_cruise_altitude > 1,
@@ -1949,7 +1956,7 @@ if __name__ == "__main__":
 
                 try:
                     sol = opti.solve(
-                        max_iter=1000,
+                        max_iter=5000,
                         options={
                             "ipopt.max_cpu_time": 600
                         }
