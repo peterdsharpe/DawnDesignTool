@@ -57,6 +57,7 @@ def plot_results(filename):
     # Read the CSV file into a DataFrame
     df = pd.read_csv(filename)
 
+    df = df.apply(pd.to_numeric, errors='coerce')
     # Create an interactive 3D scatter plot
     fig = px.scatter_3d(df, x='wing_span', y='temporal_resolution', z='spatial_resolution')
 
