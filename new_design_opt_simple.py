@@ -77,15 +77,15 @@ hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we
 
 # Trajectory Parameters
 min_speed = 0.5 # specify a minimum groundspeed (bad convergence if less than 0.5 m/s)
-wind_direction = 90 # degrees, the direction the wind is blowing from 0 being North and aligned with the x-axis
-run_with_95th_percentile_wind_condition = False # do we want to run the sizing with the 95th percentile wind condition?
+wind_direction = 0 # degrees, the direction the wind is blowing from 0 being North and aligned with the x-axis
+run_with_95th_percentile_wind_condition = True # do we want to run the sizing with the 95th percentile wind condition?
 
 # todo finalize trajectory parameterization
-straight_line_trajectory = True   # do we want to assume a straight line trajectory?
-required_headway_per_day = 100000
-vehicle_heading = opti.parameter(value=275) # degrees
+straight_line_trajectory = False   # do we want to assume a straight line trajectory?
+required_headway_per_day = 10000
+vehicle_heading = opti.parameter(value=120) # degrees
 
-circular_trajectory = False  # do we want to assume a circular trajectory?
+circular_trajectory = True  # do we want to assume a circular trajectory?
 flight_path_radius = 100000  # only relevant if circular_trajectory is True
 temporal_resolution = opti.variable(init_guess=6, scale=1, upper_bound=12, category='des')  # hours
 
@@ -1135,10 +1135,12 @@ if straight_line_trajectory == True:
     ground_speed_x = u_e - wind_speed_x
     ground_speed_y = v_e - wind_speed_y
     ground_speed = (ground_speed_x ** 2 + ground_speed_y ** 2) ** 0.5
-    vehicle_bearing = np.arctan2(ground_speed_y, ground_speed_x)
-    distance = time * ground_speed
-    x_e = distance * np.cos(track)
-    y_e = distance * np.sin(track)
+    opti.subject_to(ground_speed > min_speed)
+    vehicle_bearing = np.arctan2d(ground_speed_y, ground_speed_x)
+    distance = ground_speed_x * np.cosd(vehicle_bearing) * time
+    x_e = ground_speed_x * time
+    y_e = ground_speed_y * time
+    # distance = (x_e ** 2 + y_e ** 2) ** 0.5
     w_e = opti.variable(
         init_guess=0,
         n_vars=n_timesteps,
@@ -1571,13 +1573,13 @@ opti.subject_to([
 payload_power = power_trans * pulse_rep_freq * pulse_duration
 
 snr = payload_power * antenna_gain ** 2 * center_wavelength ** 3 * a_hs * sigma0 * range_resolution / \
-      ((2 * 4 * np.pi) ** 3 * dist ** 3 * k_b * my_atmosphere.temperature() * F * air_speed * a_B)
+      ((2 * 4 * np.pi) ** 3 * dist ** 3 * k_b * my_atmosphere.temperature() * F * ground_speed * a_B)
 
 snr_db = 10 * np.log(snr)
 
 opti.subject_to([
     required_snr <= snr_db,
-    pulse_rep_freq >= 2 * air_speed / radar_length,
+    pulse_rep_freq >= 2 * ground_speed / radar_length,
     pulse_rep_freq <= c / (2 * swath_azimuth),
 ])
 
