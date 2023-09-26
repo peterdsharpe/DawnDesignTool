@@ -36,8 +36,8 @@ des = dict(category="design")
 ops = dict(category="operations")
 
 ##### optimization assumptions
-minimize = ('wingspan_optimization_scaling_term * wing_span / 30 '
-            '+ spatial_resolution_optimization_scaling_term * spatial_resolution / 10 ')
+minimize = ('wingspan_optimization_scaling_term * wing_span / 30 ')
+            # '+ spatial_resolution_optimization_scaling_term * spatial_resolution / 10 '
             # '+ temporal_resolution_optimization_scaling_term * temporal_resolution / 12')
 make_plots = True
 
@@ -78,11 +78,12 @@ hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we
 # Trajectory Parameters
 min_speed = 0.5 # specify a minimum groundspeed (bad convergence if less than 0.5 m/s)
 wind_direction = 90 # degrees, the direction the wind is blowing from 0 being North and aligned with the x-axis
+run_with_95th_percentile_wind_condition = False # do we want to run the sizing with the 95th percentile wind condition?
 
 # todo finalize trajectory parameterization
 straight_line_trajectory = True   # do we want to assume a straight line trajectory?
 required_headway_per_day = 100000
-vehicle_heading = opti.parameter(value=90) # degrees
+vehicle_heading = opti.parameter(value=275) # degrees
 
 circular_trajectory = False  # do we want to assume a circular trajectory?
 flight_path_radius = 100000  # only relevant if circular_trajectory is True
@@ -1113,11 +1114,10 @@ def wind_speed_func(alt):
 if straight_line_trajectory == True:
     guess_altitude = 14000
     guess_speed = 20
-    flight_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10)
-    distance = time * flight_speed
+    air_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10)
     track = vehicle_heading * np.pi / 180
-    x_e = distance * np.cos(track)
-    y_e = distance * np.sin(track)
+    u_e = air_speed * np.cos(track)
+    v_e = air_speed * np.sin(track)
     z_e = opti.variable(
         init_guess=-guess_altitude,
         n_vars=n_timesteps,
@@ -1126,8 +1126,19 @@ if straight_line_trajectory == True:
         upper_bound=0,
         lower_bound=-40000,
     )
-    u_e = flight_speed * np.cos(track)
-    v_e = flight_speed * np.sin(track)
+    altitude = -z_e
+    wind_speed = wind_speed_func(altitude)
+    if run_with_95th_percentile_wind_condition == False:
+        wind_speed = np.zeros(n_timesteps)
+    wind_speed_x = np.cosd(wind_direction) * wind_speed
+    wind_speed_y = np.sind(wind_direction) * wind_speed
+    ground_speed_x = u_e - wind_speed_x
+    ground_speed_y = v_e - wind_speed_y
+    ground_speed = (ground_speed_x ** 2 + ground_speed_y ** 2) ** 0.5
+    vehicle_bearing = np.arctan2(ground_speed_y, ground_speed_x)
+    distance = time * ground_speed
+    x_e = distance * np.cos(track)
+    y_e = distance * np.sin(track)
     w_e = opti.variable(
         init_guess=0,
         n_vars=n_timesteps,
@@ -1135,42 +1146,27 @@ if straight_line_trajectory == True:
         category='ops',
         lower_bound=min_speed,
     )
-    altitude = -z_e
-    speed = (u_e ** 2 + v_e ** 2) ** 0.5
-    gamma = np.arctan2(-w_e, speed)
+    # speed = (u_e ** 2 + v_e ** 2) ** 0.5
+    gamma = np.arctan2(-w_e, air_speed)
     alpha = opti.variable(
         init_guess=5,
         n_vars=n_timesteps,
         scale=4,
         category='ops'
     )
-    # ground_speed = opti.variable(
-    #     init_guess=5,
-    #     n_vars=n_timesteps,
-    #     scale=0.1,
-    #     category='ops',
-    #     lower_bound=min_speed,
-    # )
     opti.subject_to([
         altitude[time_periodic_start_index:] / min_cruise_altitude > 1,
         distance[time_periodic_start_index] / 1e5 == 0,
         distance[time_periodic_end_index] / 1e5 > (distance[time_periodic_start_index] + required_headway_per_day) / 1e5,
     ])
-    vehicle_bearing = vehicle_heading
-    # wind_speed = wind_speed_func(dyn.altitude)
-    # wind_speed_x = np.cosd(wind_direction) * wind_speed
-    # wind_speed_y = np.sind(wind_direction) * wind_speed
-    # ground_speed_x = dyn.u_e - wind_speed_x
-    # ground_speed_y = dyn.v_e - wind_speed_y
-    # opti.subject_to(ground_speed ** 2 == (ground_speed_x ** 2 + ground_speed_y ** 2))
-    # vehicle_bearing = np.arctan2(ground_speed_y, ground_speed_x)
+    # vehicle_bearing = vehicle_heading
 
 if circular_trajectory == True:
     guess_altitude = 18000
     guess_speed = 30
-    flight_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10)
+    air_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10)
     start_angle = opti.variable(init_guess=0, scale=1, category='ops')
-    distance = time * flight_speed
+    distance = time * air_speed
     circular_trajectory_length = 2 * np.pi * flight_path_radius
     angle_radians = distance / flight_path_radius + start_angle
     track = angle_radians + np.pi / 2
@@ -1184,8 +1180,8 @@ if circular_trajectory == True:
         upper_bound=0,
         lower_bound=-40000,
     )
-    u_e = flight_speed * np.cos(angle_radians)
-    v_e = flight_speed * np.sin(angle_radians)
+    u_e = air_speed * np.cos(angle_radians)
+    v_e = air_speed * np.sin(angle_radians)
     w_e = opti.variable(
         init_guess=0,
         n_vars=n_timesteps,
@@ -1194,8 +1190,8 @@ if circular_trajectory == True:
         lower_bound=min_speed,
     )
     altitude = -z_e
-    speed = (u_e ** 2 + v_e ** 2) ** 0.5
-    gamma = np.arctan2(-w_e, speed)
+    # speed = (u_e ** 2 + v_e ** 2) ** 0.5
+    gamma = np.arctan2(-w_e, air_speed)
     alpha = opti.variable(
         init_guess=5,
         n_vars=n_timesteps,
@@ -1285,77 +1281,7 @@ x_km = x_e / 1e3
 # dyn.speed = (dyn.u_e ** 2 + dyn.v_e ** 2) ** 0.5
 # start on the ground if doing climb optimization
 if climb_opt:
-    opti.subject_to(dyn.altitude[0] / 1e4 == 0)
-
-if lawnmower_trajectory == True:  # can you approximate with an ellipse and define the angle along an ellipse explicitly?
-
-    initial_vehicle_bearing = opti.variable(
-        init_guess=0,
-        scale=1,
-        lower_bound=0,
-        upper_bound=360,
-        category='ops',
-    )
-    groundspeed = opti.variable(
-        init_guess=5,
-        n_vars=n_timesteps,
-        scale=1,
-        category='ops',
-    )
-    straight_segment_length = sample_area_height
-    turn_radius = dyn.speed ** 2 / (9.81 * np.tan(np.radians(10)))
-    turn_length = 2 * np.pi * turn_radius
-    racetrack_length = 2 * straight_segment_length + 2 * turn_length
-    place_on_track = np.mod(distance, racetrack_length)
-    single_track_coverage = 4 * turn_radius
-    passes_required = sample_area_width / single_track_coverage
-    total_track_length = racetrack_length * passes_required
-    opti.subject_to(distance[-1] / total_track_length > required_revisit_rate)
-
-    opti.subject_to([
-        # groundspeed > min_speed,
-        # groundspeed == speed,
-    ])
-    # opti.subject_to(dyn.track == initial_vehicle_bearing)
-    vehicle_bearing = np.where(
-        place_on_track > straight_segment_length,
-        initial_vehicle_bearing + (place_on_track - straight_segment_length) * 180 / (np.pi * turn_radius),
-        initial_vehicle_bearing
-    )
-    vehicle_bearing = np.where(
-        place_on_track > (straight_segment_length + turn_length),
-        initial_vehicle_bearing + 180,
-        vehicle_bearing
-    )
-    vehicle_bearing = np.where(
-        place_on_track > (2 * straight_segment_length + turn_length),
-        initial_vehicle_bearing + 180 + ((place_on_track - (2 * straight_segment_length + turn_length)) * 180 / (np.pi * turn_radius)),
-        vehicle_bearing
-    )
-    #
-    # groundspeed_x = groundspeed * np.cosd(vehicle_bearing)
-    # groundspeed_y = groundspeed * np.sind(vehicle_bearing)
-    # wind_speed_x = wind_speed * np.cosd(wind_direction)
-    # wind_speed_y = wind_speed * np.sind(wind_direction)
-    #
-    opti.subject_to([
-        # dyn.x_e[time_periodic_start_index] == 0,
-        # dyn.y_e[time_periodic_start_index] == 0,
-        dyn.u_e == dyn.speed * np.cosd(vehicle_bearing),
-        dyn.v_e == dyn.speed * np.sind(vehicle_bearing),
-    # groundspeed ** 2 == groundspeed_x ** 2 + groundspeed_y ** 2,
-    ])
-    vehicle_heading = vehicle_bearing
-
-if hold_cruise_altitude == True:
-    cruise_altitude = opti.variable(
-        init_guess=guess_altitude,
-        scale=1e3,
-        category='des',
-    )
-    opti.subject_to([
-        altitude[time_periodic_start_index:] == cruise_altitude,  # stay at cruise altitude after climb
-    ])
+    opti.subject_to(altitude[0] / 1e4 == 0)
 
 # region Atmosphere
 ##### Atmosphere
@@ -1365,9 +1291,9 @@ rho = my_atmosphere.density()
 T = my_atmosphere.temperature()
 mu = my_atmosphere.dynamic_viscosity()
 a = my_atmosphere.speed_of_sound()
-mach = speed / a
+mach = air_speed / a
 g = 9.81  # gravitational acceleration, m/s^2
-q = 1 / 2 * rho * speed ** 2  # Solar calculations
+q = 1 / 2 * rho * air_speed ** 2  # Solar calculations
 opti.subject_to(q_ne / 100 > q * q_ne_over_q_max / 100)
 
 
@@ -1378,7 +1304,7 @@ opti.subject_to(q_ne / 100 > q * q_ne_over_q_max / 100)
 
 # Fuselage
 def compute_fuse_aerodynamics(fuse: asb.Fuselage):
-    fuse.Re = rho / mu * speed * fuse.length()
+    fuse.Re = rho / mu * air_speed * fuse.length()
     fuse.CLA = 0
     fuse.CDA = aero_lib.Cf_flat_plate(fuse.Re) * fuse.area_wetted() * 1.2  # wetted area with form factor
 
@@ -1402,7 +1328,7 @@ def compute_wing_aerodynamics(
     if is_horizontal_surface:
         surface.alpha_eff += alpha
 
-    surface.Re = rho / mu * speed * surface.mean_geometric_chord()
+    surface.Re = rho / mu * air_speed * surface.mean_geometric_chord()
     surface.airfoil = surface.xsecs[0].airfoil
     try:
 
@@ -1645,13 +1571,13 @@ opti.subject_to([
 payload_power = power_trans * pulse_rep_freq * pulse_duration
 
 snr = payload_power * antenna_gain ** 2 * center_wavelength ** 3 * a_hs * sigma0 * range_resolution / \
-      ((2 * 4 * np.pi) ** 3 * dist ** 3 * k_b * my_atmosphere.temperature() * F * speed * a_B)
+      ((2 * 4 * np.pi) ** 3 * dist ** 3 * k_b * my_atmosphere.temperature() * F * air_speed * a_B)
 
 snr_db = 10 * np.log(snr)
 
 opti.subject_to([
     required_snr <= snr_db,
-    pulse_rep_freq >= 2 * speed / radar_length,
+    pulse_rep_freq >= 2 * air_speed / radar_length,
     pulse_rep_freq <= c / (2 * swath_azimuth),
 ])
 
@@ -1696,12 +1622,12 @@ else:
     opti.subject_to(altitude < 30000)  # Bugs out without this limiter
 
     propeller_efficiency, motor_efficiency = eff_curve_fit(
-        airspeed=speed,
+        airspeed=air_speed,
         total_thrust=thrust,
         altitude=altitude,
         var_pitch=variable_pitch
     )
-    power_out_propulsion_shaft = thrust * speed / propeller_efficiency
+    power_out_propulsion_shaft = thrust * air_speed / propeller_efficiency
 
     gearbox_efficiency = 0.986
 
@@ -1839,7 +1765,7 @@ net_accel_z_e = opti.variable(
 # )
 opti.constrain_derivative(
     variable=distance, with_respect_to=time,
-    derivative=speed
+    derivative=air_speed
 )
 opti.constrain_derivative(
     variable=u_e, with_respect_to=time,
@@ -1928,7 +1854,7 @@ opti.constrain_derivative(
 ##### Add periodic constraints
 opti.subject_to([
     altitude[time_periodic_end_index] / 1e4 > altitude[time_periodic_start_index] / 1e4,
-    speed[time_periodic_end_index] / 2e1 > speed[time_periodic_start_index] / 2e1,
+    air_speed[time_periodic_end_index] / 2e1 > air_speed[time_periodic_start_index] / 2e1,
     battery_charge_state[time_periodic_end_index] > battery_charge_state[time_periodic_start_index],
     gamma[time_periodic_end_index] == gamma[time_periodic_start_index],
     alpha[time_periodic_end_index] == alpha[time_periodic_start_index],
@@ -1965,10 +1891,10 @@ wing_loading = 9.81 * mass_total / wing.area()
 wing_loading_psf = wing_loading / 47.880258888889
 empty_wing_loading = 9.81 * mass_structural / wing.area()
 empty_wing_loading_psf = empty_wing_loading / 47.880258888889
-propeller_efficiency = thrust * speed/ power_out_propulsion_shaft
+propeller_efficiency = thrust * air_speed/ power_out_propulsion_shaft
 cruise_LD = lift_force / drag_force
 avg_cruise_LD = np.mean(cruise_LD)
-avg_airspeed = np.mean(speed)
+avg_airspeed = np.mean(air_speed)
 sl_atmosphere = atmo(altitude=0)
 rho_ratio = np.sqrt(np.mean(my_atmosphere.density()) / sl_atmosphere.density())
 avg_ias = avg_airspeed * rho_ratio
@@ -1996,7 +1922,7 @@ for penalty_input in [
     thrust / 10,
     # dyn.Fz_e / 1e-1,
     # dyn.Fx_e / 1e-1,
-    speed / 1e-1,
+    air_speed / 1e-1,
     alpha / 1,
     distance / 500,
 ]:
@@ -2201,7 +2127,7 @@ if __name__ == "__main__":
                          title="Altitude over Simulation",
                          save_name="outputs/altitude.png"
                          )
-                    plot("hour", "speed",
+                    plot("hour", "air_speed",
                          xlabel="Hours after Solar Noon",
                          ylabel="True Airspeed [m/s]",
                          title="True Airspeed over Simulation",
