@@ -49,9 +49,9 @@ draw_initial_guess_config = False
 ##### Section: Input Parameters
 
 # Objective Function Scaling Parameters
-wingspan_optimization_scaling_term = opti.parameter(value=0.33) # scale from 0 to 1 to adjust the relative importance of wingspan in the objective function
-temporal_resolution_optimization_scaling_term = opti.parameter(value=0.33) # scale from 0 to 1 to adjust the relative importance of temporal resolution in the objective function
-spatial_resolution_optimization_scaling_term = opti.parameter(value=0.33) # scale from 0 to 1 to adjust the relative importance of spatial resolution in the objective function
+wingspan_optimization_scaling_term = opti.parameter(value=0.8) # scale from 0 to 1 to adjust the relative importance of wingspan in the objective function
+temporal_resolution_optimization_scaling_term = opti.parameter(value=0.1) # scale from 0 to 1 to adjust the relative importance of temporal resolution in the objective function
+spatial_resolution_optimization_scaling_term = opti.parameter(value=0.1) # scale from 0 to 1 to adjust the relative importance of spatial resolution in the objective function
 
 # Aircraft Parameters
 battery_specific_energy_Wh_kg = 390  # cell level specific energy of the battery
@@ -86,8 +86,8 @@ required_headway_per_day = 10000
 vehicle_heading = opti.parameter(value=120) # degrees
 
 circular_trajectory = True  # do we want to assume a circular trajectory?
-flight_path_radius = 100000  # only relevant if circular_trajectory is True
-temporal_resolution = opti.variable(init_guess=6, scale=1, upper_bound=12, category='des')  # hours
+temporal_resolution = opti.variable(init_guess=6, scale=1, upper_bound=24, category='des')  # hours
+coverage_radius = 2500 # meters # todo finalize with Brent
 
 lawnmower_trajectory = False  # do we want to assume a lawnmower trajectory?
 sample_area_height = 3000  # meters, the height of the area the aircraft must sample
@@ -99,15 +99,13 @@ mass_payload_base = 6
 payload_volume = 0.023 * 1.5  # assuming payload mass from gamma remote sensing with 50% margin on volume
 #todo change these from requirements to part of the objective function
 tb_per_day = 4 # terabytes per day, the amount of data the payload collects per day, to account for storage
-spatial_resolution = opti.variable(init_guess=10, scale=1, upper_bound=10, category='des')  # meters from conversation with Brent on 3/7/2023
+spatial_resolution = opti.variable(init_guess=1, scale=1, upper_bound=10, category='des')  # meters from conversation with Brent on 3/7/2023
 required_snr = 6  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
-center_wavelength = 0.024
 # meters given from Brent based on the properties of the ice sampled by the radar
 scattering_cross_sec_db = -10
 # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
 radar_length = 1  # meters, given from existing Gamma Remote Sensing instrument
 radar_width = 0.3  # meters, given from existing Gamma Remote Sensing instrument
-look_angle = 45  # degrees
 
 # Margins
 structural_mass_margin_multiplier = 1.25
@@ -1166,9 +1164,10 @@ if straight_line_trajectory == True:
 if circular_trajectory == True:
     guess_altitude = 18000
     guess_speed = 30
-    ground_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10)
+    ground_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10, category='ops')
     start_angle = opti.variable(init_guess=0, scale=1, category='ops')
     distance = time * ground_speed
+    flight_path_radius = opti.variable(init_guess=10000, lower_bound=0, scale=1000, category='ops')
     circular_trajectory_length = 2 * np.pi * flight_path_radius
     angle_radians = distance / flight_path_radius + start_angle
     track = angle_radians + np.pi / 2
@@ -1529,6 +1528,20 @@ opti.subject_to([
 
 c = 299792458  # [m/s] speed of light
 k_b = 1.38064852E-23  # [m2 kg s-2 K-1] boltzman constant
+look_angle = opti.variable(
+    init_guess=45,
+    scale=10,
+    upper_bound=90,
+    lower_bound=0,
+    **des
+)
+center_wavelength = opti.variable(
+    init_guess=0.03,
+    scale=0.01,
+    lower_bound=0,
+    # upper_bound=0.1,
+    **des
+)
 bandwidth = opti.variable(
     init_guess=211985277,
     scale=1e7,
@@ -1540,7 +1553,7 @@ pulse_rep_freq = opti.variable(
     scale=10000,
     lower_bound=0,
     **des
-)
+) # 1/s (Hz)
 power_trans = opti.variable(
     init_guess=862445,
     scale=1e5,
@@ -1550,7 +1563,7 @@ power_trans = opti.variable(
 )  # watts
 
 # define key radar parameters
-radar_area = radar_width * radar_length  # meters ** 2
+radar_aperture_area = radar_width * radar_length  # meters ** 2
 dist = altitude / np.cosd(look_angle)  # meters
 swath_azimuth = center_wavelength * dist / radar_length  # meters
 swath_range = center_wavelength * dist / (radar_width * np.cosd(look_angle))  # meters
@@ -1560,7 +1573,7 @@ radius = (swath_azimuth + swath_range) / 4  # meters
 ground_imaging_offset = np.tand(look_angle) * altitude  # meters
 scattering_cross_sec = 10 ** (scattering_cross_sec_db / 10)
 sigma0 = scattering_cross_sec / ground_area
-antenna_gain = 4 * np.pi * radar_area * 0.7 / center_wavelength ** 2
+antenna_gain = 4 * np.pi * radar_aperture_area * 0.7 / center_wavelength ** 2
 
 # Assumed constants
 a_hs = 0.88  # aperture-illumination taper factor associated with the synthetic aperture (value from Ulaby and Long)
@@ -1574,6 +1587,8 @@ azimuth_resolution = radar_length / 2
 opti.subject_to([
     range_resolution <= spatial_resolution,
     azimuth_resolution <= spatial_resolution,
+    flight_path_radius >= ground_imaging_offset + swath_range,
+    coverage_radius <= swath_range,
 ])
 
 # use SAR specific equations from Ulaby and Long
