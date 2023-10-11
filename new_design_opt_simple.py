@@ -49,9 +49,9 @@ draw_initial_guess_config = False
 ##### Section: Input Parameters
 
 # Objective Function Scaling Parameters
-wingspan_optimization_scaling_term = opti.parameter(value=0.8) # scale from 0 to 1 to adjust the relative importance of wingspan in the objective function
-temporal_resolution_optimization_scaling_term = opti.parameter(value=0.1) # scale from 0 to 1 to adjust the relative importance of temporal resolution in the objective function
-spatial_resolution_optimization_scaling_term = opti.parameter(value=0.1) # scale from 0 to 1 to adjust the relative importance of spatial resolution in the objective function
+wingspan_optimization_scaling_term = opti.parameter(value=0.33) # scale from 0 to 1 to adjust the relative importance of wingspan in the objective function
+temporal_resolution_optimization_scaling_term = opti.parameter(value=0.33) # scale from 0 to 1 to adjust the relative importance of temporal resolution in the objective function
+spatial_resolution_optimization_scaling_term = opti.parameter(value=0.33) # scale from 0 to 1 to adjust the relative importance of spatial resolution in the objective function
 
 # Aircraft Parameters
 battery_specific_energy_Wh_kg = 390  # cell level specific energy of the battery
@@ -69,7 +69,7 @@ use_propulsion_fits_from_FL2020_1682_undergrads = True  # Warning: Fits not yet 
 # Mission Operating Parameters
 latitude = -73  # degrees, the location the sizing occurs
 day_of_year = 60  # Julian day, the day of the year the sizing occurs
-mission_length = 60  # days, the length of the mission without landing to download data
+mission_length = 80  # days, the length of the mission without landing to download data
 strat_offset_value = 1000  # meters, margin above the stratosphere height the aircraft is required to stay above
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 climb_opt = False  # are we optimizing for the climb as well?
@@ -87,7 +87,7 @@ vehicle_heading = opti.parameter(value=120) # degrees
 
 circular_trajectory = True  # do we want to assume a circular trajectory?
 temporal_resolution = opti.variable(init_guess=6, scale=1, upper_bound=24, category='des')  # hours
-coverage_radius = 2500 # meters # todo finalize with Brent
+coverage_radius = 1500 # meters # todo finalize with Brent
 
 lawnmower_trajectory = False  # do we want to assume a lawnmower trajectory?
 sample_area_height = 3000  # meters, the height of the area the aircraft must sample
@@ -95,7 +95,7 @@ sample_area_width = 3000  # meters, the width of the area the aircraft must samp
 required_revisit_rate = 1  # How many times must the aircraft fully cover the sample area in the sizing day?
 
 # Instrument Parameters
-mass_payload_base = 6
+mass_payload_base = 5 # kg, does not include data storage or aperture mass
 payload_volume = 0.023 * 1.5  # assuming payload mass from gamma remote sensing with 50% margin on volume
 #todo change these from requirements to part of the objective function
 tb_per_day = 4 # terabytes per day, the amount of data the payload collects per day, to account for storage
@@ -104,8 +104,6 @@ required_snr = 6  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18
 # meters given from Brent based on the properties of the ice sampled by the radar
 scattering_cross_sec_db = -10
 # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
-radar_length = 1  # meters, given from existing Gamma Remote Sensing instrument
-radar_width = 0.3  # meters, given from existing Gamma Remote Sensing instrument
 
 # Margins
 structural_mass_margin_multiplier = 1.25
@@ -713,6 +711,9 @@ mass_props['wing_secondary'] = asb.mass_properties_from_radius_of_gyration(
     radius_of_gyration_z=wing.xsecs[0].xyz_le[0] + wing_root_chord / 2
 )
 
+opti.subject_to([
+    x_payload_pod < wing_x_le #+ wing_root_chord / 4
+])
 # Stabilizers
 q_ne = opti.variable(
     init_guess=93,
@@ -864,8 +865,7 @@ mass_landing_gear = 0.728 * mass_total / mass_daedalus  # Scale landing gear mas
 mass_strut_forward = payload_pod_forward_strut_length * 0.55 # assumed mass per meter of carbon fiber tube length (about 10 cm diameter)
 mass_strut_rear = payload_pod_rear_strut_length * 0.55
 mass_payload_pod_shell = payload_pod.area_wetted() * 2 * 0.2 # 0.2 kg/m^2 is the mass of kevlar sheet
-mass_paylod_pod_structure = 47.5 * payload_pod.volume() # todo make this better
-# todo add mass of thermal management in the payload pod (need mass value from Andrew as per 7/17 convo)
+mass_payload_pod_structure = 75 * payload_pod.volume() # todo make this better
 # areal_density_thermal_mat =   # kg/m^2, assumed mass per unit area of thermal management material
 # mass_thermal_management_system = payload_pod.area_wetted() * areal_density_thermal_mat
 mass_props['payload_pod'] = asb.MassProperties(
@@ -874,7 +874,7 @@ mass_props['payload_pod'] = asb.MassProperties(
             mass_landing_gear +
             mass_strut_forward +
             mass_strut_rear +
-            mass_paylod_pod_structure +
+            mass_payload_pod_structure +
             mass_payload_pod_shell
     ),
     x_cg=x_payload_pod + payload_pod_length / 2
@@ -930,12 +930,6 @@ mass_props['avionics'] = asb.MassProperties(
 avionics_volume = mass_props['avionics'].mass / 1250  # assumed density of electronics
 avionics_power = 180  # TODO revisit this number
 
-### instrument data storage mass requirements
-mass_of_data_storage = 0.0053  # kg per TB of data
-mass_props['payload'] = asb.MassProperties(
-    mass=mass_payload_base +
-         mission_length * tb_per_day * mass_of_data_storage
-)
 
 ### Power Systems Mass Accounting
 solar_cell_efficiency = 0.30 * 0.93 * 0.93
@@ -1013,7 +1007,7 @@ battery_voltage = 240 # todo reconsider based on RFI motor findings
 battery_pack_specific_energy = battery_specific_energy_Wh_kg * u.hour * battery_pack_cell_percentage  # J/kg #TODO double check this is right
 battery_total_energy = battery_pack_mass * battery_pack_specific_energy  # J
 
-battery_cg = (battery_volume / payload_pod_volume) * 0.5 * payload_pod_length + x_payload_pod + payload_pod_nose_length
+battery_cg = (battery_volume / payload_pod_volume) * 0.5 * payload_pod_length + x_payload_pod
 mass_props['battery_pack'] = asb.MassProperties(
     mass=battery_pack_mass,
     x_cg=battery_cg,
@@ -1479,6 +1473,8 @@ static_margin_fraction = (x_ac - airplane.xyz_ref[0]) / wing.mean_aerodynamic_ch
 opti.subject_to([
     static_margin_fraction == 0.2,  # Stability condition
     # moment / 1e4 == 0  # Trim condition
+    # mass_props_TOGW.xyz_cg[0] <=wing_x_quarter_chord,
+    # mass_props_TOGW.xyz_cg[0] >= wing_x_le,
 ])
 
 ### Size the tails off of tail volume coefficients
@@ -1528,18 +1524,30 @@ opti.subject_to([
 
 c = 299792458  # [m/s] speed of light
 k_b = 1.38064852E-23  # [m2 kg s-2 K-1] boltzman constant
-look_angle = opti.variable(
-    init_guess=45,
-    scale=10,
-    upper_bound=90,
+radar_width = opti.variable(
+    init_guess=0.3,
+    scale=0.1,
     lower_bound=0,
     **des
 )
+radar_length = opti.variable(
+    init_guess=0.6,
+    scale=0.1,
+    lower_bound=0,
+    **des
+)
+look_angle = opti.variable(
+    init_guess=45,
+    scale=10,
+    upper_bound=65,
+    lower_bound=25,
+    **des
+) # limited in lower bound by specular reflection which we get at low look angles and does not enable interferometry
 center_wavelength = opti.variable(
     init_guess=0.03,
     scale=0.01,
-    lower_bound=0,
-    # upper_bound=0.1,
+    lower_bound=0.015,
+    upper_bound=0.3,
     **des
 )
 bandwidth = opti.variable(
@@ -1564,6 +1572,7 @@ power_trans = opti.variable(
 
 # define key radar parameters
 radar_aperture_area = radar_width * radar_length  # meters ** 2
+mass_radar_aperture = 5.55 * radar_aperture_area
 dist = altitude / np.cosd(look_angle)  # meters
 swath_azimuth = center_wavelength * dist / radar_length  # meters
 swath_range = center_wavelength * dist / (radar_width * np.cosd(look_angle))  # meters
@@ -1584,11 +1593,15 @@ a_B = 1  # pulse-taper factor to relate bandwidth and pulse duration
 pulse_duration = a_B / bandwidth
 range_resolution = c * pulse_duration / (2 * np.sind(look_angle))
 azimuth_resolution = radar_length / 2
+critical_baseline = center_wavelength * dist / (2 * range_resolution * (np.cosd(look_angle)) ** 2)
+
 opti.subject_to([
     range_resolution <= spatial_resolution,
     azimuth_resolution <= spatial_resolution,
     flight_path_radius >= ground_imaging_offset + swath_range,
     coverage_radius <= swath_range,
+    payload_pod_length * 0.75 >= radar_length,
+    payload_pod_diameter * 0.75 >= radar_width,
 ])
 
 # use SAR specific equations from Ulaby and Long
@@ -1599,11 +1612,21 @@ snr = payload_power * antenna_gain ** 2 * center_wavelength ** 3 * a_hs * sigma0
 
 snr_db = 10 * np.log(snr)
 
+p_thermal = 1 / (1 + snr_db ** -1)
+
 opti.subject_to([
     required_snr <= snr_db,
     pulse_rep_freq >= 2 * ground_speed / radar_length,
     pulse_rep_freq <= c / (2 * swath_azimuth),
 ])
+
+### instrument data storage mass requirements
+mass_of_data_storage = 0.0053  # kg per TB of data
+mass_props['payload'] = asb.MassProperties(
+    mass=mass_payload_base +
+         mission_length * tb_per_day * mass_of_data_storage +
+         mass_radar_aperture
+)
 
 # region Propulsion
 
@@ -2393,10 +2416,10 @@ if __name__ == "__main__":
                 # opti.value(time)
                 # opti.set_value(vehicle_heading, heading)
                 #
-                # def draw():  # Draw the geometry of the optimal airplane
-                #     airplane.substitute_solution(sol)
-                #     airplane.draw()
-                #
-                #
-                # if make_plots == True:
-                #     draw()
+                def draw():  # Draw the geometry of the optimal airplane
+                    airplane.substitute_solution(sol)
+                    airplane.draw()
+
+
+                if make_plots == True:
+                    draw()

@@ -8,7 +8,7 @@ import plotly.io as pio
 pio.renderers.default = "browser"
 
 ### Set the run ID
-run_name = "sweep"
+run_name = "sweep_new_radar"
 
 ### Turn parallelization on/off.
 parallel = True
@@ -53,13 +53,20 @@ def run(wingspan_scale, time_scale, space_scale):
 
 
 def plot_results(filename):
+    import pandas as pd
+    import plotly.express as px
+    import numpy as np
 
     # Read the CSV file into a DataFrame
     df = pd.read_csv(filename)
 
     df = df.apply(pd.to_numeric, errors='coerce')
-    # Create an interactive 3D scatter plot
-    fig = px.scatter_3d(df, x='wing_span', y='temporal_resolution', z='spatial_resolution')
+
+    # Calculate the Euclidean distance from (0, 0, 0)
+    df['distance'] = np.sqrt(df['wing_span'] ** 2 + df['temporal_resolution'] ** 2 + df['spatial_resolution'] ** 2)
+
+    # Create an interactive 3D scatter plot and use 'distance' for coloring
+    fig = px.scatter_3d(df, x='wing_span', y='temporal_resolution', z='spatial_resolution', color='distance')
 
     # Customize the appearance if needed
     fig.update_traces(marker=dict(size=5))
