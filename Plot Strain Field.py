@@ -12,13 +12,12 @@ spatial_resolution_lower_limit = 0.1 * plastic_radius
 print(spatial_resolution_lower_limit)
 
 # Define a range of r and θ values
-r_values = np.linspace(0.0001, 150, 100)  # Adjust the range and number of points as needed
+r_values = np.linspace(0.0001, 1500, 100)  # Adjust the range and number of points as needed
 theta_values = np.linspace(0, 2 * np.pi, 100)  # Adjust the range and number of points as needed
 
 # Create a grid of r and θ values
 theta, radius = np.meshgrid(theta_values, r_values)
-theta = np.pi * 3 / 4
-radius = 50
+
 
 # Initialize a 100x100 matrix to store the deviatoric stress values
 deviatoric_stress_matrix = np.zeros((100, 100))
@@ -76,9 +75,9 @@ for i in range(100):
         deviatoric_stress_matrix[i, j] = deviatoric_stress
 
 # Create a contour plot of deviatoric stress in Cartesian coordinates
-contour_levels = np.linspace(-10, 150, 25)  # Adjust the levels as needed
+contour_levels = np.linspace(-100, 150, 17)  # Adjust the levels as needed
 plt.figure(figsize=(8, 8))
-contour = plt.contourf(x_coords, y_coords, deviatoric_stress_matrix, levels=contour_levels, cmap='viridis', vmin=-10, vmax=150)
+contour = plt.contour(x_coords, y_coords, deviatoric_stress_matrix, levels=contour_levels, cmap='viridis', vmin=-10, vmax=150)
 
 # Add a colorbar
 cbar = plt.colorbar(contour, label='Deviatoric Stress [kPa]')
@@ -87,8 +86,8 @@ cbar = plt.colorbar(contour, label='Deviatoric Stress [kPa]')
 plt.title('Deviatoric Stress Contour Plot')
 plt.xlabel('X [meters]')
 plt.ylabel('Y [meters]')
-plt.xlim(-100, 100)
-plt.ylim(-100, 100)
+plt.xlim(-1000, 1000)
+plt.ylim(-1000, 1000)
 
 # Show the plot
 plt.show()
