@@ -1,5 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
+from aerosandbox.tools.pretty_plots import plt, sns, mpl, show_plot
 
 # define lower limit of spatial resolution where there are no benefits to further improving spatial resolution
 k_i = 100 # somewhere between 100 - 150 kPa/m^0.5
@@ -9,15 +9,18 @@ plastic_radius = k_i ** 2 / (2 * np.pi * yield_strength ** 2)
 
 spatial_resolution_lower_limit = 0.1 * plastic_radius
 
-print(spatial_resolution_lower_limit)
+print("spatial resolution lower limit: ", spatial_resolution_lower_limit)
 
 # Define a range of r and θ values
-r_values = np.linspace(0.0001, 1500, 100)  # Adjust the range and number of points as needed
+r_values = np.linspace(0.001, 15, 100)  # Adjust the range and number of points as needed
 theta_values = np.linspace(0, 2 * np.pi, 100)  # Adjust the range and number of points as needed
 
 # Create a grid of r and θ values
 theta, radius = np.meshgrid(theta_values, r_values)
 
+# for debugging
+# theta = np.pi * 3 / 4
+# radius = 50
 
 # Initialize a 100x100 matrix to store the deviatoric stress values
 deviatoric_stress_matrix = np.zeros((100, 100))
@@ -52,7 +55,7 @@ for i in range(100):
         cauchy_stress_tensor = np.append(cauchy_stress_tensor, [[0, 0, sigma_33]], axis=0)
         # Calculate the eigenvalues and mean stress
         eigenvalues = np.linalg.eigvals(cauchy_stress_tensor)
-        I_1 = eigenvalues[0]
+        I_1 = np.trace(cauchy_stress_tensor)
         I_2 = eigenvalues[1]
         I_3 = eigenvalues[2]
         pressure = (I_1) / 3
@@ -67,17 +70,33 @@ for i in range(100):
         deviatoric_stress = (np.trace(deviatoric_stress_tensor) ** 2 - np.trace((deviatoric_stress_tensor ** 2))) / 2
         eigenvalues_tau = np.linalg.eigvals(deviatoric_stress_tensor)
         I_1_tau = eigenvalues_tau[0]
-        # print(deviatoric_stress)
+        # print(np.trace(deviatoric_stress_tensor))
         I_2_tau = eigenvalues_tau[1]
         # deviatoric_stress = I_2_tau
 
         # Store the deviatoric stress in the matrix
-        deviatoric_stress_matrix[i, j] = deviatoric_stress
+        deviatoric_stress_matrix[i, j] = -deviatoric_stress
 
 # Create a contour plot of deviatoric stress in Cartesian coordinates
-contour_levels = np.linspace(-100, 150, 17)  # Adjust the levels as needed
+viridis = mpl.colormaps.get_cmap('cividis')
+newcolors = viridis(np.linspace(0, 1, 256))
+newcolors[-1, :] = np.array([76/255, 187/255, 23/255, 0.5])
+newcolors[0, :] = np.array([0/255, 0/255, 0/255, 0.5])
+newcmp = mpl.colors.ListedColormap(newcolors)
+args = [
+    x_coords,
+    y_coords,
+    deviatoric_stress_matrix,
+]
+kwargs = {
+    "levels": np.arange(0, 500, 25),
+    "alpha" : .9,
+    "extend": "both",
+}
 plt.figure(figsize=(8, 8))
-contour = plt.contour(x_coords, y_coords, deviatoric_stress_matrix, levels=contour_levels, cmap='viridis', vmin=-10, vmax=150)
+CS = plt.contour(*args, **kwargs, colors="k", linewidths=0.2)
+contour = plt.contourf(*args, **kwargs, cmap=newcmp)
+plt.plot([0, 1000], [0, 0], '-w', label='Crack Orientation')
 
 # Add a colorbar
 cbar = plt.colorbar(contour, label='Deviatoric Stress [kPa]')
@@ -86,8 +105,9 @@ cbar = plt.colorbar(contour, label='Deviatoric Stress [kPa]')
 plt.title('Deviatoric Stress Contour Plot')
 plt.xlabel('X [meters]')
 plt.ylabel('Y [meters]')
-plt.xlim(-1000, 1000)
-plt.ylim(-1000, 1000)
+plt.xlim(-10, 10)
+plt.ylim(-10, 10)
+plt.legend(loc='upper left')
 
 # Show the plot
 plt.show()
