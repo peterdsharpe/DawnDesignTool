@@ -98,7 +98,7 @@ required_revisit_rate = 0 # How many times must the aircraft fully cover the sam
 mass_payload_base = 5 # kg, does not include data storage or aperture mass
 payload_volume = 0.023 * 1.5  # assuming payload mass from gamma remote sensing with 50% margin on volume
 tb_per_day = 4 # terabytes per day, the amount of data the payload collects per day, to account for storage
-spatial_resolution = opti.variable(init_guess=1, scale=1, upper_bound=10, category='des')  # meters from conversation with Brent on 3/7/2023
+spatial_resolution = opti.variable(init_guess=2.2, scale=1, lower_bound=0.015, category='des')  # meters from conversation with Brent on 3/7/2023
 required_snr = 6  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
 # meters given from Brent based on the properties of the ice sampled by the radar
 scattering_cross_sec_db = -10
@@ -164,16 +164,16 @@ hour = time / 3600
 
 ##### Section: Vehicle Overall Specs
 mass_total = opti.variable(
-    init_guess=300,
+    init_guess=230,
     scale=100,
     lower_bound=0,
     **des
 )
 
 power_in_after_panels_max = opti.variable(
-    init_guess=7000,
+    init_guess=5000,
     lower_bound=0,
-    scale=3000,
+    scale=1000,
     **des
 )
 
