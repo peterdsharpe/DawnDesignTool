@@ -1102,7 +1102,7 @@ def wind_speed_func(alt):
     return speed_func
 
 # add trajectory constraints depending on trajectory type
-if straight_line_trajectory == True:
+if trajectory == 'straight':
     guess_altitude = 14000
     guess_speed = 20
     air_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10)
@@ -1128,9 +1128,16 @@ if straight_line_trajectory == True:
     ground_speed = (ground_speed_x ** 2 + ground_speed_y ** 2) ** 0.5
     opti.subject_to(ground_speed > min_speed)
     vehicle_bearing = np.arctan2d(ground_speed_y, ground_speed_x)
-    distance = ground_speed_x * np.cosd(vehicle_bearing) * time
-    x_e = ground_speed_x * time
-    y_e = ground_speed_y * time
+    x_e = opti.variable(init_guess=0, n_vars=n_timesteps, scale=1e4, category='ops')
+    y_e = opti.variable(init_guess=0, n_vars=n_timesteps, scale=1e4, category='ops')
+    opti.constrain_derivative(
+        variable=x_e, with_respect_to=time,
+        derivative=ground_speed_x
+    )
+    opti.constrain_derivative(
+        variable=y_e, with_respect_to=time,
+        derivative=ground_speed_y
+    )
     # distance = (x_e ** 2 + y_e ** 2) ** 0.5
     w_e = opti.variable(
         init_guess=0,
@@ -1147,6 +1154,7 @@ if straight_line_trajectory == True:
         scale=4,
         category='ops'
     )
+    distance = opti.variable(init_guess=0, n_vars=n_timesteps, scale=1e5, category='ops')
     opti.subject_to([
         altitude[time_periodic_start_index:] / min_cruise_altitude > 1,
         distance[time_periodic_start_index] / 1e5 == 0,
@@ -1154,12 +1162,13 @@ if straight_line_trajectory == True:
     ])
     # vehicle_bearing = vehicle_heading
 
-if circular_trajectory == True:
+if trajectory == 'circular':
     guess_altitude = 18000
     guess_speed = 30
     ground_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10, category='ops')
     start_angle = opti.variable(init_guess=0, scale=1, category='ops')
-    distance = time * ground_speed
+    distance = opti.variable(init_guess=0, n_vars=n_timesteps, scale=1e5, category='ops')
+    opti.constrain_derivative(variable=distance, with_respect_to=time, derivative=ground_speed)
     flight_path_radius = opti.variable(init_guess=10000, lower_bound=0, scale=1000, category='ops')
     circular_trajectory_length = 2 * np.pi * flight_path_radius
     angle_radians = distance / flight_path_radius + start_angle
@@ -1203,83 +1212,92 @@ if circular_trajectory == True:
     required_revisit_rate_circ = 24 / temporal_resolution
     opti.subject_to([
         altitude[time_periodic_start_index:] / min_cruise_altitude > 1,
-        distance[time_periodic_start_index] / 1e5 == 0,
+        distance[time_periodic_start_index] == 0,
         distance[time_periodic_end_index] / circular_trajectory_length > required_revisit_rate_circ,
     ])
 
-    # dyn = asb.DynamicsPointMass3DSpeedGammaTrack()
-    # dyn = asb.DynamicsPointMass3DSpeedGammaTrack(
-    #     mass_props=mass_props_TOGW,
-    #     x_e=flight_path_radius * np.cos(angle_radians),
-    #     y_e=flight_path_radius * np.sin(angle_radians),
-    #     z_e=opti.variable(
-    #         init_guess=-guess_altitude,
-    #         n_vars=n_timesteps,
-    #         scale=1e4,
-    #         category='ops'
-    #     ),
-    #     speed=flight_speed,
-    #     gamma=opti.variable(
-    #         init_guess=0,
-    #         n_vars=n_timesteps,
-    #         scale=1e-1,
-    #         category='ops'
-    #     ),
-    #     track=angle_radians + np.pi / 2,
-    #     alpha=opti.variable(
-    #         init_guess=5,
-    #         n_vars=n_timesteps,
-    #         scale=4,
-    #         category='ops'
-    #     ),
-    #     bank= 0 #opti.variable( # can compute explicitly or leave as zero for flight path radius this large
-    #     #     init_guess=np.radians(1e-4),
-    #     #     n_vars=n_timesteps,
-    #     #     scale=1e-4,
-    #     #     category='ops',
-    #     #     lower_bound=np.radians(-30),
-    #     #     upper_bound=np.radians(30),
-    #     # )
-    # )
+if trajectory == 'lawnmower':
+    guess_altitude = 14000
+    guess_speed = 20
+    air_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10, category='ops')
+    start_angle = 0
+    turn_radius_1 = opti.variable(init_guess=1000, lower_bound=0, scale=1000, category='ops')
+    turn_radius_2 = opti.variable(init_guess=1000, lower_bound=0, scale=1000, category='ops')
+    distance = opti.variable(init_guess=0, n_vars=n_timesteps, scale=1e5, category='ops')
+    single_track_distance = np.mod(distance, sample_area_height * 2 + turn_radius_1 * np.pi + turn_radius_2 * np.pi)
+    track = np.where(
+        single_track_distance > sample_area_height,
+        start_angle + (single_track_distance - sample_area_height) / turn_radius_1,
+        start_angle)
+    track = np.where(
+        single_track_distance > sample_area_height + turn_radius_1 * np.pi,
+        start_angle + np.pi,
+        track)
+    track = np.where(
+        single_track_distance > sample_area_height * 2 + turn_radius_1 * np.pi,
+        start_angle + np.pi + (single_track_distance - sample_area_height * 2 - turn_radius_1 * np.pi) / turn_radius_2,
+        track)
+    u_e = air_speed * np.cos(track)
+    v_e = air_speed * np.sin(track)
+    z_e = opti.variable(
+        init_guess=-guess_altitude,
+        n_vars=n_timesteps,
+        scale=1e4,
+        category='ops',
+        upper_bound=0,
+        lower_bound=-40000,
+    )
+    altitude = -z_e
+    wind_speed = wind_speed_func(altitude)
+    if run_with_95th_percentile_wind_condition == False:
+        wind_speed = np.zeros(n_timesteps)
+    wind_speed_x = np.cosd(wind_direction) * wind_speed
+    wind_speed_y = np.sind(wind_direction) * wind_speed
+    ground_speed_x = u_e - wind_speed_x
+    ground_speed_y = v_e - wind_speed_y
+    ground_speed = (ground_speed_x ** 2 + ground_speed_y ** 2) ** 0.5
+    opti.subject_to(ground_speed > min_speed)
+    vehicle_bearing = np.arctan2d(ground_speed_y, ground_speed_x)
+    x_e = opti.variable(init_guess=0, n_vars=n_timesteps, scale=1e4, category='ops')
+    y_e = opti.variable(init_guess=0, n_vars=n_timesteps, scale=1e4, category='ops')
+    opti.constrain_derivative(
+        variable=x_e, with_respect_to=time,
+        derivative=ground_speed_x
+    )
+    opti.constrain_derivative(
+        variable=y_e, with_respect_to=time,
+        derivative=ground_speed_y
+    )
+    w_e = opti.variable(
+        init_guess=0,
+        n_vars=n_timesteps,
+        scale=1e-4,
+        category='ops',
+        lower_bound=min_speed,
+    )
 
-    # dyn.add_gravity_force(g=9.81)
-
-    # ground_speed = opti.variable(
-    #     init_guess=5,
-    #     n_vars=n_timesteps,
-    #     scale=0.1,
-    #     category='ops',
-    #     lower_bound=min_speed,
-    # )
-
-    # add dynamics constraints initial conditions
-    # opti.subject_to([
-    #     dyn.altitude[time_periodic_start_index:] / min_cruise_altitude > 1,
-    #     dyn.altitude / guess_altitude > 0,  # stay above ground
-    #     dyn.altitude / 40000 < 1,  # models break down
-    #     distance[time_periodic_start_index] / 1e5 == 0,
-    #     distance[time_periodic_end_index] / circular_trajectory_length > required_revisit_rate_circ,
-    # ])
-    # wind_speed = wind_speed_func(dyn.altitude)
-    # wind_speed_x = np.sind(wind_direction) * wind_speed
-    # wind_speed_y = np.cosd(wind_direction) * wind_speed
-    # ground_speed_x = dyn.u_e - wind_speed_x
-    # ground_speed_y = dyn.v_e - wind_speed_y
-    # opti.subject_to(ground_speed ** 2 == (ground_speed_x ** 2 + ground_speed_y ** 2))
+    gamma = np.arctan2(-w_e, air_speed)
+    alpha = opti.variable(
+        init_guess=5,
+        n_vars=n_timesteps,
+        scale=4,
+        category='ops'
+    )
+    opti.subject_to([
+        altitude[time_periodic_start_index:] / min_cruise_altitude > 1,
+        distance[time_periodic_start_index] / 1e5 == 0,
+        x_e[0] == 0,
+        y_e[0] == 0,
+    ])
 
 z_km = altitude / 1e3
 y_km = y_e / 1e3
 x_km = x_e / 1e3
 
-# define key terms in dyn stack explicitly
-# gamma = np.arctan2(
-#             -dyn.w_e,
-#             (
-#                     dyn.u_e ** 2 +
-#                     dyn.v_e ** 2
-#             ) ** 0.5
-#         )
-# dyn.speed = (dyn.u_e ** 2 + dyn.v_e ** 2) ** 0.5
+if hold_cruise_altitude == True:
+    cruise_altitude = opti.variable(init_guess=14000, scale=1e4, category='ops')
+    opti.subject_to(altitude[time_periodic_start_index:] == cruise_altitude)
+
 # start on the ground if doing climb optimization
 if climb_opt:
     opti.subject_to(altitude[0] / 1e4 == 0)
