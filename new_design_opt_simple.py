@@ -73,26 +73,26 @@ mission_length = 80  # days, the length of the mission without landing to downlo
 strat_offset_value = 1000  # meters, margin above the stratosphere height the aircraft is required to stay above
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 climb_opt = False  # are we optimizing for the climb as well?
-hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we altitude cycle (False)?
+hold_cruise_altitude = False  # must we hold the cruise altitude (True) or can we altitude cycle (False)?
 
 # Trajectory Parameters
 min_speed = 0.5 # specify a minimum groundspeed (bad convergence if less than 0.5 m/s)
-wind_direction = 0 # degrees, the direction the wind is blowing from 0 being North and aligned with the x-axis
+wind_direction = 45 # degrees, the direction the wind is blowing from 0 being North and aligned with the x-axis
 run_with_95th_percentile_wind_condition = False # do we want to run the sizing with the 95th percentile wind condition?
 
 # todo finalize trajectory parameterization
-straight_line_trajectory = False   # do we want to assume a straight line trajectory?
-required_headway_per_day = 10000
-vehicle_heading = opti.parameter(value=120) # degrees
+# trajectory = 'straight'   # do we want to assume a straight line trajectory?
+required_headway_per_day = 100000
+vehicle_heading = opti.parameter(value=0) # degrees
 
-circular_trajectory = True  # do we want to assume a circular trajectory?
-temporal_resolution = opti.variable(init_guess=6, scale=1, upper_bound=24, category='des')  # hours
-coverage_radius = 1500 # meters # todo finalize with Brent
+trajectory = 'circular' # do we want to assume a circular trajectory?
+temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0.5, category='des')  # hours
+coverage_radius = 15000 / 2 # meters # todo finalize with Brent
 
-lawnmower_trajectory = False  # do we want to assume a lawnmower trajectory?
-sample_area_height = 3000  # meters, the height of the area the aircraft must sample
-sample_area_width = 3000  # meters, the width of the area the aircraft must sample
-required_revisit_rate = 1  # How many times must the aircraft fully cover the sample area in the sizing day?
+# trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
+sample_area_height = 10000  # meters, the height of the area the aircraft must sample
+sample_area_width = 10000  # meters, the width of the area the aircraft must sample
+required_revisit_rate = 0 # How many times must the aircraft fully cover the sample area in the sizing day?
 
 # Instrument Parameters
 mass_payload_base = 5 # kg, does not include data storage or aperture mass
