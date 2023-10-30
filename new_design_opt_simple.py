@@ -97,7 +97,6 @@ required_revisit_rate = 0 # How many times must the aircraft fully cover the sam
 # Instrument Parameters
 mass_payload_base = 5 # kg, does not include data storage or aperture mass
 payload_volume = 0.023 * 1.5  # assuming payload mass from gamma remote sensing with 50% margin on volume
-#todo change these from requirements to part of the objective function
 tb_per_day = 4 # terabytes per day, the amount of data the payload collects per day, to account for storage
 spatial_resolution = opti.variable(init_guess=1, scale=1, upper_bound=10, category='des')  # meters from conversation with Brent on 3/7/2023
 required_snr = 6  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
