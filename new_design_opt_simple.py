@@ -37,7 +37,7 @@ ops = dict(category="operations")
 
 ##### optimization assumptions
 minimize = ('(1-wingspan_optimization_scaling_term) * wing_span / 24 '
-            '+ (wingspan_optimization_scaling_term) * spatial_resolution / 1 ')
+            '+ (wingspan_optimization_scaling_term) * InSAR_resolution / 1 ')
             # '+ temporal_resolution_optimization_scaling_term * temporal_resolution / 12')
 make_plots = True
 
@@ -100,7 +100,9 @@ mass_payload_base = 5 # kg, does not include data storage or aperture mass
 payload_volume = 0.023 * 1.5  # assuming payload mass from gamma remote sensing with 50% margin on volume
 tb_per_day = 4 # terabytes per day, the amount of data the payload collects per day, to account for storage
 spatial_resolution = opti.variable(init_guess=2.2, scale=1, lower_bound=0.015, category='des')  # meters from conversation with Brent on 3/7/2023
+InSAR_resolution = opti.variable(init_guess=0.5, scale=1, lower_bound=0.015, category='des')
 required_snr = 20  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
+required_precision = 1e-4 # 1/year
 # meters given from Brent based on the properties of the ice sampled by the radar
 scattering_cross_sec_db = -10
 # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
@@ -1657,12 +1659,23 @@ snr = payload_power * antenna_gain ** 2 * center_wavelength ** 3 * a_hs * sigma0
 
 snr_db = 10 * np.log(snr)
 
+# translate to InSAR Terms
+N_i = opti.variable(init_guess=1, scale=1, lower_bound=0, category='ops')
+# number of pixels in the incoherent averaging window
+deviation = critical_baseline # meters
+opti.subject_to(InSAR_resolution >= N_i * spatial_resolution)
 p_thermal = 1 / (1 + snr_db ** -1)
+p_position = 2 * deviation * range_resolution * np.cosd(look_angle) / (center_wavelength * dist)
+p_time = 0.95
+decorrelation = p_thermal * p_position * p_time
+
+precision = 1 / (2 * N_i) * (1-decorrelation ** 2) / decorrelation ** 2
 
 opti.subject_to([
     required_snr <= snr_db,
     pulse_rep_freq >= 2 * ground_speed / radar_length,
     pulse_rep_freq <= c / (2 * swath_azimuth),
+    required_precision >= precision,
 ])
 
 ### instrument data storage mass requirements
@@ -1988,6 +2001,8 @@ propeller_efficiency = thrust * air_speed/ power_out_propulsion_shaft
 cruise_LD = lift_force / drag_force
 avg_cruise_LD = np.mean(cruise_LD)
 avg_airspeed = np.mean(air_speed)
+avg_snr = np.mean(snr_db)
+avg_precision = np.mean(precision)
 cruise_altitude = np.mean(altitude)
 sl_atmosphere = atmo(altitude=0)
 rho_ratio = np.sqrt(np.mean(my_atmosphere.density()) / sl_atmosphere.density())
@@ -2039,7 +2054,7 @@ if draw_initial_guess_config:
 
 if __name__ == "__main__":
     scaling_terms = np.linspace(0.1, 1, 10)
-    # scaling_terms = [1]
+    scaling_terms = [0.5]
     spans = []
     space_resolutions = []
     for x in scaling_terms:
@@ -2096,8 +2111,8 @@ if __name__ == "__main__":
                         "Spatial Resolution": f"{fmt(spatial_resolution)} meters",
                         "Temporal Resolution": f"{fmt(temporal_resolution)} hours",
                         "Revisit Rate": f"{fmt(distance[time_periodic_end_index] / circular_trajectory_length)}",
-                        "Cruise Altitude": f"{cruise_altitude / 1000} kilometers",
-                        "Average Airspeed": f"{avg_airspeed} m/s",
+                        "Cruise Altitude": f"{fmt(cruise_altitude / 1000)} kilometers",
+                        "Average Airspeed": f"{fmt(avg_airspeed)} m/s",
                         "Wing Root Chord": f"{fmt(wing_root_chord)} meters",
                         "mass_TOGW": f"{fmt(mass_total)} kg",
                         "Average Cruise L/D": fmt(avg_cruise_LD),
@@ -2115,11 +2130,13 @@ if __name__ == "__main__":
                         "aperture width": fmt(radar_width),
                         "range resolution": fmt(range_resolution),
                         "azimuth resolution": fmt(azimuth_resolution),
+                        "InSAR resolution": fmt(InSAR_resolution),
+                        "precision": fmt(avg_precision),
                         "pulse repetition frequency": fmt(pulse_rep_freq),
                         "bandwidth": fmt(bandwidth),
                         "center wavelength": fmt(center_wavelength),
                         "look angle": fmt(look_angle),
-                        "SNR": fmt(snr_db),
+                        "SNR": fmt(avg_snr),
                     }.items():
                         print(f"{k.rjust(25)} = {v}")
 
