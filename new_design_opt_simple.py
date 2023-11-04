@@ -36,9 +36,9 @@ des = dict(category="design")
 ops = dict(category="operations")
 
 ##### optimization assumptions
-minimize = ('wingspan_optimization_scaling_term * wing_span / 30 '
-            '+ spatial_resolution_optimization_scaling_term * spatial_resolution / 10 '
-            '+ temporal_resolution_optimization_scaling_term * temporal_resolution / 12')
+minimize = ('(1-wingspan_optimization_scaling_term) * wing_span / 24 '
+            '+ (wingspan_optimization_scaling_term) * spatial_resolution / 1 ')
+            # '+ temporal_resolution_optimization_scaling_term * temporal_resolution / 12')
 make_plots = True
 
 ##### Debug flags
@@ -49,9 +49,9 @@ draw_initial_guess_config = False
 ##### Section: Input Parameters
 
 # Objective Function Scaling Parameters
-wingspan_optimization_scaling_term = opti.parameter(value=0.33) # scale from 0 to 1 to adjust the relative importance of wingspan in the objective function
-temporal_resolution_optimization_scaling_term = opti.parameter(value=0.33) # scale from 0 to 1 to adjust the relative importance of temporal resolution in the objective function
-spatial_resolution_optimization_scaling_term = opti.parameter(value=0.33) # scale from 0 to 1 to adjust the relative importance of spatial resolution in the objective function
+wingspan_optimization_scaling_term = opti.parameter(value=0) # scale from 0 to 1 to adjust the relative importance of wingspan in the objective function
+temporal_resolution_optimization_scaling_term = opti.parameter(value=0.5) # scale from 0 to 1 to adjust the relative importance of temporal resolution in the objective function
+spatial_resolution_optimization_scaling_term = opti.parameter(value=0.5) # scale from 0 to 1 to adjust the relative importance of spatial resolution in the objective function
 
 # Aircraft Parameters
 battery_specific_energy_Wh_kg = 390  # cell level specific energy of the battery
@@ -87,7 +87,8 @@ vehicle_heading = opti.parameter(value=0) # degrees
 
 trajectory = 'circular' # do we want to assume a circular trajectory?
 temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0.5, category='des')  # hours
-coverage_radius = 15000 / 2 # meters # todo finalize with Brent
+temporal_resolution = 8 # hours
+coverage_radius = 2500  # meters # todo finalize with Brent
 
 # trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
 sample_area_height = 10000  # meters, the height of the area the aircraft must sample
@@ -99,7 +100,7 @@ mass_payload_base = 5 # kg, does not include data storage or aperture mass
 payload_volume = 0.023 * 1.5  # assuming payload mass from gamma remote sensing with 50% margin on volume
 tb_per_day = 4 # terabytes per day, the amount of data the payload collects per day, to account for storage
 spatial_resolution = opti.variable(init_guess=2.2, scale=1, lower_bound=0.015, category='des')  # meters from conversation with Brent on 3/7/2023
-required_snr = 6  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
+required_snr = 20  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
 # meters given from Brent based on the properties of the ice sampled by the radar
 scattering_cross_sec_db = -10
 # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
@@ -178,7 +179,7 @@ power_in_after_panels_max = opti.variable(
 )
 
 power_out_propulsion_max = opti.variable(
-    init_guess=2100,
+    init_guess=1683,
     lower_bound=10,
     scale=1e3,
     **des
@@ -187,14 +188,14 @@ power_out_propulsion_max = opti.variable(
 ##### Initialize design optimization variables (all units in base SI or derived units)
 # start with defining payload pod variables
 payload_pod_length = opti.variable(
-    init_guess=0.5,
+    init_guess=5,
     scale=1,
     lower_bound=0.5,
     # upper_bound=5,
     category="des",
 ) # meters
 payload_pod_diameter = opti.variable(
-    init_guess=0.7,
+    init_guess=0.25,
     scale=0.1,
     lower_bound=0.2,
     upper_bound=1,
@@ -239,14 +240,14 @@ boom_offset = boom_location * wing_span / 2  # in real units (meters)
 opti.subject_to([wing_span > 1])
 
 wing_root_chord = opti.variable(
-    init_guess=2,
+    init_guess=1.8,
     scale=0.1,
     category="des",
     lower_bound=1,
 )
 wing_x_quarter_chord = opti.variable(
     init_guess=0,
-    scale=0.1,
+    scale=0.01,
     category="des"
 )
 wing_y_taper_break = break_location * wing_span / 2
@@ -1163,13 +1164,13 @@ if trajectory == 'straight':
     # vehicle_bearing = vehicle_heading
 
 if trajectory == 'circular':
-    guess_altitude = 18000
-    guess_speed = 30
+    guess_altitude = 11500
+    guess_speed = 16
     ground_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10, category='ops')
-    start_angle = opti.variable(init_guess=0, scale=1, category='ops')
-    distance = opti.variable(init_guess=0, n_vars=n_timesteps, scale=1e5, category='ops')
+    start_angle = opti.variable(init_guess=-12, scale=1, category='ops')
+    distance = opti.variable(init_guess=np.linspace(0, 1406264, n_timesteps), scale=1e5, category='ops')
     opti.constrain_derivative(variable=distance, with_respect_to=time, derivative=ground_speed)
-    flight_path_radius = opti.variable(init_guess=10000, lower_bound=0, scale=1000, category='ops')
+    flight_path_radius = opti.variable(init_guess=57073, lower_bound=0, scale=10000, category='ops')
     circular_trajectory_length = 2 * np.pi * flight_path_radius
     angle_radians = distance / flight_path_radius + start_angle
     track = angle_radians + np.pi / 2
@@ -1570,7 +1571,7 @@ center_wavelength = opti.variable(
 bandwidth = opti.variable(
     init_guess=211985277,
     scale=1e7,
-    lower_bound=0,
+    lower_bound=0, # 200 MHz is typical hardware lower limt
     **des
 )  # Hz
 pulse_rep_freq = opti.variable(
@@ -1615,11 +1616,38 @@ critical_baseline = center_wavelength * dist / (2 * range_resolution * (np.cosd(
 opti.subject_to([
     range_resolution <= spatial_resolution,
     azimuth_resolution <= spatial_resolution,
-    flight_path_radius >= ground_imaging_offset + swath_range,
-    coverage_radius <= swath_range,
     payload_pod_length * 0.75 >= radar_length,
     payload_pod_diameter * 0.75 >= radar_width,
 ])
+
+if trajectory == 'straight':
+    coverage = opti.variable(init_guess=1e11, scale=1e11, lower_bound=0, category='ops')
+    coverage_area = ground_area * distance[time_periodic_end_index]
+    opti.subject_to(coverage_area >= coverage)
+
+
+if trajectory == 'circular':
+    opti.subject_to([
+        flight_path_radius >= ground_imaging_offset + swath_range,
+        coverage_radius <= swath_range,
+                ])
+
+if trajectory == 'lawnmower':
+    max_imaging_offset = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
+    max_swath_range = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
+    passes_required = sample_area_width / swath_range
+    total_distance = passes_required * sample_area_height
+    opti.subject_to([
+        required_revisit_rate * total_distance / 1e5 <= distance[time_periodic_end_index] / 1e5,
+        max_imaging_offset >= ground_imaging_offset,
+        # max_imaging_offset <= ground_imaging_offset + 100,
+        max_swath_range >= swath_range,
+        # max_swath_range <= swath_range + 100,
+        max_swath_range > max_imaging_offset,
+        turn_radius_1 == (2 * max_imaging_offset),
+        turn_radius_2 == (2 * max_swath_range - 2 * max_imaging_offset),
+        ])
+
 
 # use SAR specific equations from Ulaby and Long
 payload_power = power_trans * pulse_rep_freq * pulse_duration
@@ -1827,10 +1855,10 @@ net_accel_z_e = opti.variable(
 #     variable=z_e, with_respect_to=time,
 #     derivative=w_e,
 # )
-opti.constrain_derivative(
-    variable=distance, with_respect_to=time,
-    derivative=air_speed
-)
+# opti.constrain_derivative(
+#     variable=distance, with_respect_to=time,
+#     derivative=ground_speed
+# )
 opti.constrain_derivative(
     variable=u_e, with_respect_to=time,
     derivative=net_accel_x_e,
@@ -1843,7 +1871,7 @@ opti.constrain_derivative(
     variable=w_e, with_respect_to=time,
     derivative=net_accel_z_e,
 )
-
+# opti.subject_to(ground_speed == air_speed - wind_speed)
 # dyn.add_force(
 #     Fx=-np.cosd(dyn.gamma) * drag_force,
 #     Fz=np.sind(dyn.gamma) * drag_force,
@@ -1944,6 +1972,7 @@ opti.subject_to([
     np.diff(alpha) < 2,
     np.diff(alpha) > -2,
     center_boom_length >= outboard_boom_length,
+    center_boom_length >= payload_pod_length,
     # outboard_hstab_chord == center_hstab_chord,
     # outboard_hstab_span == center_hstab_span,
     outboard_hstab_chord < wing_root_chord,
@@ -1959,6 +1988,7 @@ propeller_efficiency = thrust * air_speed/ power_out_propulsion_shaft
 cruise_LD = lift_force / drag_force
 avg_cruise_LD = np.mean(cruise_LD)
 avg_airspeed = np.mean(air_speed)
+cruise_altitude = np.mean(altitude)
 sl_atmosphere = atmo(altitude=0)
 rho_ratio = np.sqrt(np.mean(my_atmosphere.density()) / sl_atmosphere.density())
 avg_ias = avg_airspeed * rho_ratio
@@ -1984,11 +2014,11 @@ penalty = 0
 
 for penalty_input in [
     thrust / 10,
-    # dyn.Fz_e / 1e-1,
-    # dyn.Fx_e / 1e-1,
-    air_speed / 1e-1,
+    Fz_e / 1e-1,
+    Fx_e / 1e-1,
+    # air_speed / 1e-1,
     alpha / 1,
-    distance / 500,
+    # distance / 500,
 ]:
     penalty += np.sum(np.diff(np.diff(penalty_input)) ** 2) / n_timesteps_per_segment
 
@@ -2008,19 +2038,28 @@ if draw_initial_guess_config:
         airplane.draw()
 
 if __name__ == "__main__":
-
+    scaling_terms = np.linspace(0.1, 1, 10)
+    # scaling_terms = [1]
+    spans = []
+    space_resolutions = []
+    for x in scaling_terms:
                 try:
+                    opti.set_value(wingspan_optimization_scaling_term, x)
                     sol = opti.solve(
-                        max_iter=5000,
+                        max_iter=10000,
                         options={
-                            "ipopt.max_cpu_time": 600
+                            "ipopt.max_cpu_time": 6000
                         }
                     )
-                    # opti.set_value(vehicle_heading, heading)
+                    print("Success!")
+                    time = opti.value(temporal_resolution)
+                    space = opti.value(spatial_resolution)
+                    span = opti.value(wing_span)
+                    spans.append(span)
+                    space_resolutions.append(space)
+                    opti.set_initial_from_sol(sol)
                 except:
                     sol = opti.debug
-
-
                 # Print a warning if the penalty term is unreasonably high
                 penalty_objective_ratio = np.abs(sol.value(penalty / objective))
                 if penalty_objective_ratio > 0.01:
@@ -2056,6 +2095,9 @@ if __name__ == "__main__":
                         "Wing Span": f"{fmt(wing_span)} meters",
                         "Spatial Resolution": f"{fmt(spatial_resolution)} meters",
                         "Temporal Resolution": f"{fmt(temporal_resolution)} hours",
+                        "Revisit Rate": f"{fmt(distance[time_periodic_end_index] / circular_trajectory_length)}",
+                        "Cruise Altitude": f"{cruise_altitude / 1000} kilometers",
+                        "Average Airspeed": f"{avg_airspeed} m/s",
                         "Wing Root Chord": f"{fmt(wing_root_chord)} meters",
                         "mass_TOGW": f"{fmt(mass_total)} kg",
                         "Average Cruise L/D": fmt(avg_cruise_LD),
@@ -2065,12 +2107,27 @@ if __name__ == "__main__":
 
                 fmtpow = lambda x: fmt(x) + " W"
 
+                print_title("Payload Terms")
+                for k, v in {
+                        "payload power": fmtpow(payload_power),
+                        "payload mass": fmt(mass_props['payload'].mass),
+                        "aperture length": fmt(radar_length),
+                        "aperture width": fmt(radar_width),
+                        "range resolution": fmt(range_resolution),
+                        "azimuth resolution": fmt(azimuth_resolution),
+                        "pulse repetition frequency": fmt(pulse_rep_freq),
+                        "bandwidth": fmt(bandwidth),
+                        "center wavelength": fmt(center_wavelength),
+                        "look angle": fmt(look_angle),
+                        "SNR": fmt(snr_db),
+                    }.items():
+                        print(f"{k.rjust(25)} = {v}")
+
                 print_title("Powers")
                 for k, v in {
                         "max_power_in": fmtpow(power_in_after_panels_max),
                         "max_power_out": fmtpow(power_out_propulsion_max),
                         "battery_total_energy": fmtpow(battery_total_energy),
-                        "payload_power": fmtpow(payload_power),
                     }.items():
                         print(f"{k.rjust(25)} = {v}")
 
@@ -2440,3 +2497,9 @@ if __name__ == "__main__":
 
                 if make_plots == True:
                     draw()
+    # from aerosandbox.tools.pretty_plots import plt, sns, mpl, show_plot
+    # plt.plot(spans, space_resolutions, linestyle='--', marker='o')
+    # plt.title('Pareto Front')
+    # plt.xlabel('Wingspan [meters]')
+    # plt.ylabel('Spatial Resolution [meters]')
+    # plt.show()
