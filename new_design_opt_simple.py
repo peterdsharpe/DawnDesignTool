@@ -2173,7 +2173,7 @@ if __name__ == "__main__":
                             print(f"{k.rjust(25)} = {fmt(v.mass)} kg")
 
                     # Define a filename for the CSV file with the temporal resolution in the name
-                    csv_file = f"outputs_data_temporal_{temporal_resolution}_scaling_{val}.csv"
+                    csv_file = f"outputs/outputs_data_temporal_{temporal_resolution}_scaling_{val}.csv"
 
                     # Write the data to the CSV file
                     with open(csv_file, 'w', newline='') as csvfile:
