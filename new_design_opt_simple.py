@@ -2061,9 +2061,9 @@ if __name__ == "__main__":
         # scaling_terms = [0.5]
         spans = []
         space_resolutions = []
-        for x in scaling_terms:
+        for val in scaling_terms:
                     try:
-                        opti.set_value(wingspan_optimization_scaling_term, x)
+                        opti.set_value(wingspan_optimization_scaling_term, val)
                         sol = opti.solve(
                             max_iter=10000,
                             options={
@@ -2124,6 +2124,22 @@ if __name__ == "__main__":
                         }.items():
                             print(f"{k.rjust(25)} = {v}")
 
+                    import csv
+
+                    # Define the data for the "Outputs" section
+                    outputs_data = {
+                        "Wing Span": f"{fmt(wing_span)} meters",
+                        "Spatial Resolution": f"{fmt(spatial_resolution)} meters",
+                        "Temporal Resolution": f"{fmt(temporal_resolution)} hours",
+                        "Revisit Rate": f"{fmt(distance[time_periodic_end_index] / circular_trajectory_length)}",
+                        "Cruise Altitude": f"{fmt(cruise_altitude / 1000)} kilometers",
+                        "Average Airspeed": f"{fmt(avg_airspeed)} m/s",
+                        "Wing Root Chord": f"{fmt(wing_root_chord)} meters",
+                        "mass_TOGW": f"{fmt(mass_total)} kg",
+                        "Average Cruise L/D": fmt(avg_cruise_LD),
+                        "CG location": "(" + ", ".join([fmt(xyz) for xyz in mass_props_TOGW.xyz_cg]) + ") m",
+                    }
+
                     fmtpow = lambda x: fmt(x) + " W"
 
                     print_title("Payload Terms")
@@ -2155,6 +2171,47 @@ if __name__ == "__main__":
                     print_title("Mass props")
                     for k, v in mass_props.items():
                             print(f"{k.rjust(25)} = {fmt(v.mass)} kg")
+
+                    # Define a filename for the CSV file with the temporal resolution in the name
+                    csv_file = f"outputs_data_temporal_{temporal_resolution}_scaling_{val}.csv"
+
+                    # Write the data to the CSV file
+                    with open(csv_file, 'w', newline='') as csvfile:
+                        fieldnames = ["Property", "Value"]
+                        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+                        # Write the header row
+                        writer.writeheader()
+
+                        # Write the data rows
+                        for k, v in outputs_data.items():
+                            writer.writerow({"Property": k, "Value": v})
+                        for k, v in mass_props.items():
+                            writer.writerow({"Property": k, "Value": fmt(v.mass) + " kg"})
+                        for k, v in {
+                            "payload power": fmtpow(payload_power),
+                            "payload mass": fmt(mass_props['payload'].mass),
+                            "aperture length": fmt(radar_length),
+                            "aperture width": fmt(radar_width),
+                            "range resolution": fmt(range_resolution),
+                            "azimuth resolution": fmt(azimuth_resolution),
+                            "InSAR resolution": fmt(InSAR_resolution),
+                            "precision": fmt(avg_precision),
+                            "pulse repetition frequency": fmt(pulse_rep_freq),
+                            "bandwidth": fmt(bandwidth),
+                            "center wavelength": fmt(center_wavelength),
+                            "look angle": fmt(look_angle),
+                            "SNR": fmt(avg_snr),
+                        }.items():
+                            writer.writerow({"Property": k, "Value": v})
+                        for k, v in {
+                            "max_power_in": fmtpow(power_in_after_panels_max),
+                            "max_power_out": fmtpow(power_out_propulsion_max),
+                            "battery_total_energy": fmtpow(battery_total_energy),
+                        }.items():
+                            writer.writerow({"Property": k, "Value": v})
+
+                    print(f"Data from 'Outputs' section saved to {csv_file}")
 
                     def qp(*args: List[str]):
                         """
