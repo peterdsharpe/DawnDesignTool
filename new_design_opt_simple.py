@@ -20,6 +20,7 @@ from design_opt_utilities.fuselage import make_fuselage, aero_payload_pod
 from typing import Union, List
 from aerosandbox.modeling.interpolation import InterpolatedModel
 import pathlib
+from aerosandbox.tools.pretty_plots import plt, sns, mpl, show_plot
 
 path = str(
     pathlib.Path(__file__).parent.absolute()
@@ -39,7 +40,7 @@ ops = dict(category="operations")
 minimize = ('(1-wingspan_optimization_scaling_term) * wing_span / 24 '
             '+ (wingspan_optimization_scaling_term) * InSAR_resolution / 1 ')
             # '+ temporal_resolution_optimization_scaling_term * temporal_resolution / 12')
-make_plots = True
+make_plots = False
 
 ##### Debug flags
 draw_initial_guess_config = False
@@ -87,7 +88,7 @@ vehicle_heading = opti.parameter(value=0) # degrees
 
 trajectory = 'circular' # do we want to assume a circular trajectory?
 temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0.5, category='des')  # hours
-temporal_resolution = 8 # hours
+temporal_resolution = opti.parameter(value=8) # hours
 coverage_radius = 2500  # meters # todo finalize with Brent
 
 # trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
