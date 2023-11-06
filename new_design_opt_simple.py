@@ -2055,6 +2055,7 @@ if draw_initial_guess_config:
 
 if __name__ == "__main__":
     time_terms = [12, 8, 6, 4]
+    time_terms = [6]
     for y in time_terms:
         opti.set_value(temporal_resolution, y)
         scaling_terms = np.linspace(0.1, 1, 10)
@@ -2072,7 +2073,7 @@ if __name__ == "__main__":
                         )
                         print("Success!")
                         time = opti.value(temporal_resolution)
-                        space = opti.value(spatial_resolution)
+                        space = opti.value(InSAR_resolution)
                         span = opti.value(wing_span)
                         spans.append(span)
                         space_resolutions.append(space)
@@ -2173,7 +2174,7 @@ if __name__ == "__main__":
                             print(f"{k.rjust(25)} = {fmt(v.mass)} kg")
 
                     # Define a filename for the CSV file with the temporal resolution in the name
-                    csv_file = f"outputs/outputs_data_temporal_{temporal_resolution}_scaling_{val}.csv"
+                    csv_file = f"outputs/outputs_data_temporal_{y}_scaling_{val}.csv"
 
                     # Write the data to the CSV file
                     with open(csv_file, 'w', newline='') as csvfile:
