@@ -1564,7 +1564,7 @@ look_angle = opti.variable(
     lower_bound=25,
     **des
 ) # limited in lower bound by specular reflection which we get at low look angles and does not enable interferometry
-center_wavelength = opti.variable(
+wavelength = opti.variable(
     init_guess=0.03,
     scale=0.01,
     lower_bound=0.015,
@@ -1595,15 +1595,15 @@ power_trans = opti.variable(
 radar_aperture_area = radar_width * radar_length  # meters ** 2
 mass_radar_aperture = 5.55 * radar_aperture_area
 dist = altitude / np.cosd(look_angle)  # meters
-swath_azimuth = center_wavelength * dist / radar_length  # meters
-swath_range = center_wavelength * dist / (radar_width * np.cosd(look_angle))  # meters
-max_length_synth_ap = center_wavelength * dist / radar_length  # meters
+swath_azimuth = wavelength * dist / radar_length  # meters
+swath_range = wavelength * dist / (radar_width * np.cosd(look_angle))  # meters
+max_length_synth_ap = wavelength * dist / radar_length  # meters
 ground_area = swath_range * swath_azimuth * np.pi / 4  # meters ** 2
 radius = (swath_azimuth + swath_range) / 4  # meters
 ground_imaging_offset = np.tand(look_angle) * altitude  # meters
 scattering_cross_sec = 10 ** (scattering_cross_sec_db / 10)
 sigma0 = scattering_cross_sec / ground_area
-antenna_gain = 4 * np.pi * radar_aperture_area * 0.7 / center_wavelength ** 2
+antenna_gain = 4 * np.pi * radar_aperture_area * 0.7 / wavelength ** 2
 
 # Assumed constants
 a_hs = 0.88  # aperture-illumination taper factor associated with the synthetic aperture (value from Ulaby and Long)
@@ -1614,7 +1614,7 @@ a_B = 1  # pulse-taper factor to relate bandwidth and pulse duration
 pulse_duration = a_B / bandwidth
 range_resolution = c * pulse_duration / (2 * np.sind(look_angle))
 azimuth_resolution = radar_length / 2
-critical_baseline = center_wavelength * dist / (2 * range_resolution * (np.cosd(look_angle)) ** 2)
+critical_baseline = wavelength * dist / (2 * range_resolution * (np.cosd(look_angle)) ** 2)
 
 opti.subject_to([
     range_resolution <= spatial_resolution,
@@ -1655,7 +1655,7 @@ if trajectory == 'lawnmower':
 # use SAR specific equations from Ulaby and Long
 payload_power = power_trans * pulse_rep_freq * pulse_duration
 
-snr = payload_power * antenna_gain ** 2 * center_wavelength ** 3 * a_hs * sigma0 * range_resolution / \
+snr = payload_power * antenna_gain ** 2 * wavelength ** 3 * a_hs * sigma0 * range_resolution / \
       ((2 * 4 * np.pi) ** 3 * dist ** 3 * k_b * my_atmosphere.temperature() * F * ground_speed * a_B)
 
 snr_db = 10 * np.log(snr)
@@ -1666,18 +1666,21 @@ N_i = opti.variable(init_guess=5, scale=1, lower_bound=1, category='ops')
 deviation = 10 # meters
 opti.subject_to(InSAR_resolution >= N_i * spatial_resolution)
 p_thermal = 1 / (1 + snr_db ** -1)
-p_position = 1 - (2 * deviation * range_resolution * (np.cosd(look_angle)) ** 2 / (center_wavelength * dist))
+p_position = 1 - (2 * deviation * range_resolution * (np.cosd(look_angle)) ** 2 / (wavelength * dist))
 p_time = -0.0021 * temporal_resolution + 0.95
 decorrelation = p_thermal * p_position * p_time
 
-precision = np.sqrt(1 / (2 * N_i) * (1-decorrelation ** 2) / decorrelation ** 2)
+precision = wavelength / (4 * np.pi * N_i * distance[time_periodic_end_index] / circular_trajectory_length) * (1 - decorrelation ** 2) / decorrelation ** 2
 
 opti.subject_to([
     required_snr <= snr_db,
     pulse_rep_freq >= 2 * ground_speed / radar_length,
-    pulse_rep_freq <= c / (2 * swath_azimuth),
+    # pulse_rep_freq <= c / (2 * swath_azimuth),
+    1 / pulse_rep_freq >= pulse_duration,
     required_precision >= precision,
 ])
+# range_resolution = c * pulse_duration / (2 * np.sind(look_angle))
+
 
 ### instrument data storage mass requirements
 mass_of_data_storage = 0.0053  # kg per TB of data
@@ -2058,8 +2061,9 @@ if __name__ == "__main__":
     time_terms = [6]
     for y in time_terms:
         opti.set_value(temporal_resolution, y)
-        scaling_terms = np.linspace(0.1, 1, 10)
+        # scaling_terms = np.linspace(0.1, 1, 10)
         # scaling_terms = [0.5]
+        scaling_terms = [.5, .4, .3, .2, .1, 0, 0.6, 0.7, 0.8, 0.9, 1]
         spans = []
         space_resolutions = []
         for val in scaling_terms:
@@ -2155,7 +2159,7 @@ if __name__ == "__main__":
                             "precision": fmt(avg_precision),
                             "pulse repetition frequency": fmt(pulse_rep_freq),
                             "bandwidth": fmt(bandwidth),
-                            "center wavelength": fmt(center_wavelength),
+                            "center wavelength": fmt(wavelength),
                             "look angle": fmt(look_angle),
                             "SNR": fmt(avg_snr),
                         }.items():
@@ -2200,7 +2204,7 @@ if __name__ == "__main__":
                             "precision": fmt(avg_precision),
                             "pulse repetition frequency": fmt(pulse_rep_freq),
                             "bandwidth": fmt(bandwidth),
-                            "center wavelength": fmt(center_wavelength),
+                            "center wavelength": fmt(wavelength),
                             "look angle": fmt(look_angle),
                             "SNR": fmt(avg_snr),
                         }.items():

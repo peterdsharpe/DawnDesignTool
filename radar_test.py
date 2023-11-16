@@ -84,7 +84,7 @@ antenna_gain = 4 * np.pi * radar_area * 0.7 / center_wavelength ** 2
 a_hs = 0.88 # aperture-illumination taper factor associated with the synthetic aperture (value from Ulaby and Long)
 F = 4 # receiver noise figure (somewhat randomly chosen value from Ulaby and Long)
 a_B = 1 # pulse-taper factor to relate bandwidth and pulse duration
-# doppler_bandwidth = 2 * groundspeed * horz_beamwidth / (center_wavelength * y)
+# doppler_bandwidth = 2 * groundspeed * horz_beamwidth / (wavelength * y)
 #
 # # constrain SAR resolution to required value
 pulse_duration = a_B / bandwidth
@@ -96,11 +96,11 @@ opti.subject_to([
 ])
 #
 # account for snr
-# noise_power_density = k_b * T * bandwidth / (center_wavelength ** 2)
+# noise_power_density = k_b * T * bandwidth / (wavelength ** 2)
 # power_trans = peak_power * pulse_duration
 # power_received = power_trans * antenna_gain * radar_area * sigma0 / ((4 * np.pi) ** 2 * dist ** 4)
-# power_received = power_trans * antenna_gain ** 2 * center_wavelength ** 2 * sigma0 * azimuth_resolution * range_resolution / ((4 * np.pi) ** 3 * dist ** 4)
-# power_received = power_trans * center_wavelength ** 2 * antenna_gain ** 2 * radar_length * c * pulse_duration * sigma0 / (4 * (4 * np.pi) ** 3 * dist ** 4 * np.sind(look_angle))
+# power_received = power_trans * antenna_gain ** 2 * wavelength ** 2 * sigma0 * azimuth_resolution * range_resolution / ((4 * np.pi) ** 3 * dist ** 4)
+# power_received = power_trans * wavelength ** 2 * antenna_gain ** 2 * radar_length * c * pulse_duration * sigma0 / (4 * (4 * np.pi) ** 3 * dist ** 4 * np.sind(look_angle))
 # power_out_payload = power_trans * pulse_rep_freq
 # snr = power_received / noise_power_density
 
