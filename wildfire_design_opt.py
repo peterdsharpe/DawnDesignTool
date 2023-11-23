@@ -266,7 +266,6 @@ center_hstab_chord = opti.variable(
 )
 
 center_hstab_twist = opti.variable(
-    n_vars=n_timesteps,
     init_guess=0,
     scale=2,
     category="ops",
@@ -292,7 +291,6 @@ outboard_hstab_chord = opti.variable(
 )
 
 outboard_hstab_twist = opti.variable(
-    n_vars=n_timesteps,
     init_guess=-0.3,
     scale=0.1,
     lower_bound=-15,
@@ -1172,14 +1170,7 @@ if trajectory == 'circular':
     track = angle_radians + np.pi / 2
     x_e = flight_path_radius * np.cos(angle_radians)
     y_e = flight_path_radius * np.sin(angle_radians)
-    z_e = opti.variable(
-        init_guess=-guess_altitude,
-        n_vars=n_timesteps,
-        scale=1e4,
-        category='ops',
-        upper_bound=0,
-        lower_bound=-40000,
-    )
+    z_e = opti.variable(init_guess=-guess_altitude, scale=1e4, category='ops', upper_bound=0, lower_bound=-40000)
     altitude = -z_e
     wind_speed = wind_speed_func(altitude)
     if run_with_95th_percentile_wind_condition == False:
