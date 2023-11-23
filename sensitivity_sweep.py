@@ -1,14 +1,14 @@
 import multiprocessing as mp
-from design_opt import *
+from wildfire_design_opt import *
 from func_timeout import func_timeout
 import aerosandbox.numpy as np
 import pandas as pd
 
 ### Set the run ID
-run_name = "pareto_front3"
-parameter = "lam"
+run_name = "test"
+parameter = "day_of_year"
 unit = "[-]"
-sweep_space = np.linspace(0, 1, 11)
+sweep_space = np.linspace(0, 365, 10)
 
 def run(val):
     print("\n".join([
@@ -20,13 +20,13 @@ def run(val):
 
     try:
         sol = func_timeout(
-            timeout=240,
+            timeout=600,
             func=opti.solve,
             args=(),
             kwargs={
                 "max_iter": 2000,
                 "options" : {
-                    "ipopt.max_cpu_time": 240,
+                    "ipopt.max_cpu_time": 600,
                 },
                 "verbose" : False
             }
@@ -37,15 +37,15 @@ def run(val):
         opti.set_initial(opti.lam_g, sol.value(opti.lam_g))
 
         span = sol.value(wing_span)
-        revisit = sol.value(revisit_rate)
+        day = sol.value(day_of_year)
     except Exception as e:
         print("Fail!")
         print(e)
 
         span = np.NaN
-        revisit = np.NaN
+        day = np.NaN
 
-    return val, span, revisit
+    return val, span, day
 
 def plot_results(run_name):
     import matplotlib.pyplot as plt
@@ -58,14 +58,14 @@ def plot_results(run_name):
     values = np.array(data[parameter], dtype=float)
     # altitude = np.divide(altitude, 1000)
     spans = np.array(data['Spans'], dtype=float)
-    revisit = np.array(data['Revisit Rate'], dtype=float)
+    day = np.array(data['Day'], dtype=float)
 
 
     sns.set(font_scale=1)
 
-    plt.plot(revisit, spans, ".-", label='Pareto Front')
+    plt.plot(day, spans, ".-", label='Pareto Front')
     # plt.scatter(altitude[43], spans[43], marker = "o", color='r', label='Baseline Design')
-    plt.xlabel(r"Revisit Rate [-]")
+    plt.xlabel(r"Day[-]")
     plt.ylabel(r"Wing Span [m]")
     plt.title(r"Set of Optimal Aircraft")
     plt.tight_layout()
@@ -82,7 +82,7 @@ if __name__ == '__main__':
     with open(filename, "w+") as f:
         f.write(
             f"{parameter.ljust(l)},"
-            f"{'Revisit Rate'.ljust(l)},"
+            f"{'Day'.ljust(l)},"
             f"{'Spans'.ljust(l)}\n"
         )
 
