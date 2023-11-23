@@ -1124,7 +1124,6 @@ if trajectory == 'straight':
         n_vars=n_timesteps,
         scale=1e-4,
         category='ops',
-        lower_bound=min_speed,
     )
     # speed = (u_e ** 2 + v_e ** 2) ** 0.5
     gamma = np.arctan2(-w_e, air_speed)
@@ -1148,7 +1147,10 @@ if trajectory == 'circular':
     ground_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10, category='ops')
     start_angle = opti.variable(init_guess=-12, scale=1, category='ops')
     distance = opti.variable(init_guess=np.linspace(0, 1406264, n_timesteps), scale=1e5, category='ops')
-    opti.constrain_derivative(variable=distance, with_respect_to=time, derivative=ground_speed)
+    opti.constrain_derivative(
+        variable=distance, with_respect_to=time,
+        derivative=ground_speed
+    )
     flight_path_radius = opti.variable(init_guess=57073, lower_bound=0, scale=10000, category='ops')
     circular_trajectory_length = 2 * np.pi * flight_path_radius
     angle_radians = distance / flight_path_radius + start_angle
@@ -1173,7 +1175,10 @@ if trajectory == 'circular':
         n_vars=n_timesteps,
         scale=1e-4,
         category='ops',
-        lower_bound=min_speed,
+    )
+    opti.constrain_derivative(
+        variable=z_e * np.ones(n_timesteps), with_respect_to=time,
+        derivative=w_e
     )
     gamma = np.arctan2(-w_e, air_speed)
     alpha = opti.variable(
@@ -1182,11 +1187,11 @@ if trajectory == 'circular':
         scale=4,
         category='ops'
     )
-    required_revisit_rate_circ = 24 / temporal_resolution
     opti.subject_to([
-        altitude[time_periodic_start_index:] / min_cruise_altitude > 1,
+        altitude / min_cruise_altitude > 1,
         distance[time_periodic_start_index] == 0,
-        distance[time_periodic_end_index] / circular_trajectory_length > required_revisit_rate_circ,
+        distance[time_periodic_end_index] / circular_trajectory_length > revisit_rate,
+        air_speed == ground_speed - wind_speed,
     ])
 
 if trajectory == 'lawnmower':
@@ -1246,7 +1251,6 @@ if trajectory == 'lawnmower':
         n_vars=n_timesteps,
         scale=1e-4,
         category='ops',
-        lower_bound=min_speed,
     )
 
     gamma = np.arctan2(-w_e, air_speed)
@@ -1263,7 +1267,7 @@ if trajectory == 'lawnmower':
         y_e[0] == 0,
     ])
 
-z_km = altitude / 1e3
+z_km = altitude / 1e3 * np.ones(n_timesteps)
 y_km = y_e / 1e3
 x_km = x_e / 1e3
 
