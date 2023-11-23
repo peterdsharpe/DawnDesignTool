@@ -37,8 +37,8 @@ des = dict(category="design")
 ops = dict(category="operations")
 
 ##### optimization assumptions
-minimize = ('(1-wingspan_optimization_scaling_term) * wing_span / 24 '
-            '+ (wingspan_optimization_scaling_term) * InSAR_resolution / 1 ')
+minimize = ('(1-wingspan_optimization_scaling_term) * wing_span / 26 '
+            '+ (wingspan_optimization_scaling_term) * InSAR_resolution / 11 ')
             # '+ temporal_resolution_optimization_scaling_term * temporal_resolution / 12')
 make_plots = False
 
@@ -273,7 +273,6 @@ center_hstab_chord = opti.variable(
 )
 
 center_hstab_twist = opti.variable(
-    n_vars=n_timesteps,
     init_guess=0,
     scale=2,
     category="ops",
@@ -299,7 +298,6 @@ outboard_hstab_chord = opti.variable(
 )
 
 outboard_hstab_twist = opti.variable(
-    n_vars=n_timesteps,
     init_guess=-0.3,
     scale=0.1,
     lower_bound=-15,
@@ -1080,22 +1078,6 @@ mass_propulsion = (
         mass_props['esc']
 )
 
-#### summation of total system mass
-
-mass_props_TOGW = sum(mass_props.values())
-opti.subject_to([
-    mass_total / 100 > mass_props_TOGW.mass / 100,
-])
-
-# track remaining volume in payload pod
-remaining_volume = (
-        payload_pod_volume - (
-        payload_volume +
-        avionics_volume +
-        battery_volume +
-        payload_pod_structure_volume
-)
-)
 
 ##### Section: Setup Dynamics
 #account for winds
@@ -1204,7 +1186,6 @@ if trajectory == 'circular':
         n_vars=n_timesteps,
         scale=1e-4,
         category='ops',
-        lower_bound=min_speed,
     )
     gamma = np.arctan2(-w_e, air_speed)
     alpha = opti.variable(
@@ -1277,7 +1258,6 @@ if trajectory == 'lawnmower':
         n_vars=n_timesteps,
         scale=1e-4,
         category='ops',
-        lower_bound=min_speed,
     )
 
     gamma = np.arctan2(-w_e, air_speed)
@@ -1959,6 +1939,23 @@ opti.constrain_derivative(
 )
 
 #### end section
+
+#### summation of total system mass
+
+mass_props_TOGW = sum(mass_props.values())
+opti.subject_to([
+    mass_total / 100 > mass_props_TOGW.mass / 100,
+])
+
+# track remaining volume in payload pod
+remaining_volume = (
+        payload_pod_volume - (
+        payload_volume +
+        avionics_volume +
+        battery_volume +
+        payload_pod_structure_volume
+)
+)
 
 ##### Add periodic constraints
 opti.subject_to([
