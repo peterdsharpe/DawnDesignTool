@@ -62,7 +62,7 @@ use_propulsion_fits_from_FL2020_1682_undergrads = True  # Warning: Fits not yet 
 
 # Mission Operating Parameters
 latitude = opti.parameter(value=65)  # degrees, the location the sizing occurs 32-40
-day_of_year = opti.parameter(value=180)  # Julian day, the day of the year the sizing occurs
+day_of_year = opti.parameter(value=200)  # Julian day, the day of the year the sizing occurs
 # mission_length = 0  # days, the length of the mission without landing to download data
 strat_offset_value = 1000  # meters, margin above the stratosphere height the aircraft is required to stay above
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
@@ -80,8 +80,8 @@ required_headway_per_day = 100000
 vehicle_heading = opti.parameter(value=0) # degrees
 
 trajectory = 'circular' # do we want to assume a circular trajectory?
-temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=1, upper_bound=24, category='des')  # hours
-coverage_radius = 1000  # meters # average fire is less than 1km^2
+revisit_rate = opti.parameter(value=2)
+coverage_radius = 2000  # meters # average fire is less than 1km^2
 
 # trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
 sample_area_height = 10000  # meters, the height of the area the aircraft must sample
@@ -187,7 +187,7 @@ payload_pod_length = opti.variable(
     init_guess=0.5,
     scale=1,
     lower_bound=0.5,
-    # upper_bound=5,
+    upper_bound=5,
     category="des",
 ) # meters
 payload_pod_diameter = opti.variable(
