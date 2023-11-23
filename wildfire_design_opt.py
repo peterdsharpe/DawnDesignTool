@@ -2103,7 +2103,7 @@ if __name__ == "__main__":
                     for k, v in {
                             "Wing Span": f"{fmt(wing_span)} meters",
                             "Spatial Resolution": f"{fmt(spatial_resolution)} meters",
-                            "Temporal Resolution": f"{fmt(temporal_resolution)} hours",
+                            # "Temporal Resolution": f"{fmt(temporal_resolution)} hours",
                             "Revisit Rate": f"{fmt(distance[time_periodic_end_index] / circular_trajectory_length)}",
                             "Cruise Altitude": f"{fmt(cruise_altitude / 1000)} kilometers",
                             "Average Airspeed": f"{fmt(avg_airspeed)} m/s",
@@ -2120,7 +2120,7 @@ if __name__ == "__main__":
                     outputs_data = {
                         "Wing Span": f"{fmt(wing_span)} meters",
                         "Spatial Resolution": f"{fmt(spatial_resolution)} meters",
-                        "Temporal Resolution": f"{fmt(temporal_resolution)} hours",
+                        # "Temporal Resolution": f"{fmt(temporal_resolution)} hours",
                         "Revisit Rate": f"{fmt(distance[time_periodic_end_index] / circular_trajectory_length)}",
                         "Cruise Altitude": f"{fmt(cruise_altitude / 1000)} kilometers",
                         "Average Airspeed": f"{fmt(avg_airspeed)} m/s",
@@ -2163,7 +2163,7 @@ if __name__ == "__main__":
                             print(f"{k.rjust(25)} = {fmt(v.mass)} kg")
 
                     # Define a filename for the CSV file with the temporal resolution in the name
-                    csv_file = f"outputs/outputs_data_temporal_{temporal_resolution}.csv"
+                    csv_file = f"outputs/outputs_data.csv"
 
                     # Write the data to the CSV file
                     with open(csv_file, 'w', newline='') as csvfile:
