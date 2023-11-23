@@ -1652,10 +1652,12 @@ opti.subject_to([
 
 ### instrument data storage mass requirements
 mass_of_data_storage = 0.0053  # kg per TB of data
+payload_cg = battery_cg + 0.25 * payload_pod_length
 mass_props['payload'] = asb.MassProperties(
     mass=mass_payload_base +
          # mission_length * tb_per_day * mass_of_data_storage +
-         mass_radar_aperture
+         mass_radar_aperture,
+    x_cg=payload_cg
 )
 
 # region Propulsion
