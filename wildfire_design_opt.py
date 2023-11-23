@@ -1071,22 +1071,7 @@ mass_propulsion = (
         mass_props['esc']
 )
 
-#### summation of total system mass
 
-mass_props_TOGW = sum(mass_props.values())
-opti.subject_to([
-    mass_total / 100 > mass_props_TOGW.mass / 100,
-])
-
-# track remaining volume in payload pod
-remaining_volume = (
-        payload_pod_volume - (
-        payload_volume +
-        avionics_volume +
-        battery_volume +
-        payload_pod_structure_volume
-)
-)
 
 ##### Section: Setup Dynamics
 #account for winds
@@ -1943,10 +1928,27 @@ opti.constrain_derivative(
 
 #### end section
 
+#### summation of total system mass
+
+mass_props_TOGW = sum(mass_props.values())
+opti.subject_to([
+    mass_total / 100 > mass_props_TOGW.mass / 100,
+])
+
+# track remaining volume in payload pod
+remaining_volume = (
+        payload_pod_volume - (
+        payload_volume +
+        avionics_volume +
+        battery_volume +
+        payload_pod_structure_volume
+)
+)
+
 ##### Add periodic constraints
 opti.subject_to([
-    altitude[time_periodic_end_index] / 1e4 > altitude[time_periodic_start_index] / 1e4,
-    air_speed[time_periodic_end_index] / 2e1 > air_speed[time_periodic_start_index] / 2e1,
+    # altitude[time_periodic_end_index] / 1e4 > altitude[time_periodic_start_index] / 1e4,
+    # air_speed[time_periodic_end_index] / 2e1 > air_speed[time_periodic_start_index] / 2e1,
     battery_charge_state[time_periodic_end_index] > battery_charge_state[time_periodic_start_index],
     gamma[time_periodic_end_index] == gamma[time_periodic_start_index],
     alpha[time_periodic_end_index] == alpha[time_periodic_start_index],
