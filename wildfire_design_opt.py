@@ -2025,7 +2025,7 @@ for penalty_input in [
     thrust / 10,
     Fz_e / 1e-1,
     Fx_e / 1e-1,
-    # air_speed / 1e-1,
+    air_speed / 1e-1,
     alpha / 1,
     # distance / 500,
 ]:
@@ -2060,7 +2060,7 @@ if __name__ == "__main__":
                         sol = opti.solve(
                             max_iter=10000,
                             options={
-                                "ipopt.max_cpu_time": 6000
+                                "ipopt.max_cpu_time": 600
                             }
                         )
                         print("Success!")
