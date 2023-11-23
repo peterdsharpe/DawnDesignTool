@@ -1980,7 +1980,6 @@ opti.subject_to([
     np.diff(alpha) < 2,
     np.diff(alpha) > -2,
     center_boom_length >= outboard_boom_length,
-    center_boom_length >= payload_pod_length,
     # outboard_hstab_chord == center_hstab_chord,
     # outboard_hstab_span == center_hstab_span,
     outboard_hstab_chord < wing_root_chord,
