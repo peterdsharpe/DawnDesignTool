@@ -3,7 +3,7 @@ import aerosandbox.numpy as np
 from scipy import interpolate
 import pandas as pd
 
-run_name = "new/6kg_payload_100W_sunpower_450batt"
+run_name = "Wildfire/1km_radius_20dB_5mRes"
 
 debug_mode = False
 
