@@ -7,6 +7,17 @@ run_name = "Wildfire/1km_radius_20dB_5mRes"
 
 debug_mode = False
 
+def read_excel_data(excel_file):
+    df = pd.read_excel(excel_file)
+    return df.values.tolist()
+
+excel_file = "cache/Wildfire/wildfire_runs.xlsx"
+inputs = read_excel_data(excel_file)
+for i in range(0, 11):
+    run_name = i
+    title_1 = inputs[i][5]
+    title_2 = inputs[i][6]
+
 # Do raw imports
 data = pd.read_csv(f"cache/{run_name}.csv")
 data.columns = data.columns.str.strip()
@@ -206,24 +217,25 @@ if debug_mode:
 #     color='w',
 # )
 
-plt.xticks(
-    np.linspace(0, 365, 13)[:-1],
-    (
-        "Jan. 1",
-        "Feb. 1",
-        "Mar. 1",
-        "Apr. 1",
-        "May 1",
-        "June 1",
-        "July 1",
-        "Aug. 1",
-        "Sep. 1",
-        "Oct. 1",
-        "Nov. 1",
-        "Dec. 1"
-    ),
-    rotation=40
-)
+# plt.xticks(
+#     np.linspace(0, 365, 13)[:-1],
+#     (
+#         "Jan. 1",
+#         "Feb. 1",
+#         "Mar. 1",
+#         "Apr. 1",
+#         "May 1",
+#         "June 1",
+#         "July 1",
+#         "Aug. 1",
+#         "Sep. 1",
+#         "Oct. 1",
+#         "Nov. 1",
+#         "Dec. 1"
+#     ),
+#     rotation=40
+# )
+plt.xticks(rotation=40)
 lat_label_vals = np.arange(-80, 80.1, 20)
 lat_labels = []
 for lat in lat_label_vals:
@@ -242,14 +254,15 @@ plt.suptitle(
 )
 plt.title(
     "\n".join([
-        "6 kg payload, min alt set by strat height, no alt. cycling, 450 Wh/kg batteries,",
-        "100W continuous payload power, SunPower solar cells on wing and vertical tail, station-keeping in 95% wind"
+        title1,
+        title2
     ]),
     fontsize=10
 )
+plt.savefig(f"cache/summer-2023-balloon/plot_{run_name}.png")
 
 show_plot(
-    xlabel="Time of Year",
+    xlabel="Day of Year",
     ylabel="Latitude",
     show=True,
 )
