@@ -1,13 +1,14 @@
 import multiprocessing as mp
 from wildfire_design_opt import *
 import aerosandbox.numpy as np
-
-### Set the run ID
-run_name = "Wildfire/1km_radius_20dB_5mRes"
+import pandas as pd
 
 ### Turn parallelization on/off.
 parallel = True
 
+def read_excel_data(excel_file):
+    df = pd.read_excel(excel_file)
+    return df.values.tolist()
 
 def run(day_val, lat_val):
     print("\n".join([
@@ -33,8 +34,8 @@ def run(day_val, lat_val):
         #     }
         # )
         sol = opti.solve(
-            max_iter=500,
-            max_runtime=60,
+            max_iter=2000,
+            max_runtime=600,
             verbose=False
         )
 
@@ -57,6 +58,25 @@ def run_wrapped(input):
 
 
 if __name__ == '__main__':
+
+    run_number = 4
+
+    excel_file = "cache/Wildfire/wildfire_runs.xlsx"
+
+    # read inputs from excel file
+    inputs = read_excel_data(excel_file)
+    input = inputs[run_number]
+
+    # adjust model inputs to match excel file
+    opti.set_value(required_snr, input[0])
+    opti.set_value(battery_specific_energy_Wh_kg, input[1])
+    opti.set_value(solar_cell_efficiency, input[2])
+    opti.set_value(revisit_rate, input[3])
+    opti.set_value(coverage_radius, input[4])
+    opti.set_value(spatial_resolution, input[5])
+
+    ### Set the run ID
+    run_name = f"Wildfire/run_{run_number}"
 
     ### Make a data file
     filename = f"cache/{run_name}.csv"
