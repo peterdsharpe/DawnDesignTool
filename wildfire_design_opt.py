@@ -1,3 +1,5 @@
+import sys
+sys.path.append('/home/gridsan/adewald/aerosandbox')
 import aerosandbox as asb
 import aerosandbox.library.aerodynamics as aero_lib
 from aerosandbox.atmosphere import Atmosphere as atmo
@@ -38,7 +40,7 @@ ops = dict(category="operations")
 
 ##### optimization assumptions
 minimize = ('wing_span / 30')
-make_plots = True
+make_plots = False
 
 ##### Debug flags
 draw_initial_guess_config = False
@@ -61,7 +63,7 @@ use_propulsion_fits_from_FL2020_1682_undergrads = True  # Warning: Fits not yet 
 # todo validate fits from FL2020 1682 undergrads or replace with better propulsion model
 
 # Mission Operating Parameters
-latitude = opti.parameter(value=65)  # degrees, the location the sizing occurs 32-40
+latitude = opti.parameter(value=60)  # degrees, the location the sizing occurs 32-40
 day_of_year = opti.parameter(value=200)  # Julian day, the day of the year the sizing occurs
 # mission_length = 0  # days, the length of the mission without landing to download data
 strat_offset_value = 1000  # meters, margin above the stratosphere height the aircraft is required to stay above
@@ -77,11 +79,11 @@ run_with_95th_percentile_wind_condition = False # do we want to run the sizing w
 # todo finalize trajectory parameterization
 # trajectory = 'straight'   # do we want to assume a straight line trajectory?
 required_headway_per_day = 100000
-vehicle_heading = opti.parameter(value=0) # degrees
+vehicle_heading = 0 # degrees
 
 trajectory = 'circular' # do we want to assume a circular trajectory?
 revisit_rate = opti.parameter(value=2)
-coverage_radius = 2000  # meters # average fire is less than 1km^2
+coverage_radius = opti.parameter(value=2000)  # meters # average fire is less than 1km^2
 
 # trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
 sample_area_height = 10000  # meters, the height of the area the aircraft must sample
@@ -94,7 +96,7 @@ tb_per_day = 4 # terabytes per day, the amount of data the payload collects per 
 # spatial_resolution = opti.variable(init_guess=2.2, scale=1, lower_bound=0.015, category='des')  # meters from conversation with Brent on 3/7/2023
 spatial_resolution = opti.parameter(value=5)
 # InSAR_resolution = opti.parameter(value=5)
-required_snr = 20  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
+required_snr = opti.parameter(value=20)  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
 # required_precision = 1e-4 * 60 * 60 * 24 * 365 # 1/year
 # meters given from Brent based on the properties of the ice sampled by the radar
 scattering_cross_sec_db = -20
@@ -926,7 +928,7 @@ avionics_power = 180  # TODO revisit this number
 
 
 ### Power Systems Mass Accounting
-solar_cell_efficiency = 0.30 * 0.93 * 0.93
+solar_cell_efficiency = opti.parameter(value=0.25947)
 # 30% efficiency of Sunpower cells at AM0, 7% knockdown for encapsulation, 7% knockdown for wing shape
 # as decided 7/17 with Andrew Streett
 rho_solar_cells = 0.56 # kg/m^2, areal density of solar cells as determined from 7/17 discussion with Andrew Streett
