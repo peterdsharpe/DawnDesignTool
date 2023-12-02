@@ -100,10 +100,10 @@ required_revisit_rate = 0 # How many times must the aircraft fully cover the sam
 mass_payload_base = 5 # kg, does not include data storage or aperture mass
 payload_volume = 0.023 * 1.5  # assuming payload mass from gamma remote sensing with 50% margin on volume
 tb_per_day = 4 # terabytes per day, the amount of data the payload collects per day, to account for storage
-spatial_resolution = opti.variable(init_guess=2.2, scale=1, lower_bound=0.015, upper_bound=100, category='des')  # meters from conversation with Brent on 3/7/2023
+spatial_resolution = opti.variable(init_guess=0.2, scale=1, lower_bound=0.015, upper_bound=100, category='des')  # meters from conversation with Brent on 3/7/2023
 InSAR_resolution = opti.variable(init_guess=0.5, scale=1, lower_bound=0.015, category='des')
 required_snr = 20  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
-required_precision = 1e-4 * 60 * 60 * 24 * 365 # 1/year
+required_precision = 1e-4 # 1/year
 # meters given from Brent based on the properties of the ice sampled by the radar
 scattering_cross_sec_db = -10
 # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
@@ -2055,12 +2055,12 @@ if draw_initial_guess_config:
 
 if __name__ == "__main__":
     time_terms = [12, 8, 6, 4]
-    time_terms = [6]
+    # time_terms = [6]
     for y in time_terms:
         opti.set_value(temporal_resolution, y)
-        # scaling_terms = np.linspace(0.1, 1, 10)
+        scaling_terms = np.linspace(0.1, 1, 10)
         # scaling_terms = [0.5]
-        scaling_terms = [.5, .4, .3, .2, .1, 0, 0.6, 0.7, 0.8, 0.9, 1]
+        # scaling_terms = [.5, .4, .3, .2, .1, 0, 0.6, 0.7, 0.8, 0.9, 1]
         spans = []
         space_resolutions = []
         for val in scaling_terms:
