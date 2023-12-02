@@ -3,8 +3,6 @@ import aerosandbox.numpy as np
 from scipy import interpolate
 import pandas as pd
 
-run_name = "Wildfire/1km_radius_20dB_5mRes"
-
 debug_mode = False
 
 def read_excel_data(excel_file):
@@ -13,13 +11,13 @@ def read_excel_data(excel_file):
 
 excel_file = "cache/Wildfire/wildfire_runs.xlsx"
 inputs = read_excel_data(excel_file)
-for i in range(0, 11):
-    run_name = i
-    title_1 = inputs[i][5]
-    title_2 = inputs[i][6]
+
+run_num = 4
+title1 = inputs[run_num][8]
+title2 = inputs[run_num][9]
 
 # Do raw imports
-data = pd.read_csv(f"cache/{run_name}.csv")
+data = pd.read_csv(f"cache/Wildfire/run_{run_num}.csv")
 data.columns = data.columns.str.strip()
 days_raw = np.array(data['Days'], dtype=float)
 lats_raw = np.array(data['Latitudes'], dtype=float)
@@ -66,7 +64,8 @@ rbf = interpolate.RBFInterpolator(
         lats_raw[~nan],
     )).T,
     spans_raw[~nan],
-    smoothing=50,
+    smoothing=0.1,
+    kernel="cubic",
 )
 
 days_plot = np.linspace(0, 365, 300)
@@ -259,7 +258,7 @@ plt.title(
     ]),
     fontsize=10
 )
-plt.savefig(f"cache/summer-2023-balloon/plot_{run_name}.png")
+plt.savefig(f"cache/Wildfire/plot_{run_num}.png")
 
 show_plot(
     xlabel="Day of Year",
