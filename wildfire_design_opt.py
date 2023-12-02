@@ -50,8 +50,8 @@ draw_initial_guess_config = False
 ##### Section: Input Parameters
 
 # Aircraft Parameters
-battery_specific_energy_Wh_kg = 390  # cell level specific energy of the battery
-battery_pack_cell_percentage = 0.85  # What percent of the battery pack consists of the module, by weight?
+battery_specific_energy_Wh_kg = opti.parameter(value=390)  # cell level specific energy of the battery
+battery_pack_cell_percentage = 0.85  # What percent of the battery pack consists of the module, by weight? # maybe 0.9
 # these roughly correspond to the value for cells we are planning for near-term
 variable_pitch = False  # Do we assume the propeller is variable pitch?
 structural_load_factor = 3  # over static
