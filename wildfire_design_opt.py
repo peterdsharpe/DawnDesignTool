@@ -104,7 +104,7 @@ scattering_cross_sec_db = -20
 ## ranges from -20 to -5 dB for forest regions (depending on biomass)
 
 # Margins
-structural_mass_margin_multiplier = 1.25
+structural_mass_margin_multiplier = 1.15
 # A value greater than 1 represents the structural components as sized are
 energy_generation_margin = 1.05
 # A value greater than 1 represents aircraft must generate said fractional surplus of energy
