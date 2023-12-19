@@ -86,12 +86,12 @@ run_with_95th_percentile_wind_condition = False # do we want to run the sizing w
 required_headway_per_day = 100000
 vehicle_heading = opti.parameter(value=0) # degrees
 
-trajectory = 'circular' # do we want to assume a circular trajectory?
+# trajectory = 'circular' # do we want to assume a circular trajectory?
 temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0.5, category='des')  # hours
 temporal_resolution = opti.parameter(value=8) # hours
 coverage_radius = 2500  # meters # todo finalize with Brent
 
-# trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
+trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
 sample_area_height = 10000  # meters, the height of the area the aircraft must sample
 sample_area_width = 10000  # meters, the width of the area the aircraft must sample
 required_revisit_rate = 0 # How many times must the aircraft fully cover the sample area in the sizing day?
@@ -1209,6 +1209,7 @@ if trajectory == 'lawnmower':
     turn_radius_1 = opti.variable(init_guess=1000, lower_bound=0, scale=1000, category='ops')
     turn_radius_2 = opti.variable(init_guess=1000, lower_bound=0, scale=1000, category='ops')
     distance = opti.variable(init_guess=0, n_vars=n_timesteps, scale=1e5, category='ops')
+    opti.constrain_derivative(variable=distance, with_respect_to=time, derivative=ground_speed)
     single_track_distance = np.mod(distance, sample_area_height * 2 + turn_radius_1 * np.pi + turn_radius_2 * np.pi)
     track = np.where(
         single_track_distance > sample_area_height,
