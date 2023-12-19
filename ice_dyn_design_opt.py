@@ -95,14 +95,15 @@ trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
 sample_area_height = 10000  # meters, the height of the area the aircraft must sample
 sample_area_width = 10000  # meters, the width of the area the aircraft must sample
 required_revisit_rate = 0 # How many times must the aircraft fully cover the sample area in the sizing day?
+spatial_coverage = sample_area_height * sample_area_width  # meters ** 2, the area the aircraft must sample
 
 # Instrument Parameters
 mass_payload_base = 5 # kg, does not include data storage or aperture mass
 payload_volume = 0.023 * 1.5  # assuming payload mass from gamma remote sensing with 50% margin on volume
 tb_per_day = 4 # terabytes per day, the amount of data the payload collects per day, to account for storage
-spatial_resolution = opti.variable(init_guess=0.2, scale=1, lower_bound=0.015, upper_bound=100, category='des')  # meters from conversation with Brent on 3/7/2023
-InSAR_resolution = opti.variable(init_guess=0.5, scale=1, lower_bound=0.015, category='des')
-required_snr = 20  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
+InSAR_range_resolution = opti.variable(init_guess=0.5, scale=1, upper_bound=10, lower_bound=0.015, category='des')
+InSAR_azimuth_resolution = opti.variable(init_guess=0.5, scale=1, upper_bound=10, lower_bound=0.015, category='des')
+# required_snr = 20  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
 required_precision = 1e-4 / (365 * 24) # 1/hour, the required precision of the InSAR measurement
 # meters given from Brent based on the properties of the ice sampled by the radar
 scattering_cross_sec_db = -10
