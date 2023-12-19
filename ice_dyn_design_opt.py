@@ -101,8 +101,9 @@ spatial_coverage = sample_area_height * sample_area_width  # meters ** 2, the ar
 mass_payload_base = 5 # kg, does not include data storage or aperture mass
 payload_volume = 0.023 * 1.5  # assuming payload mass from gamma remote sensing with 50% margin on volume
 tb_per_day = 4 # terabytes per day, the amount of data the payload collects per day, to account for storage
-InSAR_range_resolution = opti.variable(init_guess=0.5, scale=1, upper_bound=10, lower_bound=0.015, category='des')
-InSAR_azimuth_resolution = opti.variable(init_guess=0.5, scale=1, upper_bound=10, lower_bound=0.015, category='des')
+InSAR_range_resolution = opti.variable(init_guess=0.5, scale=1, upper_bound=10, lower_bound=0.015, category='des') # meters
+InSAR_azimuth_resolution = opti.variable(init_guess=0.5, scale=1, upper_bound=10, lower_bound=0.015, category='des') # meters
+InSAR_temporal_resolution = opti.variable(init_guess=4, scale=1, upper_bound=6, category='des') # hours
 # required_snr = 20  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
 required_precision = 1e-4 / (365 * 24) # 1/hour, the required precision of the InSAR measurement
 # meters given from Brent based on the properties of the ice sampled by the radar
@@ -1599,8 +1600,6 @@ azimuth_resolution = radar_length / 2
 critical_baseline = wavelength * dist / (2 * range_resolution * (np.cosd(look_angle)) ** 2)
 
 opti.subject_to([
-    range_resolution <= spatial_resolution,
-    azimuth_resolution <= spatial_resolution,
     payload_pod_length * 0.75 >= radar_length,
     payload_pod_diameter * 0.75 >= radar_width,
 ])
@@ -1613,16 +1612,23 @@ snr = payload_power * antenna_gain ** 2 * wavelength ** 3 * a_hs * sigma0 * rang
 snr_db = 10 * np.log(snr)
 
 # translate to InSAR Terms
-N_i = opti.variable(init_guess=5, scale=1, lower_bound=1, category='ops')
+N_i_range = opti.variable(init_guess=5, scale=1, lower_bound=1, category='des')
+N_i_azimuth = opti.variable(init_guess=5, scale=1, lower_bound=1, category='des')
+N_i_time = opti.variable(init_guess=5, scale=1, lower_bound=1, category='des')
+N_i = N_i_range * N_i_azimuth * N_i_time
 # number of pixels in the incoherent averaging window
 deviation = 10 # meters
-opti.subject_to(InSAR_resolution >= N_i * spatial_resolution)
+opti.subject_to([
+    InSAR_azimuth_resolution >= N_i_azimuth * azimuth_resolution,
+    InSAR_range_resolution >= N_i_range * range_resolution,
+    InSAR_temporal_resolution >= N_i_time * temporal_resolution,
+])
 p_thermal = 1 / (1 + snr_db ** -1)
 p_position = 1 - (2 * deviation * range_resolution * (np.cosd(look_angle)) ** 2 / (wavelength * dist))
 p_time = -0.0021 * temporal_resolution + 0.95
 decorrelation = p_thermal * p_position * p_time
 # todo define max time between samples in each trajectory
-precision = wavelength / (4 * np.pi * N_i * max_time_between_samples) * (
+precision = wavelength / (4 * np.pi * N_i * max_time_between_samples * InSAR_range_resolution) * (
         1 - decorrelation ** 2) / decorrelation ** 2
 
 
