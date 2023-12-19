@@ -12,7 +12,7 @@ def read_excel_data(excel_file):
 excel_file = "cache/Wildfire/wildfire_runs.xlsx"
 inputs = read_excel_data(excel_file)
 
-run_num = 4
+run_num = 0
 title1 = inputs[run_num][8]
 title2 = inputs[run_num][9]
 
@@ -151,17 +151,42 @@ if debug_mode:
 #     )
 # )
 #
-# ax.add_patch(
-#     plt.Rectangle(
-#         (115, 60),
-#         width=(130),
-#         height=(20),
-#         linestyle="--",
-#         color="k",
-#         linewidth=1,
-#         fill=False
-#     )
-# )
+ax.add_patch(
+    plt.Rectangle(
+        (152, 50),
+        width=(50),
+        height=(5),
+        linestyle="--",
+        color="r",
+        linewidth=1,
+        fill=False,
+        label="Canadian 2023 Wildfires"
+    )
+)
+ax.add_patch(
+    plt.Rectangle(
+        (320, -40),
+        width=(45),
+        height=(20),
+        linestyle="--",
+        color="w",
+        linewidth=1,
+        fill=False,
+        label="Australian 2019 Wildfires"
+    )
+)
+ax.add_patch(
+    plt.Rectangle(
+        (228, 40),
+        width=(60),
+        height=(5),
+        linestyle="--",
+        color="g",
+        linewidth=1,
+        fill=False,
+        label="August Complex 2020 Wildfire"
+    )
+)
 
 # ### Plots the region of interest (CONUS)
 # plt.plot(
@@ -251,6 +276,7 @@ plt.suptitle(
     "Minimum Wingspan Airplane by Mission",
     y=0.98
 )
+plt.legend(loc='center')
 plt.title(
     "\n".join([
         title1,
@@ -258,7 +284,9 @@ plt.title(
     ]),
     fontsize=10
 )
-plt.savefig(f"cache/Wildfire/plot_{run_num}.png")
+plt.xlabel("Day of Year")
+plt.ylabel("Latitude")
+plt.savefig(f"cache/Wildfire/plot_{run_num}_labelled.png")
 
 show_plot(
     xlabel="Day of Year",
