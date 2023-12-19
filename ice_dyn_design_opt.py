@@ -103,7 +103,7 @@ tb_per_day = 4 # terabytes per day, the amount of data the payload collects per 
 spatial_resolution = opti.variable(init_guess=0.2, scale=1, lower_bound=0.015, upper_bound=100, category='des')  # meters from conversation with Brent on 3/7/2023
 InSAR_resolution = opti.variable(init_guess=0.5, scale=1, lower_bound=0.015, category='des')
 required_snr = 20  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
-required_precision = 1e-4 # 1/year
+required_precision = 1e-4 / (365 * 24) # 1/hour, the required precision of the InSAR measurement
 # meters given from Brent based on the properties of the ice sampled by the radar
 scattering_cross_sec_db = -10
 # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
