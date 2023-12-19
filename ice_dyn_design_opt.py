@@ -1603,36 +1603,6 @@ opti.subject_to([
     payload_pod_length * 0.75 >= radar_length,
     payload_pod_diameter * 0.75 >= radar_width,
 ])
-
-if trajectory == 'straight':
-    coverage = opti.variable(init_guess=1e11, scale=1e11, lower_bound=0, category='ops')
-    coverage_area = ground_area * distance[time_periodic_end_index]
-    opti.subject_to(coverage_area >= coverage)
-
-
-if trajectory == 'circular':
-    opti.subject_to([
-        flight_path_radius >= ground_imaging_offset + swath_range,
-        coverage_radius <= swath_range,
-                ])
-
-if trajectory == 'lawnmower':
-    max_imaging_offset = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
-    max_swath_range = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
-    passes_required = sample_area_width / swath_range
-    total_distance = passes_required * sample_area_height
-    opti.subject_to([
-        required_revisit_rate * total_distance / 1e5 <= distance[time_periodic_end_index] / 1e5,
-        max_imaging_offset >= ground_imaging_offset,
-        # max_imaging_offset <= ground_imaging_offset + 100,
-        max_swath_range >= swath_range,
-        # max_swath_range <= swath_range + 100,
-        max_swath_range > max_imaging_offset,
-        turn_radius_1 == (2 * max_imaging_offset),
-        turn_radius_2 == (2 * max_swath_range - 2 * max_imaging_offset),
-        ])
-
-
 # use SAR specific equations from Ulaby and Long
 payload_power = power_trans * pulse_rep_freq * pulse_duration
 
@@ -1650,8 +1620,40 @@ p_thermal = 1 / (1 + snr_db ** -1)
 p_position = 1 - (2 * deviation * range_resolution * (np.cosd(look_angle)) ** 2 / (wavelength * dist))
 p_time = -0.0021 * temporal_resolution + 0.95
 decorrelation = p_thermal * p_position * p_time
+# todo define max time between samples in each trajectory
+precision = wavelength / (4 * np.pi * N_i * max_time_between_samples) * (
+        1 - decorrelation ** 2) / decorrelation ** 2
 
-precision = wavelength / (4 * np.pi * N_i * distance[time_periodic_end_index] / circular_trajectory_length) * (1 - decorrelation ** 2) / decorrelation ** 2
+
+
+if trajectory == 'straight':
+    coverage = opti.variable(init_guess=1e11, scale=1e11, lower_bound=0, category='ops')
+    coverage_area = ground_area * distance[time_periodic_end_index]
+    opti.subject_to(coverage_area >= coverage)
+
+
+if trajectory == 'circular':
+    opti.subject_to([
+        flight_path_radius >= ground_imaging_offset + swath_range,
+        coverage_radius <= swath_range,
+                ])
+
+
+if trajectory == 'lawnmower':
+    max_imaging_offset = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
+    max_swath_range = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
+    passes_required = sample_area_width / swath_range
+    total_distance = passes_required * sample_area_height
+    opti.subject_to([
+        required_revisit_rate * total_distance / 1e5 <= distance[time_periodic_end_index] / 1e5,
+        max_imaging_offset >= ground_imaging_offset,
+        # max_imaging_offset <= ground_imaging_offset + 100,
+        max_swath_range >= swath_range,
+        # max_swath_range <= swath_range + 100,
+        max_swath_range > max_imaging_offset,
+        turn_radius_1 == (2 * max_imaging_offset),
+        turn_radius_2 == (2 * max_swath_range - 2 * max_imaging_offset),
+        ])
 
 opti.subject_to([
     required_snr <= snr_db,
