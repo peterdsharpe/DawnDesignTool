@@ -58,7 +58,7 @@ structural_load_factor = 3  # over static
 tail_panels = True  # Do we assume we can mount solar cells on the vertical tail?
 max_wing_solar_area_fraction = 0.8
 max_vstab_solar_area_fraction = 0.8
-use_propulsion_fits_from_FL2020_1682_undergrads = True  # Warning: Fits not yet validated
+use_propulsion_fits_from_FL2020_1682_undergrads = False  # Warning: Fits not yet validated
 # fits for propeller and motors to derive motor and propeller efficiencies
 # todo validate fits from FL2020 1682 undergrads or replace with better propulsion model
 
@@ -1705,7 +1705,7 @@ if not use_propulsion_fits_from_FL2020_1682_undergrads:
     power_out_propulsion_shaft = lib_prop_prop.propeller_shaft_power_from_thrust(
         thrust_force=thrust,
         area_propulsive=area_propulsive,
-        airspeed=speed,
+        airspeed=ground_speed,
         rho=rho,
         propeller_coefficient_of_performance=0.90  # calibrated to QProp output with Dongjoon
     )
