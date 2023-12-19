@@ -36,8 +36,8 @@ def run(day_val, lat_val):
         #     }
         # )
         sol = opti.solve(
-            max_iter=200,
-            max_runtime=60,
+            max_iter=2000,
+            max_runtime=600,
             verbose=False
         )
         print("Success!")
