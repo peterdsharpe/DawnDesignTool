@@ -4,9 +4,11 @@ from scipy import interpolate
 import pandas as pd
 
 debug_mode = False
+run_num = 0
+run_name = "payload_run"
 def plot(run_name, title1, title2, run_number):
     # Do raw imports
-    data = pd.read_csv(f"cache/summer-2023-balloon/run_{run_name}.csv")
+    data = pd.read_csv(f"cache/Wildfire/{run_name}.csv")
     data.columns = data.columns.str.strip()
     days_raw = np.array(data['Days'], dtype=float)
     lats_raw = np.array(data['Latitudes'], dtype=float)
@@ -170,7 +172,9 @@ def plot(run_name, title1, title2, run_number):
         ]),
         fontsize=10
     )
-    plt.savefig(f"cache/summer-2023-balloon/plot_{run_name}.png")
+    plt.xlabel("Day of Year")
+    plt.ylabel("Latitude")
+    plt.savefig(f"cache/Wildfire/plot_payload.png")
 
     show_plot(
         xlabel="Time of Year",
@@ -184,12 +188,10 @@ def read_excel_data(excel_file):
 
 if __name__ == '__main__':
 
-    excel_file = "model_inputs_title_balloon.xlsx"
+    excel_file = "cache/Wildfire/wildfire_runs_payload.xlsx"
     # Read data from Excel
     inputs = read_excel_data(excel_file)
-    for i in range(0, 11):
-        run_name = i
-        title_1 = inputs[i][5]
-        title_2 = inputs[i][6]
-        plot(run_name, title_1, title_2, i)
+    title_1 = inputs[run_num][6]
+    title_2 = inputs[run_num][7]
+    plot(run_name, title_1, title_2, run_num)
 
