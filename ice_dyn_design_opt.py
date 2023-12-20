@@ -86,12 +86,12 @@ run_with_95th_percentile_wind_condition = False # do we want to run the sizing w
 required_headway_per_day = 100000
 vehicle_heading = opti.parameter(value=0) # degrees
 
-# trajectory = 'circular' # do we want to assume a circular trajectory?
-temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0.5, category='des')  # hours
-temporal_resolution = opti.parameter(value=8) # hours
+trajectory = 'circular' # do we want to assume a circular trajectory?
+# temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0.5, category='des')  # hours
+required_InSAR_temporal_resolution = opti.parameter(value=24) # hours
 coverage_radius = 2500  # meters # todo finalize with Brent
 
-trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
+# trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
 sample_area_height = 10000  # meters, the height of the area the aircraft must sample
 sample_area_width = 10000  # meters, the width of the area the aircraft must sample
 required_revisit_rate = 0 # How many times must the aircraft fully cover the sample area in the sizing day?
@@ -1196,12 +1196,12 @@ if trajectory == 'circular':
         scale=4,
         category='ops'
     )
-    required_revisit_rate_circ = 24 / temporal_resolution
     opti.subject_to([
         altitude[time_periodic_start_index:] / min_cruise_altitude > 1,
         distance[time_periodic_start_index] == 0,
-        distance[time_periodic_end_index] / circular_trajectory_length > required_revisit_rate_circ,
     ])
+    revisit_rate = distance[time_periodic_end_index] / circular_trajectory_length
+    revisit_period = 1 / revisit_rate
 
 if trajectory == 'lawnmower':
     guess_altitude = 14000
@@ -1657,14 +1657,15 @@ deviation = 10 # meters
 opti.subject_to([
     InSAR_azimuth_resolution >= N_i_azimuth * azimuth_resolution,
     InSAR_range_resolution >= N_i_range * range_resolution,
-    InSAR_temporal_resolution >= N_i_time * temporal_resolution,
+    InSAR_temporal_resolution >= N_i_time * revisit_period,
+    required_InSAR_temporal_resolution >= InSAR_temporal_resolution,
 ])
 p_thermal = 1 / (1 + snr_db ** -1)
 p_position = 1 - (2 * deviation * range_resolution * (np.cosd(look_angle)) ** 2 / (wavelength * dist))
-p_time_volume = -0.0021 * temporal_resolution + 0.95
+p_time_volume = -0.0021 * revisit_period + 0.95
 decorrelation = p_thermal * p_position * p_time_volume
 # todo define max time between samples in each trajectory
-precision = wavelength / (4 * np.pi * N_i * revisit_period * InSAR_range_resolution) * (
+precision = wavelength / (4 * np.pi * N_i * InSAR_temporal_resolution * InSAR_range_resolution) * (
         1 - decorrelation ** 2) / decorrelation ** 2
 opti.subject_to(required_precision >= precision)
 
