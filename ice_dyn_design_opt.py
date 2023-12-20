@@ -1622,6 +1622,7 @@ if trajectory == 'circular':
         flight_path_radius >= ground_imaging_offset + swath_range,
         coverage_radius <= swath_range,
                 ])
+    coverage_area = np.pi * coverage_radius ** 2
 
 
 if trajectory == 'lawnmower':
