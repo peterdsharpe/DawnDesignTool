@@ -50,9 +50,9 @@ draw_initial_guess_config = False
 ##### Section: Input Parameters
 
 # Objective Function Scaling Parameters
-wingspan_optimization_scaling_term = opti.parameter(value=0.3) # scale from 0 to 1 to adjust the relative importance of wingspan in the objective function
-azimuth_optimization_scaling_term = opti.parameter(value=0.3) # scale from 0 to 1 to adjust the relative importance of temporal resolution in the objective function
-range_optimization_scaling_term = opti.parameter(value=0.3) # scale from 0 to 1 to adjust the relative importance of spatial resolution in the objective function
+wingspan_optimization_scaling_term = opti.parameter(value=1) # scale from 0 to 1 to adjust the relative importance of wingspan in the objective function
+azimuth_optimization_scaling_term = opti.parameter(value=0) # scale from 0 to 1 to adjust the relative importance of temporal resolution in the objective function
+range_optimization_scaling_term = opti.parameter(value=0) # scale from 0 to 1 to adjust the relative importance of spatial resolution in the objective function
 
 # Aircraft Parameters
 battery_specific_energy_Wh_kg = 390  # cell level specific energy of the battery
