@@ -2060,18 +2060,7 @@ if draw_initial_guess_config:
         airplane.draw()
 
 if __name__ == "__main__":
-    time_terms = [12, 8, 6, 4]
-    # time_terms = [6]
-    for y in time_terms:
-        opti.set_value(temporal_resolution, y)
-        scaling_terms = np.linspace(0.1, 1, 10)
-        # scaling_terms = [0.5]
-        # scaling_terms = [.5, .4, .3, .2, .1, 0, 0.6, 0.7, 0.8, 0.9, 1]
-        spans = []
-        space_resolutions = []
-        for val in scaling_terms:
                     try:
-                        opti.set_value(wingspan_optimization_scaling_term, val)
                         sol = opti.solve(
                             max_iter=10000,
                             options={
@@ -2079,12 +2068,6 @@ if __name__ == "__main__":
                             }
                         )
                         print("Success!")
-                        time = opti.value(temporal_resolution)
-                        space = opti.value(InSAR_resolution)
-                        span = opti.value(wing_span)
-                        spans.append(span)
-                        space_resolutions.append(space)
-                        opti.set_initial_from_sol(sol)
                     except:
                         sol = opti.debug
                     # Print a warning if the penalty term is unreasonably high
@@ -2120,9 +2103,10 @@ if __name__ == "__main__":
                     print_title("Outputs")
                     for k, v in {
                             "Wing Span": f"{fmt(wing_span)} meters",
-                            "Spatial Resolution": f"{fmt(spatial_resolution)} meters",
-                            "Temporal Resolution": f"{fmt(temporal_resolution)} hours",
-                            "Revisit Rate": f"{fmt(distance[time_periodic_end_index] / circular_trajectory_length)}",
+                            "InSAR Range Resolution": f"{fmt(InSAR_range_resolution)} meters",
+                            "InSAR Azimuth Resolution": f"{fmt(InSAR_azimuth_resolution)} meters",
+                            "InSAR Temporal Resolution": f"{fmt(InSAR_temporal_resolution)} hours",
+                            # "Revisit Rate": f"{fmt(distance[time_periodic_end_index] / circular_trajectory_length)}",
                             "Cruise Altitude": f"{fmt(cruise_altitude / 1000)} kilometers",
                             "Average Airspeed": f"{fmt(avg_airspeed)} m/s",
                             "Wing Root Chord": f"{fmt(wing_root_chord)} meters",
@@ -2137,8 +2121,10 @@ if __name__ == "__main__":
                     # Define the data for the "Outputs" section
                     outputs_data = {
                         "Wing Span": f"{fmt(wing_span)} meters",
-                        "Spatial Resolution": f"{fmt(spatial_resolution)} meters",
-                        "Temporal Resolution": f"{fmt(temporal_resolution)} hours",
+                        "InSAR Range Resolution": f"{fmt(InSAR_range_resolution)} meters",
+                        "InSAR Azimuth Resolution": f"{fmt(InSAR_azimuth_resolution)} meters",
+                        "InSAR Temporal Resolution": f"{fmt(InSAR_temporal_resolution)} hours",
+                        "Coverage Area": f"{fmt(coverage_area)} meters^2",
                         "Revisit Rate": f"{fmt(distance[time_periodic_end_index] / circular_trajectory_length)}",
                         "Cruise Altitude": f"{fmt(cruise_altitude / 1000)} kilometers",
                         "Average Airspeed": f"{fmt(avg_airspeed)} m/s",
@@ -2156,14 +2142,17 @@ if __name__ == "__main__":
                             "payload mass": fmt(mass_props['payload'].mass),
                             "aperture length": fmt(radar_length),
                             "aperture width": fmt(radar_width),
-                            "range resolution": fmt(range_resolution),
-                            "azimuth resolution": fmt(azimuth_resolution),
-                            "InSAR resolution": fmt(InSAR_resolution),
+                            "SAR range resolution": fmt(range_resolution),
+                            "SAR azimuth resolution": fmt(azimuth_resolution),
+                            "SAR revisit period": fmt(revisit_period),
+                            "pixels in the incoherent averaging window": fmt(N_i),
                             "precision": fmt(avg_precision),
                             "pulse repetition frequency": fmt(pulse_rep_freq),
                             "bandwidth": fmt(bandwidth),
                             "center wavelength": fmt(wavelength),
                             "look angle": fmt(look_angle),
+                            "swath range": fmt(swath_range),
+                            "swath azimuth": fmt(swath_azimuth),
                             "SNR": fmt(avg_snr),
                         }.items():
                             print(f"{k.rjust(25)} = {v}")
@@ -2583,8 +2572,4 @@ if __name__ == "__main__":
 
                     if make_plots == True:
                         draw()
-        plt.plot(spans, space_resolutions, linestyle='--', marker='o', label='Temporal Resolution = ' + str(y) + ' hours')
-    plt.title('Pareto Front')
-    plt.xlabel('Wingspan [meters]')
-    plt.ylabel('Spatial Resolution [meters]')
-    plt.show()
+
