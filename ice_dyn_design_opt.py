@@ -1201,7 +1201,7 @@ if trajectory == 'circular':
         distance[time_periodic_start_index] == 0,
     ])
     revisit_rate = distance[time_periodic_end_index] / circular_trajectory_length
-    revisit_period = 1 / revisit_rate
+    revisit_period = 24 / revisit_rate
 
 if trajectory == 'lawnmower':
     guess_altitude = 14000
