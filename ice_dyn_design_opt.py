@@ -1664,7 +1664,7 @@ opti.subject_to([
     InSAR_temporal_resolution >= N_i_time * revisit_period,
     required_InSAR_temporal_resolution >= InSAR_temporal_resolution,
 ])
-p_thermal = 1 / (1 + snr ** -1)
+p_thermal = 1 / (1 + snr ** (-1))
 p_position = 1 - (2 * deviation * range_resolution * (np.cosd(look_angle)) ** 2 / (wavelength * dist))
 p_time_volume = -0.0021 * revisit_period + 0.95
 decorrelation = p_thermal * p_position * p_time_volume
