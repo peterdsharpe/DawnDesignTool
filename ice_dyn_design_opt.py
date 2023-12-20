@@ -95,7 +95,6 @@ coverage_radius = 2500  # meters # todo finalize with Brent
 sample_area_height = 10000  # meters, the height of the area the aircraft must sample
 sample_area_width = 10000  # meters, the width of the area the aircraft must sample
 required_revisit_rate = 0 # How many times must the aircraft fully cover the sample area in the sizing day?
-spatial_coverage = sample_area_height * sample_area_width  # meters ** 2, the area the aircraft must sample
 
 # Instrument Parameters
 mass_payload_base = 5 # kg, does not include data storage or aperture mass
@@ -1646,6 +1645,7 @@ if trajectory == 'lawnmower':
         turn_radius_1 == (2 * max_imaging_offset),
         turn_radius_2 == (2 * max_swath_range - 2 * max_imaging_offset),
         ])
+    coverage_area = sample_area_height * sample_area_width  # meters ** 2, the area the aircraft must sample
 
 opti.subject_to([
     pulse_rep_freq >= 2 * ground_speed / radar_length,
