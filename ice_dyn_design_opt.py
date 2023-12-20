@@ -1587,6 +1587,8 @@ ground_imaging_offset = np.tand(look_angle) * altitude  # meters
 scattering_cross_sec = 10 ** (scattering_cross_sec_db / 10)
 sigma0 = scattering_cross_sec / ground_area
 antenna_gain = 4 * np.pi * radar_aperture_area * 0.7 / wavelength ** 2
+max_swath_range = opti.variable(init_guess=8500,scale=1e3,lower_bound=0,**ops)
+max_swath_azimuth = opti.variable(init_guess=8500,scale=1e3,lower_bound=0,**ops)
 
 # Assumed constants
 a_hs = 0.88  # aperture-illumination taper factor associated with the synthetic aperture (value from Ulaby and Long)
@@ -1602,6 +1604,8 @@ critical_baseline = wavelength * dist / (2 * range_resolution * (np.cosd(look_an
 opti.subject_to([
     payload_pod_length * 0.75 >= radar_length,
     payload_pod_diameter * 0.75 >= radar_width,
+    max_swath_range >= swath_range,
+    max_swath_azimuth >= swath_azimuth,
 ])
 # use SAR specific equations from Ulaby and Long
 payload_power = power_trans * pulse_rep_freq * pulse_duration
@@ -1637,7 +1641,6 @@ if trajectory == 'lawnmower':
     opti.subject_to([
         max_imaging_offset >= ground_imaging_offset,
         # max_imaging_offset <= ground_imaging_offset + 100,
-        max_swath_range >= swath_range,
         # max_swath_range <= swath_range + 100,
         max_swath_range > max_imaging_offset,
         turn_radius_1 == (2 * max_imaging_offset),
@@ -2153,8 +2156,8 @@ if __name__ == "__main__":
                             "bandwidth": fmt(bandwidth),
                             "center wavelength": fmt(wavelength),
                             "look angle": fmt(look_angle),
-                            "swath range": fmt(swath_range),
-                            "swath azimuth": fmt(swath_azimuth),
+                            "swath range": fmt(max_swath_range),
+                            "swath azimuth": fmt(max_swath_azimuth),
                             "SNR": fmt(avg_snr),
                         }.items():
                             print(f"{k.rjust(25)} = {v}")
