@@ -1649,10 +1649,13 @@ if trajectory == 'circular':
 if trajectory == 'lawnmower':
     max_imaging_offset = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
     max_swath_range = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
-    passes_required = sample_area_width / swath_range
-    total_distance = passes_required * sample_area_height
+    swath_overlap = opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, category='ops')
+    single_track_coverage = swath_range * (2-swath_overlap)
+    passes_required = sample_area_width / single_track_coverage
+    total_distance = passes_required * (2 * sample_area_height + np.pi * turn_radius_1 + np.pi * turn_radius_2 * np.pi)
+    revisit_rate = distance[time_periodic_end_index] / total_distance
+    revisit_period = 1 / revisit_rate
     opti.subject_to([
-        required_revisit_rate * total_distance / 1e5 <= distance[time_periodic_end_index] / 1e5,
         max_imaging_offset >= ground_imaging_offset,
         # max_imaging_offset <= ground_imaging_offset + 100,
         max_swath_range >= swath_range,
