@@ -1611,28 +1611,6 @@ snr = payload_power * antenna_gain ** 2 * wavelength ** 3 * a_hs * sigma0 * rang
 
 snr_db = 10 * np.log(snr)
 
-# translate to InSAR Terms
-N_i_range = opti.variable(init_guess=5, scale=1, lower_bound=1, category='des')
-N_i_azimuth = opti.variable(init_guess=5, scale=1, lower_bound=1, category='des')
-N_i_time = opti.variable(init_guess=5, scale=1, lower_bound=1, category='des')
-N_i = N_i_range * N_i_azimuth * N_i_time
-# number of pixels in the incoherent averaging window
-deviation = 10 # meters
-opti.subject_to([
-    InSAR_azimuth_resolution >= N_i_azimuth * azimuth_resolution,
-    InSAR_range_resolution >= N_i_range * range_resolution,
-    InSAR_temporal_resolution >= N_i_time * temporal_resolution,
-])
-p_thermal = 1 / (1 + snr_db ** -1)
-p_position = 1 - (2 * deviation * range_resolution * (np.cosd(look_angle)) ** 2 / (wavelength * dist))
-p_time = -0.0021 * temporal_resolution + 0.95
-decorrelation = p_thermal * p_position * p_time
-# todo define max time between samples in each trajectory
-precision = wavelength / (4 * np.pi * N_i * max_time_between_samples * InSAR_range_resolution) * (
-        1 - decorrelation ** 2) / decorrelation ** 2
-
-
-
 if trajectory == 'straight':
     coverage = opti.variable(init_guess=1e11, scale=1e11, lower_bound=0, category='ops')
     coverage_area = ground_area * distance[time_periodic_end_index]
@@ -1666,14 +1644,29 @@ if trajectory == 'lawnmower':
         ])
 
 opti.subject_to([
-    required_snr <= snr_db,
     pulse_rep_freq >= 2 * ground_speed / radar_length,
-    # pulse_rep_freq <= c / (2 * swath_azimuth),
-    1 / pulse_rep_freq >= pulse_duration,
-    required_precision >= precision,
+    1 / pulse_rep_freq >= pulse_duration
 ])
-# range_resolution = c * pulse_duration / (2 * np.sind(look_angle))
-
+# translate to InSAR Terms
+N_i_range = opti.variable(init_guess=5, scale=1, lower_bound=1, category='des')
+N_i_azimuth = opti.variable(init_guess=5, scale=1, lower_bound=1, category='des')
+N_i_time = opti.variable(init_guess=5, scale=1, lower_bound=1, category='des')
+N_i = N_i_range * N_i_azimuth * N_i_time
+# number of pixels in the incoherent averaging window
+deviation = 10 # meters
+opti.subject_to([
+    InSAR_azimuth_resolution >= N_i_azimuth * azimuth_resolution,
+    InSAR_range_resolution >= N_i_range * range_resolution,
+    InSAR_temporal_resolution >= N_i_time * temporal_resolution,
+])
+p_thermal = 1 / (1 + snr_db ** -1)
+p_position = 1 - (2 * deviation * range_resolution * (np.cosd(look_angle)) ** 2 / (wavelength * dist))
+p_time_volume = -0.0021 * temporal_resolution + 0.95
+decorrelation = p_thermal * p_position * p_time_volume
+# todo define max time between samples in each trajectory
+precision = wavelength / (4 * np.pi * N_i * revisit_period * InSAR_range_resolution) * (
+        1 - decorrelation ** 2) / decorrelation ** 2
+opti.subject_to(required_precision >= precision)
 
 ### instrument data storage mass requirements
 mass_of_data_storage = 0.0053  # kg per TB of data
