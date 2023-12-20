@@ -2175,7 +2175,7 @@ if __name__ == "__main__":
                             print(f"{k.rjust(25)} = {fmt(v.mass)} kg")
 
                     # Define a filename for the CSV file with the temporal resolution in the name
-                    csv_file = f"outputs/outputs_data_temporal_{y}_scaling_{val}.csv"
+                    csv_file = f"outputs/outputs_data.csv"
 
                     # Write the data to the CSV file
                     with open(csv_file, 'w', newline='') as csvfile:
@@ -2197,7 +2197,7 @@ if __name__ == "__main__":
                             "aperture width": fmt(radar_width),
                             "range resolution": fmt(range_resolution),
                             "azimuth resolution": fmt(azimuth_resolution),
-                            "InSAR resolution": fmt(InSAR_resolution),
+                            # "InSAR resolution": fmt(InSAR_resolution),
                             "precision": fmt(avg_precision),
                             "pulse repetition frequency": fmt(pulse_rep_freq),
                             "bandwidth": fmt(bandwidth),
