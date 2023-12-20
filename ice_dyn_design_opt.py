@@ -88,7 +88,7 @@ vehicle_heading = opti.parameter(value=0) # degrees
 
 trajectory = 'circular' # do we want to assume a circular trajectory?
 # temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0.5, category='des')  # hours
-required_InSAR_temporal_resolution = opti.parameter(value=24) # hours
+required_InSAR_temporal_resolution = opti.parameter(value=6) # hours
 coverage_radius = 2500  # meters # todo finalize with Brent
 
 # trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
@@ -105,7 +105,7 @@ InSAR_range_resolution = opti.variable(init_guess=0.5, scale=1, upper_bound=10, 
 InSAR_azimuth_resolution = opti.variable(init_guess=0.5, scale=1, upper_bound=10, lower_bound=0.015, category='des') # meters
 InSAR_temporal_resolution = opti.variable(init_guess=4, scale=1, upper_bound=6, category='des') # hours
 # required_snr = 20  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
-required_precision = 1e-4 / (365 * 24) # 1/hour, the required precision of the InSAR measurement
+required_precision = 1 / (365 * 24) # 1/hour, the required precision of the InSAR measurement
 # meters given from Brent based on the properties of the ice sampled by the radar
 scattering_cross_sec_db = -10
 # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
