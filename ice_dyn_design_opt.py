@@ -1209,7 +1209,6 @@ if trajectory == 'lawnmower':
     turn_radius_1 = opti.variable(init_guess=1000, lower_bound=0, scale=1000, category='ops')
     turn_radius_2 = opti.variable(init_guess=1000, lower_bound=0, scale=1000, category='ops')
     distance = opti.variable(init_guess=0, n_vars=n_timesteps, scale=1e5, category='ops')
-    opti.constrain_derivative(variable=distance, with_respect_to=time, derivative=ground_speed)
     single_track_distance = np.mod(distance, sample_area_height * 2 + turn_radius_1 * np.pi + turn_radius_2 * np.pi)
     track = np.where(
         single_track_distance > sample_area_height,
@@ -1242,6 +1241,7 @@ if trajectory == 'lawnmower':
     ground_speed_x = u_e - wind_speed_x
     ground_speed_y = v_e - wind_speed_y
     ground_speed = (ground_speed_x ** 2 + ground_speed_y ** 2) ** 0.5
+    opti.constrain_derivative(variable=distance, with_respect_to=time, derivative=ground_speed)
     opti.subject_to(ground_speed > min_speed)
     vehicle_bearing = np.arctan2d(ground_speed_y, ground_speed_x)
     x_e = opti.variable(init_guess=0, n_vars=n_timesteps, scale=1e4, category='ops')
