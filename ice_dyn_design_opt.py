@@ -2013,7 +2013,7 @@ cruise_LD = lift_force / drag_force
 avg_cruise_LD = np.mean(cruise_LD)
 avg_airspeed = np.mean(air_speed)
 avg_snr = np.mean(snr_db)
-avg_precision = np.mean(precision)
+avg_precision = np.mean(precision) * 24 * 365 # 1/yr
 cruise_altitude = np.mean(altitude)
 sl_atmosphere = atmo(altitude=0)
 rho_ratio = np.sqrt(np.mean(my_atmosphere.density()) / sl_atmosphere.density())
