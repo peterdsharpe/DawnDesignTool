@@ -1860,10 +1860,10 @@ net_accel_z_e = opti.variable(
 #     variable=y_e, with_respect_to=time,
 #     derivative=(v_e)
 # )
-# opti.constrain_derivative(
-#     variable=z_e, with_respect_to=time,
-#     derivative=w_e,
-# )
+opti.constrain_derivative(
+    variable=z_e, with_respect_to=time,
+    derivative=w_e,
+)
 # opti.constrain_derivative(
 #     variable=distance, with_respect_to=time,
 #     derivative=ground_speed
