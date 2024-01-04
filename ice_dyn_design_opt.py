@@ -89,7 +89,7 @@ vehicle_heading = opti.parameter(value=0) # degrees
 trajectory = 'circular' # do we want to assume a circular trajectory?
 # temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0.5, category='des')  # hours
 required_InSAR_temporal_resolution = opti.parameter(value=6) # hours
-coverage_radius = 2500  # meters # todo finalize with Brent
+coverage_radius = opti.variable(init_guess=2500, scale=1000, lower_bound=0, category='des')  # meters # todo finalize with Brent
 
 # trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
 sample_area_height = 10000  # meters, the height of the area the aircraft must sample
