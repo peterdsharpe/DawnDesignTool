@@ -37,10 +37,10 @@ des = dict(category="design")
 ops = dict(category="operations")
 
 ##### optimization assumptions
-minimize = ('(1-wingspan_optimization_scaling_term) * wing_span / 26 '
+minimize = ('wingspan_optimization_scaling_term * wing_span / 40 '
             '+ azimuth_optimization_scaling_term * InSAR_azimuth_resolution / 11 '
-            '+ range_optimization_scaling_term * InSAR_range_resolution / 1')
-make_plots = False
+            '- coverage_optimization_scaling_term * coverage_area / 1e+11 ')
+make_plots = True
 
 ##### Debug flags
 draw_initial_guess_config = False
@@ -50,9 +50,9 @@ draw_initial_guess_config = False
 ##### Section: Input Parameters
 
 # Objective Function Scaling Parameters
-wingspan_optimization_scaling_term = opti.parameter(value=1) # scale from 0 to 1 to adjust the relative importance of wingspan in the objective function
-azimuth_optimization_scaling_term = opti.parameter(value=0) # scale from 0 to 1 to adjust the relative importance of temporal resolution in the objective function
-range_optimization_scaling_term = opti.parameter(value=0) # scale from 0 to 1 to adjust the relative importance of spatial resolution in the objective function
+wingspan_optimization_scaling_term = opti.parameter(value=0.33) # scale from 0 to 1 to adjust the relative importance of wingspan in the objective function
+azimuth_optimization_scaling_term = opti.parameter(value=0.33) # scale from 0 to 1 to adjust the relative importance of spatial resolution in the objective function
+coverage_optimization_scaling_term = opti.parameter(value=0.33) # scale from 0 to 1 to adjust the relative importance of spatial coverage in the objective function
 
 # Aircraft Parameters
 battery_specific_energy_Wh_kg = 390  # cell level specific energy of the battery
@@ -1660,6 +1660,7 @@ N_i = N_i_range * N_i_azimuth * N_i_time
 deviation = 10 # meters
 opti.subject_to([
     InSAR_azimuth_resolution >= N_i_azimuth * azimuth_resolution,
+    InSAR_range_resolution <= InSAR_azimuth_resolution,
     InSAR_range_resolution >= N_i_range * range_resolution,
     InSAR_temporal_resolution >= N_i_time * revisit_period,
     required_InSAR_temporal_resolution >= InSAR_temporal_resolution,
