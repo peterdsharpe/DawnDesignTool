@@ -88,7 +88,7 @@ vehicle_heading = opti.parameter(value=0) # degrees
 
 trajectory = 'circular' # do we want to assume a circular trajectory?
 # temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0.5, category='des')  # hours
-required_InSAR_temporal_resolution = opti.parameter(value=6) # hours
+required_strain_temporal_resolution = opti.parameter(value=6) # hours
 coverage_radius = opti.variable(init_guess=2500, scale=1000, lower_bound=0, category='des')  # meters # todo finalize with Brent
 
 # trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
@@ -104,7 +104,7 @@ strain_range_resolution = opti.variable(init_guess=0.5, scale=1, lower_bound=0.0
 strain_azimuth_resolution = opti.variable(init_guess=0.5, scale=1, lower_bound=0.015, upper_bound=100, category='des') # meters
 strain_temporal_resolution = opti.variable(init_guess=4, scale=1, category='des') # hours
 # required_snr = 20  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
-required_strain_precision = 1E-4 # 1/yr, the required precision of the InSAR measurement
+required_strain_precision = 1E-4 # 1/yr, the required precision of the strain measurement
 # meters given from Brent based on the properties of the ice sampled by the radar
 scattering_cross_sec_db = -10
 # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
@@ -1651,7 +1651,7 @@ opti.subject_to([
     pulse_rep_freq >= 2 * ground_speed / radar_length,
     1 / pulse_rep_freq >= pulse_duration
 ])
-# translate to InSAR Terms
+# translate to final data product Terms
 N_i_range = opti.variable(init_guess=5, scale=1, lower_bound=1, category='des')
 N_i_azimuth = opti.variable(init_guess=5, scale=1, lower_bound=1, category='des')
 N_i_time = opti.variable(init_guess=5, scale=1, lower_bound=1, category='des')
@@ -1659,20 +1659,19 @@ N_i = N_i_range * N_i_azimuth * N_i_time
 # number of pixels in the incoherent averaging window
 deviation = 10 # meters
 opti.subject_to([
-    InSAR_azimuth_resolution >= N_i_azimuth * azimuth_resolution,
-    InSAR_range_resolution <= InSAR_azimuth_resolution,
-    InSAR_range_resolution >= N_i_range * range_resolution,
-    InSAR_temporal_resolution >= N_i_time * revisit_period,
-    required_InSAR_temporal_resolution >= InSAR_temporal_resolution,
+    strain_azimuth_resolution >= N_i_azimuth * azimuth_resolution,
+    strain_range_resolution <= strain_azimuth_resolution,
+    strain_range_resolution >= N_i_range * range_resolution,
+    strain_temporal_resolution >= N_i_time * revisit_period,
+    required_strain_temporal_resolution >= strain_temporal_resolution,
 ])
 p_thermal = 1 / (1 + snr ** (-1))
 p_position = 1 - (2 * deviation * range_resolution * (np.cosd(look_angle)) ** 2 / (wavelength * dist))
 p_time_volume = -0.0021 * revisit_period + 0.95
 decorrelation = p_thermal * p_position * p_time_volume
-# todo define max time between samples in each trajectory
-precision = wavelength / (4 * np.pi * N_i * InSAR_temporal_resolution * InSAR_range_resolution) * (
+precision = wavelength / (4 * np.pi * N_i * strain_temporal_resolution * strain_range_resolution) * (
         1 - decorrelation ** 2) / decorrelation ** 2
-opti.subject_to(required_precision >= precision)
+opti.subject_to(required_strain_precision >= (precision * 24 * 365))
 
 ### instrument data storage mass requirements
 mass_of_data_storage = 0.0053  # kg per TB of data
@@ -2109,10 +2108,10 @@ if __name__ == "__main__":
                     print_title("Outputs")
                     for k, v in {
                             "Wing Span": f"{fmt(wing_span)} meters",
-                            "InSAR Range Resolution": f"{fmt(InSAR_range_resolution)} meters",
-                            "InSAR Azimuth Resolution": f"{fmt(InSAR_azimuth_resolution)} meters",
-                            "InSAR Temporal Resolution": f"{fmt(InSAR_temporal_resolution)} hours",
-                            # "Revisit Rate": f"{fmt(distance[time_periodic_end_index] / circular_trajectory_length)}",
+                            "Strain Range Resolution": f"{fmt(strain_range_resolution)} meters",
+                            "Strain Azimuth Resolution": f"{fmt(strain_azimuth_resolution)} meters",
+                            "Strain Temporal Resolution": f"{fmt(strain_temporal_resolution)} hours",
+                            "Coverage Area": f"{fmt(coverage_area)} meters^2",
                             "Cruise Altitude": f"{fmt(cruise_altitude / 1000)} kilometers",
                             "Average Airspeed": f"{fmt(avg_airspeed)} m/s",
                             "Wing Root Chord": f"{fmt(wing_root_chord)} meters",
@@ -2127,9 +2126,9 @@ if __name__ == "__main__":
                     # Define the data for the "Outputs" section
                     outputs_data = {
                         "Wing Span": f"{fmt(wing_span)} meters",
-                        "InSAR Range Resolution": f"{fmt(InSAR_range_resolution)} meters",
-                        "InSAR Azimuth Resolution": f"{fmt(InSAR_azimuth_resolution)} meters",
-                        "InSAR Temporal Resolution": f"{fmt(InSAR_temporal_resolution)} hours",
+                        "Strain Range Resolution": f"{fmt(strain_range_resolution)} meters",
+                        "Strain Azimuth Resolution": f"{fmt(strain_azimuth_resolution)} meters",
+                        "Strain Temporal Resolution": f"{fmt(strain_temporal_resolution)} hours",
                         "Coverage Area": f"{fmt(coverage_area)} meters^2",
                         "Revisit Rate": f"{fmt(distance[time_periodic_end_index] / circular_trajectory_length)}",
                         "Cruise Altitude": f"{fmt(cruise_altitude / 1000)} kilometers",
