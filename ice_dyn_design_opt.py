@@ -2012,8 +2012,8 @@ propeller_efficiency = thrust * air_speed/ power_out_propulsion_shaft
 cruise_LD = lift_force / drag_force
 avg_cruise_LD = np.mean(cruise_LD)
 avg_airspeed = np.mean(air_speed)
-avg_snr = np.mean(snr_db)
-avg_precision = np.mean(precision) * 24 * 365 # 1/yr
+max_snr = np.max(snr_db)
+max_precision = np.max(precision) * 24 * 365 # 1/yr
 cruise_altitude = np.mean(altitude)
 sl_atmosphere = atmo(altitude=0)
 rho_ratio = np.sqrt(np.mean(my_atmosphere.density()) / sl_atmosphere.density())
@@ -2129,7 +2129,6 @@ if __name__ == "__main__":
                         "Strain Azimuth Resolution": f"{fmt(strain_azimuth_resolution)} meters",
                         "Strain Temporal Resolution": f"{fmt(strain_temporal_resolution)} hours",
                         "Coverage Area": f"{fmt(coverage_area)} meters^2",
-                        "Revisit Rate": f"{fmt(distance[time_periodic_end_index] / circular_trajectory_length)}",
                         "Cruise Altitude": f"{fmt(cruise_altitude / 1000)} kilometers",
                         "Average Airspeed": f"{fmt(avg_airspeed)} m/s",
                         "Wing Root Chord": f"{fmt(wing_root_chord)} meters",
@@ -2143,21 +2142,21 @@ if __name__ == "__main__":
                     print_title("Payload Terms")
                     for k, v in {
                             "payload power": fmtpow(payload_power),
-                            "payload mass": fmt(mass_props['payload'].mass),
-                            "aperture length": fmt(radar_length),
-                            "aperture width": fmt(radar_width),
-                            "SAR range resolution": fmt(range_resolution),
-                            "SAR azimuth resolution": fmt(azimuth_resolution),
-                            "SAR revisit period": fmt(revisit_period),
+                            "payload mass": f"{fmt(mass_props['payload'].mass)} kg",
+                            "aperture length": f"{fmt(radar_length)} meters",
+                            "aperture width": f"{fmt(radar_width)} meters",
+                            "SAR range resolution": f"{fmt(range_resolution)} meters",
+                            "SAR azimuth resolution": f"{fmt(azimuth_resolution)} meters",
+                            "SAR revisit period": f"{fmt(revisit_period)} hours",
                             "pixels in the incoherent averaging window": fmt(N_i),
-                            "precision": fmt(avg_precision),
-                            "pulse repetition frequency": fmt(pulse_rep_freq),
-                            "bandwidth": fmt(bandwidth),
-                            "center wavelength": fmt(wavelength),
-                            "look angle": fmt(look_angle),
-                            "swath range": fmt(max_swath_range),
-                            "swath azimuth": fmt(max_swath_azimuth),
-                            "SNR": fmt(avg_snr),
+                            "precision": f"{fmt(max_precision)} 1 / yr",
+                            "pulse repetition frequency": f"{fmt(pulse_rep_freq)} Hz",
+                            "bandwidth": f"{fmt(bandwidth)} Hz",
+                            "center wavelength": f"{fmt(wavelength)} meters",
+                            "look angle": f"{fmt(look_angle)} degrees",
+                            "swath range": f"{fmt(max_swath_range)} meters",
+                            "swath azimuth": f"{fmt(max_swath_azimuth)} meters",
+                            "SNR": f"{fmt(max_snr)} dB",
                         }.items():
                             print(f"{k.rjust(25)} = {v}")
 
@@ -2191,18 +2190,21 @@ if __name__ == "__main__":
                             writer.writerow({"Property": k, "Value": fmt(v.mass) + " kg"})
                         for k, v in {
                             "payload power": fmtpow(payload_power),
-                            "payload mass": fmt(mass_props['payload'].mass),
-                            "aperture length": fmt(radar_length),
-                            "aperture width": fmt(radar_width),
-                            "range resolution": fmt(range_resolution),
-                            "azimuth resolution": fmt(azimuth_resolution),
-                            # "InSAR resolution": fmt(InSAR_resolution),
-                            "precision": fmt(avg_precision),
-                            "pulse repetition frequency": fmt(pulse_rep_freq),
-                            "bandwidth": fmt(bandwidth),
-                            "center wavelength": fmt(wavelength),
-                            "look angle": fmt(look_angle),
-                            "SNR": fmt(avg_snr),
+                            "payload mass": f"{fmt(mass_props['payload'].mass)} kg",
+                            "aperture length": f"{fmt(radar_length)} meters",
+                            "aperture width": f"{fmt(radar_width)} meters",
+                            "SAR range resolution": f"{fmt(range_resolution)} meters",
+                            "SAR azimuth resolution": f"{fmt(azimuth_resolution)} meters",
+                            "SAR revisit period": f"{fmt(revisit_period)} hours",
+                            "pixels in the incoherent averaging window": fmt(N_i),
+                            "precision": f"{fmt(max_precision)} 1 / yr",
+                            "pulse repetition frequency": f"{fmt(pulse_rep_freq)} Hz",
+                            "bandwidth": f"{fmt(bandwidth)} Hz",
+                            "center wavelength": f"{fmt(wavelength)} meters",
+                            "look angle": f"{fmt(look_angle)} degrees",
+                            "swath range": f"{fmt(max_swath_range)} meters",
+                            "swath azimuth": f"{fmt(max_swath_azimuth)} meters",
+                            "SNR": f"{fmt(max_snr)} dB",
                         }.items():
                             writer.writerow({"Property": k, "Value": v})
                         for k, v in {
