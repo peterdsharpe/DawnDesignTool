@@ -1131,7 +1131,6 @@ if trajectory == 'straight':
         n_vars=n_timesteps,
         scale=1e-4,
         category='ops',
-        lower_bound=min_speed,
     )
     # speed = (u_e ** 2 + v_e ** 2) ** 0.5
     gamma = np.arctan2(-w_e, air_speed)
