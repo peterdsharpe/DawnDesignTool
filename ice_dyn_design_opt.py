@@ -74,7 +74,7 @@ mission_length = 80  # days, the length of the mission without landing to downlo
 strat_offset_value = 1000  # meters, margin above the stratosphere height the aircraft is required to stay above
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 climb_opt = False  # are we optimizing for the climb as well?
-hold_cruise_altitude = False  # must we hold the cruise altitude (True) or can we altitude cycle (False)?
+hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we altitude cycle (False)?
 
 # Trajectory Parameters
 min_speed = 0.5 # specify a minimum groundspeed (bad convergence if less than 0.5 m/s)
