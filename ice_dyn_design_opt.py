@@ -86,14 +86,14 @@ run_with_95th_percentile_wind_condition = False # do we want to run the sizing w
 required_headway_per_day = 100000
 vehicle_heading = opti.parameter(value=0) # degrees
 
-trajectory = 'circular' # do we want to assume a circular trajectory?
+# trajectory = 'circular' # do we want to assume a circular trajectory?
 # temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0.5, category='des')  # hours
 required_strain_temporal_resolution = opti.parameter(value=6) # hours
 coverage_radius = opti.variable(init_guess=2500, scale=1000, lower_bound=0, category='des')  # meters # todo finalize with Brent
 
-# trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
-sample_area_height = 10000  # meters, the height of the area the aircraft must sample
-sample_area_width = 10000  # meters, the width of the area the aircraft must sample
+trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
+sample_area_height = opti.variable(init_guess=10000, scale=1000, lower_bound=0, category='des')  # meters, the height of the area the aircraft must sample
+sample_area_width = opti.variable(init_guess=10000, scale=1000, lower_bound=0, category='des')  # meters, the width of the area the aircraft must sample
 required_revisit_rate = 0 # How many times must the aircraft fully cover the sample area in the sizing day?
 
 # Instrument Parameters
@@ -1208,7 +1208,7 @@ if trajectory == 'lawnmower':
     start_angle = 0
     turn_radius_1 = opti.variable(init_guess=1000, lower_bound=0, scale=1000, category='ops')
     turn_radius_2 = opti.variable(init_guess=1000, lower_bound=0, scale=1000, category='ops')
-    distance = opti.variable(init_guess=0, n_vars=n_timesteps, scale=1e5, category='ops')
+    distance = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e5, category='ops')
     single_track_distance = np.mod(distance, sample_area_height * 2 + turn_radius_1 * np.pi + turn_radius_2 * np.pi)
     track = np.where(
         single_track_distance > sample_area_height,
@@ -1643,6 +1643,7 @@ if trajectory == 'lawnmower':
         max_swath_range > max_imaging_offset,
         turn_radius_1 == (2 * max_imaging_offset),
         turn_radius_2 == (2 * max_swath_range - 2 * max_imaging_offset),
+        sample_area_height == sample_area_width
         ])
     coverage_area = sample_area_height * sample_area_width  # meters ** 2, the area the aircraft must sample
 
