@@ -38,7 +38,7 @@ ops = dict(category="operations")
 
 ##### optimization assumptions
 minimize = ('wingspan_optimization_scaling_term * wing_span / 40 '
-            '+ azimuth_optimization_scaling_term * InSAR_azimuth_resolution / 11 '
+            '+ azimuth_optimization_scaling_term * strain_azimuth_resolution / 11 '
             '- coverage_optimization_scaling_term * coverage_area / 1e+11 ')
 make_plots = True
 
