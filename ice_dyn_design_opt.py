@@ -100,11 +100,11 @@ required_revisit_rate = 0 # How many times must the aircraft fully cover the sam
 mass_payload_base = 5 # kg, does not include data storage or aperture mass
 payload_volume = 0.023 * 1.5  # assuming payload mass from gamma remote sensing with 50% margin on volume
 tb_per_day = 4 # terabytes per day, the amount of data the payload collects per day, to account for storage
-InSAR_range_resolution = opti.variable(init_guess=0.5, scale=1, upper_bound=10, lower_bound=0.015, category='des') # meters
-InSAR_azimuth_resolution = opti.variable(init_guess=0.5, scale=1, upper_bound=10, lower_bound=0.015, category='des') # meters
-InSAR_temporal_resolution = opti.variable(init_guess=4, scale=1, upper_bound=6, category='des') # hours
+strain_range_resolution = opti.variable(init_guess=0.5, scale=1, lower_bound=0.015, upper_bound=100, category='des') # meters
+strain_azimuth_resolution = opti.variable(init_guess=0.5, scale=1, lower_bound=0.015, upper_bound=100, category='des') # meters
+strain_temporal_resolution = opti.variable(init_guess=4, scale=1, category='des') # hours
 # required_snr = 20  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
-required_precision = 1 / (365 * 24) # 1/hour, the required precision of the InSAR measurement
+required_strain_precision = 1E-4 # 1/yr, the required precision of the InSAR measurement
 # meters given from Brent based on the properties of the ice sampled by the radar
 scattering_cross_sec_db = -10
 # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
