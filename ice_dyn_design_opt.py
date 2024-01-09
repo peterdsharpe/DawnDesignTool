@@ -91,7 +91,10 @@ vehicle_heading = opti.parameter(value=0) # degrees
 # temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0.5, category='des')  # hours
 coverage_radius = opti.variable(init_guess=2500, scale=1000, lower_bound=0, category='des')  # meters # todo finalize with Brent
 
-trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
+trajectoy = 'racetrack'
+
+
+# trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
 sample_area_height = opti.variable(init_guess=10000, scale=1000, lower_bound=0, category='des')  # meters, the height of the area the aircraft must sample
 sample_area_width = opti.variable(init_guess=10000, scale=1000, lower_bound=0, category='des')  # meters, the width of the area the aircraft must sample
 required_revisit_rate = 0 # How many times must the aircraft fully cover the sample area in the sizing day?
@@ -1200,6 +1203,80 @@ if trajectory == 'circular':
     ])
     revisit_rate = distance[time_periodic_end_index] / circular_trajectory_length
     revisit_period = 24 / revisit_rate
+
+if trajectory == "racetrack":
+    guess_altitude = 14000
+    guess_speed = 20
+    air_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10,
+                              category='ops')
+    start_angle = 0
+    turn_radius_1 = opti.variable(init_guess=1000, lower_bound=0, scale=1000, category='ops')
+    turn_radius_2 = opti.variable(init_guess=1000, lower_bound=0, scale=1000, category='ops')
+    distance = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e5, category='ops')
+    single_track_distance = np.mod(distance, sample_area_height * 2 + turn_radius_1 * np.pi + turn_radius_2 * np.pi)
+    track = np.where(
+        single_track_distance > sample_area_height,
+        start_angle + (single_track_distance - sample_area_height) / turn_radius_1,
+        start_angle)
+    track = np.where(
+        single_track_distance > sample_area_height + turn_radius_1 * np.pi,
+        start_angle + np.pi,
+        track)
+    track = np.where(
+        single_track_distance > sample_area_height * 2 + turn_radius_1 * np.pi,
+        start_angle + np.pi + (single_track_distance - sample_area_height * 2 - turn_radius_1 * np.pi) / turn_radius_2,
+        track)
+    u_e = air_speed * np.cos(track)
+    v_e = air_speed * np.sin(track)
+    z_e = opti.variable(
+        init_guess=-guess_altitude,
+        n_vars=n_timesteps,
+        scale=1e4,
+        category='ops',
+        upper_bound=0,
+        lower_bound=-40000,
+    )
+    altitude = -z_e
+    wind_speed = wind_speed_func(altitude)
+    if run_with_95th_percentile_wind_condition == False:
+        wind_speed = np.zeros(n_timesteps)
+    wind_speed_x = np.cosd(wind_direction) * wind_speed
+    wind_speed_y = np.sind(wind_direction) * wind_speed
+    ground_speed_x = u_e - wind_speed_x
+    ground_speed_y = v_e - wind_speed_y
+    ground_speed = (ground_speed_x ** 2 + ground_speed_y ** 2) ** 0.5
+    opti.constrain_derivative(variable=distance, with_respect_to=time, derivative=ground_speed)
+    opti.subject_to(ground_speed > min_speed)
+    vehicle_bearing = np.arctan2d(ground_speed_y, ground_speed_x)
+    x_e = opti.variable(init_guess=0, n_vars=n_timesteps, scale=1e4, category='ops')
+    y_e = opti.variable(init_guess=0, n_vars=n_timesteps, scale=1e4, category='ops')
+    opti.constrain_derivative(
+        variable=x_e, with_respect_to=time,
+        derivative=ground_speed_x
+    )
+    opti.constrain_derivative(
+        variable=y_e, with_respect_to=time,
+        derivative=ground_speed_y
+    )
+    w_e = opti.variable(
+        init_guess=0,
+        n_vars=n_timesteps,
+        scale=1e-4,
+        category='ops',
+    )
+    gamma = np.arctan2(-w_e, air_speed)
+    alpha = opti.variable(
+        init_guess=5,
+        n_vars=n_timesteps,
+        scale=4,
+        category='ops'
+    )
+    opti.subject_to([
+        altitude[time_periodic_start_index:] / min_cruise_altitude > 1,
+        distance[time_periodic_start_index] / 1e5 == 0,
+        x_e[0] == 0,
+        y_e[0] == 0,
+    ])
 
 if trajectory == 'lawnmower':
     guess_altitude = 14000
