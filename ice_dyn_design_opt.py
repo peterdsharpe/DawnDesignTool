@@ -89,10 +89,8 @@ vehicle_heading = opti.parameter(value=0) # degrees
 
 # trajectory = 'circular' # do we want to assume a circular trajectory?
 # temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0.5, category='des')  # hours
-coverage_radius = opti.variable(init_guess=2500, scale=1000, lower_bound=0, category='des')  # meters # todo finalize with Brent
 
-trajectoy = 'racetrack'
-
+trajectory = 'racetrack'
 
 # trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
 sample_area_height = opti.variable(init_guess=10000, scale=1000, lower_bound=0, category='des')  # meters, the height of the area the aircraft must sample
@@ -1209,21 +1207,21 @@ if trajectory == "racetrack":
     air_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10,
                               category='ops')
     start_angle = 0
-    turn_radius_1 = opti.variable(init_guess=1000, lower_bound=0, scale=1000, category='ops')
-    turn_radius_2 = opti.variable(init_guess=1000, lower_bound=0, scale=1000, category='ops')
+    turn_radius = opti.variable(init_guess=1000, lower_bound=0, scale=1000, category='ops')
+    sample_area_height = opti.variable(init_guess=1000, lower_bound=0, scale=1000, category='ops')
     distance = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e5, category='ops')
-    single_track_distance = np.mod(distance, sample_area_height * 2 + turn_radius_1 * np.pi + turn_radius_2 * np.pi)
+    single_track_distance = np.mod(distance, sample_area_height * 2 + turn_radius * np.pi * 2)
     track = np.where(
         single_track_distance > sample_area_height,
-        start_angle + (single_track_distance - sample_area_height) / turn_radius_1,
+        start_angle + (single_track_distance - sample_area_height) / turn_radius,
         start_angle)
     track = np.where(
-        single_track_distance > sample_area_height + turn_radius_1 * np.pi,
+        single_track_distance > sample_area_height + turn_radius * np.pi,
         start_angle + np.pi,
         track)
     track = np.where(
-        single_track_distance > sample_area_height * 2 + turn_radius_1 * np.pi,
-        start_angle + np.pi + (single_track_distance - sample_area_height * 2 - turn_radius_1 * np.pi) / turn_radius_2,
+        single_track_distance > sample_area_height * 2 + turn_radius * np.pi,
+        start_angle + np.pi + (single_track_distance - sample_area_height * 2 - turn_radius * np.pi) / turn_radius,
         track)
     u_e = air_speed * np.cos(track)
     v_e = air_speed * np.sin(track)
@@ -1704,6 +1702,8 @@ if trajectory == 'straight':
 
 
 if trajectory == 'circular':
+    coverage_radius = opti.variable(init_guess=2500, scale=1000, lower_bound=0,
+                                    category='des')  # meters
     opti.subject_to([
         flight_path_radius >= ground_imaging_offset + swath_range,
         coverage_radius <= swath_range,
