@@ -97,7 +97,6 @@ trajectoy = 'racetrack'
 # trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
 sample_area_height = opti.variable(init_guess=10000, scale=1000, lower_bound=0, category='des')  # meters, the height of the area the aircraft must sample
 sample_area_width = opti.variable(init_guess=10000, scale=1000, lower_bound=0, category='des')  # meters, the width of the area the aircraft must sample
-required_revisit_rate = 0 # How many times must the aircraft fully cover the sample area in the sizing day?
 
 # Instrument Parameters
 mass_payload_base = 5 # kg, does not include data storage or aperture mass
