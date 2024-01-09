@@ -1690,9 +1690,17 @@ snr = payload_power * antenna_gain ** 2 * wavelength ** 3 * a_hs * sigma0 * rang
 snr_db = 10 * np.log(snr)
 
 if trajectory == 'straight':
-    coverage = opti.variable(init_guess=1e11, scale=1e11, lower_bound=0, category='ops')
+    # coverage = opti.variable(init_guess=1e11, scale=1e11, lower_bound=0, category='ops')
+    max_swath_range = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
+    max_swath_azimuth = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
+    opti.subject_to([
+        max_swath_range > swath_range,
+        max_swath_azimuth > swath_azimuth
+    ])
+    ground_area = max_swath_range * max_swath_azimuth * np.pi / 4  # meters ** 2
     coverage_area = ground_area * distance[time_periodic_end_index]
-    opti.subject_to(coverage_area >= coverage)
+    # opti.subject_to(coverage_area >= coverage)
+    revisit_period = 1 # todo change this
 
 
 if trajectory == 'circular':
