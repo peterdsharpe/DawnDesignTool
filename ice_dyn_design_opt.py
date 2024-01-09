@@ -2162,9 +2162,9 @@ if draw_initial_guess_config:
 if __name__ == "__main__":
                     try:
                         sol = opti.solve(
-                            max_iter=10000,
+                            max_iter=50000,
                             options={
-                                "ipopt.max_cpu_time": 6000
+                                "ipopt.max_cpu_time": 60000
                             }
                         )
                         print("Success!")
