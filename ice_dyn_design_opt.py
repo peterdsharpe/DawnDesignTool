@@ -1844,7 +1844,7 @@ power_out_avionics = 180  # Pulled from Avionics spreadsheet on 5/13/20
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
 ### Power accounting
-power_out = power_out_propulsion + payload_power + power_out_avionics
+power_out = power_out_propulsion + payload_power_adjusted + power_out_avionics
 
 # endregion
 
