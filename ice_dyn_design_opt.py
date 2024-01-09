@@ -1714,22 +1714,33 @@ if trajectory == 'circular':
 if trajectory == 'lawnmower':
     max_imaging_offset = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
     max_swath_range = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
-    swath_overlap = opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, category='ops')
-    single_track_coverage = swath_range * (2-swath_overlap)
+    swath_overlap = 0 # opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, category='ops')
+    single_track_coverage = max_swath_range * (2-swath_overlap)
     passes_required = sample_area_width / single_track_coverage
     total_distance = passes_required * (2 * sample_area_height + np.pi * turn_radius_1 + np.pi * turn_radius_2 * np.pi)
     revisit_rate = distance[time_periodic_end_index] / total_distance
-    revisit_period = 1 / revisit_rate
+    revisit_period = 24 / revisit_rate
     opti.subject_to([
         max_imaging_offset >= ground_imaging_offset,
+        # passes_required >= 1,
         # max_imaging_offset <= ground_imaging_offset + 100,
         # max_swath_range <= swath_range + 100,
         max_swath_range > max_imaging_offset,
+        max_swath_range > swath_range,
         turn_radius_1 == (2 * max_imaging_offset),
         turn_radius_2 == (2 * max_swath_range - 2 * max_imaging_offset),
         sample_area_height == sample_area_width
         ])
     coverage_area = sample_area_height * sample_area_width  # meters ** 2, the area the aircraft must sample
+    payload_power_adjusted = np.where(
+        track == 0,
+        payload_power,
+        0)
+    payload_power_adjusted = np.where(
+        track == np.pi,
+        payload_power,
+        payload_power_adjusted
+    )
 
 opti.subject_to([
     pulse_rep_freq >= 2 * ground_speed / radar_length,
