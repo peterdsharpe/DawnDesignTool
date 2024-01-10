@@ -1207,10 +1207,11 @@ if trajectory == "racetrack":
     air_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10,
                               category='ops')
     start_angle = 0
-    turn_radius = opti.variable(init_guess=1000, lower_bound=0, scale=1000, category='ops')
-    sample_area_height = opti.variable(init_guess=1000, lower_bound=0, scale=1000, category='ops')
-    distance = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e5, category='ops')
-    single_track_distance = np.mod(distance, sample_area_height * 2 + turn_radius * np.pi * 2)
+    turn_radius = opti.variable(init_guess=10000, lower_bound=0, scale=1000, category='ops')
+    sample_area_height = opti.variable(init_guess=100000, lower_bound=0, scale=1000, category='ops')
+    distance = opti.variable(init_guess=np.linspace(0, 1000000, n_timesteps), scale=1e5, category='ops')
+    track_trajectory_length = 2 * sample_area_height + 2 * turn_radius * np.pi
+    single_track_distance = np.mod(distance, track_trajectory_length)
     track = np.where(
         single_track_distance > sample_area_height,
         start_angle + (single_track_distance - sample_area_height) / turn_radius,
@@ -1274,6 +1275,8 @@ if trajectory == "racetrack":
         x_e[0] == 0,
         y_e[0] == 0,
     ])
+    revisit_rate = distance[time_periodic_end_index] / track_trajectory_length
+    revisit_period = 24 / revisit_rate
 
 if trajectory == 'lawnmower':
     guess_altitude = 14000
@@ -1710,7 +1713,17 @@ if trajectory == 'circular':
                 ])
     coverage_area = np.pi * coverage_radius ** 2
 
-
+if trajectory == "racetrack":
+    max_imaging_offset = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
+    max_swath_range = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
+    swath_overlap = 0 # opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, category='ops')
+    opti.subject_to([
+        max_imaging_offset >= ground_imaging_offset,
+        max_swath_range > swath_range,
+        turn_radius == (2 * max_swath_range + 2 * max_imaging_offset - swath_overlap * max_swath_range) / 2,
+        ])
+    coverage_area = sample_area_height * 2 * max_swath_range  # meters ** 2, the area the aircraft must sample
+    payload_power_adjusted = payload_power
 if trajectory == 'lawnmower':
     max_imaging_offset = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
     max_swath_range = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
