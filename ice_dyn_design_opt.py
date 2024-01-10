@@ -80,7 +80,7 @@ hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we
 min_speed = 0.5 # specify a minimum groundspeed (bad convergence if less than 0.5 m/s)
 wind_direction = 45 # degrees, the direction the wind is blowing from 0 being North and aligned with the x-axis
 run_with_95th_percentile_wind_condition = False # do we want to run the sizing with the 95th percentile wind condition?
-required_strain_temporal_resolution = opti.parameter(value=6) # hours
+required_strain_temporal_resolution = opti.parameter(value=24) # hours
 
 # todo finalize trajectory parameterization
 # trajectory = 'straight'   # do we want to assume a straight line trajectory?
@@ -90,9 +90,9 @@ vehicle_heading = opti.parameter(value=0) # degrees
 # trajectory = 'circular' # do we want to assume a circular trajectory?
 # temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0.5, category='des')  # hours
 
-trajectory = 'racetrack'
+# trajectory = 'racetrack'
 
-# trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
+trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
 sample_area_height = opti.variable(init_guess=10000, scale=1000, lower_bound=0, category='des')  # meters, the height of the area the aircraft must sample
 sample_area_width = opti.variable(init_guess=10000, scale=1000, lower_bound=0, category='des')  # meters, the width of the area the aircraft must sample
 
