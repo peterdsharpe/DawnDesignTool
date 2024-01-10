@@ -1202,7 +1202,7 @@ if trajectory == 'circular':
     revisit_period = 24 / revisit_rate
 
 if trajectory == "racetrack":
-    guess_altitude = 14000
+    guess_altitude = 12000
     guess_speed = 20
     air_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10,
                               category='ops')
