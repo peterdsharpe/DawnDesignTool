@@ -2152,7 +2152,7 @@ for penalty_input in [
     thrust / 10,
     Fz_e / 1e-1,
     Fx_e / 1e-1,
-    # air_speed / 1e-1,
+    air_speed / 1e-2,
     alpha / 1,
     # distance / 500,
 ]:
