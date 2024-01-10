@@ -1712,6 +1712,7 @@ if trajectory == 'circular':
         coverage_radius <= swath_range,
                 ])
     coverage_area = np.pi * coverage_radius ** 2
+    payload_power_adjusted = payload_power
 
 if trajectory == "racetrack":
     max_imaging_offset = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
