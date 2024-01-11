@@ -80,7 +80,7 @@ hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we
 min_speed = 0.5 # specify a minimum groundspeed (bad convergence if less than 0.5 m/s)
 wind_direction = 45 # degrees, the direction the wind is blowing from 0 being North and aligned with the x-axis
 run_with_95th_percentile_wind_condition = False # do we want to run the sizing with the 95th percentile wind condition?
-required_strain_temporal_resolution = opti.parameter(value=24) # hours
+required_strain_temporal_resolution = opti.parameter(value=6) # hours
 
 # todo finalize trajectory parameterization
 # trajectory = 'straight'   # do we want to assume a straight line trajectory?
@@ -90,9 +90,9 @@ vehicle_heading = opti.parameter(value=0) # degrees
 # trajectory = 'circular' # do we want to assume a circular trajectory?
 # temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0.5, category='des')  # hours
 
-# trajectory = 'racetrack'
+trajectory = 'racetrack'
 
-trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
+# trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
 sample_area_height = opti.variable(init_guess=10000, scale=1000, lower_bound=0, category='des')  # meters, the height of the area the aircraft must sample
 sample_area_width = opti.variable(init_guess=10000, scale=1000, lower_bound=0, category='des')  # meters, the width of the area the aircraft must sample
 
@@ -1723,7 +1723,7 @@ if trajectory == "racetrack":
         max_swath_range > swath_range,
         turn_radius == (2 * max_swath_range + 2 * max_imaging_offset - swath_overlap * max_swath_range) / 2,
         ])
-    coverage_area = sample_area_height * 2 * max_swath_range  # meters ** 2, the area the aircraft must sample
+    coverage_area = sample_area_height * 2 * (max_swath_range - swath_overlap) + np.pi * max_swath_range ** 2  # meters ** 2, the area the aircraft must sample
     payload_power_adjusted = payload_power
 if trajectory == 'lawnmower':
     max_imaging_offset = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
