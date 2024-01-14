@@ -1755,7 +1755,6 @@ if trajectory == 'lawnmower':
         max_swath_range > swath_range,
         turn_radius_1 == max_swath_range + max_imaging_offset - swath_overlap * max_swath_range / 2,
         turn_radius_2 == max_imaging_offset - max_swath_range * swath_overlap / 2,
-        sample_area_height == sample_area_width
         ])
     coverage_area = sample_area_height * sample_area_width  # meters ** 2, the area the aircraft must sample
     payload_power_adjusted = np.where(
