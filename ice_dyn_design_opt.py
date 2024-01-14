@@ -1,3 +1,5 @@
+import sys
+sys.path.append("C:\\Users\\AnnickDewald\\PycharmProjects\\AeroSandbox")
 import aerosandbox as asb
 import aerosandbox.library.aerodynamics as aero_lib
 from aerosandbox.atmosphere import Atmosphere as atmo
@@ -11,6 +13,7 @@ from aerosandbox.library.airfoils import naca0008, flat_plate
 import aerosandbox.tools.units as u
 from aerosandbox.optimization.opti import Opti
 import aerosandbox.numpy as np
+from aerosandbox.numpy.integrate_discrete import integrate_discrete_squared_curvature
 import plotly.express as px
 import copy
 import matplotlib.pyplot as plt
