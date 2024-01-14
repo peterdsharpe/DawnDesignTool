@@ -1721,7 +1721,7 @@ if trajectory == 'circular':
 if trajectory == "racetrack":
     max_imaging_offset = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
     max_swath_range = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
-    swath_overlap = 0 # opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, category='ops')
+    swath_overlap = opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, category='ops')
     opti.subject_to([
         max_imaging_offset >= ground_imaging_offset,
         max_swath_range > swath_range,
@@ -1733,7 +1733,7 @@ if trajectory == "racetrack":
 if trajectory == 'lawnmower':
     max_imaging_offset = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
     max_swath_range = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
-    swath_overlap = 0 # opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, category='ops')
+    swath_overlap = opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, category='ops')
     single_track_coverage = max_swath_range * (2-swath_overlap)
     passes_required = sample_area_width / single_track_coverage
     full_coverage_distance = passes_required * (2 * sample_area_height + np.pi * turn_radius_1 + np.pi * turn_radius_2)
