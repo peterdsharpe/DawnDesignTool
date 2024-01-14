@@ -1288,6 +1288,7 @@ if trajectory == 'lawnmower':
     start_angle = 0
     turn_radius_1 = opti.variable(init_guess=1000, lower_bound=0, scale=1000, category='ops')
     turn_radius_2 = opti.variable(init_guess=1000, lower_bound=0, scale=1000, category='ops')
+    turn_radius_3 = opti.variable(init_guess=1000, lower_bound=0, scale=1000, category='ops')
     distance = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e5, category='ops')
     single_track_distance = np.mod(distance, sample_area_height * 2 + turn_radius_1 * np.pi + turn_radius_2 * np.pi)
     track = np.where(
@@ -1728,15 +1729,23 @@ if trajectory == "racetrack":
         ])
     coverage_area = sample_area_height * 2 * (max_swath_range - swath_overlap) + np.pi * max_swath_range ** 2  # meters ** 2, the area the aircraft must sample
     payload_power_adjusted = payload_power
+
 if trajectory == 'lawnmower':
     max_imaging_offset = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
     max_swath_range = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
     swath_overlap = 0 # opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, category='ops')
     single_track_coverage = max_swath_range * (2-swath_overlap)
     passes_required = sample_area_width / single_track_coverage
-    total_distance = passes_required * (2 * sample_area_height + np.pi * turn_radius_1 + np.pi * turn_radius_2)
-    revisit_rate = distance[time_periodic_end_index] / total_distance
+    full_coverage_distance = passes_required * (2 * sample_area_height + np.pi * turn_radius_1 + np.pi * turn_radius_2)
+    revisit_rate = distance[time_periodic_end_index] / full_coverage_distance
     revisit_period = 24 / revisit_rate
+    total_distance = revisit_rate * full_coverage_distance
+
+    track = np.where(
+        distance > full_coverage_distance - (np.pi * turn_radius_2),
+        start_angle + np.pi + (single_track_distance - sample_area_height * 2 - turn_radius_1 * np.pi) / turn_radius_3,
+        track)
+
     opti.subject_to([
         max_imaging_offset >= ground_imaging_offset,
         passes_required >= 1,
