@@ -1209,21 +1209,21 @@ if trajectory == "racetrack":
                               category='ops')
     start_angle = 0
     turn_radius = opti.variable(init_guess=10000, lower_bound=0, scale=1000, category='ops')
-    sample_area_height = opti.variable(init_guess=100000, lower_bound=0, scale=1000, category='ops')
+    coverage_length = opti.variable(init_guess=100000, lower_bound=0, scale=1000, category='ops')
     distance = opti.variable(init_guess=np.linspace(0, 1000000, n_timesteps), scale=1e5, category='ops')
-    track_trajectory_length = 2 * sample_area_height + 2 * turn_radius * np.pi
+    track_trajectory_length = 2 * coverage_length + 2 * turn_radius * np.pi
     single_track_distance = np.mod(distance, track_trajectory_length)
     track = np.where(
-        single_track_distance > sample_area_height,
-        start_angle + (single_track_distance - sample_area_height) / turn_radius,
+        single_track_distance > coverage_length,
+        start_angle + (single_track_distance - coverage_length) / turn_radius,
         start_angle)
     track = np.where(
-        single_track_distance > sample_area_height + turn_radius * np.pi,
+        single_track_distance > coverage_length + turn_radius * np.pi,
         start_angle + np.pi,
         track)
     track = np.where(
-        single_track_distance > sample_area_height * 2 + turn_radius * np.pi,
-        start_angle + np.pi + (single_track_distance - sample_area_height * 2 - turn_radius * np.pi) / turn_radius,
+        single_track_distance > coverage_length * 2 + turn_radius * np.pi,
+        start_angle + np.pi + (single_track_distance - coverage_length * 2 - turn_radius * np.pi) / turn_radius,
         track)
     u_e = air_speed * np.cos(track)
     v_e = air_speed * np.sin(track)
@@ -1292,18 +1292,18 @@ if trajectory == 'lawnmower':
     turn_radius_2 = opti.variable(init_guess=1000, lower_bound=0, scale=1000, category='ops')
     turn_radius_3 = opti.variable(init_guess=1000, lower_bound=0, scale=1000, category='ops')
     distance = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e5, category='ops')
-    single_track_distance = np.mod(distance, sample_area_height * 2 + turn_radius_1 * np.pi + turn_radius_2 * np.pi)
+    single_track_distance = np.mod(distance, coverage_length * 2 + turn_radius_1 * np.pi + turn_radius_2 * np.pi)
     track = np.where(
-        single_track_distance > sample_area_height,
-        start_angle + (single_track_distance - sample_area_height) / turn_radius_1,
+        single_track_distance > coverage_length,
+        start_angle + (single_track_distance - coverage_length) / turn_radius_1,
         start_angle)
     track = np.where(
-        single_track_distance > sample_area_height + turn_radius_1 * np.pi,
+        single_track_distance > coverage_length + turn_radius_1 * np.pi,
         start_angle + np.pi,
         track)
     track = np.where(
-        single_track_distance > sample_area_height * 2 + turn_radius_1 * np.pi,
-        start_angle + np.pi + (single_track_distance - sample_area_height * 2 - turn_radius_1 * np.pi) / turn_radius_2,
+        single_track_distance > coverage_length * 2 + turn_radius_1 * np.pi,
+        start_angle + np.pi + (single_track_distance - coverage_length * 2 - turn_radius_1 * np.pi) / turn_radius_2,
         track)
     u_e = air_speed * np.cos(track)
     v_e = air_speed * np.sin(track)
@@ -1729,24 +1729,31 @@ if trajectory == "racetrack":
         max_swath_range > swath_range,
         turn_radius == (2 * max_swath_range + 2 * max_imaging_offset - swath_overlap * max_swath_range) / 2,
         ])
-    coverage_area = sample_area_height * 2 * (max_swath_range - swath_overlap) + np.pi * max_swath_range ** 2  # meters ** 2, the area the aircraft must sample
-    payload_power_adjusted = payload_power
-
+    coverage_area = coverage_length * 2 * max_swath_range - (max_swath_range * swath_overlap)
+    payload_power_adjusted = np.where(
+        track == 0,
+        payload_power,
+        0)
+    payload_power_adjusted = np.where(
+        track == np.pi,
+        payload_power,
+        payload_power_adjusted
+    )
 if trajectory == 'lawnmower':
     max_imaging_offset = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
     max_swath_range = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
     swath_overlap = opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, category='ops')
-    single_track_coverage = max_swath_range * (2-swath_overlap)
-    passes_required = sample_area_width / single_track_coverage
-    full_coverage_distance = passes_required * (2 * sample_area_height + np.pi * turn_radius_1 + np.pi * turn_radius_2)
+    single_track_coverage = 2 * max_swath_range - (max_swath_range * swath_overlap)
+    passes_required = coverage_width / single_track_coverage
+    full_coverage_distance = passes_required * (2 * coverage_length + np.pi * turn_radius_1 + np.pi * turn_radius_2)
     revisit_rate = distance[time_periodic_end_index] / full_coverage_distance
     revisit_period = 24 / revisit_rate
     total_distance = revisit_rate * full_coverage_distance
 
-    track = np.where(
-        distance > full_coverage_distance - (np.pi * turn_radius_2),
-        start_angle + np.pi + (single_track_distance - sample_area_height * 2 - turn_radius_1 * np.pi) / turn_radius_3,
-        track)
+    # track = np.where(
+    #     distance > full_coverage_distance - (np.pi * turn_radius_2),
+    #     start_angle + np.pi + (single_track_distance - coverage_length * 2 - turn_radius_1 * np.pi) / turn_radius_3,
+    #     track)
 
     opti.subject_to([
         max_imaging_offset >= ground_imaging_offset,
@@ -1758,7 +1765,7 @@ if trajectory == 'lawnmower':
         turn_radius_1 == max_swath_range + max_imaging_offset - swath_overlap * max_swath_range / 2,
         turn_radius_2 == max_imaging_offset - max_swath_range * swath_overlap / 2,
         ])
-    coverage_area = sample_area_height * sample_area_width  # meters ** 2, the area the aircraft must sample
+    coverage_area = coverage_length * coverage_width  # meters ** 2, the area the aircraft must sample
     payload_power_adjusted = np.where(
         track == 0,
         payload_power,
