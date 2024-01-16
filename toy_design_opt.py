@@ -1282,8 +1282,8 @@ if trajectory == 'lawnmower':
         distance[time_periodic_start_index] / 1e5 == 0,
         x_e[0] == 0,
         y_e[0] == 0,
-        # x_e[time_periodic_end_index] == sample_area_height,
-        # y_e[time_periodic_end_index] == sample_area_width,
+        # x_e[time_periodic_end_index] == coverage_length,
+        # y_e[time_periodic_end_index] == coverage_width,
     ])
 
 z_km = altitude / 1e3
@@ -1633,7 +1633,7 @@ if trajectory == 'lawnmower':
         turn_radius_1 == (2 * swath_radius),
         turn_radius_2 == (2 * swath_radius),
         min_swath_radius <= swath_radius,
-        # sample_area_width == sample_area_height,
+        # coverage_width == coverage_length,
         ])
     coverage = distance[time_periodic_end_index] * min_swath_radius * 2
 

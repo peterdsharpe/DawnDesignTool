@@ -2582,6 +2582,7 @@ if __name__ == "__main__":
 
                     if make_plots == True:
                         draw()
+
     #     plt.plot(spans, space_resolutions, linestyle='--', marker='o', label='Temporal Resolution = ' + str(y) + ' hours')
     # plt.title('Pareto Front')
     # plt.xlabel('Wingspan [meters]')
