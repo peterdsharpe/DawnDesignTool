@@ -2194,6 +2194,14 @@ if draw_initial_guess_config:
         airplane.draw()
 
 if __name__ == "__main__":
+    # wingspan_terms = [1, 0.8, 0.6, 0.4, 0.2, 0]
+    # spatial = []
+    # wingspan = []
+    # coverage = []
+    # for wingspan_term in wingspan_terms:
+    #                 opti.set_value(wingspan_optimization_scaling_term, wingspan_term)
+    #                 coverage_term = 1 - wingspan_term
+    #                 opti.set_value(coverage_optimization_scaling_term, coverage_term)
                     try:
                         sol = opti.solve(
                             max_iter=50000,
@@ -2202,6 +2210,9 @@ if __name__ == "__main__":
                             }
                         )
                         print("Success!")
+                        # spatial.append(opti.value(strain_azimuth_resolution))
+                        # wingspan.append(opti.value(wing_span))
+                        # coverage.append(opti.value(coverage_area))
                     except:
                         sol = opti.debug
                     # Print a warning if the penalty term is unreasonably high
@@ -2707,5 +2718,12 @@ if __name__ == "__main__":
 
 
                     if make_plots == True:
-                        draw()
+                        # draw()
+                        pass
+                    opti.set_initial_from_sol(sol)
 
+    # plt.plot(wingspan, spatial, linestyle='--', marker='o')
+    # plt.title('Pareto Front')
+    # plt.xlabel('Wingspan [meters]')
+    # plt.ylabel('Spatial Resolution [meters]')
+    # plt.show()
