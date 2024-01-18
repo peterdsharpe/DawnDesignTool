@@ -2174,12 +2174,12 @@ for penalty_input in [
     thrust / 10,
     Fz_e / 1e-1,
     Fx_e / 1e-1,
-    air_speed / 10,
-    alpha / 1,
-    # distance / 500,
+    air_speed / 2,
+    gamma / 2,
+    alpha / 1
 ]:
-    penalty += np.sum(np.diff(np.diff(penalty_input)) ** 2) / n_timesteps_per_segment
-
+    # penalty += np.sum(np.diff(np.diff(penalty_input)) ** 2) / n_timesteps_per_segment ## old version
+    penalty += np.mean(integrate_discrete_squared_curvature(penalty_input)) ## peter suggested version
 opti.minimize(
     objective
     + penalty
