@@ -1292,7 +1292,7 @@ if trajectory == 'lawnmower':
     turn_radius_2 = opti.variable(init_guess=1000, lower_bound=0, scale=1000, category='ops')
     turn_radius_3 = opti.variable(init_guess=1000, lower_bound=0, scale=1000, category='ops')
     distance = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e5, category='ops')
-    single_track_distance = np.mod(distance, coverage_length * 2 + turn_radius_1 * np.pi + turn_radius_2 * np.pi)
+    single_track_distance = np.mod(distance, (coverage_length * 2 + turn_radius_1 * np.pi + turn_radius_2 * np.pi))
     track = np.where(
         single_track_distance > coverage_length,
         start_angle + (single_track_distance - coverage_length) / turn_radius_1,
