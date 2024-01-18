@@ -1751,10 +1751,10 @@ if trajectory == 'lawnmower':
     revisit_period = 24 / revisit_rate
     total_distance = revisit_rate * full_coverage_distance
 
-    # track = np.where(
-    #     distance > full_coverage_distance - (np.pi * turn_radius_2),
-    #     start_angle + np.pi + (single_track_distance - coverage_length * 2 - turn_radius_1 * np.pi) / turn_radius_3,
-    #     track)
+    track = np.where(
+        distance > full_coverage_distance - (np.pi * turn_radius_2),
+        start_angle + np.pi + (single_track_distance - coverage_length * 2 - turn_radius_1 * np.pi) / turn_radius_3,
+        track)
 
     opti.subject_to([
         max_imaging_offset >= ground_imaging_offset,
