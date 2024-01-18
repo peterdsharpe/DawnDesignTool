@@ -1759,8 +1759,8 @@ if trajectory == 'lawnmower':
     opti.subject_to([
         max_imaging_offset >= ground_imaging_offset,
         passes_required >= 1,
-        # max_imaging_offset <= ground_imaging_offset + 100,
-        # max_swath_range <= swath_range + 100,
+        max_imaging_offset <= ground_imaging_offset + 10,
+        max_swath_range <= swath_range + 10,
         max_swath_range > max_imaging_offset,
         max_swath_range > swath_range,
         turn_radius_1 == max_imaging_offset + max_swath_range * swath_overlap / 2,
