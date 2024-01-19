@@ -2173,7 +2173,7 @@ penalty = 0
 for penalty_input in [
     thrust / 10,
     Fz_e / 1e-1,
-    Fx_e / 1e-1,
+    Fx_e / 5e-1,
     air_speed / 2,
     gamma / 2,
     alpha / 1
@@ -2720,8 +2720,8 @@ if __name__ == "__main__":
 
 
                     if make_plots == True:
-                        # draw()
-                        pass
+                        draw()
+                        # pass
                     opti.set_initial_from_sol(sol)
 
     # plt.plot(wingspan, spatial, linestyle='--', marker='o')
