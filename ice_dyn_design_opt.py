@@ -1727,7 +1727,7 @@ if trajectory == "racetrack":
     opti.subject_to([
         max_imaging_offset >= ground_imaging_offset,
         max_swath_range > swath_range,
-        turn_radius == (2 * max_swath_range + 2 * max_imaging_offset - swath_overlap * max_swath_range) / 2,
+        turn_radius == max_imaging_offset + max_swath_range - max_swath_range * swath_overlap,
         ])
     coverage_area = coverage_length * 2 * max_swath_range - (max_swath_range * swath_overlap)
     payload_power_adjusted = np.where(
