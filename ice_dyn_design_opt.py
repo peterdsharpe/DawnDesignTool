@@ -93,9 +93,9 @@ vehicle_heading = opti.parameter(value=0) # degrees
 # trajectory = 'circular' # do we want to assume a circular trajectory?
 # temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0.5, category='des')  # hours
 
-# trajectory = 'racetrack'
+trajectory = 'racetrack'
 
-trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
+# trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
 
 # Instrument Parameters
 mass_payload_base = 5 # kg, does not include data storage or aperture mass
@@ -1209,22 +1209,23 @@ if trajectory == "racetrack":
                               category='ops')
     start_angle = 0
     turn_radius = opti.variable(init_guess=10000, lower_bound=0, scale=1000, category='ops')
-    coverage_length = opti.variable(init_guess=100000, lower_bound=0, scale=1000, category='ops')
+    coverage_length = 50000 # opti.variable(init_guess=100000, lower_bound=0, scale=1000, category='ops')
     distance = opti.variable(init_guess=np.linspace(0, 1000000, n_timesteps), scale=1e5, category='ops')
     track_trajectory_length = 2 * coverage_length + 2 * turn_radius * np.pi
     single_track_distance = np.mod(distance, track_trajectory_length)
-    track = np.where(
-        single_track_distance > coverage_length,
-        start_angle + (single_track_distance - coverage_length) / turn_radius,
-        start_angle)
-    track = np.where(
-        single_track_distance > coverage_length + turn_radius * np.pi,
-        start_angle + np.pi,
-        track)
-    track = np.where(
-        single_track_distance > coverage_length * 2 + turn_radius * np.pi,
-        start_angle + np.pi + (single_track_distance - coverage_length * 2 - turn_radius * np.pi) / turn_radius,
-        track)
+    track = 0 * np.ones(n_timesteps)
+    # track = np.where(
+    #     single_track_distance > coverage_length,
+    #     start_angle + (single_track_distance - coverage_length) / turn_radius,
+    #     start_angle)
+    # track = np.where(
+    #     single_track_distance > coverage_length + turn_radius * np.pi,
+    #     start_angle + np.pi,
+    #     track)
+    # track = np.where(
+    #     single_track_distance > coverage_length * 2 + turn_radius * np.pi,
+    #     start_angle + np.pi + (single_track_distance - coverage_length * 2 - turn_radius * np.pi) / turn_radius,
+    #     track)
     u_e = air_speed * np.cos(track)
     v_e = air_speed * np.sin(track)
     z_e = opti.variable(
@@ -1293,6 +1294,8 @@ if trajectory == 'lawnmower':
     turn_radius_3 = opti.variable(init_guess=1000, lower_bound=0, scale=1000, category='ops')
     distance = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e5, category='ops')
     single_track_distance = np.mod(distance, (coverage_length * 2 + turn_radius_1 * np.pi + turn_radius_2 * np.pi))
+    # single_track_distance = np.mod(distance, (1000))
+    # track = 0
     track = np.where(
         single_track_distance > coverage_length,
         start_angle + (single_track_distance - coverage_length) / turn_radius_1,
