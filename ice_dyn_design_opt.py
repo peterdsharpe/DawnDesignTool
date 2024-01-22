@@ -1671,7 +1671,7 @@ if trajectory == "racetrack":
     guess_altitude = 12000
     guess_speed = 20
     start_angle = 0
-    turn_radius = max_imaging_offset + max_swath_range - max_swath_range * swath_overlap
+    turn_radius = max_imaging_offset + max_swath_range - 0.5 * max_swath_range * swath_overlap
     coverage_length = opti.variable(init_guess=50000, lower_bound=0, scale=1000, category='ops')
     distance = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e5, category='ops')
     track_trajectory_length = 2 * coverage_length + 2 * turn_radius * np.pi
