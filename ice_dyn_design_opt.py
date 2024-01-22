@@ -53,9 +53,9 @@ draw_initial_guess_config = False
 ##### Section: Input Parameters
 
 # Objective Function Scaling Parameters
-wingspan_optimization_scaling_term = opti.parameter(value=1) # scale from 0 to 1 to adjust the relative importance of wingspan in the objective function
-azimuth_optimization_scaling_term = opti.parameter(value=0) # scale from 0 to 1 to adjust the relative importance of spatial resolution in the objective function
-coverage_optimization_scaling_term = opti.parameter(value=0) # scale from 0 to 1 to adjust the relative importance of spatial coverage in the objective function
+wingspan_optimization_scaling_term = opti.parameter(value=0.3) # scale from 0 to 1 to adjust the relative importance of wingspan in the objective function
+azimuth_optimization_scaling_term = opti.parameter(value=0.3) # scale from 0 to 1 to adjust the relative importance of spatial resolution in the objective function
+coverage_optimization_scaling_term = opti.parameter(value=0.3) # scale from 0 to 1 to adjust the relative importance of spatial coverage in the objective function
 
 # Aircraft Parameters
 battery_specific_energy_Wh_kg = 390  # cell level specific energy of the battery
@@ -1660,6 +1660,7 @@ if trajectory == 'circular':
     payload_power_adjusted = payload_power
 
 if trajectory == "racetrack":
+    track_scaler = opti.parameter(value=0)
     max_imaging_offset = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, category='ops')
     max_swath_range = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, category='ops')
     swath_overlap = opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, category='ops')
@@ -1689,6 +1690,7 @@ if trajectory == "racetrack":
         single_track_distance > coverage_length * 2 + turn_radius * np.pi,
         start_angle + np.pi + (single_track_distance - coverage_length * 2 - turn_radius * np.pi) / turn_radius,
         track)
+    track = track * track_scaler
     u_e = air_speed * np.cos(track)
     v_e = air_speed * np.sin(track)
     wind_speed = wind_speed_func(altitude)
@@ -2180,7 +2182,7 @@ for penalty_input in [
     thrust / 10,
     Fz_e / 1e-1,
     Fx_e / 5e-1,
-    air_speed / 2,
+    air_speed / 1,
     gamma / 2,
     alpha / 1
 ]:
@@ -2202,6 +2204,8 @@ if draw_initial_guess_config:
         airplane.draw()
 
 if __name__ == "__main__":
+    scales = [0, 1]
+    for scale in scales:
     # wingspan_terms = [1, 0.8, 0.6, 0.4, 0.2, 0]
     # spatial = []
     # wingspan = []
@@ -2210,6 +2214,7 @@ if __name__ == "__main__":
     #                 opti.set_value(wingspan_optimization_scaling_term, wingspan_term)
     #                 coverage_term = 1 - wingspan_term
     #                 opti.set_value(coverage_optimization_scaling_term, coverage_term)
+                    opti.set_value(track_scaler, scale)
                     try:
                         sol = opti.solve(
                             max_iter=50000,
