@@ -1207,27 +1207,6 @@ if trajectory == "racetrack":
     guess_speed = 20
     air_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10,
                               category='ops')
-    start_angle = 0
-    turn_radius = opti.variable(init_guess=10000, lower_bound=0, scale=1000, category='ops')
-    coverage_length = 50000 # opti.variable(init_guess=100000, lower_bound=0, scale=1000, category='ops')
-    distance = opti.variable(init_guess=np.linspace(0, 1000000, n_timesteps), scale=1e5, category='ops')
-    track_trajectory_length = 2 * coverage_length + 2 * turn_radius * np.pi
-    single_track_distance = np.mod(distance, track_trajectory_length)
-    track = 0 * np.ones(n_timesteps)
-    # track = np.where(
-    #     single_track_distance > coverage_length,
-    #     start_angle + (single_track_distance - coverage_length) / turn_radius,
-    #     start_angle)
-    # track = np.where(
-    #     single_track_distance > coverage_length + turn_radius * np.pi,
-    #     start_angle + np.pi,
-    #     track)
-    # track = np.where(
-    #     single_track_distance > coverage_length * 2 + turn_radius * np.pi,
-    #     start_angle + np.pi + (single_track_distance - coverage_length * 2 - turn_radius * np.pi) / turn_radius,
-    #     track)
-    u_e = air_speed * np.cos(track)
-    v_e = air_speed * np.sin(track)
     z_e = opti.variable(
         init_guess=-guess_altitude,
         n_vars=n_timesteps,
@@ -1237,48 +1216,12 @@ if trajectory == "racetrack":
         lower_bound=-40000,
     )
     altitude = -z_e
-    wind_speed = wind_speed_func(altitude)
-    if run_with_95th_percentile_wind_condition == False:
-        wind_speed = np.zeros(n_timesteps)
-    wind_speed_x = np.cosd(wind_direction) * wind_speed
-    wind_speed_y = np.sind(wind_direction) * wind_speed
-    ground_speed_x = u_e - wind_speed_x
-    ground_speed_y = v_e - wind_speed_y
-    ground_speed = (ground_speed_x ** 2 + ground_speed_y ** 2) ** 0.5
-    opti.constrain_derivative(variable=distance, with_respect_to=time, derivative=ground_speed)
-    opti.subject_to(ground_speed > min_speed)
-    vehicle_bearing = np.arctan2d(ground_speed_y, ground_speed_x)
-    x_e = opti.variable(init_guess=0, n_vars=n_timesteps, scale=1e4, category='ops')
-    y_e = opti.variable(init_guess=0, n_vars=n_timesteps, scale=1e4, category='ops')
-    opti.constrain_derivative(
-        variable=x_e, with_respect_to=time,
-        derivative=ground_speed_x
-    )
-    opti.constrain_derivative(
-        variable=y_e, with_respect_to=time,
-        derivative=ground_speed_y
-    )
-    w_e = opti.variable(
-        init_guess=0,
-        n_vars=n_timesteps,
-        scale=1e-4,
-        category='ops',
-    )
-    gamma = np.arctan2(-w_e, air_speed)
     alpha = opti.variable(
         init_guess=5,
         n_vars=n_timesteps,
         scale=4,
         category='ops'
     )
-    opti.subject_to([
-        altitude[time_periodic_start_index:] / min_cruise_altitude > 1,
-        distance[time_periodic_start_index] / 1e5 == 0,
-        x_e[0] == 0,
-        y_e[0] == 0,
-    ])
-    revisit_rate = distance[time_periodic_end_index] / track_trajectory_length
-    revisit_period = 24 / revisit_rate
 
 if trajectory == 'lawnmower':
     coverage_length = opti.variable(init_guess=10000, scale=1000, lower_bound=0,
@@ -1362,8 +1305,6 @@ if trajectory == 'lawnmower':
     ])
 
 z_km = altitude / 1e3
-y_km = y_e / 1e3
-x_km = x_e / 1e3
 
 if hold_cruise_altitude == True:
     cruise_altitude = opti.variable(init_guess=14000, scale=1e4, category='ops')
@@ -1694,11 +1635,6 @@ opti.subject_to([
 # use SAR specific equations from Ulaby and Long
 payload_power = power_trans * pulse_rep_freq * pulse_duration
 
-snr = payload_power * antenna_gain ** 2 * wavelength ** 3 * a_hs * sigma0 * range_resolution / \
-      ((2 * 4 * np.pi) ** 3 * dist ** 3 * k_b * my_atmosphere.temperature() * F * ground_speed * a_B)
-
-snr_db = 10 * np.log(snr)
-
 if trajectory == 'straight':
     # coverage = opti.variable(init_guess=1e11, scale=1e11, lower_bound=0, category='ops')
     max_swath_range = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
@@ -1724,14 +1660,74 @@ if trajectory == 'circular':
     payload_power_adjusted = payload_power
 
 if trajectory == "racetrack":
-    max_imaging_offset = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
-    max_swath_range = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
+    max_imaging_offset = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, category='ops')
+    max_swath_range = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, category='ops')
     swath_overlap = opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, category='ops')
     opti.subject_to([
         max_imaging_offset >= ground_imaging_offset,
         max_swath_range > swath_range,
-        turn_radius == max_imaging_offset + max_swath_range - max_swath_range * swath_overlap,
         ])
+
+    guess_altitude = 12000
+    guess_speed = 20
+    start_angle = 0
+    turn_radius = max_imaging_offset + max_swath_range - max_swath_range * swath_overlap
+    coverage_length = opti.variable(init_guess=50000, lower_bound=0, scale=1000, category='ops')
+    distance = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e5, category='ops')
+    track_trajectory_length = 2 * coverage_length + 2 * turn_radius * np.pi
+    single_track_distance = np.mod(distance, track_trajectory_length)
+    # track = 45 * np.ones(n_timesteps)
+    track = np.where(
+        single_track_distance > coverage_length,
+        start_angle + (single_track_distance - coverage_length) / turn_radius,
+        start_angle)
+    track = np.where(
+        single_track_distance > coverage_length + turn_radius * np.pi,
+        start_angle + np.pi,
+        track)
+    track = np.where(
+        single_track_distance > coverage_length * 2 + turn_radius * np.pi,
+        start_angle + np.pi + (single_track_distance - coverage_length * 2 - turn_radius * np.pi) / turn_radius,
+        track)
+    u_e = air_speed * np.cos(track)
+    v_e = air_speed * np.sin(track)
+    wind_speed = wind_speed_func(altitude)
+    if run_with_95th_percentile_wind_condition == False:
+        wind_speed = np.zeros(n_timesteps)
+    wind_speed_x = np.cosd(wind_direction) * wind_speed
+    wind_speed_y = np.sind(wind_direction) * wind_speed
+    ground_speed_x = u_e - wind_speed_x
+    ground_speed_y = v_e - wind_speed_y
+    ground_speed = (ground_speed_x ** 2 + ground_speed_y ** 2) ** 0.5
+    opti.constrain_derivative(variable=distance, with_respect_to=time, derivative=ground_speed)
+    opti.subject_to(ground_speed > min_speed)
+    vehicle_bearing = np.arctan2d(ground_speed_y, ground_speed_x)
+    x_e = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e4, category='ops')
+    y_e = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e4, category='ops')
+    opti.constrain_derivative(
+        variable=x_e, with_respect_to=time,
+        derivative=ground_speed_x
+    )
+    opti.constrain_derivative(
+        variable=y_e, with_respect_to=time,
+        derivative=ground_speed_y
+    )
+    w_e = opti.variable(
+        init_guess=0,
+        n_vars=n_timesteps,
+        scale=1e-4,
+        category='ops',
+    )
+    gamma = np.arctan2(-w_e, air_speed)
+    opti.subject_to([
+        altitude[time_periodic_start_index:] / min_cruise_altitude > 1,
+        distance[time_periodic_start_index] / 1e5 == 0,
+        x_e[0] == 0,
+        y_e[0] == 0,
+    ])
+    revisit_rate = distance[time_periodic_end_index] / track_trajectory_length
+    revisit_period = 24 / revisit_rate
+
     coverage_area = coverage_length * 2 * max_swath_range - (max_swath_range * swath_overlap)
     payload_power_adjusted = np.where(
         track == 0,
@@ -1742,6 +1738,8 @@ if trajectory == "racetrack":
         payload_power,
         payload_power_adjusted
     )
+y_km = y_e / 1e3
+x_km = x_e / 1e3
 if trajectory == 'lawnmower':
     max_imaging_offset = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
     max_swath_range = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
@@ -1780,6 +1778,11 @@ if trajectory == 'lawnmower':
         payload_power,
         payload_power_adjusted
     )
+
+snr = payload_power * antenna_gain ** 2 * wavelength ** 3 * a_hs * sigma0 * range_resolution / \
+      ((2 * 4 * np.pi) ** 3 * dist ** 3 * k_b * my_atmosphere.temperature() * F * ground_speed * a_B)
+
+snr_db = 10 * np.log(snr)
 
 opti.subject_to([
     pulse_rep_freq >= 2 * ground_speed / radar_length,
