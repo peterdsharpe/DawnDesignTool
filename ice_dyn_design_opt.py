@@ -1227,8 +1227,11 @@ if trajectory == "racetrack":
     )
 
 if trajectory == 'lawnmower':
+    # define initial guesses
     guess_altitude = 12000
     guess_speed = 20
+
+    #intialize trajectory variables that are needed for other models
     air_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10, category='ops')
 
     z_e = opti.variable(
@@ -1713,14 +1716,14 @@ if trajectory == 'lawnmower':
     max_imaging_offset = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, category='ops')
     max_swath_range = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, category='ops')
     swath_overlap = opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, category='ops')
+    coverage_length = opti.variable(init_guess=0, lower_bound=0, scale=1000, category='ops')
+    coverage_width = opti.variable(init_guess=1000, scale=100, lower_bound=0,
+                                   category='des')  # meters, the width of the area the aircraft must sample
+
     opti.subject_to([
         max_imaging_offset >= ground_imaging_offset,
         max_swath_range > swath_range,
         ])
-
-    coverage_length = opti.variable(init_guess=50000, lower_bound=0, scale=1000, category='ops')
-    coverage_width = opti.variable(init_guess=1000, scale=100, lower_bound=0,
-                                   category='des')  # meters, the width of the area the aircraft must sample
 
     start_angle = 0
     turn_radius_1 = max_imaging_offset + max_swath_range * swath_overlap / 2
@@ -1803,43 +1806,28 @@ if trajectory == 'lawnmower':
         payload_power_adjusted
     )
 
-
-
-
-    # opti.subject_to([
-    #     passes_required >= 1,
-    #     ])
-
-    # coverage_area = coverage_length * coverage_width  # meters ** 2, the area the aircraft must sample
-    # payload_power_adjusted = np.where(
-    #     track == 0,
-    #     payload_power,
-    #     0)
-    # payload_power_adjusted = np.where(
-    #     track == np.pi,
-    #     payload_power,
-    #     payload_power_adjusted
-    # )
-
-y_km = y_e / 1e3
-x_km = x_e / 1e3
-
+# calculate snr from equation in Ulaby and Long
 snr = payload_power * antenna_gain ** 2 * wavelength ** 3 * a_hs * sigma0 * range_resolution / \
       ((2 * 4 * np.pi) ** 3 * dist ** 3 * k_b * my_atmosphere.temperature() * F * ground_speed * a_B)
 
 snr_db = 10 * np.log(snr)
 
+# necessary constraints for SAR system
 opti.subject_to([
     pulse_rep_freq >= 2 * ground_speed / radar_length,
     1 / pulse_rep_freq >= pulse_duration
 ])
+
 # translate to final data product Terms
 N_i_range = opti.variable(init_guess=5, scale=1, lower_bound=1, category='des')
 N_i_azimuth = opti.variable(init_guess=5, scale=1, lower_bound=1, category='des')
 N_i_time = opti.variable(init_guess=5, scale=1, lower_bound=1, category='des')
-N_i = N_i_range * N_i_azimuth * N_i_time
-# number of pixels in the incoherent averaging window
+N_i = N_i_range * N_i_azimuth * N_i_time # number of pixels in the incoherent averaging window
+
+# assume deviation based on GPS uncertainty
 deviation = 10 # meters
+
+# enforce constraints on final data product terms
 opti.subject_to([
     strain_azimuth_resolution >= N_i_azimuth * azimuth_resolution,
     strain_range_resolution <= strain_azimuth_resolution,
@@ -1847,10 +1835,14 @@ opti.subject_to([
     strain_temporal_resolution >= N_i_time * revisit_period,
     required_strain_temporal_resolution >= strain_temporal_resolution,
 ])
+
+# calculate decorrelation terms
 p_thermal = 1 / (1 + snr ** (-1))
 p_position = 1 - (2 * deviation * range_resolution * (np.cosd(look_angle)) ** 2 / (wavelength * dist))
 p_time_volume = -0.0021 * revisit_period + 0.95
 decorrelation = p_thermal * p_position * p_time_volume
+
+# use to calculate precision and ensure it meets precision requirement
 precision = wavelength / (4 * np.pi * N_i * strain_temporal_resolution * strain_range_resolution) * (
         1 - decorrelation ** 2) / decorrelation ** 2
 opti.subject_to(required_strain_precision >= (precision * 24 * 365))
@@ -2201,6 +2193,8 @@ cruise_altitude = np.mean(altitude)
 sl_atmosphere = atmo(altitude=0)
 rho_ratio = np.sqrt(np.mean(my_atmosphere.density()) / sl_atmosphere.density())
 avg_ias = avg_airspeed * rho_ratio
+y_km = y_e / 1e3
+x_km = x_e / 1e3
 
 ##### Add tippers
 things_to_slightly_minimize = 0
