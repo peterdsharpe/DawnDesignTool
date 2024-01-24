@@ -1203,8 +1203,11 @@ if trajectory == 'circular':
     revisit_period = 24 / revisit_rate
 
 if trajectory == "racetrack":
+    # define initial guesses
     guess_altitude = 12000
     guess_speed = 20
+
+    #intialize trajectory variables that are needed for other models
     air_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10,
                               category='ops')
     z_e = opti.variable(
@@ -1600,24 +1603,29 @@ if trajectory == 'circular':
     payload_power_adjusted = payload_power
 
 if trajectory == "racetrack":
+    # initialize variables
     track_scaler = opti.parameter(value=0)
     max_imaging_offset = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, category='ops')
     max_swath_range = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, category='ops')
     swath_overlap = opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, category='ops')
+    coverage_length = opti.variable(init_guess=50000, lower_bound=0, scale=1000, category='ops')
+    distance = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e5, category='ops')
+
+    # find max values of swath terms to size turn radii
     opti.subject_to([
         max_imaging_offset >= ground_imaging_offset,
         max_swath_range > swath_range,
         ])
 
-    guess_altitude = 12000
-    guess_speed = 20
-    start_angle = 0
+    # assume north/south sampling
+    start_angle = 0 # in radians
+
+    # define turn radius and track length
     turn_radius = max_imaging_offset + max_swath_range - 0.5 * max_swath_range * swath_overlap
-    coverage_length = opti.variable(init_guess=50000, lower_bound=0, scale=1000, category='ops')
-    distance = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e5, category='ops')
     track_trajectory_length = 2 * coverage_length + 2 * turn_radius * np.pi
     single_track_distance = np.mod(distance, track_trajectory_length)
-    # track = 45 * np.ones(n_timesteps)
+
+    # define track angle according to aircraft along-track distance travelled
     track = np.where(
         single_track_distance > coverage_length,
         start_angle + (single_track_distance - coverage_length) / turn_radius,
@@ -1630,9 +1638,15 @@ if trajectory == "racetrack":
         single_track_distance > coverage_length * 2 + turn_radius * np.pi,
         start_angle + np.pi + (single_track_distance - coverage_length * 2 - turn_radius * np.pi) / turn_radius,
         track)
+
+    # track scaler multiple allows for easy initial optimizer run to warm start racetrack case
     track = track * track_scaler
+
+    # set airspeed in x and y directions
     u_e = air_speed * np.cos(track)
     v_e = air_speed * np.sin(track)
+
+    # account for wind_speed and direction
     wind_speed = wind_speed_func(altitude)
     if run_with_95th_percentile_wind_condition == False:
         wind_speed = np.zeros(n_timesteps)
@@ -1642,8 +1656,12 @@ if trajectory == "racetrack":
     ground_speed_y = v_e - wind_speed_y
     ground_speed = (ground_speed_x ** 2 + ground_speed_y ** 2) ** 0.5
     opti.constrain_derivative(variable=distance, with_respect_to=time, derivative=ground_speed)
+
+    # constrain ground speed to be greater than minimum speed
     opti.subject_to(ground_speed > min_speed)
     vehicle_bearing = np.arctan2d(ground_speed_y, ground_speed_x)
+
+    # define x and y positions
     x_e = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e4, category='ops')
     y_e = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e4, category='ops')
     opti.constrain_derivative(
@@ -1654,29 +1672,39 @@ if trajectory == "racetrack":
         variable=y_e, with_respect_to=time,
         derivative=ground_speed_y
     )
+
+    # define airspeed in z direction
     w_e = opti.variable(
         init_guess=0,
         n_vars=n_timesteps,
         scale=1e-4,
         category='ops',
     )
+    # define gamma from speed in z direction and airspeed
     gamma = np.arctan2(-w_e, air_speed)
+
+    # necessary constraints for trajectory variables
     opti.subject_to([
         altitude[time_periodic_start_index:] / min_cruise_altitude > 1,
         distance[time_periodic_start_index] / 1e5 == 0,
         x_e[0] == 0,
         y_e[0] == 0,
     ])
+
+    #define revisit rate and period from number of times track is sampled
     revisit_rate = distance[time_periodic_end_index] / track_trajectory_length
     revisit_period = 24 / revisit_rate
 
+    # define coverage area
     coverage_area = coverage_length * 2 * max_swath_range - (max_swath_range * swath_overlap)
+
+    # only sample in straight sections of racetrack
     payload_power_adjusted = np.where(
-        track == 0,
+        track == start_angle + 0,
         payload_power,
         0)
     payload_power_adjusted = np.where(
-        track == np.pi,
+        track == start_angle + np.pi,
         payload_power,
         payload_power_adjusted
     )
