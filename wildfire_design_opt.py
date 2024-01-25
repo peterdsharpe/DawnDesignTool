@@ -1,5 +1,5 @@
 import sys
-sys.path.append('/home/gridsan/adewald/aerosandbox')
+sys.path.append("C:\\Users\\AnnickDewald\\PycharmProjects\\AeroSandbox")
 import aerosandbox as asb
 import aerosandbox.library.aerodynamics as aero_lib
 from aerosandbox.atmosphere import Atmosphere as atmo
@@ -13,6 +13,7 @@ from aerosandbox.library.airfoils import naca0008, flat_plate
 import aerosandbox.tools.units as u
 from aerosandbox.optimization.opti import Opti
 import aerosandbox.numpy as np
+# from aerosandbox.numpy.integrate_discrete import integrate_discrete_squared_curvature
 import plotly.express as px
 import copy
 import matplotlib.pyplot as plt
@@ -39,7 +40,7 @@ des = dict(category="design")
 ops = dict(category="operations")
 
 ##### optimization assumptions
-minimize = ('- mass_payload / 30')
+minimize = ('wing_span / 30')
 make_plots = False
 
 ##### Debug flags
@@ -50,8 +51,8 @@ draw_initial_guess_config = False
 ##### Section: Input Parameters
 
 # Aircraft Parameters
-battery_specific_energy_Wh_kg = opti.parameter(value=390)  # cell level specific energy of the battery
-battery_pack_cell_percentage = 0.85  # What percent of the battery pack consists of the module, by weight? # maybe 0.9
+battery_specific_energy_Wh_kg = opti.parameter(value=450)  # cell level specific energy of the battery
+battery_pack_cell_percentage = 0.90  # What percent of the battery pack consists of the module, by weight? # maybe 0.9
 # these roughly correspond to the value for cells we are planning for near-term
 variable_pitch = False  # Do we assume the propeller is variable pitch?
 structural_load_factor = 3  # over static
@@ -104,7 +105,7 @@ scattering_cross_sec_db = -20
 ## ranges from -20 to -5 dB for forest regions (depending on biomass)
 
 # Margins
-structural_mass_margin_multiplier = 1.25
+structural_mass_margin_multiplier = opti.parameter(value=1.05)
 # A value greater than 1 represents the structural components as sized are
 energy_generation_margin = 1.05
 # A value greater than 1 represents aircraft must generate said fractional surplus of energy
@@ -227,12 +228,12 @@ boom_location = 0.80  # as a fraction of the half-span
 break_location = 0.67  # as a fraction of the half-span
 
 # wing
-# wing_span = opti.variable(
-#     init_guess=30,
-#     scale=6,
-#     category="des"
-# )
-wing_span = opti.parameter(value=35)
+wing_span = opti.variable(
+    init_guess=30,
+    scale=6,
+    category="des"
+)
+# wing_span = opti.parameter(value=35)
 
 boom_offset = boom_location * wing_span / 2  # in real units (meters)
 
@@ -1592,12 +1593,12 @@ range_resolution = c * pulse_duration / (2 * np.sind(look_angle))
 azimuth_resolution = radar_length / 2
 critical_baseline = center_wavelength * dist / (2 * range_resolution * (np.cosd(look_angle)) ** 2)
 
-# opti.subject_to([
-#     range_resolution <= spatial_resolution,
-#     azimuth_resolution <= spatial_resolution,
-#     payload_pod_length * 0.75 >= radar_length,
-#     payload_pod_diameter * 0.75 >= radar_width,
-# ])
+opti.subject_to([
+    range_resolution <= spatial_resolution,
+    azimuth_resolution <= spatial_resolution,
+    payload_pod_length * 0.75 >= radar_length,
+    payload_pod_diameter * 0.75 >= radar_width,
+])
 
 if trajectory == 'straight':
     coverage = opti.variable(init_guess=1e11, scale=1e11, lower_bound=0, category='ops')
@@ -1630,8 +1631,8 @@ if trajectory == 'lawnmower':
 
 
 # use SAR specific equations from Ulaby and Long
-# payload_power = power_trans * pulse_rep_freq * pulse_duration
-payload_power = opti.parameter(value=100)
+payload_power = power_trans * pulse_rep_freq * pulse_duration
+# payload_power = opti.parameter(value=100)
 
 snr = payload_power * antenna_gain ** 2 * center_wavelength ** 3 * a_hs * sigma0 * range_resolution / \
       ((2 * 4 * np.pi) ** 3 * dist ** 3 * k_b * my_atmosphere.temperature() * F * ground_speed * a_B)
@@ -1650,33 +1651,33 @@ deviation = 10 # meters
 #
 # precision = np.sqrt(1 / (2 * N_i) * (1-decorrelation ** 2) / decorrelation ** 2)
 
-# opti.subject_to([
-#     required_snr <= snr_db,
-#     pulse_rep_freq >= 2 * ground_speed / radar_length,
-#     # pulse_rep_freq <= c / (2 * swath_azimuth),
-#     1 / pulse_rep_freq >= pulse_duration,
-#     # required_precision >= precision,
-# ])
+opti.subject_to([
+    required_snr <= snr_db,
+    pulse_rep_freq >= 2 * ground_speed / radar_length,
+    # pulse_rep_freq <= c / (2 * swath_azimuth),
+    1 / pulse_rep_freq >= pulse_duration,
+    # required_precision >= precision,
+])
 
 ### instrument data storage mass requirements
 mass_of_data_storage = 0.0053  # kg per TB of data
 payload_cg = battery_cg + 0.25 * payload_pod_length
-# mass_props['payload'] = asb.MassProperties(
-#     mass=mass_payload_base +
-#          # mission_length * tb_per_day * mass_of_data_storage +
-#          mass_radar_aperture,
-#     x_cg=payload_cg
-# )
-mass_payload = opti.variable(
-    init_guess=mass_payload_base,
-    scale=1,
-    lower_bound=0,
-    category='des'
-)
 mass_props['payload'] = asb.MassProperties(
-    mass=mass_payload,
+    mass=mass_payload_base +
+         # mission_length * tb_per_day * mass_of_data_storage +
+         mass_radar_aperture,
     x_cg=payload_cg
 )
+# mass_payload = opti.variable(
+#     init_guess=mass_payload_base,
+#     scale=1,
+#     lower_bound=0,
+#     category='des'
+# )
+# mass_props['payload'] = asb.MassProperties(
+#     mass=mass_payload,
+#     x_cg=payload_cg
+# )
 
 # region Propulsion
 
@@ -2038,12 +2039,13 @@ penalty = 0
 for penalty_input in [
     thrust / 10,
     Fz_e / 1e-1,
-    Fx_e / 1e-1,
-    air_speed / 1e-1,
-    alpha / 1,
-    # distance / 500,
+    Fx_e / 5e-1,
+    air_speed / 1,
+    gamma / 2,
+    alpha / 1
 ]:
-    penalty += np.sum(np.diff(np.diff(penalty_input)) ** 2) / n_timesteps_per_segment
+    penalty += np.sum(np.diff(np.diff(penalty_input)) ** 2) / n_timesteps_per_segment ## old version
+    # penalty += np.mean(integrate_discrete_squared_curvature(penalty_input)) ## peter suggested version
 
 opti.minimize(
     objective
@@ -2060,6 +2062,10 @@ if draw_initial_guess_config:
         airplane.substitute_solution(opti.debug)
         airplane.draw()
 
+import pandas as pd
+def read_excel_data(excel_file):
+    df = pd.read_excel(excel_file)
+    return df.values.tolist()
 if __name__ == "__main__":
     # time_terms = [12, 8, 6, 4]
     # for y in time_terms:
