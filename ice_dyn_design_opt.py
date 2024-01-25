@@ -1744,18 +1744,19 @@ if trajectory == 'lawnmower':
         single_track_distance > coverage_length * 2 + turn_radius_1 * np.pi,
         start_angle + np.pi + (single_track_distance - coverage_length * 2 - turn_radius_1 * np.pi) / turn_radius_2,
         track)
-    single_track_coverage = 2 * max_swath_range - 1.5 * (max_swath_range * swath_overlap)
-    passes_required = coverage_width / single_track_coverage
-    turn_radius_3 = passes_required * turn_radius_1 + (passes_required - 1) * turn_radius_2
-    full_coverage_distance = passes_required * track_trajectory_length - np.pi * turn_radius_2 + np.pi * turn_radius_3
-    revisit_rate = distance[time_periodic_end_index] / full_coverage_distance
-    revisit_period = 24 / revisit_rate
-    total_distance = revisit_rate * full_coverage_distance
 
-    track = np.where(
-        distance > full_coverage_distance - (np.pi * turn_radius_2),
-        start_angle + np.pi + (single_track_distance - coverage_length * 2 - turn_radius_1 * np.pi) / turn_radius_3,
-        track)
+    # single_track_coverage = 2 * max_swath_range - 1.5 * (max_swath_range * swath_overlap)
+    # passes_required = coverage_width / single_track_coverage
+    # turn_radius_3 = passes_required * turn_radius_1 + (passes_required - 1) * turn_radius_2
+    # full_coverage_distance = passes_required * track_trajectory_length - np.pi * turn_radius_2 + np.pi * turn_radius_3
+    revisit_rate = distance[time_periodic_end_index] / track_trajectory_length# full_coverage_distance
+    revisit_period = 24 / revisit_rate
+    # total_distance = revisit_rate * full_coverage_distance
+    #
+    # track = np.where(
+    #     distance > full_coverage_distance - (np.pi * turn_radius_2),
+    #     start_angle + np.pi + (single_track_distance - coverage_length * 2 - turn_radius_1 * np.pi) / turn_radius_3,
+    #     track)
     track = track * track_scaler
 
     u_e = air_speed * np.cos(track)
