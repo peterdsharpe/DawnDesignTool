@@ -7,4 +7,4 @@
 module load anaconda/2021b
 
 # run the script
-python payload_vs_mission_run.py
+python span_vs_mission_run.py
