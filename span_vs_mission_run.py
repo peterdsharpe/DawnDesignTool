@@ -59,7 +59,7 @@ def run_wrapped(input):
 
 if __name__ == '__main__':
 
-    run_number = 4
+    run_number = 10
 
     excel_file = "cache/Wildfire/wildfire_runs.xlsx"
 
@@ -74,6 +74,7 @@ if __name__ == '__main__':
     opti.set_value(revisit_rate, input[3])
     opti.set_value(coverage_radius, input[4])
     opti.set_value(spatial_resolution, input[5])
+    opti.set_value(structural_mass_margin_multiplier, input[6])
 
     ### Set the run ID
     run_name = f"Wildfire/run_{run_number}"
