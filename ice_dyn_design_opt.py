@@ -1718,16 +1718,16 @@ if trajectory == 'lawnmower':
     max_imaging_offset = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, category='ops')
     max_swath_range = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, category='ops')
     swath_overlap = opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, category='ops')
-    coverage_length = opti.variable(init_guess=0, lower_bound=0, scale=1000, category='ops')
+    coverage_length = opti.variable(init_guess=50000, lower_bound=0, scale=1000, category='ops')
     coverage_width = opti.variable(init_guess=1000, scale=100, lower_bound=0,
-                                   category='des')  # meters, the width of the area the aircraft must sample
+                                   category='des')
     distance = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e5, category='ops')
 
     # find max values of swath terms to size turn radii
     opti.subject_to([
         max_imaging_offset >= ground_imaging_offset,
         max_swath_range > swath_range,
-        ])
+    ])
 
     # assume north/south sampling
     start_angle = 0  # in radians
@@ -1752,15 +1752,10 @@ if trajectory == 'lawnmower':
         single_track_distance > coverage_length * 2 + turn_radius_1 * np.pi,
         start_angle + np.pi + (single_track_distance - coverage_length * 2 - turn_radius_1 * np.pi) / turn_radius_2,
         track)
-
-    single_track_coverage = 2 * max_swath_range - (max_swath_range * swath_overlap)
-    # opti.subject_to(2 * max_swath_range >= 1.5 * (max_swath_range * swath_overlap))
-
-    passes_required = coverage_width / single_track_coverage
     turn_radius_3 = 0.5 * coverage_width
-    full_coverage_distance = passes_required * track_trajectory_length - np.pi * turn_radius_2 + np.pi * turn_radius_3
-    revisit_rate = distance[time_periodic_end_index] / track_trajectory_length # adjusted
-    revisit_period = 24 / revisit_rate
+    single_track_coverage = 2 * max_swath_range - (max_swath_range * swath_overlap)
+    passes_required = coverage_width / single_track_coverage
+    full_coverage_distance = track_trajectory_length * passes_required - turn_radius_2 * np.pi + turn_radius_3 * np.pi
 
     track = np.where(
         distance > full_coverage_distance - (np.pi * turn_radius_2),
@@ -1773,6 +1768,8 @@ if trajectory == 'lawnmower':
     # set airspeed in x and y directions
     u_e = air_speed * np.cos(track)
     v_e = air_speed * np.sin(track)
+
+    # account for wind_speed and direction
     wind_speed = wind_speed_func(altitude)
     if run_with_95th_percentile_wind_condition == False:
         wind_speed = np.zeros(n_timesteps)
@@ -1818,8 +1815,12 @@ if trajectory == 'lawnmower':
         y_e[0] == 0,
     ])
 
-    #define revisit rate and period from number of times track is sampled
-    coverage_area = coverage_length * coverage_width
+    # define revisit rate and period from number of times track is sampled
+    revisit_rate = distance[time_periodic_end_index] / track_trajectory_length
+    revisit_period = 24 / revisit_rate
+
+    # define coverage area
+    coverage_area = coverage_length * 2 * max_swath_range - (max_swath_range * swath_overlap)
 
     # only sample in straight sections of racetrack
     payload_power_adjusted = np.where(
