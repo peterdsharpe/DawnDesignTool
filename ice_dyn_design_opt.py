@@ -53,9 +53,9 @@ draw_initial_guess_config = False
 ##### Section: Input Parameters
 
 # Objective Function Scaling Parameters
-wingspan_optimization_scaling_term = opti.parameter(value=0.3) # scale from 0 to 1 to adjust the relative importance of wingspan in the objective function
-azimuth_optimization_scaling_term = opti.parameter(value=0.3) # scale from 0 to 1 to adjust the relative importance of spatial resolution in the objective function
-coverage_optimization_scaling_term = opti.parameter(value=0.3) # scale from 0 to 1 to adjust the relative importance of spatial coverage in the objective function
+wingspan_optimization_scaling_term = opti.parameter(value=1) # scale from 0 to 1 to adjust the relative importance of wingspan in the objective function
+azimuth_optimization_scaling_term = opti.parameter(value=0) # scale from 0 to 1 to adjust the relative importance of spatial resolution in the objective function
+coverage_optimization_scaling_term = opti.parameter(value=0) # scale from 0 to 1 to adjust the relative importance of spatial coverage in the objective function
 
 # Aircraft Parameters
 battery_specific_energy_Wh_kg = 390  # cell level specific energy of the battery
@@ -1502,7 +1502,7 @@ k_b = 1.38064852E-23  # [m2 kg s-2 K-1] boltzman constant
 radar_width = opti.variable(
     init_guess=0.3,
     scale=0.1,
-    lower_bound=0,
+    lower_bound=0.01,
     **des
 )
 radar_length = opti.variable(
@@ -1719,7 +1719,7 @@ if trajectory == 'lawnmower':
     max_swath_range = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, category='ops')
     swath_overlap = opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, category='ops')
     coverage_length = opti.variable(init_guess=50000, lower_bound=0, scale=1000, category='ops')
-    coverage_width = opti.variable(init_guess=1000, scale=100, lower_bound=0,
+    coverage_width = opti.variable(init_guess=10000, scale=1000, lower_bound=0,
                                    category='des')
     distance = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e5, category='ops')
 
@@ -1752,13 +1752,14 @@ if trajectory == 'lawnmower':
         single_track_distance > coverage_length * 2 + turn_radius_1 * np.pi,
         start_angle + np.pi + (single_track_distance - coverage_length * 2 - turn_radius_1 * np.pi) / turn_radius_2,
         track)
-    turn_radius_3 = 0.5 * coverage_width
+    passes_required = 1
     single_track_coverage = 2 * max_swath_range - (max_swath_range * swath_overlap)
-    passes_required = coverage_width / single_track_coverage
+    coverage_width = passes_required * single_track_coverage
+    turn_radius_3 = 0.5 * coverage_width + max_imaging_offset # max_imaging_offset + max_swath_range - 0.5 * max_swath_range * swath_overlap
     full_coverage_distance = track_trajectory_length * passes_required - turn_radius_2 * np.pi + turn_radius_3 * np.pi
 
     track = np.where(
-        distance > full_coverage_distance - (np.pi * turn_radius_2),
+        distance > full_coverage_distance - (np.pi * turn_radius_3),
         start_angle + np.pi + (single_track_distance - coverage_length * 2 - turn_radius_1 * np.pi) / turn_radius_3,
         track)
 
@@ -1816,11 +1817,11 @@ if trajectory == 'lawnmower':
     ])
 
     # define revisit rate and period from number of times track is sampled
-    revisit_rate = distance[time_periodic_end_index] / track_trajectory_length
+    revisit_rate = distance[time_periodic_end_index] / full_coverage_distance
     revisit_period = 24 / revisit_rate
 
     # define coverage area
-    coverage_area = coverage_length * 2 * max_swath_range - (max_swath_range * swath_overlap)
+    coverage_area = coverage_length *  coverage_width
 
     # only sample in straight sections of racetrack
     payload_power_adjusted = np.where(
