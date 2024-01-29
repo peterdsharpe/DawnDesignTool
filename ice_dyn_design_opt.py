@@ -53,9 +53,9 @@ draw_initial_guess_config = False
 ##### Section: Input Parameters
 
 # Objective Function Scaling Parameters
-wingspan_optimization_scaling_term = opti.parameter(value=1) # scale from 0 to 1 to adjust the relative importance of wingspan in the objective function
-azimuth_optimization_scaling_term = opti.parameter(value=0) # scale from 0 to 1 to adjust the relative importance of spatial resolution in the objective function
-coverage_optimization_scaling_term = opti.parameter(value=0) # scale from 0 to 1 to adjust the relative importance of spatial coverage in the objective function
+wingspan_optimization_scaling_term = opti.parameter(value=0.3) # scale from 0 to 1 to adjust the relative importance of wingspan in the objective function
+azimuth_optimization_scaling_term = opti.parameter(value=0.3) # scale from 0 to 1 to adjust the relative importance of spatial resolution in the objective function
+coverage_optimization_scaling_term = opti.parameter(value=0.3) # scale from 0 to 1 to adjust the relative importance of spatial coverage in the objective function
 
 # Aircraft Parameters
 battery_specific_energy_Wh_kg = 390  # cell level specific energy of the battery
@@ -1733,7 +1733,7 @@ if trajectory == 'lawnmower':
     start_angle = 0  # in radians
 
     # define turn radius and track length
-    turn_radius_1 = max_swath_range + max_imaging_offset + max_swath_range * swath_overlap / 2
+    turn_radius_1 = max_swath_range + max_imaging_offset - max_swath_range * swath_overlap / 2
     turn_radius_2 = max_imaging_offset - max_swath_range * swath_overlap / 2
     # opti.subject_to(max_swath_range >= max_imaging_offset + max_swath_range * swath_overlap)
     track_trajectory_length = (coverage_length * 2 + turn_radius_1 * np.pi + turn_radius_2 * np.pi)
@@ -1754,12 +1754,12 @@ if trajectory == 'lawnmower':
         track)
     passes_required = 1
     single_track_coverage = 2 * max_swath_range - (max_swath_range * swath_overlap)
-    coverage_width = passes_required * single_track_coverage
-    turn_radius_3 = 0.5 * coverage_width + max_imaging_offset # max_imaging_offset + max_swath_range - 0.5 * max_swath_range * swath_overlap
-    full_coverage_distance = track_trajectory_length * passes_required - turn_radius_2 * np.pi + turn_radius_3 * np.pi
+    turn_radius_3 = single_track_coverage * passes_required + max_imaging_offset
+    full_coverage_length = track_trajectory_length * passes_required - turn_radius_2 * np.pi + turn_radius_3 * np.pi
+    total_area_distance = np.mod(distance, full_coverage_length)
 
     track = np.where(
-        distance > full_coverage_distance - (np.pi * turn_radius_3),
+        total_area_distance > full_coverage_length - (np.pi * turn_radius_3),
         start_angle + np.pi + (single_track_distance - coverage_length * 2 - turn_radius_1 * np.pi) / turn_radius_3,
         track)
 
@@ -1817,11 +1817,11 @@ if trajectory == 'lawnmower':
     ])
 
     # define revisit rate and period from number of times track is sampled
-    revisit_rate = distance[time_periodic_end_index] / full_coverage_distance
+    revisit_rate = distance[time_periodic_end_index] / full_coverage_length
     revisit_period = 24 / revisit_rate
 
     # define coverage area
-    coverage_area = coverage_length *  coverage_width
+    coverage_area = coverage_length * passes_required * single_track_coverage
 
     # only sample in straight sections of racetrack
     payload_power_adjusted = np.where(
