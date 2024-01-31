@@ -13,7 +13,7 @@ from aerosandbox.library.airfoils import naca0008, flat_plate
 import aerosandbox.tools.units as u
 from aerosandbox.optimization.opti import Opti
 import aerosandbox.numpy as np
-from aerosandbox.numpy.integrate_discrete import integrate_discrete_squared_curvature
+# from aerosandbox.numpy.integrate_discrete import integrate_discrete_squared_curvature
 import plotly.express as px
 import copy
 import matplotlib.pyplot as plt
@@ -53,9 +53,9 @@ draw_initial_guess_config = False
 ##### Section: Input Parameters
 
 # Objective Function Scaling Parameters
-wingspan_optimization_scaling_term = opti.parameter(value=0.3) # scale from 0 to 1 to adjust the relative importance of wingspan in the objective function
-azimuth_optimization_scaling_term = opti.parameter(value=0.3) # scale from 0 to 1 to adjust the relative importance of spatial resolution in the objective function
-coverage_optimization_scaling_term = opti.parameter(value=0.3) # scale from 0 to 1 to adjust the relative importance of spatial coverage in the objective function
+wingspan_optimization_scaling_term = opti.parameter(value=0) # scale from 0 to 1 to adjust the relative importance of wingspan in the objective function
+azimuth_optimization_scaling_term = opti.parameter(value=0) # scale from 0 to 1 to adjust the relative importance of spatial resolution in the objective function
+coverage_optimization_scaling_term = opti.parameter(value=1) # scale from 0 to 1 to adjust the relative importance of spatial coverage in the objective function
 
 # Aircraft Parameters
 battery_specific_energy_Wh_kg = 390  # cell level specific energy of the battery
@@ -93,9 +93,9 @@ vehicle_heading = opti.parameter(value=0) # degrees
 # trajectory = 'circular' # do we want to assume a circular trajectory?
 # temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0.5, category='des')  # hours
 
-# trajectory = 'racetrack'
+trajectory = 'racetrack'
 
-trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
+# trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
 
 # Instrument Parameters
 mass_payload_base = 5 # kg, does not include data storage or aperture mass
@@ -1309,13 +1309,13 @@ def compute_wing_aerodynamics(
     surface.airfoil = surface.xsecs[0].airfoil
     try:
 
-        # surface.Cl_inc = surface.airfoil.CL_function(
-        #     {'alpha': surface.alpha_eff, 'reynolds': np.log(surface.Re)})  # Incompressible 2D lift coefficient
+        surface.Cl_inc = surface.airfoil.CL_function(
+            {'alpha': surface.alpha_eff, 'reynolds': np.log(surface.Re)})  # Incompressible 2D lift coefficient
 
-        airfoil_aero = surface.airfoil.get_aero_from_neuralfoil(
-            alpha=surface.alpha_eff, Re=surface.Re, model_size="medium"
-        )
-        surface.Cl_inc = airfoil_aero["CL"]
+        # airfoil_aero = surface.airfoil.get_aero_from_neuralfoil(
+        #     alpha=surface.alpha_eff, Re=surface.Re, model_size="medium"
+        # )
+        # surface.Cl_inc = airfoil_aero["CL"]
 
         surface.CL = surface.Cl_inc * aero_lib.CL_over_Cl(surface.aspect_ratio(), mach=mach,
                                                       sweep=surface.mean_sweep_angle())  # Compressible 3D lift coefficient
@@ -1700,7 +1700,7 @@ if trajectory == "racetrack":
     revisit_period = 24 / revisit_rate
 
     # define coverage area
-    coverage_area = coverage_length * 2 * max_swath_range - (max_swath_range * swath_overlap)
+    coverage_area = coverage_length * (2 * max_swath_range - (max_swath_range * swath_overlap))
 
     # only sample in straight sections of racetrack
     payload_power_adjusted = np.where(
@@ -1719,8 +1719,8 @@ if trajectory == 'lawnmower':
     max_swath_range = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, category='ops')
     swath_overlap = opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, category='ops')
     coverage_length = opti.variable(init_guess=50000, lower_bound=0, scale=1000, category='ops')
-    coverage_width = opti.variable(init_guess=10000, scale=1000, lower_bound=0,
-                                   category='des')
+    # coverage_width = opti.variable(init_guess=10000, scale=1000, lower_bound=0,
+    #                                category='des')
     distance = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e5, category='ops')
 
     # find max values of swath terms to size turn radii
@@ -1735,7 +1735,6 @@ if trajectory == 'lawnmower':
     # define turn radius and track length
     turn_radius_1 = max_swath_range + max_imaging_offset - max_swath_range * swath_overlap / 2
     turn_radius_2 = max_imaging_offset - max_swath_range * swath_overlap / 2
-    # opti.subject_to(max_swath_range >= max_imaging_offset + max_swath_range * swath_overlap)
     track_trajectory_length = (coverage_length * 2 + turn_radius_1 * np.pi + turn_radius_2 * np.pi)
     single_track_distance = np.mod(distance, track_trajectory_length)
 
@@ -1754,7 +1753,7 @@ if trajectory == 'lawnmower':
         track)
     passes_required = 1
     single_track_coverage = 2 * max_swath_range - (max_swath_range * swath_overlap)
-    turn_radius_3 = single_track_coverage * passes_required + max_imaging_offset
+    turn_radius_3 = (single_track_coverage / 2) * passes_required + max_imaging_offset
     full_coverage_length = track_trajectory_length * passes_required - turn_radius_2 * np.pi + turn_radius_3 * np.pi
     total_area_distance = np.mod(distance, full_coverage_length)
 
@@ -2246,13 +2245,13 @@ penalty = 0
 for penalty_input in [
     thrust / 10,
     Fz_e / 1e-1,
-    Fx_e / 5e-1,
+    Fx_e / 1e-1,
     air_speed / 1,
     gamma / 2,
     alpha / 1
 ]:
-    # penalty += np.sum(np.diff(np.diff(penalty_input)) ** 2) / n_timesteps_per_segment ## old version
-    penalty += np.mean(integrate_discrete_squared_curvature(penalty_input)) ## peter suggested version
+    penalty += np.sum(np.diff(np.diff(penalty_input)) ** 2) / n_timesteps_per_segment ## old version
+    # penalty += np.mean(integrate_discrete_squared_curvature(penalty_input)) ## peter suggested version
 opti.minimize(
     objective
     + penalty
@@ -2269,17 +2268,36 @@ if draw_initial_guess_config:
         airplane.draw()
 
 if __name__ == "__main__":
-    scales = [0, 1]
-    for scale in scales:
-    # wingspan_terms = [1, 0.8, 0.6, 0.4, 0.2, 0]
-    # spatial = []
-    # wingspan = []
-    # coverage = []
-    # for wingspan_term in wingspan_terms:
-    #                 opti.set_value(wingspan_optimization_scaling_term, wingspan_term)
-    #                 coverage_term = 1 - wingspan_term
-    #                 opti.set_value(coverage_optimization_scaling_term, coverage_term)
-                    opti.set_value(track_scaler, scale)
+    output_file = "ice_dyn_sweeps"
+    runs = np.linspace(0, 16, 17).astype(int)
+    combinations = [
+                [0.33, 0.33, 0.33],
+                [0.33, 0.33, 0.33],
+                [1, 0, 0],
+                [0.75, 0.25, 0],
+                [0.5, 0.5, 0],
+                [0.25, 0.75, 0],
+                [0, 1, 0],
+                [0, 0.75, 0.25],
+                [0, 0.5, 0.5],
+                [0, 0.25, 0.75],
+                [0, 0, 1],
+                [0.25, 0, 0.75],
+                [0.5, 0, 0.5],
+                [0.75, 0, 0.25],
+                [0.5, 0.25, 0.25],
+                [0.25, 0.5, 0.25],
+                [0.25, 0.25, 0.5]]
+
+    for run_num in runs:
+                    if run_num == 0:
+                        opti.set_value(track_scaler, 0)
+                    else:
+                        opti.set_value(track_scaler, 1)
+
+                    opti.set_value(wingspan_optimization_scaling_term, combinations[run_num][0])
+                    opti.set_value(azimuth_optimization_scaling_term, combinations[run_num][1])
+                    opti.set_value(coverage_optimization_scaling_term, combinations[run_num][2])
                     try:
                         sol = opti.solve(
                             max_iter=50000,
@@ -2392,7 +2410,7 @@ if __name__ == "__main__":
                             print(f"{k.rjust(25)} = {fmt(v.mass)} kg")
 
                     # Define a filename for the CSV file with the temporal resolution in the name
-                    csv_file = f"outputs/outputs_data.csv"
+                    csv_file = f"outputs/outputs_data_run_{run_num}.csv"
 
                     # Write the data to the CSV file
                     with open(csv_file, 'w', newline='') as csvfile:
@@ -2546,37 +2564,37 @@ if __name__ == "__main__":
                              xlabel="Hours after Solar Noon",
                              ylabel="Altitude [km]",
                              title="Altitude over Simulation",
-                             save_name="outputs/altitude.png"
+                             save_name=f"outputs/{output_file}/altitude_{run_num}.png"
                              )
                         plot("hour", "air_speed",
                              xlabel="Hours after Solar Noon",
                              ylabel="True Airspeed [m/s]",
                              title="True Airspeed over Simulation",
-                             save_name="outputs/airspeed.png"
+                             save_name=f"outputs/{output_file}/airspeed_{run_num}.png"
                              )
                         plot("hour", "net_power",
                              xlabel="Hours after Solar Noon",
                              ylabel="Net Power [W] (positive is charging)",
                              title="Net Power to Battery over Simulation",
-                             save_name="outputs/net_powerJuly15.png"
+                             save_name=f"outputs/{output_file}/net_power_{run_num}.png"
                              )
                         plot("hour", "battery_charge_state",
                              xlabel="Hours after Solar Noon",
                              ylabel="State of Charge [%]",
                              title="Battery Charge State over Simulation",
-                             save_name="outputs/battery_charge.png"
+                             save_name=f"outputs/{output_file}/battery_charge_{run_num}.png"
                              )
                         plot("hour", "distance",
                              xlabel="hours after Solar Noon",
                              ylabel="Downrange Distance [km]",
                              title="Optimal Trajectory over Simulation",
-                             save_name="outputs/trajectory.png"
+                             save_name=f"outputs/{output_file}/trajectory_{run_num}.png"
                              )
                         plot("x_km", "y_km",
                              xlabel="Downrange Distance in X [km]",
                              ylabel="Downrange Distance in Y [km]",
                              title="Optimal Trajectory over Simulation",
-                             save_name="outputs/trajectory.png"
+                             save_name=f"outputs/{output_file}/trajectory_{run_num}.png"
                              )
                         # plot("hour", "groundspeed",
                         #      xlabel="hours after Solar Noon",
@@ -2721,7 +2739,7 @@ if __name__ == "__main__":
                             # }
                         )
 
-                        plt.savefig("outputs/mass_pie_chart.png")
+                        plt.savefig(f"outputs/{output_file}/mass_pie_chart_{run_num}.png")
                         plt.show() if make_plots else plt.close(fig)
 
                     # Write a geometry spreadsheet
@@ -2739,7 +2757,7 @@ if __name__ == "__main__":
 
                     wing_y_taper_break_loc = s(wing_y_taper_break)
 
-                    with open("outputs/geometry.csv", "w+") as f:
+                    with open(f"outputs/{output_file}/geometry_{run_num}.csv", "w+") as f:
 
                         f.write("Design Variable, Value (all in base SI units or derived units thereof),\n")
                         geometry_vars = [
@@ -2795,9 +2813,8 @@ if __name__ == "__main__":
                         airplane.draw()
 
 
-                    if make_plots == True:
-                        draw()
-                        # pass
+                    # if make_plots == True:
+                    #     draw()
                     opti.set_initial_from_sol(sol)
 
     # plt.plot(wingspan, spatial, linestyle='--', marker='o')
