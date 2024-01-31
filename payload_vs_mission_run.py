@@ -60,13 +60,25 @@ def run_wrapped(input):
 
 
 if __name__ == '__main__':
-    ## name run number
+    run_number = 3
+
+    excel_file = "cache/Wildfire/wildfire_runs_payload.xlsx"
+
+    # read inputs from excel file
+    inputs = read_excel_data(excel_file)
+    input = inputs[run_number]
 
     # adjust model inputs to match excel file
+    opti.set_value(battery_specific_energy_Wh_kg, input[0])
+    opti.set_value(solar_cell_efficiency, input[1])
+    opti.set_value(revisit_rate, input[2])
+    opti.set_value(wing_span, input[3])
+    opti.set_value(payload_power, input[4])
+    opti.set_value(structural_mass_margin_multiplier, input[5])
 
     ### Make a data file
     # file where outputs will be saved
-    filename = f"cache/Wildfire/payload_run.csv"
+    filename = f"cache/Wildfire/payload_run_{run_number}.csv"
     l = 20
     with open(filename, "w+") as f:
         f.write(
