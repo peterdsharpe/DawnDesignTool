@@ -1,14 +1,16 @@
+import sys
+sys.path.append("C:\\Users\\AnnickDewald\\PycharmProjects\\AeroSandbox")
 from aerosandbox.tools.pretty_plots import plt, sns, mpl, show_plot
 import aerosandbox.numpy as np
 from scipy import interpolate
 import pandas as pd
 
 debug_mode = False
-run_num = 0
+run_num = 3
 run_name = "payload_run"
 def plot(run_name, title1, title2, run_number):
     # Do raw imports
-    data = pd.read_csv(f"cache/Wildfire/{run_name}.csv")
+    data = pd.read_csv(f"cache/Wildfire/{run_name}_{run_number}.csv")
     data.columns = data.columns.str.strip()
     days_raw = np.array(data['Days'], dtype=float)
     lats_raw = np.array(data['Latitudes'], dtype=float)
@@ -41,8 +43,8 @@ def plot(run_name, title1, title2, run_number):
             lats_raw[~nan],
         )).T,
         payloads_raw[~nan],
-        smoothing=0.001,
-        kernel="linear",
+        smoothing=0,
+        kernel="cubic",
     )
 
     days_plot = np.linspace(0, 365, 300)
@@ -174,12 +176,9 @@ def plot(run_name, title1, title2, run_number):
     )
     plt.xlabel("Day of Year")
     plt.ylabel("Latitude")
-    plt.savefig(f"cache/Wildfire/plot_payload.png")
-
-    show_plot(
-        xlabel="Time of Year",
-        ylabel="Latitude"
-    )
+    plt.tight_layout()
+    plt.savefig(f"cache/Wildfire/plot_{run_num}.png")
+    plt.show()
     plt.close()
 
 def read_excel_data(excel_file):
@@ -191,7 +190,7 @@ if __name__ == '__main__':
     excel_file = "cache/Wildfire/wildfire_runs_payload.xlsx"
     # Read data from Excel
     inputs = read_excel_data(excel_file)
-    title_1 = inputs[run_num][6]
-    title_2 = inputs[run_num][7]
+    title_1 = inputs[run_num][8]
+    title_2 = inputs[run_num][9]
     plot(run_name, title_1, title_2, run_num)
 
