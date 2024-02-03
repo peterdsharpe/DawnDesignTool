@@ -42,7 +42,7 @@ ops = dict(category="operations")
 ##### optimization assumptions
 minimize = ('wingspan_optimization_scaling_term * wing_span / 29 '
             '+ azimuth_optimization_scaling_term * strain_azimuth_resolution / spatial_adjustment '
-            '- coverage_optimization_scaling_term * coverage_area / 3.63415e+09')
+            '- coverage_optimization_scaling_term * coverage_area / coverage_adjustment')
 make_plots = True
 
 ##### Debug flags
@@ -54,6 +54,7 @@ draw_initial_guess_config = False
 
 # Objective Function Scaling Parameters
 spatial_adjustment = opti.parameter(value=500)
+coverage_adjustment = opti.parameter(value=1e10)
 wingspan_optimization_scaling_term = opti.parameter(value=0) # scale from 0 to 1 to adjust the relative importance of wingspan in the objective function
 azimuth_optimization_scaling_term = opti.parameter(value=0) # scale from 0 to 1 to adjust the relative importance of spatial resolution in the objective function
 coverage_optimization_scaling_term = opti.parameter(value=1) # scale from 0 to 1 to adjust the relative importance of spatial coverage in the objective function
@@ -2309,6 +2310,7 @@ if __name__ == "__main__":
                     else:
                         opti.set_value(track_scaler, 1)
                         opti.set_value(spatial_adjustment, 20)
+                        opti.set_value(coverage_adjustment, 3.63415e+09)
 
                     opti.set_value(wingspan_optimization_scaling_term, float(combinations[run_num][0]))
                     opti.set_value(azimuth_optimization_scaling_term, float(combinations[run_num][1]))
@@ -2321,13 +2323,13 @@ if __name__ == "__main__":
                             }
                         )
                         print("Success!")
-                        converged = 'yes'
+                        converged = True
                         # spatial.append(opti.value(strain_azimuth_resolution))
                         # wingspan.append(opti.value(wing_span))
                         # coverage.append(opti.value(coverage_area))
                     except:
                         sol = opti.debug
-                        converged = 'no'
+                        converged = False
                     # Print a warning if the penalty term is unreasonably high
                     penalty_objective_ratio = np.abs(sol.value(penalty / objective))
                     if penalty_objective_ratio > 0.01:
@@ -2430,49 +2432,46 @@ if __name__ == "__main__":
                     csv_file = f"outputs/{output_file}/outputs_data_run_{run_num}.csv"
 
                     # Write the data to the CSV file
-                    with open(csv_file, 'w', newline='') as csvfile:
-                        fieldnames = ["Property", "Value"]
-                        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                    if converged == True:
+                        with open(csv_file, 'w', newline='') as csvfile:
+                            fieldnames = ["Property", "Value"]
+                            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
-                        # write if the run converged
-                        writer.writerow('Converged: ' + converged)
-                        # Write the header row
-                        writer.writeheader()
+                            # Write the header row
+                            writer.writeheader()
 
-                        # Write the data rows
-                        for k, v in outputs_data.items():
-                            writer.writerow({"Property": k, "Value": v})
-                        for k, v in mass_props.items():
-                            writer.writerow({"Property": k, "Value": fmt(v.mass) + " kg"})
-                        for k, v in {
-                            "payload power": fmtpow(payload_power),
-                            "payload mass": f"{fmt(mass_props['payload'].mass)} kg",
-                            "aperture length": f"{fmt(radar_length)} meters",
-                            "aperture width": f"{fmt(radar_width)} meters",
-                            "SAR range resolution": f"{fmt(range_resolution)} meters",
-                            "SAR azimuth resolution": f"{fmt(azimuth_resolution)} meters",
-                            "SAR revisit period": f"{fmt(revisit_period)} hours",
-                            "pixels in the incoherent averaging window": fmt(N_i),
-                            "precision": f"{fmt(max_precision)} 1 / yr",
-                            "pulse repetition frequency": f"{fmt(pulse_rep_freq)} Hz",
-                            "bandwidth": f"{fmt(bandwidth)} Hz",
-                            "center wavelength": f"{fmt(wavelength)} meters",
-                            "look angle": f"{fmt(look_angle)} degrees",
-                            "swath range": f"{fmt(max_swath_range)} meters",
-                            "swath azimuth": f"{fmt(max_swath_azimuth)} meters",
-                            "SNR": f"{fmt(max_snr)} dB",
-                        }.items():
-                            writer.writerow({"Property": k, "Value": v})
-                        for k, v in {
-                            "max_power_in": fmtpow(power_in_after_panels_max),
-                            "max_power_out": fmtpow(power_out_propulsion_max),
-                            "battery_total_energy": fmtpow(battery_total_energy),
-                        }.items():
-                            writer.writerow({"Property": k, "Value": v})
+                            # Write the data rows
+                            for k, v in outputs_data.items():
+                                writer.writerow({"Property": k, "Value": v})
+                            for k, v in mass_props.items():
+                                writer.writerow({"Property": k, "Value": fmt(v.mass) + " kg"})
+                            for k, v in {
+                                "payload power": fmtpow(payload_power),
+                                "payload mass": f"{fmt(mass_props['payload'].mass)} kg",
+                                "aperture length": f"{fmt(radar_length)} meters",
+                                "aperture width": f"{fmt(radar_width)} meters",
+                                "SAR range resolution": f"{fmt(range_resolution)} meters",
+                                "SAR azimuth resolution": f"{fmt(azimuth_resolution)} meters",
+                                "SAR revisit period": f"{fmt(revisit_period)} hours",
+                                "pixels in the incoherent averaging window": fmt(N_i),
+                                "precision": f"{fmt(max_precision)} 1 / yr",
+                                "pulse repetition frequency": f"{fmt(pulse_rep_freq)} Hz",
+                                "bandwidth": f"{fmt(bandwidth)} Hz",
+                                "center wavelength": f"{fmt(wavelength)} meters",
+                                "look angle": f"{fmt(look_angle)} degrees",
+                                "swath range": f"{fmt(max_swath_range)} meters",
+                                "swath azimuth": f"{fmt(max_swath_azimuth)} meters",
+                                "SNR": f"{fmt(max_snr)} dB",
+                            }.items():
+                                writer.writerow({"Property": k, "Value": v})
+                            for k, v in {
+                                "max_power_in": fmtpow(power_in_after_panels_max),
+                                "max_power_out": fmtpow(power_out_propulsion_max),
+                                "battery_total_energy": fmtpow(battery_total_energy),
+                            }.items():
+                                writer.writerow({"Property": k, "Value": v})
 
-                        writer.writerow()
-
-                    print(f"Data from 'Outputs' section saved to {csv_file}")
+                        print(f"Data from 'Outputs' section saved to {csv_file}")
 
                     def qp(*args: List[str]):
                         """
