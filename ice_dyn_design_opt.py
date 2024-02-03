@@ -40,9 +40,9 @@ des = dict(category="design")
 ops = dict(category="operations")
 
 ##### optimization assumptions
-minimize = ('wingspan_optimization_scaling_term * wing_span / 25 '
-            '+ azimuth_optimization_scaling_term * strain_azimuth_resolution / 500 '
-            '- coverage_optimization_scaling_term * coverage_area / 1e+10')
+minimize = ('wingspan_optimization_scaling_term * wing_span / 29 '
+            '+ azimuth_optimization_scaling_term * strain_azimuth_resolution / spatial_adjustment '
+            '- coverage_optimization_scaling_term * coverage_area / 3.63415e+09')
 make_plots = True
 
 ##### Debug flags
@@ -53,6 +53,7 @@ draw_initial_guess_config = False
 ##### Section: Input Parameters
 
 # Objective Function Scaling Parameters
+spatial_adjustment = opti.parameter(value=500)
 wingspan_optimization_scaling_term = opti.parameter(value=0) # scale from 0 to 1 to adjust the relative importance of wingspan in the objective function
 azimuth_optimization_scaling_term = opti.parameter(value=0) # scale from 0 to 1 to adjust the relative importance of spatial resolution in the objective function
 coverage_optimization_scaling_term = opti.parameter(value=1) # scale from 0 to 1 to adjust the relative importance of spatial coverage in the objective function
@@ -1718,7 +1719,7 @@ if trajectory == 'lawnmower':
     max_imaging_offset = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, category='ops')
     max_swath_range = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, category='ops')
     swath_overlap = opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, category='ops')
-    coverage_length = opti.variable(init_guess=50000, lower_bound=0, scale=1000, category='ops')
+    coverage_length = 0
     # coverage_width = opti.variable(init_guess=10000, scale=1000, lower_bound=0,
     #                                category='des')
     distance = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e5, category='ops')
@@ -1821,6 +1822,7 @@ if trajectory == 'lawnmower':
 
     # define coverage area
     coverage_area = coverage_length * passes_required * single_track_coverage
+    opti.subject_to(required_coverage_area <= coverage_area)
 
     # only sample in straight sections of racetrack
     payload_power_adjusted = np.where(
@@ -2268,36 +2270,49 @@ if draw_initial_guess_config:
         airplane.draw()
 
 if __name__ == "__main__":
+    import csv
     output_file = "ice_dyn_sweeps"
-    runs = np.linspace(0, 16, 17).astype(int)
-    combinations = [
-                [0.33, 0.33, 0.33],
-                [0.33, 0.33, 0.33],
-                [1, 0, 0],
-                [0.75, 0.25, 0],
-                [0.5, 0.5, 0],
-                [0.25, 0.75, 0],
-                [0, 1, 0],
-                [0, 0.75, 0.25],
-                [0, 0.5, 0.5],
-                [0, 0.25, 0.75],
-                [0, 0, 1],
-                [0.25, 0, 0.75],
-                [0.5, 0, 0.5],
-                [0.75, 0, 0.25],
-                [0.5, 0.25, 0.25],
-                [0.25, 0.5, 0.25],
-                [0.25, 0.25, 0.5]]
+    runs =  [i for i in range(0, 61 + 1)]
+    # runs = [0, 1, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62]
+    combinations = []
+    with open('parameter_combinations.csv', newline='\n') as csvfile:
+        # Create a CSV reader object
+        csv_reader = csv.reader(csvfile)
+        # Iterate over each row in the CSV file
+        for row in csv_reader:
+            # Append the row to the list
+            combinations.append(row)
+    combinations = combinations[::-1]
+    # combinations = [
+    #             [0.33, 0.33, 0.33],
+    #             [0.33, 0.33, 0.33],
+    #             [1, 0, 0],
+    #             [0.75, 0.25, 0],
+    #             [0.5, 0.5, 0],
+    #             [0.25, 0.75, 0],
+    #             [0, 1, 0],
+    #             [0, 0.75, 0.25],
+    #             [0, 0.5, 0.5],
+    #             [0, 0.25, 0.75],
+    #             # [0, 0, 1],
+    #             [0.25, 0, 0.75],
+    #             [0.5, 0, 0.5],
+    #             [0.75, 0, 0.25],
+    #             [0.5, 0.25, 0.25],
+    #             [0.25, 0.5, 0.25],
+    #             [0.25, 0.25, 0.5]]
 
     for run_num in runs:
                     if run_num == 0:
                         opti.set_value(track_scaler, 0)
+                        opti.set_value(spatial_adjustment, 500)
                     else:
                         opti.set_value(track_scaler, 1)
+                        opti.set_value(spatial_adjustment, 20)
 
-                    opti.set_value(wingspan_optimization_scaling_term, combinations[run_num][0])
-                    opti.set_value(azimuth_optimization_scaling_term, combinations[run_num][1])
-                    opti.set_value(coverage_optimization_scaling_term, combinations[run_num][2])
+                    opti.set_value(wingspan_optimization_scaling_term, float(combinations[run_num][0]))
+                    opti.set_value(azimuth_optimization_scaling_term, float(combinations[run_num][1]))
+                    opti.set_value(coverage_optimization_scaling_term, float(combinations[run_num][2]))
                     try:
                         sol = opti.solve(
                             max_iter=50000,
@@ -2306,11 +2321,13 @@ if __name__ == "__main__":
                             }
                         )
                         print("Success!")
+                        converged = 'yes'
                         # spatial.append(opti.value(strain_azimuth_resolution))
                         # wingspan.append(opti.value(wing_span))
                         # coverage.append(opti.value(coverage_area))
                     except:
                         sol = opti.debug
+                        converged = 'no'
                     # Print a warning if the penalty term is unreasonably high
                     penalty_objective_ratio = np.abs(sol.value(penalty / objective))
                     if penalty_objective_ratio > 0.01:
@@ -2410,13 +2427,15 @@ if __name__ == "__main__":
                             print(f"{k.rjust(25)} = {fmt(v.mass)} kg")
 
                     # Define a filename for the CSV file with the temporal resolution in the name
-                    csv_file = f"outputs/outputs_data_run_{run_num}.csv"
+                    csv_file = f"outputs/{output_file}/outputs_data_run_{run_num}.csv"
 
                     # Write the data to the CSV file
                     with open(csv_file, 'w', newline='') as csvfile:
                         fieldnames = ["Property", "Value"]
                         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
+                        # write if the run converged
+                        writer.writerow('Converged: ' + converged)
                         # Write the header row
                         writer.writeheader()
 
@@ -2450,6 +2469,8 @@ if __name__ == "__main__":
                             "battery_total_energy": fmtpow(battery_total_energy),
                         }.items():
                             writer.writerow({"Property": k, "Value": v})
+
+                        writer.writerow()
 
                     print(f"Data from 'Outputs' section saved to {csv_file}")
 
