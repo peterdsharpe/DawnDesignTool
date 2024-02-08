@@ -5,15 +5,19 @@ import aerosandbox.numpy as np
 from scipy import interpolate
 import pandas as pd
 
-debug_mode = False
-run_num = 3
-run_name = "payload_run"
+debug_mode = True
+run_num = 1
+run_name = f"payload_run_{run_num}"
 def plot(run_name, title1, title2, run_number):
     # Do raw imports
-    data = pd.read_csv(f"cache/Wildfire/{run_name}_{run_number}.csv")
+    data = pd.read_csv(f"cache/Wildfire/{run_name}.csv")
     data.columns = data.columns.str.strip()
     days_raw = np.array(data['Days'], dtype=float)
     lats_raw = np.array(data['Latitudes'], dtype=float)
+    if run_num == 3: # This is a hack to fix rbf interpolator when there are nan values in clearly not converged area
+        data.loc[data['Payloads'] == 'nan                 ', 'Payloads'] = np.nan
+        data.loc[(data['Payloads'].isnull()) & (data['Latitudes'] > -15) & (data['Latitudes'] < 15), 'Payloads'] = -1000
+
     payloads_raw = np.array(data['Payloads'], dtype=float)
 
     # Add dummy points
@@ -37,15 +41,26 @@ def plot(run_name, title1, title2, run_number):
     # spans_raw[spans_raw > infeasible_value] = infeasible_value
     # nan = np.isnan(spans_raw)
 
-    rbf = interpolate.RBFInterpolator(
-        np.vstack((
-            days_raw[~nan],
-            lats_raw[~nan],
-        )).T,
-        payloads_raw[~nan],
-        smoothing=0,
-        kernel="cubic",
-    )
+    if run_num == 3:
+        rbf = interpolate.RBFInterpolator(
+            np.vstack((
+                days_raw[~nan],
+                lats_raw[~nan],
+            )).T,
+            payloads_raw[~nan],
+            smoothing=1,
+            kernel="linear",
+        )
+    else:
+        rbf = interpolate.RBFInterpolator(
+            np.vstack((
+                days_raw[~nan],
+                lats_raw[~nan],
+            )).T,
+            payloads_raw[~nan],
+            smoothing=5,
+            kernel="cubic",
+        )
 
     days_plot = np.linspace(0, 365, 300)
     lats_plot = np.linspace(-80, 80, 200)
