@@ -1,5 +1,6 @@
 import sys
 sys.path.append("C:\\Users\\AnnickDewald\\PycharmProjects\\AeroSandbox")
+# sys.path.append("/home/gridsan/adewald/aerosandbox")
 import aerosandbox as asb
 import aerosandbox.library.aerodynamics as aero_lib
 from aerosandbox.atmosphere import Atmosphere as atmo
