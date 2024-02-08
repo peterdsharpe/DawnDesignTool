@@ -75,8 +75,8 @@ hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we
 
 # Trajectory Parameters
 min_speed = 0.5 # specify a minimum groundspeed (bad convergence if less than 0.5 m/s)
-wind_direction = 45 # degrees, the direction the wind is blowing from 0 being North and aligned with the x-axis
-run_with_95th_percentile_wind_condition = False # do we want to run the sizing with the 95th percentile wind condition?
+wind_direction = 135 # degrees, the direction the wind is blowing from 0 being North and aligned with the x-axis
+run_with_95th_percentile_wind_condition = True # do we want to run the sizing with the 95th percentile wind condition?
 
 # todo finalize trajectory parameterization
 # trajectory = 'straight'   # do we want to assume a straight line trajectory?
@@ -1148,8 +1148,7 @@ if trajectory == 'straight':
 
 if trajectory == 'circular':
     guess_altitude = 18000
-    guess_speed = 30
-    ground_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10, category='ops')
+    ground_speed = opti.variable(init_guess=3, n_vars=n_timesteps, lower_bound=min_speed, scale=10, category='ops')
     start_angle = opti.variable(init_guess=-12, scale=1, category='ops')
     distance = opti.variable(init_guess=np.linspace(0, 1406264, n_timesteps), scale=1e5, category='ops')
     opti.constrain_derivative(
@@ -1174,6 +1173,8 @@ if trajectory == 'circular':
     vehicle_bearing = np.arctan2d(ground_speed_y, ground_speed_x)
     u_e = ground_speed_x + wind_speed_x
     v_e = ground_speed_y + wind_speed_y
+    vehicle_heading = np.arctan2d(v_e, u_e)
+    # air_speed = u_e / np.cosd(vehicle_heading)
     air_speed = (u_e ** 2 + v_e ** 2) ** 0.5
     w_e = opti.variable(
         init_guess=0,
@@ -1196,7 +1197,6 @@ if trajectory == 'circular':
         altitude / min_cruise_altitude > 1,
         distance[time_periodic_start_index] == 0,
         distance[time_periodic_end_index] / circular_trajectory_length > revisit_rate,
-        air_speed == ground_speed - wind_speed,
     ])
 
 if trajectory == 'lawnmower':
@@ -1707,7 +1707,7 @@ if not use_propulsion_fits_from_FL2020_1682_undergrads:
     power_out_propulsion_shaft = lib_prop_prop.propeller_shaft_power_from_thrust(
         thrust_force=thrust,
         area_propulsive=area_propulsive,
-        airspeed=ground_speed,
+        airspeed=air_speed,
         rho=rho,
         propeller_coefficient_of_performance=0.90  # calibrated to QProp output with Dongjoon
     )
@@ -2081,7 +2081,7 @@ if __name__ == "__main__":
                         sol = opti.solve(
                             max_iter=10000,
                             options={
-                                "ipopt.max_cpu_time": 600
+                                "ipopt.max_cpu_time": 6000
                             }
                         )
                         print("Success!")
@@ -2370,12 +2370,12 @@ if __name__ == "__main__":
                              title="Optimal Trajectory over Simulation",
                              save_name="outputs/trajectory.png"
                              )
-                        # plot("hour", "groundspeed",
-                        #      xlabel="hours after Solar Noon",
-                        #      ylabel="Groundspeed [m/s]",
-                        #      title="Groundspeed over Simulation",
-                        #      save_name="outputs/trajectory.png"
-                        #      )
+                        plot("hour", "ground_speed",
+                             xlabel="hours after Solar Noon",
+                             ylabel="Groundspeed [m/s]",
+                             title="Groundspeed over Simulation",
+                             save_name="outputs/trajectory.png"
+                             )
 
                         # Draw mass breakdown
                         fig = plt.figure(figsize=(10, 8), dpi=plot_dpi)
