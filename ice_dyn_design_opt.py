@@ -85,7 +85,7 @@ hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we
 # Trajectory Parameters
 min_speed = 0.5 # specify a minimum groundspeed (bad convergence if less than 0.5 m/s)
 wind_direction = 45 # degrees, the direction the wind is blowing from 0 being North and aligned with the x-axis
-run_with_95th_percentile_wind_condition = False # do we want to run the sizing with the 95th percentile wind condition?
+run_with_95th_percentile_wind_condition = True # do we want to run the sizing with the 95th percentile wind condition?
 required_strain_temporal_resolution = opti.parameter(value=6) # hours
 
 # todo finalize trajectory parameterization
@@ -1660,7 +1660,8 @@ if trajectory == "racetrack":
     wind_speed_y = np.sind(wind_direction) * wind_speed
     ground_speed_x = u_e - wind_speed_x
     ground_speed_y = v_e - wind_speed_y
-    ground_speed = (ground_speed_x ** 2 + ground_speed_y ** 2) ** 0.5
+    vehicle_bearing = np.arctan2d(ground_speed_y, ground_speed_x)
+    ground_speed =  ground_speed_x / np.cosd(vehicle_heading)
     opti.constrain_derivative(variable=distance, with_respect_to=time, derivative=ground_speed)
 
     # constrain ground speed to be greater than minimum speed
@@ -2257,9 +2258,9 @@ if draw_initial_guess_config:
 
 if __name__ == "__main__":
     import csv
-    output_file = "ice_dyn_sweeps"
+    output_file = "wind_sweeps"
     runs =  [i for i in range(0, 61 + 1)]
-    # runs = [0, 1, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62]
+    runs = [0, 1, 2, 51, 61]
     combinations = []
     with open('parameter_combinations.csv', newline='\n') as csvfile:
         # Create a CSV reader object
