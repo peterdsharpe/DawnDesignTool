@@ -1713,7 +1713,7 @@ if trajectory == 'lawnmower':
     max_imaging_offset = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, category='ops')
     max_swath_range = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, category='ops')
     swath_overlap = opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, category='ops')
-    coverage_length = 0
+    coverage_length = opti.variable(init_guess=50000, lower_bound=10000, scale=1000, category='ops')
     # coverage_width = opti.variable(init_guess=10000, scale=1000, lower_bound=0,
     #                                category='des')
     distance = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e5, category='ops')
@@ -1752,10 +1752,10 @@ if trajectory == 'lawnmower':
     full_coverage_length = track_trajectory_length * passes_required - turn_radius_2 * np.pi + turn_radius_3 * np.pi
     total_area_distance = np.mod(distance, full_coverage_length)
 
-    track = np.where(
-        total_area_distance > full_coverage_length - (np.pi * turn_radius_3),
-        start_angle + np.pi + (single_track_distance - coverage_length * 2 - turn_radius_1 * np.pi) / turn_radius_3,
-        track)
+    # track = np.where(
+    #     total_area_distance > full_coverage_length - (np.pi * turn_radius_3),
+    #     start_angle + np.pi + (single_track_distance - coverage_length * 2 - turn_radius_1 * np.pi) / turn_radius_3,
+    #     track)
 
     # track scaler multiple allows for easy initial optimizer run to warm start racetrack case
     track = track * track_scaler
@@ -1816,7 +1816,6 @@ if trajectory == 'lawnmower':
 
     # define coverage area
     coverage_area = coverage_length * passes_required * single_track_coverage
-    opti.subject_to(required_coverage_area <= coverage_area)
 
     # only sample in straight sections of racetrack with smoothing correction from Peter
     payload_power_adjusted = payload_power * np.cos(track - start_angle) ** 2
