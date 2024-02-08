@@ -2731,11 +2731,9 @@ if __name__ == "__main__":
                                 # }
                             )
                             plt.annotate(
-                                text="""
-                                                    Total mass: %.1f kg
-                                                    Wing span: %.2f m
-                                                    """ % (s(mass_total), s(wing.span())),
-                                xy=(0.03, 0.70),
+                                text="""Total mass: %.1f kg \n Wing span: %.2f m
+                                        """ % (s(mass_total), s(wing.span())),
+                                xy=(0.02, 0.7),
                                 # xytext=(0.03, 0.03),
                                 xycoords="figure fraction",
                                 # arrowprops={
