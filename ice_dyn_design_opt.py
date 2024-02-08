@@ -2609,144 +2609,145 @@ if __name__ == "__main__":
                         #      save_name="outputs/trajectory.png"
                         #      )
 
-                        # Draw mass breakdown
-                        fig = plt.figure(figsize=(10, 8), dpi=plot_dpi)
-                        plt.suptitle("Mass Budget")
+                        if converged == True:
+                            # Draw mass breakdown
+                            fig = plt.figure(figsize=(10, 8), dpi=plot_dpi)
+                            plt.suptitle("Mass Budget")
 
-                        ax_main = fig.add_axes([0.2, 0.3, 0.6, 0.6], aspect=1)
-                        pie_labels = [
-                            "Payload",
-                            "Structural",
-                            "Propulsion",
-                            "Power Systems",
-                            "Avionics"
-                        ]
-                        pie_values = [
-                            s(mass_props['payload'].mass),
-                            s(mass_structural.mass),
-                            s(mass_propulsion.mass),
-                            s(mass_power_systems.mass),
-                            s(mass_props['avionics'].mass),
-                        ]
-                        colors = plt.cm.Set2(np.arange(5))
-                        pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (x * s(mass_total) / 100, x)
-                        ax_main.pie(
-                            pie_values,
-                            labels=pie_labels,
-                            autopct=pie_format,
-                            pctdistance=0.7,
-                            colors=colors,
-                            startangle=120
-                        )
-                        plt.title("Overall Mass")
-
-                        ax_structural = fig.add_axes([0.05, 0.05, 0.3, 0.3], aspect=1)
-                        pie_labels = [
-                            "Wing Spar",
-                            "Wing Secondary Structure",
-                            "Stabilizers",
-                            "Booms",
-                            "Payload Pod"]
-                        pie_values = [
-                            s(mass_props['wing_primary'].mass),
-                            s(mass_props['wing_secondary'].mass),
-                            s(
-                                mass_props['center_hstab'].mass +
-                                mass_props['right_hstab'].mass +
-                                mass_props['left_hstab'].mass +
-                                mass_props['vstab'].mass
-                            ),
-                            s(
-                                mass_props['center_boom'].mass +
-                                mass_props['right_boom'].mass +
-                                mass_props['left_boom'].mass
-                            ),
-                            s(
-                                mass_props['payload_pod'].mass
+                            ax_main = fig.add_axes([0.2, 0.3, 0.6, 0.6], aspect=1)
+                            pie_labels = [
+                                "Payload",
+                                "Structural",
+                                "Propulsion",
+                                "Power Systems",
+                                "Avionics"
+                            ]
+                            pie_values = [
+                                s(mass_props['payload'].mass),
+                                s(mass_structural.mass),
+                                s(mass_propulsion.mass),
+                                s(mass_power_systems.mass),
+                                s(mass_props['avionics'].mass),
+                            ]
+                            colors = plt.cm.Set2(np.arange(5))
+                            pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (x * s(mass_total) / 100, x)
+                            ax_main.pie(
+                                pie_values,
+                                labels=pie_labels,
+                                autopct=pie_format,
+                                pctdistance=0.7,
+                                colors=colors,
+                                startangle=120
                             )
-                        ]
-                        colors = plt.cm.Set2(np.arange(5))
-                        colors = np.clip(
-                            colors[1, :3] + np.expand_dims(
-                                np.linspace(-0.1, 0.2, len(pie_labels)),
-                                1),
-                            0, 1
-                        )
-                        pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (
-                            x * s(mass_structural.mass) / 100, x * s(mass_structural.mass / mass_total))
-                        ax_structural.pie(
-                            pie_values,
-                            labels=pie_labels,
-                            autopct=pie_format,
-                            pctdistance=0.7,
-                            colors=colors,
-                            startangle=60,
-                        )
-                        plt.title("Structural Mass*")
+                            plt.title("Overall Mass")
 
-                        ax_power_systems = fig.add_axes([0.65, 0.05, 0.3, 0.3], aspect=1)
-                        pie_labels = [
-                            "Batt. Pack (Cells)",
-                            "Batt. Pack (Non-cell)",
-                            "Solar Cells",
-                            "Misc. & Wires"
-                        ]
-                        pie_values = [
-                            s(battery_cell_mass),
-                            s(mass_props['battery_pack'].mass - battery_cell_mass),
-                            s(mass_props['solar_panel_wing'].mass + mass_props['solar_panel_vstab'].mass),
-                            s(mass_power_systems.mass - mass_props['battery_pack'].mass - mass_props['solar_panel_vstab'].mass -
-                              mass_props['solar_panel_wing'].mass)
-                        ]
-                        colors = plt.cm.Set2(np.arange(5))
-                        colors = np.clip(
-                            colors[3, :3] + np.expand_dims(
-                                np.linspace(-0.1, 0.2, len(pie_labels)),
-                                1),
-                            0, 1
-                        )[::-1]
-                        pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (
-                            x * s(mass_power_systems.mass) / 100, x * s(mass_power_systems.mass / mass_total))
-                        ax_power_systems.pie(
-                            pie_values,
-                            labels=pie_labels,
-                            autopct=pie_format,
-                            pctdistance=0.7,
-                            colors=colors,
-                            startangle=15,
-                        )
-                        plt.title("Power Systems Mass*")
+                            ax_structural = fig.add_axes([0.05, 0.05, 0.3, 0.3], aspect=1)
+                            pie_labels = [
+                                "Wing Spar",
+                                "Wing Secondary Structure",
+                                "Stabilizers",
+                                "Booms",
+                                "Payload Pod"]
+                            pie_values = [
+                                s(mass_props['wing_primary'].mass),
+                                s(mass_props['wing_secondary'].mass),
+                                s(
+                                    mass_props['center_hstab'].mass +
+                                    mass_props['right_hstab'].mass +
+                                    mass_props['left_hstab'].mass +
+                                    mass_props['vstab'].mass
+                                ),
+                                s(
+                                    mass_props['center_boom'].mass +
+                                    mass_props['right_boom'].mass +
+                                    mass_props['left_boom'].mass
+                                ),
+                                s(
+                                    mass_props['payload_pod'].mass
+                                )
+                            ]
+                            colors = plt.cm.Set2(np.arange(5))
+                            colors = np.clip(
+                                colors[1, :3] + np.expand_dims(
+                                    np.linspace(-0.1, 0.2, len(pie_labels)),
+                                    1),
+                                0, 1
+                            )
+                            pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (
+                                x * s(mass_structural.mass) / 100, x * s(mass_structural.mass / mass_total))
+                            ax_structural.pie(
+                                pie_values,
+                                labels=pie_labels,
+                                autopct=pie_format,
+                                pctdistance=0.7,
+                                colors=colors,
+                                startangle=60,
+                            )
+                            plt.title("Structural Mass*")
 
-                        plt.annotate(
-                            text="* percentages referenced to total aircraft mass",
-                            xy=(0.01, 0.01),
-                            # xytext=(0.03, 0.03),
-                            xycoords="figure fraction",
-                            # arrowprops={
-                            #     "color"     : "k",
-                            #     "width"     : 0.25,
-                            #     "headwidth" : 4,
-                            #     "headlength": 6,
-                            # }
-                        )
-                        plt.annotate(
-                            text="""
-                                                Total mass: %.1f kg
-                                                Wing span: %.2f m
-                                                """ % (s(mass_total), s(wing.span())),
-                            xy=(0.03, 0.70),
-                            # xytext=(0.03, 0.03),
-                            xycoords="figure fraction",
-                            # arrowprops={
-                            #     "color"     : "k",
-                            #     "width"     : 0.25,
-                            #     "headwidth" : 4,
-                            #     "headlength": 6,
-                            # }
-                        )
+                            ax_power_systems = fig.add_axes([0.65, 0.05, 0.3, 0.3], aspect=1)
+                            pie_labels = [
+                                "Batt. Pack (Cells)",
+                                "Batt. Pack (Non-cell)",
+                                "Solar Cells",
+                                "Misc. & Wires"
+                            ]
+                            pie_values = [
+                                s(battery_cell_mass),
+                                s(mass_props['battery_pack'].mass - battery_cell_mass),
+                                s(mass_props['solar_panel_wing'].mass + mass_props['solar_panel_vstab'].mass),
+                                s(mass_power_systems.mass - mass_props['battery_pack'].mass - mass_props['solar_panel_vstab'].mass -
+                                  mass_props['solar_panel_wing'].mass)
+                            ]
+                            colors = plt.cm.Set2(np.arange(5))
+                            colors = np.clip(
+                                colors[3, :3] + np.expand_dims(
+                                    np.linspace(-0.1, 0.2, len(pie_labels)),
+                                    1),
+                                0, 1
+                            )[::-1]
+                            pie_format = lambda x: "%.1f kg\n(%.1f%%)" % (
+                                x * s(mass_power_systems.mass) / 100, x * s(mass_power_systems.mass / mass_total))
+                            ax_power_systems.pie(
+                                pie_values,
+                                labels=pie_labels,
+                                autopct=pie_format,
+                                pctdistance=0.7,
+                                colors=colors,
+                                startangle=15,
+                            )
+                            plt.title("Power Systems Mass*")
 
-                        plt.savefig(f"outputs/{output_file}/mass_pie_chart_{run_num}.png")
-                        plt.show() if make_plots else plt.close(fig)
+                            plt.annotate(
+                                text="* percentages referenced to total aircraft mass",
+                                xy=(0.01, 0.01),
+                                # xytext=(0.03, 0.03),
+                                xycoords="figure fraction",
+                                # arrowprops={
+                                #     "color"     : "k",
+                                #     "width"     : 0.25,
+                                #     "headwidth" : 4,
+                                #     "headlength": 6,
+                                # }
+                            )
+                            plt.annotate(
+                                text="""
+                                                    Total mass: %.1f kg
+                                                    Wing span: %.2f m
+                                                    """ % (s(mass_total), s(wing.span())),
+                                xy=(0.03, 0.70),
+                                # xytext=(0.03, 0.03),
+                                xycoords="figure fraction",
+                                # arrowprops={
+                                #     "color"     : "k",
+                                #     "width"     : 0.25,
+                                #     "headwidth" : 4,
+                                #     "headlength": 6,
+                                # }
+                            )
+
+                            plt.savefig(f"outputs/{output_file}/mass_pie_chart_{run_num}.png")
+                            plt.show() if make_plots else plt.close(fig)
 
                     # Write a geometry spreadsheet
                     wing_area = s(wing.area())
