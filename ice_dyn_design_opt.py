@@ -1704,16 +1704,9 @@ if trajectory == "racetrack":
     # define coverage area
     coverage_area = coverage_length * (2 * max_swath_range - (max_swath_range * swath_overlap))
 
-    # only sample in straight sections of racetrack
-    payload_power_adjusted = np.where(
-        track == start_angle + 0,
-        payload_power,
-        0)
-    payload_power_adjusted = np.where(
-        track == start_angle + np.pi,
-        payload_power,
-        payload_power_adjusted
-    )
+    # only sample in straight sections of racetrack with smoothing correction from Peter
+    payload_power_adjusted = payload_power * np.cos(track - start_angle) ** 2
+
 if trajectory == 'lawnmower':
     # initialize variables
     track_scaler = opti.parameter(value=0)
@@ -1825,16 +1818,8 @@ if trajectory == 'lawnmower':
     coverage_area = coverage_length * passes_required * single_track_coverage
     opti.subject_to(required_coverage_area <= coverage_area)
 
-    # only sample in straight sections of racetrack
-    payload_power_adjusted = np.where(
-        track == start_angle + 0,
-        payload_power,
-        0)
-    payload_power_adjusted = np.where(
-        track == start_angle + np.pi,
-        payload_power,
-        payload_power_adjusted
-    )
+    # only sample in straight sections of racetrack with smoothing correction from Peter
+    payload_power_adjusted = payload_power * np.cos(track - start_angle) ** 2
 
 # calculate snr from equation in Ulaby and Long
 snr = payload_power * antenna_gain ** 2 * wavelength ** 3 * a_hs * sigma0 * range_resolution / \
