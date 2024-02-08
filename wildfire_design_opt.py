@@ -71,7 +71,7 @@ day_of_year = opti.parameter(value=200)  # Julian day, the day of the year the s
 strat_offset_value = 1000  # meters, margin above the stratosphere height the aircraft is required to stay above
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 climb_opt = False  # are we optimizing for the climb as well?
-hold_cruise_altitude = False  # must we hold the cruise altitude (True) or can we altitude cycle (False)?
+hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we altitude cycle (False)?
 
 # Trajectory Parameters
 min_speed = 0.5 # specify a minimum groundspeed (bad convergence if less than 0.5 m/s)
@@ -1162,7 +1162,7 @@ if trajectory == 'circular':
     track = angle_radians + np.pi / 2
     x_e = flight_path_radius * np.cos(angle_radians)
     y_e = flight_path_radius * np.sin(angle_radians)
-    z_e = opti.variable(init_guess=-guess_altitude, scale=1e4, category='ops', upper_bound=0, lower_bound=-40000)
+    z_e = opti.variable(init_guess=-guess_altitude, n_vars=n_timesteps, scale=1e4, category='ops', upper_bound=0, lower_bound=-40000)
     altitude = -z_e
     wind_speed = wind_speed_func(altitude)
     if run_with_95th_percentile_wind_condition == False:
@@ -1182,7 +1182,7 @@ if trajectory == 'circular':
         category='ops',
     )
     opti.constrain_derivative(
-        variable=z_e * np.ones(n_timesteps), with_respect_to=time,
+        variable=z_e, with_respect_to=time,
         derivative=w_e
     )
     gamma = np.arctan2(-w_e, air_speed)
