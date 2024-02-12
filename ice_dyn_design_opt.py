@@ -87,7 +87,7 @@ hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we
 # Trajectory Parameters
 min_speed = 0.5 # specify a minimum groundspeed (bad convergence if less than 0.5 m/s)
 wind_direction = 45 # degrees, the direction the wind is blowing from 0 being North and aligned with the x-axis
-run_with_95th_percentile_wind_condition = True # do we want to run the sizing with the 95th percentile wind condition?
+run_with_95th_percentile_wind_condition = False # do we want to run the sizing with the 95th percentile wind condition?
 required_strain_temporal_resolution = opti.parameter(value=6) # hours
 
 # todo finalize trajectory parameterization
@@ -1662,8 +1662,7 @@ if trajectory == "racetrack":
     wind_speed_y = np.sind(wind_direction) * wind_speed
     ground_speed_x = u_e - wind_speed_x
     ground_speed_y = v_e - wind_speed_y
-    vehicle_bearing = np.arctan2d(ground_speed_y, ground_speed_x)
-    ground_speed =  ground_speed_x / np.cosd(vehicle_heading)
+    ground_speed = (ground_speed_x ** 2 + ground_speed_y ** 2) ** 0.5
     opti.constrain_derivative(variable=distance, with_respect_to=time, derivative=ground_speed)
 
     # constrain ground speed to be greater than minimum speed
