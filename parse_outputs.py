@@ -3,8 +3,8 @@ import re
 
 output_file = "sweeps_new_weighting3"
 annotation = "airspeed"
-sizing = ('swath_range')
-runs = [i for i in range(1, 160 + 1)]
+sizing = ('look_angle')
+runs = [i for i in range(1, 170 + 1)]
 
 # pull the data from the csv output files
 wingspans = []
@@ -106,7 +106,7 @@ plt.scatter(spatial_resolutions, coverage_areas, c=wingspans, cmap=cmap, norm=no
 
 if sizing == 'cruise_altitude':
     # Define size of dots based on cruise altitude values
-    sizes = (np.array(cruise_altitudes) - 10) * 30
+    sizes = (np.array(cruise_altitudes) - 11.5) * 10
 
     # Create scatter plot
     plt.scatter(spatial_resolutions, coverage_areas, c=wingspans, cmap=cmap, norm=norm,
@@ -114,13 +114,13 @@ if sizing == 'cruise_altitude':
     plt.title('Pareto Front Results: cruise altitude demonstrated by dot size')
 if sizing == "airspeed":
     # define size of dots based of airspeed values
-    sizes = (np.array(airspeeds) - 14) * 50
+    sizes = (np.array(airspeeds) - 14) * 20
     plt.scatter(spatial_resolutions, coverage_areas, c=wingspans, cmap=cmap, norm=norm,
                 s=sizes)
     plt.title('Pareto Front Results: airspeed demonstrated by dot size')
 if sizing == "payload_power":
     # Define size of dots based on payload power values
-    sizes = np.array(payload_powers)
+    sizes = np.array(payload_powers) * 0.2
 
     # Create scatter plot
     plt.scatter(spatial_resolutions, coverage_areas, c=wingspans, cmap=cmap, norm=norm,
@@ -129,7 +129,7 @@ if sizing == "payload_power":
 
 if sizing == "snr":
     # Define size of dots based on payload power values
-    sizes = (np.array(SNRs) - 9.5) * 30
+    sizes = (np.array(SNRs) - 9.5) * 5
 
     # Create scatter plot
     plt.scatter(spatial_resolutions, coverage_areas, c=wingspans, cmap=cmap, norm=norm,
@@ -138,7 +138,7 @@ if sizing == "snr":
 
 if sizing == 'SAR_range_resolution':
     # Define size of dots based on SAR range resolution values
-    sizes = (np.array(SAR_range_resolutions) - 0.1) * 500
+    sizes = (np.array(SAR_range_resolutions) - 0.1) * 100
 
     # Create scatter plot
     plt.scatter(spatial_resolutions, coverage_areas, c=wingspans, cmap=cmap, norm=norm,
@@ -147,7 +147,7 @@ if sizing == 'SAR_range_resolution':
 
 if sizing == 'SAR_azimuth_resolution':
     # Define size of dots based on SAR azimuth resolution values
-    sizes = (np.array(SAR_azimuth_resolutions) - 0.1) * 500
+    sizes = (np.array(SAR_azimuth_resolutions) - 0.1) * 100
 
     # Create scatter plot
     plt.scatter(spatial_resolutions, coverage_areas, c=wingspans, cmap=cmap, norm=norm,
@@ -161,7 +161,14 @@ if sizing == 'swath_range':
     plt.scatter(spatial_resolutions, coverage_areas, c=wingspans, cmap=cmap, norm=norm,
                 s=sizes)
     plt.title('Pareto Front Results: Swath Range demonstrated by dot size')
+if sizing == 'look_angle':
+    # Define size of dots based on SAR azimuth resolution values
+    sizes = (np.array(look_angles) - 25) * 10
 
+    # Create scatter plot
+    plt.scatter(spatial_resolutions, coverage_areas, c=wingspans, cmap=cmap, norm=norm,
+                s=sizes)
+    plt.title('Pareto Front Results: Look Angle demonstrated by dot size')
 # Set labels and title
 plt.xlabel('Spatial Resolution [m]')
 plt.ylabel('Coverage Area [km^2]')
@@ -173,37 +180,37 @@ cbar.set_label('Wingspan [m]')
 if sizing == "payload_power":
     sizes_legend = [100, 300, 500]  # Sample payload power values for legend
     for size in sizes_legend:
-        plt.scatter([], [], s=size, label=str(size) + ' kW')
+        plt.scatter([], [], s=size * 0.2, label=str(size) + ' kW')
 
     plt.legend(title='Payload Power', labelspacing=1, loc='upper left')
 if sizing == 'cruise_altitude':
-    sizes_legend = [11, 13, 15]  # Sample cruise altitude values for legend
+    sizes_legend = [11.6, 13]  # Sample cruise altitude values for legend
     for size in sizes_legend:
-        plt.scatter([], [], s=30*(size -10), label=str(size) + ' km')
+        plt.scatter([], [], s=30*(size -11.5), label=str(size) + ' km')
 
     plt.legend(title='Cruise Altitude', labelspacing=1, loc='upper left')
 if sizing == "airspeed":
-    sizes_legend = [15, 16, 17]  # Sample airspeed values for legend
+    sizes_legend = [16, 19, 22]  # Sample airspeed values for legend
     for size in sizes_legend:
-        plt.scatter([], [], s=50*(size - 14), label=str(size) + ' m/s')
+        plt.scatter([], [], s=20*(size - 14), label=str(size) + ' m/s')
 
     plt.legend(title='Airspeed', labelspacing=1, loc='upper left')
 if sizing == "snr":
-    sizes_legend = [20, 30]  # Sample snr values for legend
+    sizes_legend = [15, 30]  # Sample snr values for legend
     for size in sizes_legend:
-        plt.scatter([], [], s=30*(size - 9.5), label=str(size))
+        plt.scatter([], [], s=5*(size - 9.5), label=str(size))
 
     plt.legend(title='SNR', labelspacing=1, loc='upper left')
 if sizing == 'SAR_range_resolution':
     sizes_legend = [ 0.4, 0.8]  # Sample SAR range resolution values for legend
     for size in sizes_legend:
-        plt.scatter([], [], s=500*(size - 0.1), label=str(size) + ' m')
+        plt.scatter([], [], s=100*(size - 0.1), label=str(size) + ' m')
 
     plt.legend(title='SAR Range Resolution', labelspacing=1, loc='upper left')
 if sizing == 'SAR_azimuth_resolution':
     sizes_legend = [0.2, 0.3, 0.4]  # Sample SAR azimuth resolution values for legend
     for size in sizes_legend:
-        plt.scatter([], [], s=500*(size - 0.1), label=str(size) + ' m')
+        plt.scatter([], [], s=100*(size - 0.1), label=str(size) + ' m')
 
     plt.legend(title='SAR Azimuth Resolution', labelspacing=1, loc='upper left')
 if sizing == 'swath_range':
@@ -212,6 +219,12 @@ if sizing == 'swath_range':
         plt.scatter([], [], s=(size - 40), label=str(size) + ' km')
 
     plt.legend(title='Swath Range', labelspacing=1, loc='upper left')
+if sizing == 'look_angle':
+    sizes_legend = [30, 40]  # Sample look angle values for legend
+    for size in sizes_legend:
+        plt.scatter([], [], s=10*(size - 25), label=str(size) + ' degrees')
+
+    plt.legend(title='Look Angle', labelspacing=1, loc='upper left')
 # Show plot
 plt.grid(True)
 plt.show()
