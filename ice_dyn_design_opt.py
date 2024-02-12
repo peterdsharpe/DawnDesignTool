@@ -2382,6 +2382,9 @@ if __name__ == "__main__":
                             "swath range": f"{fmt(max_swath_range)} meters",
                             "swath azimuth": f"{fmt(max_swath_azimuth)} meters",
                             "SNR": f"{fmt(max_snr)} dB",
+                            "swath overlap": f"{fmt(swath_overlap)}",
+                            "coverage length": f"{fmt(coverage_length)} meters",
+                            "coverage width": f"{fmt(2 * max_swath_range - (max_swath_range * swath_overlap))} meters",
                         }.items():
                             print(f"{k.rjust(25)} = {v}")
 
@@ -2431,6 +2434,9 @@ if __name__ == "__main__":
                                 "swath range": f"{fmt(max_swath_range)} meters",
                                 "swath azimuth": f"{fmt(max_swath_azimuth)} meters",
                                 "SNR": f"{fmt(max_snr)} dB",
+                                "swath overlap": f"{fmt(swath_overlap)}",
+                                "coverage length": f"{fmt(coverage_length)} meters",
+                                "coverage width": f"{fmt(2 * max_swath_range - (max_swath_range * swath_overlap))} meters",
                             }.items():
                                 writer.writerow({"Property": k, "Value": v})
                             for k, v in {
