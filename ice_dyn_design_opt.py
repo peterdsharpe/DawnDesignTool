@@ -2260,11 +2260,11 @@ if draw_initial_guess_config:
 
 if __name__ == "__main__":
     import csv
-    output_file = "wind_sweeps"
-    runs =  [i for i in range(0, 61 + 1)]
-    runs = [0, 1, 2, 51, 61]
+    output_file = "sweeps_new_weighting3"
+    runs =  [i for i in range(0, 168 + 1)]
+    runs = [0, 144, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168]
     combinations = []
-    with open('parameter_combinations.csv', newline='\n') as csvfile:
+    with open(f'outputs/{output_file}/0_parameter_combinations.csv', newline='\n') as csvfile:
         # Create a CSV reader object
         csv_reader = csv.reader(csvfile)
         # Iterate over each row in the CSV file
@@ -2272,25 +2272,6 @@ if __name__ == "__main__":
             # Append the row to the list
             combinations.append(row)
     combinations = combinations[::-1]
-    # combinations = [
-    #             [0.33, 0.33, 0.33],
-    #             [0.33, 0.33, 0.33],
-    #             [1, 0, 0],
-    #             [0.75, 0.25, 0],
-    #             [0.5, 0.5, 0],
-    #             [0.25, 0.75, 0],
-    #             [0, 1, 0],
-    #             [0, 0.75, 0.25],
-    #             [0, 0.5, 0.5],
-    #             [0, 0.25, 0.75],
-    #             # [0, 0, 1],
-    #             [0.25, 0, 0.75],
-    #             [0.5, 0, 0.5],
-    #             [0.75, 0, 0.25],
-    #             [0.5, 0.25, 0.25],
-    #             [0.25, 0.5, 0.25],
-    #             [0.25, 0.25, 0.5]]
-
     for run_num in runs:
                     if run_num == 0:
                         opti.set_value(track_scaler, 0)
