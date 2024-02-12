@@ -1837,8 +1837,8 @@ opti.subject_to([
 ])
 
 # translate to final data product Terms
-N_i_range = opti.variable(init_guess=5, scale=1, lower_bound=1, category='des')
-N_i_azimuth = opti.variable(init_guess=5, scale=1, lower_bound=1, category='des')
+N_i_range = opti.variable(init_guess=5, scale=1, lower_bound=10, category='des')
+N_i_azimuth = opti.variable(init_guess=5, scale=1, lower_bound=10, category='des')
 N_i_time = opti.variable(init_guess=5, scale=1, lower_bound=1, category='des')
 N_i = N_i_range * N_i_azimuth * N_i_time # number of pixels in the incoherent averaging window
 
@@ -1848,10 +1848,10 @@ deviation = 10 # meters
 # enforce constraints on final data product terms
 opti.subject_to([
     strain_azimuth_resolution >= N_i_azimuth * azimuth_resolution,
-    strain_range_resolution <= strain_azimuth_resolution,
     strain_range_resolution >= N_i_range * range_resolution,
     strain_temporal_resolution >= N_i_time * revisit_period,
     required_strain_temporal_resolution >= strain_temporal_resolution,
+    strain_range_resolution <= strain_azimuth_resolution,
 ])
 
 # calculate decorrelation terms
