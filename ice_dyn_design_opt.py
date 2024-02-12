@@ -1534,6 +1534,7 @@ bandwidth = opti.variable(
     init_guess=211985277,
     scale=1e7,
     lower_bound=0, # 200 MHz is typical hardware lower limt
+    upper_bound=300e6, # 300 MHz is typical hardware upper limit
     **des
 )  # Hz
 pulse_rep_freq = opti.variable(
