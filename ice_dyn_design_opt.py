@@ -2539,6 +2539,9 @@ if __name__ == "__main__":
                             ax.xaxis.set_major_locator(
                                 ticker.MultipleLocator(base=3)
                             )
+                        if y_name == "y_km":
+                            plt.xlim(-75, 150)
+                            plt.ylim(-25, 125)
 
                         # Do the usual plot things.
                         plt.xlabel(xlabel)
