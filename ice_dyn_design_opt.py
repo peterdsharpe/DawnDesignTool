@@ -41,7 +41,7 @@ des = dict(category="design")
 ops = dict(category="operations")
 
 ##### optimization assumptions
-minimize = ('wingspan_optimization_scaling_term * wing_span / 29 '
+minimize = ('wingspan_optimization_scaling_term * wing_span / wingspan_adjustment '
             '+ azimuth_optimization_scaling_term * strain_azimuth_resolution / spatial_adjustment '
             '- coverage_optimization_scaling_term * coverage_area / coverage_adjustment')
 make_plots = True
@@ -54,8 +54,10 @@ draw_initial_guess_config = False
 ##### Section: Input Parameters
 
 # Objective Function Scaling Parameters
-spatial_adjustment = opti.parameter(value=500)
-coverage_adjustment = opti.parameter(value=1e10)
+wingspan_adjustment = opti.parameter(value=29)
+spatial_adjustment = opti.parameter(value=5.51307)
+coverage_adjustment = opti.parameter(value=1.24478e+09)
+
 wingspan_optimization_scaling_term = opti.parameter(value=0) # scale from 0 to 1 to adjust the relative importance of wingspan in the objective function
 azimuth_optimization_scaling_term = opti.parameter(value=0) # scale from 0 to 1 to adjust the relative importance of spatial resolution in the objective function
 coverage_optimization_scaling_term = opti.parameter(value=1) # scale from 0 to 1 to adjust the relative importance of spatial coverage in the objective function
@@ -2292,11 +2294,11 @@ if __name__ == "__main__":
     for run_num in runs:
                     if run_num == 0:
                         opti.set_value(track_scaler, 0)
-                        opti.set_value(spatial_adjustment, 500)
                     else:
                         opti.set_value(track_scaler, 1)
-                        opti.set_value(spatial_adjustment, 20)
-                        opti.set_value(coverage_adjustment, 3.63415e+09)
+                        opti.set_value(wingspan_adjustment, 27.5)
+                        opti.set_value(spatial_adjustment, 8.3)
+                        opti.set_value(coverage_adjustment, 7.36855e+09)
 
                     opti.set_value(wingspan_optimization_scaling_term, float(combinations[run_num][0]))
                     opti.set_value(azimuth_optimization_scaling_term, float(combinations[run_num][1]))
