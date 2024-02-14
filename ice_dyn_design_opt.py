@@ -98,9 +98,9 @@ vehicle_heading = opti.parameter(value=0) # degrees
 # trajectory = 'circular' # do we want to assume a circular trajectory?
 # temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0.5, category='des')  # hours
 
-trajectory = 'racetrack'
+# trajectory = 'racetrack'
 
-# trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
+trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
 
 # Instrument Parameters
 mass_payload_base = 5 # kg, does not include data storage or aperture mass
@@ -1717,7 +1717,7 @@ if trajectory == 'lawnmower':
     max_imaging_offset = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, category='ops')
     max_swath_range = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, category='ops')
     swath_overlap = opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, category='ops')
-    coverage_length = opti.variable(init_guess=50000, lower_bound=10000, scale=1000, category='ops')
+    coverage_length = opti.variable(init_guess=10000, lower_bound=1000, scale=1000, category='ops')
     # coverage_width = opti.variable(init_guess=10000, scale=1000, lower_bound=0,
     #                                category='des')
     distance = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e5, category='ops')
@@ -1732,34 +1732,33 @@ if trajectory == 'lawnmower':
     start_angle = 0  # in radians
 
     # define turn radius and track length
+    single_track_coverage = 2 * max_swath_range - (max_swath_range * swath_overlap)
     turn_radius_1 = max_swath_range + max_imaging_offset - max_swath_range * swath_overlap / 2
     turn_radius_2 = max_imaging_offset - max_swath_range * swath_overlap / 2
-    track_trajectory_length = (coverage_length * 2 + turn_radius_1 * np.pi + turn_radius_2 * np.pi)
-    single_track_distance = np.mod(distance, track_trajectory_length)
+    number_of_passes = 1
+    turn_radius_3 = (single_track_coverage / 2) * number_of_passes + max_imaging_offset
+    full_coverage_length = (coverage_length * number_of_passes + number_of_passes * turn_radius_1 * np.pi +
+                            (number_of_passes-1) * turn_radius_2 * np.pi + turn_radius_3 * np.pi)
+    total_area_distance = np.mod(distance, full_coverage_length)
+
 
     # define track angle according to aircraft along-track distance travelled
     track = np.where(
-        single_track_distance > coverage_length,
-        start_angle + (single_track_distance - coverage_length) / turn_radius_1,
+        total_area_distance > coverage_length,
+        start_angle + (total_area_distance - coverage_length) / turn_radius_1,
         start_angle)
     track = np.where(
-        single_track_distance > coverage_length + turn_radius_1 * np.pi,
+        total_area_distance > coverage_length + turn_radius_1 * np.pi,
         start_angle + np.pi,
         track)
     track = np.where(
-        single_track_distance > coverage_length * 2 + turn_radius_1 * np.pi,
-        start_angle + np.pi + (single_track_distance - coverage_length * 2 - turn_radius_1 * np.pi) / turn_radius_2,
+        total_area_distance > coverage_length * 2 + turn_radius_1 * np.pi,
+        start_angle + np.pi + (total_area_distance - coverage_length * 2 - turn_radius_1 * np.pi) / turn_radius_2,
         track)
-    passes_required = 1
-    single_track_coverage = 2 * max_swath_range - (max_swath_range * swath_overlap)
-    turn_radius_3 = (single_track_coverage / 2) * passes_required + max_imaging_offset
-    full_coverage_length = track_trajectory_length * passes_required - turn_radius_2 * np.pi + turn_radius_3 * np.pi
-    total_area_distance = np.mod(distance, full_coverage_length)
-
-    # track = np.where(
-    #     total_area_distance > full_coverage_length - (np.pi * turn_radius_3),
-    #     start_angle + np.pi + (single_track_distance - coverage_length * 2 - turn_radius_1 * np.pi) / turn_radius_3,
-    #     track)
+    track = np.where(
+        total_area_distance > full_coverage_length - (np.pi * turn_radius_3),
+        start_angle + np.pi + (total_area_distance - coverage_length * 2 - turn_radius_1 * np.pi) / turn_radius_3,
+        track)
 
     # track scaler multiple allows for easy initial optimizer run to warm start racetrack case
     track = track * track_scaler
@@ -1819,7 +1818,7 @@ if trajectory == 'lawnmower':
     revisit_period = 24 / revisit_rate
 
     # define coverage area
-    coverage_area = coverage_length * passes_required * single_track_coverage
+    coverage_area = coverage_length * number_of_passes * single_track_coverage
 
     # only sample in straight sections of racetrack with smoothing correction from Peter
     payload_power_adjusted = payload_power * np.cos(track - start_angle) ** 2
@@ -2260,9 +2259,9 @@ if draw_initial_guess_config:
 
 if __name__ == "__main__":
     import csv
-    output_file = "sweeps_new_weighting3"
+    output_file = "lawnmower_tests"
     runs =  [i for i in range(0, 168 + 1)]
-    runs = [0, 1, 5, 6]
+    runs = [0, 1]
     combinations = []
     with open(f'outputs/{output_file}/0_parameter_combinations.csv', newline='\n') as csvfile:
         # Create a CSV reader object
