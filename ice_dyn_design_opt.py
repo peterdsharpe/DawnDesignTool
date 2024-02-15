@@ -1737,7 +1737,7 @@ if trajectory == 'lawnmower':
     turn_radius_2 = max_imaging_offset - max_swath_range * swath_overlap / 2
     number_of_passes = 1
     turn_radius_3 = (single_track_coverage / 2) * number_of_passes + max_imaging_offset
-    full_coverage_length = (coverage_length * number_of_passes + number_of_passes * turn_radius_1 * np.pi +
+    full_coverage_length = (2 * coverage_length * number_of_passes + number_of_passes * turn_radius_1 * np.pi +
                             (number_of_passes-1) * turn_radius_2 * np.pi + turn_radius_3 * np.pi)
     total_area_distance = np.mod(distance, full_coverage_length)
 
@@ -2538,9 +2538,9 @@ if __name__ == "__main__":
                             ax.xaxis.set_major_locator(
                                 ticker.MultipleLocator(base=3)
                             )
-                        if y_name == "y_km":
-                            plt.xlim(-75, 150)
-                            plt.ylim(-25, 125)
+                        # if y_name == "y_km":
+                        #     plt.xlim(-75, 150)
+                        #     plt.ylim(-25, 125)
 
                         # Do the usual plot things.
                         plt.xlabel(xlabel)
