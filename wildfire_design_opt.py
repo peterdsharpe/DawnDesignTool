@@ -1,6 +1,6 @@
 import sys
-sys.path.append("C:\\Users\\AnnickDewald\\PycharmProjects\\AeroSandbox")
-# sys.path.append("/home/gridsan/adewald/aerosandbox")
+# sys.path.append("C:\\Users\\AnnickDewald\\PycharmProjects\\AeroSandbox")
+sys.path.append("/home/gridsan/adewald/aerosandbox")
 import aerosandbox as asb
 import aerosandbox.library.aerodynamics as aero_lib
 from aerosandbox.atmosphere import Atmosphere as atmo
@@ -41,7 +41,11 @@ des = dict(category="design")
 ops = dict(category="operations")
 
 ##### optimization assumptions
-minimize = ('wing_span / 30')
+optimization_mode = 'payload_mass'  # 'wingspan' or 'payload_mass
+if optimization_mode == 'wingspan':
+    minimize = ('wing_span / 30')
+if optimization_mode == 'payload_mass':
+    minimize = ('- mass_payload')
 make_plots = True
 
 ##### Debug flags
@@ -71,12 +75,12 @@ day_of_year = opti.parameter(value=200)  # Julian day, the day of the year the s
 strat_offset_value = 1000  # meters, margin above the stratosphere height the aircraft is required to stay above
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 climb_opt = False  # are we optimizing for the climb as well?
-hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we altitude cycle (False)?
+hold_cruise_altitude = False  # must we hold the cruise altitude (True) or can we altitude cycle (False)?
 
 # Trajectory Parameters
 min_speed = 0.5 # specify a minimum groundspeed (bad convergence if less than 0.5 m/s)
 wind_direction = 135 # degrees, the direction the wind is blowing from 0 being North and aligned with the x-axis
-run_with_95th_percentile_wind_condition = True # do we want to run the sizing with the 95th percentile wind condition?
+run_with_95th_percentile_wind_condition = False # do we want to run the sizing with the 95th percentile wind condition?
 
 # todo finalize trajectory parameterization
 # trajectory = 'straight'   # do we want to assume a straight line trajectory?
@@ -229,12 +233,14 @@ boom_location = 0.80  # as a fraction of the half-span
 break_location = 0.67  # as a fraction of the half-span
 
 # wing
-wing_span = opti.variable(
-    init_guess=30,
-    scale=6,
-    category="des"
-)
-# wing_span = opti.parameter(value=35)
+if optimization_mode == 'wingspan':
+    wing_span = opti.variable(
+        init_guess=30,
+        scale=6,
+        category="des"
+    )
+if optimization_mode == 'payload_mass':
+    wing_span = opti.parameter(value=35)
 
 boom_offset = boom_location * wing_span / 2  # in real units (meters)
 
@@ -1148,7 +1154,8 @@ if trajectory == 'straight':
 
 if trajectory == 'circular':
     guess_altitude = 18000
-    ground_speed = opti.variable(init_guess=3, n_vars=n_timesteps, lower_bound=min_speed, scale=10, category='ops')
+    guess_speed = 30
+    ground_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10, category='ops')
     start_angle = opti.variable(init_guess=-12, scale=1, category='ops')
     distance = opti.variable(init_guess=np.linspace(0, 1406264, n_timesteps), scale=1e5, category='ops')
     opti.constrain_derivative(
@@ -1161,7 +1168,7 @@ if trajectory == 'circular':
     track = angle_radians + np.pi / 2
     x_e = flight_path_radius * np.cos(angle_radians)
     y_e = flight_path_radius * np.sin(angle_radians)
-    z_e = opti.variable(init_guess=-guess_altitude, n_vars=n_timesteps, scale=1e4, category='ops', upper_bound=0, lower_bound=-40000)
+    z_e = opti.variable(init_guess=-guess_altitude, scale=1e4, category='ops', upper_bound=0, lower_bound=-40000)
     altitude = -z_e
     wind_speed = wind_speed_func(altitude)
     if run_with_95th_percentile_wind_condition == False:
@@ -1173,8 +1180,6 @@ if trajectory == 'circular':
     vehicle_bearing = np.arctan2d(ground_speed_y, ground_speed_x)
     u_e = ground_speed_x + wind_speed_x
     v_e = ground_speed_y + wind_speed_y
-    vehicle_heading = np.arctan2d(v_e, u_e)
-    # air_speed = u_e / np.cosd(vehicle_heading)
     air_speed = (u_e ** 2 + v_e ** 2) ** 0.5
     w_e = opti.variable(
         init_guess=0,
@@ -1183,7 +1188,7 @@ if trajectory == 'circular':
         category='ops',
     )
     opti.constrain_derivative(
-        variable=z_e, with_respect_to=time,
+        variable=z_e * np.ones(n_timesteps), with_respect_to=time,
         derivative=w_e
     )
     gamma = np.arctan2(-w_e, air_speed)
@@ -1197,6 +1202,7 @@ if trajectory == 'circular':
         altitude / min_cruise_altitude > 1,
         distance[time_periodic_start_index] == 0,
         distance[time_periodic_end_index] / circular_trajectory_length > revisit_rate,
+        air_speed == ground_speed - wind_speed,
     ])
 
 if trajectory == 'lawnmower':
@@ -1594,12 +1600,13 @@ range_resolution = c * pulse_duration / (2 * np.sind(look_angle))
 azimuth_resolution = radar_length / 2
 critical_baseline = center_wavelength * dist / (2 * range_resolution * (np.cosd(look_angle)) ** 2)
 
-opti.subject_to([
-    range_resolution <= spatial_resolution,
-    azimuth_resolution <= spatial_resolution,
-    payload_pod_length * 0.75 >= radar_length,
-    payload_pod_diameter * 0.75 >= radar_width,
-])
+if optimization_mode == 'wingspan':
+    opti.subject_to([
+        range_resolution <= spatial_resolution,
+        azimuth_resolution <= spatial_resolution,
+        payload_pod_length * 0.75 >= radar_length,
+        payload_pod_diameter * 0.75 >= radar_width,
+    ])
 
 if trajectory == 'straight':
     coverage = opti.variable(init_guess=1e11, scale=1e11, lower_bound=0, category='ops')
@@ -1632,8 +1639,10 @@ if trajectory == 'lawnmower':
 
 
 # use SAR specific equations from Ulaby and Long
-payload_power = power_trans * pulse_rep_freq * pulse_duration
-# payload_power = opti.parameter(value=100)
+if optimization_mode == 'wingspan':
+    payload_power = power_trans * pulse_rep_freq * pulse_duration
+if optimization_mode == 'payload_mass':
+    payload_power = opti.parameter(value=100)
 
 snr = payload_power * antenna_gain ** 2 * center_wavelength ** 3 * a_hs * sigma0 * range_resolution / \
       ((2 * 4 * np.pi) ** 3 * dist ** 3 * k_b * my_atmosphere.temperature() * F * ground_speed * a_B)
@@ -1652,33 +1661,37 @@ deviation = 10 # meters
 #
 # precision = np.sqrt(1 / (2 * N_i) * (1-decorrelation ** 2) / decorrelation ** 2)
 
-opti.subject_to([
-    required_snr <= snr_db,
-    pulse_rep_freq >= 2 * ground_speed / radar_length,
-    # pulse_rep_freq <= c / (2 * swath_azimuth),
-    1 / pulse_rep_freq >= pulse_duration,
-    # required_precision >= precision,
-])
+if optimization_mode == 'wingspan':
+    opti.subject_to([
+        required_snr <= snr_db,
+        pulse_rep_freq >= 2 * ground_speed / radar_length,
+        # pulse_rep_freq <= c / (2 * swath_azimuth),
+        1 / pulse_rep_freq >= pulse_duration,
+        # required_precision >= precision,
+    ])
 
 ### instrument data storage mass requirements
 mass_of_data_storage = 0.0053  # kg per TB of data
 payload_cg = battery_cg + 0.25 * payload_pod_length
-mass_props['payload'] = asb.MassProperties(
-    mass=mass_payload_base +
-         # mission_length * tb_per_day * mass_of_data_storage +
-         mass_radar_aperture,
-    x_cg=payload_cg
-)
-# mass_payload = opti.variable(
-#     init_guess=mass_payload_base,
-#     scale=1,
-#     lower_bound=0,
-#     category='des'
-# )
-# mass_props['payload'] = asb.MassProperties(
-#     mass=mass_payload,
-#     x_cg=payload_cg
-# )
+
+if optimization_mode == 'wingspan':
+    mass_props['payload'] = asb.MassProperties(
+        mass=mass_payload_base +
+             # mission_length * tb_per_day * mass_of_data_storage +
+             mass_radar_aperture,
+        x_cg=payload_cg
+    )
+if optimization_mode == 'payload_mass':
+    mass_payload = opti.variable(
+        init_guess=mass_payload_base,
+        scale=1,
+        lower_bound=0,
+        category='des'
+    )
+    mass_props['payload'] = asb.MassProperties(
+        mass=mass_payload,
+        x_cg=payload_cg
+    )
 
 # region Propulsion
 
