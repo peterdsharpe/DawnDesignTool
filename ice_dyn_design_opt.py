@@ -1717,7 +1717,7 @@ if trajectory == 'lawnmower':
     max_imaging_offset = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, category='ops')
     max_swath_range = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, category='ops')
     swath_overlap = opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, category='ops')
-    coverage_length = opti.variable(init_guess=10000, lower_bound=1000, scale=1000, category='ops')
+    coverage_length = opti.variable(init_guess=10000, lower_bound=0, scale=1000, category='ops')
     # coverage_width = opti.variable(init_guess=10000, scale=1000, lower_bound=0,
     #                                category='des')
     distance = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e5, category='ops')
@@ -1735,27 +1735,89 @@ if trajectory == 'lawnmower':
     single_track_coverage = 2 * max_swath_range - (max_swath_range * swath_overlap)
     turn_radius_1 = max_swath_range + max_imaging_offset - max_swath_range * swath_overlap / 2
     turn_radius_2 = max_imaging_offset - max_swath_range * swath_overlap / 2
-    number_of_passes = 1
+    number_of_passes = opti.variable(init_guess=1, lower_bound=1, upper_bound =10, category='ops')
     turn_radius_3 = (single_track_coverage / 2) * number_of_passes + max_imaging_offset
     full_coverage_length = (2 * coverage_length * number_of_passes + number_of_passes * turn_radius_1 * np.pi +
                             (number_of_passes-1) * turn_radius_2 * np.pi + turn_radius_3 * np.pi)
     total_area_distance = np.mod(distance, full_coverage_length)
+    single_track_length = 2 * coverage_length + turn_radius_1 * np.pi + turn_radius_2 * np.pi
 
+    opti.subject_to(max_imaging_offset >= max_swath_range * swath_overlap / 2)
 
     # define track angle according to aircraft along-track distance travelled
-    track = np.where(
+    track = np.where( # turn 1 condition
         total_area_distance > coverage_length,
         start_angle + (total_area_distance - coverage_length) / turn_radius_1,
         start_angle)
-    track = np.where(
+    track = np.where( # return sampling condition
         total_area_distance > coverage_length + turn_radius_1 * np.pi,
         start_angle + np.pi,
         track)
-    track = np.where(
+    track = np.where( # turn 2 condition
         total_area_distance > coverage_length * 2 + turn_radius_1 * np.pi,
         start_angle + np.pi + (total_area_distance - coverage_length * 2 - turn_radius_1 * np.pi) / turn_radius_2,
         track)
-    track = np.where(
+    # track = np.where( # outbound sampling condition if n passes > 1
+    #     total_area_distance > single_track_length,
+    #     start_angle,
+    #     track)
+    # track = np.where( # turn 1 condition if n passes > 1
+    #     total_area_distance > (single_track_length + coverage_length),
+    #     start_angle + (total_area_distance - coverage_length - single_track_length) / turn_radius_1,
+    #     track)
+    # track = np.where( # return sampling condition if n passes > 1
+    #     total_area_distance > single_track_length + coverage_length + turn_radius_1 * np.pi,
+    #     start_angle + np.pi,
+    #     track)
+    # track = np.where( # turn 2 condition if n passes > 2
+    #     total_area_distance > single_track_length + coverage_length * 2 + turn_radius_1 * np.pi,
+    #     start_angle + np.pi + (total_area_distance - single_track_length - coverage_length * 2 - turn_radius_1 * np.pi) / turn_radius_2,
+    #     track)
+    # track = np.where( # outbound sampling condition if n passes > 2
+    #     total_area_distance > single_track_length * 2,
+    #     start_angle,
+    #     track)
+    # track = np.where( # turn 1 condition if n passes > 2
+    #     total_area_distance > single_track_length * 2 + coverage_length,
+    #     start_angle + (total_area_distance - single_track_length * 2 - coverage_length) / turn_radius_1,
+    #     track)
+    # track = np.where( # return sampling condition if n passes > 2
+    #     total_area_distance > single_track_length * 2 + coverage_length + turn_radius_1 * np.pi,
+    #     start_angle + np.pi,
+    #     track)
+    # track = np.where( # turn 2 condition if n passes > 3
+    #     total_area_distance > single_track_length * 2 + coverage_length * 2 + turn_radius_1 * np.pi,
+    #     start_angle + np.pi + (total_area_distance - single_track_length * 2 - coverage_length * 2 - turn_radius_1 * np.pi) / turn_radius_2,
+    #     track)
+    # track = np.where( # outbound sampling condition if n passes > 3
+    #     total_area_distance > single_track_length * 3,
+    #     start_angle,
+    #     track)
+    # track = np.where( # turn 1 condition if n passes > 3
+    #     total_area_distance > single_track_length * 3 + coverage_length,
+    #     start_angle + (total_area_distance - single_track_length * 3 - coverage_length) / turn_radius_1,
+    #     track)
+    # track = np.where( # return sampling condition if n passes > 3
+    #     total_area_distance > single_track_length * 3 + coverage_length + turn_radius_1 * np.pi,
+    #     start_angle + np.pi,
+    #     track)
+    # track = np.where( # turn 2 condition if n passes > 4
+    #     total_area_distance > single_track_length * 3 + coverage_length * 2 + turn_radius_1 * np.pi,
+    #     start_angle + np.pi + (total_area_distance - single_track_length* 3 - coverage_length * 2 - turn_radius_1 * np.pi) / turn_radius_2,
+    #     track)
+    # track = np.where( # outbound sampling condition if n passes > 4
+    #     total_area_distance > single_track_length * 4,
+    #     start_angle,
+    #     track)
+    # track = np.where( # turn 1 condition if n passes > 4
+    #     total_area_distance > single_track_length * 4 + coverage_length,
+    #     start_angle + (total_area_distance - single_track_length * 4 - coverage_length) / turn_radius_1,
+    #     track)
+    # track = np.where( # return sampling condition if n passes > 4
+    #     total_area_distance > single_track_length * 4 + coverage_length + turn_radius_1 * np.pi,
+    #     start_angle + np.pi,
+    #     track)
+    track = np.where( # turn 3 return to start condition
         total_area_distance > full_coverage_length - (np.pi * turn_radius_3),
         start_angle + np.pi + (total_area_distance - coverage_length * 2 - turn_radius_1 * np.pi) / turn_radius_3,
         track)
@@ -2285,7 +2347,7 @@ if __name__ == "__main__":
                     opti.set_value(coverage_optimization_scaling_term, float(combinations[run_num][2]))
                     try:
                         sol = opti.solve(
-                            max_iter=50000,
+                            max_iter=30000,
                             options={
                                 "ipopt.max_cpu_time": 60000
                             }
