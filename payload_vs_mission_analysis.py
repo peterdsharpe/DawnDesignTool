@@ -192,7 +192,7 @@ def plot(run_name, title1, title2, run_number):
     plt.xlabel("Day of Year")
     plt.ylabel("Latitude")
     plt.tight_layout()
-    plt.savefig(f"cache/Wildfire/plot_{run_num}.png")
+    plt.savefig(f"cache/Wildfire/plot_{run_num}_payload.png")
     plt.show()
     plt.close()
 
