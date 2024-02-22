@@ -2347,17 +2347,27 @@ if __name__ == "__main__":
                     opti.set_value(azimuth_optimization_scaling_term, float(combinations[run_num][1]))
                     opti.set_value(coverage_optimization_scaling_term, float(combinations[run_num][2]))
                     try:
-                        sol = opti.solve(
-                            max_iter=30000,
-                            options={
-                                "ipopt.max_cpu_time": 60000
-                            }
-                        )
-                        print("Success!")
-                        converged = True
+                        if run_num == 0:
+                            sol = opti.solve(
+                                max_iter=3000,
+                                options={
+                                    "ipopt.max_cpu_time": 60000
+                                }
+                            )
+                            print("Success!")
+                            converged = True
                         # spatial.append(opti.value(strain_azimuth_resolution))
                         # wingspan.append(opti.value(wing_span))
                         # coverage.append(opti.value(coverage_area))
+                        else:
+                            sol = opti.solve(
+                                max_iter=30000,
+                                options={
+                                    "ipopt.max_cpu_time": 60000
+                                }
+                            )
+                            print("Success!")
+                            converged = True
                     except:
                         sol = opti.debug
                         converged = False
