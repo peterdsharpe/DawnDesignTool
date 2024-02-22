@@ -1757,38 +1757,38 @@ if trajectory == 'lawnmower':
         total_area_distance > coverage_length * 2 + turn_radius_1 * np.pi,
         start_angle + np.pi + (total_area_distance - coverage_length * 2 - turn_radius_1 * np.pi) / turn_radius_2,
         track)
-    # track = np.where( # outbound sampling condition if n passes > 1
-    #     total_area_distance > single_track_length,
-    #     start_angle,
-    #     track)
-    # track = np.where( # turn 1 condition if n passes > 1
-    #     total_area_distance > (single_track_length + coverage_length),
-    #     start_angle + (total_area_distance - coverage_length - single_track_length) / turn_radius_1,
-    #     track)
-    # track = np.where( # return sampling condition if n passes > 1
-    #     total_area_distance > single_track_length + coverage_length + turn_radius_1 * np.pi,
-    #     start_angle + np.pi,
-    #     track)
-    # track = np.where( # turn 2 condition if n passes > 2
-    #     total_area_distance > single_track_length + coverage_length * 2 + turn_radius_1 * np.pi,
-    #     start_angle + np.pi + (total_area_distance - single_track_length - coverage_length * 2 - turn_radius_1 * np.pi) / turn_radius_2,
-    #     track)
-    # track = np.where( # outbound sampling condition if n passes > 2
-    #     total_area_distance > single_track_length * 2,
-    #     start_angle,
-    #     track)
-    # track = np.where( # turn 1 condition if n passes > 2
-    #     total_area_distance > single_track_length * 2 + coverage_length,
-    #     start_angle + (total_area_distance - single_track_length * 2 - coverage_length) / turn_radius_1,
-    #     track)
-    # track = np.where( # return sampling condition if n passes > 2
-    #     total_area_distance > single_track_length * 2 + coverage_length + turn_radius_1 * np.pi,
-    #     start_angle + np.pi,
-    #     track)
-    # track = np.where( # turn 2 condition if n passes > 3
-    #     total_area_distance > single_track_length * 2 + coverage_length * 2 + turn_radius_1 * np.pi,
-    #     start_angle + np.pi + (total_area_distance - single_track_length * 2 - coverage_length * 2 - turn_radius_1 * np.pi) / turn_radius_2,
-    #     track)
+    track = np.where( # outbound sampling condition if n passes > 1
+        total_area_distance > single_track_length,
+        start_angle,
+        track)
+    track = np.where( # turn 1 condition if n passes > 1
+        total_area_distance > (single_track_length + coverage_length),
+        start_angle + (total_area_distance - coverage_length - single_track_length) / turn_radius_1,
+        track)
+    track = np.where( # return sampling condition if n passes > 1
+        total_area_distance > single_track_length + coverage_length + turn_radius_1 * np.pi,
+        start_angle + np.pi,
+        track)
+    track = np.where( # turn 2 condition if n passes > 2
+        total_area_distance > single_track_length + coverage_length * 2 + turn_radius_1 * np.pi,
+        start_angle + np.pi + (total_area_distance - single_track_length - coverage_length * 2 - turn_radius_1 * np.pi) / turn_radius_2,
+        track)
+    track = np.where( # outbound sampling condition if n passes > 2
+        total_area_distance > single_track_length * 2,
+        start_angle,
+        track)
+    track = np.where( # turn 1 condition if n passes > 2
+        total_area_distance > single_track_length * 2 + coverage_length,
+        start_angle + (total_area_distance - single_track_length * 2 - coverage_length) / turn_radius_1,
+        track)
+    track = np.where( # return sampling condition if n passes > 2
+        total_area_distance > single_track_length * 2 + coverage_length + turn_radius_1 * np.pi,
+        start_angle + np.pi,
+        track)
+    track = np.where( # turn 2 condition if n passes > 3
+        total_area_distance > single_track_length * 2 + coverage_length * 2 + turn_radius_1 * np.pi,
+        start_angle + np.pi + (total_area_distance - single_track_length * 2 - coverage_length * 2 - turn_radius_1 * np.pi) / turn_radius_2,
+        track)
     # track = np.where( # outbound sampling condition if n passes > 3
     #     total_area_distance > single_track_length * 3,
     #     start_angle,
@@ -1819,7 +1819,7 @@ if trajectory == 'lawnmower':
     #     track)
     track = np.where( # turn 3 return to start condition
         total_area_distance > full_coverage_length - (np.pi * turn_radius_3),
-        start_angle + np.pi + (total_area_distance - coverage_length * 2 - turn_radius_1 * np.pi) / turn_radius_3,
+        start_angle + np.pi + (total_area_distance - coverage_length * 2 - turn_radius_1 * np.pi - single_track_length * (number_of_passes - 1)) / turn_radius_3,
         track)
 
     # track scaler multiple allows for easy initial optimizer run to warm start racetrack case
@@ -2323,7 +2323,7 @@ if __name__ == "__main__":
     import csv
     output_file = "lawnmower_tests"
     runs =  [i for i in range(0, 168 + 1)]
-    runs = [0, 1]
+    runs = [0, 1, 37]
     combinations = []
     with open(f'outputs/{output_file}/0_parameter_combinations.csv', newline='\n') as csvfile:
         # Create a CSV reader object
