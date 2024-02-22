@@ -2338,9 +2338,10 @@ if __name__ == "__main__":
                         opti.set_value(track_scaler, 0)
                     else:
                         opti.set_value(track_scaler, 1)
-                        opti.set_value(wingspan_adjustment, 27.5)
-                        opti.set_value(spatial_adjustment, 8.3)
-                        opti.set_value(coverage_adjustment, 7.36855e+09)
+                        opti.set_value(wingspan_adjustment, 30) # electra wingspan demonstrator
+                        opti.set_value(spatial_adjustment, 10) # spatial resolution from 50x improvement in current
+                        # measurements and best guess to represent necessary resolution to resolve stress at fracture tip
+                        opti.set_value(coverage_adjustment, 1.9e+10) # 10% of the total Thwaites glacier area
 
                     opti.set_value(wingspan_optimization_scaling_term, float(combinations[run_num][0]))
                     opti.set_value(azimuth_optimization_scaling_term, float(combinations[run_num][1]))
