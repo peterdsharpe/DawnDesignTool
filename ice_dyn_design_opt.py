@@ -1625,6 +1625,7 @@ if trajectory == "racetrack":
     # find max values of swath terms to size turn radii
     opti.subject_to([
         max_imaging_offset >= ground_imaging_offset,
+        max_imaging_offset <= ground_imaging_offset + 10,
         max_swath_range > swath_range,
         ])
 
@@ -1727,6 +1728,7 @@ if trajectory == 'lawnmower':
     # find max values of swath terms to size turn radii
     opti.subject_to([
         max_imaging_offset >= ground_imaging_offset,
+        max_imaging_offset <= ground_imaging_offset + 10,
         max_swath_range > swath_range,
     ])
 
