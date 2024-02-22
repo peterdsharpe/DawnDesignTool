@@ -1566,6 +1566,7 @@ sigma0 = scattering_cross_sec / ground_area
 antenna_gain = 4 * np.pi * radar_aperture_area * 0.7 / wavelength ** 2
 max_swath_range = opti.variable(init_guess=8500,scale=1e3,lower_bound=0,**ops)
 max_swath_azimuth = opti.variable(init_guess=8500,scale=1e3,lower_bound=0,**ops)
+max_imaging_offset = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, category='ops')
 
 # Assumed constants
 a_hs = 0.88  # aperture-illumination taper factor associated with the synthetic aperture (value from Ulaby and Long)
@@ -1585,18 +1586,13 @@ opti.subject_to([
     max_swath_range <= 10 + swath_range,
     max_swath_azimuth >= swath_azimuth,
     max_swath_azimuth <= 10 + swath_azimuth,
+    max_imaging_offset >= ground_imaging_offset,
+    max_imaging_offset <= ground_imaging_offset + 10,
 ])
 # use SAR specific equations from Ulaby and Long
 payload_power = power_trans * pulse_rep_freq * pulse_duration
 
 if trajectory == 'straight':
-    # coverage = opti.variable(init_guess=1e11, scale=1e11, lower_bound=0, category='ops')
-    max_swath_range = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
-    max_swath_azimuth = opti.variable(init_guess=8500, scale=1e3, lower_bound=0, category='ops')
-    opti.subject_to([
-        max_swath_range > swath_range,
-        max_swath_azimuth > swath_azimuth
-    ])
     ground_area = max_swath_range * max_swath_azimuth * np.pi / 4  # meters ** 2
     coverage_area = ground_area * distance[time_periodic_end_index]
     # opti.subject_to(coverage_area >= coverage)
@@ -1616,18 +1612,9 @@ if trajectory == 'circular':
 if trajectory == "racetrack":
     # initialize variables
     track_scaler = opti.parameter(value=0)
-    max_imaging_offset = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, category='ops')
-    max_swath_range = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, category='ops')
     swath_overlap = opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, category='ops')
     coverage_length = opti.variable(init_guess=50000, lower_bound=0, scale=1000, category='ops')
     distance = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e5, category='ops')
-
-    # find max values of swath terms to size turn radii
-    opti.subject_to([
-        max_imaging_offset >= ground_imaging_offset,
-        max_imaging_offset <= ground_imaging_offset + 10,
-        max_swath_range > swath_range,
-        ])
 
     # assume north/south sampling
     start_angle = 0 # in radians
@@ -1717,20 +1704,11 @@ if trajectory == "racetrack":
 if trajectory == 'lawnmower':
     # initialize variables
     track_scaler = opti.parameter(value=0)
-    max_imaging_offset = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, category='ops')
-    max_swath_range = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, category='ops')
     swath_overlap = opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, category='ops')
     coverage_length = opti.variable(init_guess=10000, lower_bound=0, scale=1000, category='ops')
     # coverage_width = opti.variable(init_guess=10000, scale=1000, lower_bound=0,
     #                                category='des')
     distance = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e5, category='ops')
-
-    # find max values of swath terms to size turn radii
-    opti.subject_to([
-        max_imaging_offset >= ground_imaging_offset,
-        max_imaging_offset <= ground_imaging_offset + 10,
-        max_swath_range > swath_range,
-    ])
 
     # assume north/south sampling
     start_angle = 0  # in radians
