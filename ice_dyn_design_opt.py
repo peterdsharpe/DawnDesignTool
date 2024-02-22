@@ -1732,11 +1732,11 @@ if trajectory == 'lawnmower':
     start_angle = 0  # in radians
 
     # define turn radius and track length
-    single_track_coverage = 2 * max_swath_range - (max_swath_range * swath_overlap)
+    single_track_coverage_width = 2 * max_swath_range - (max_swath_range * swath_overlap)
     turn_radius_1 = max_swath_range + max_imaging_offset - max_swath_range * swath_overlap / 2
     turn_radius_2 = max_imaging_offset - max_swath_range * swath_overlap / 2
     number_of_passes = opti.variable(init_guess=1, lower_bound=1, upper_bound =10, category='ops')
-    turn_radius_3 = (single_track_coverage / 2) * number_of_passes + max_imaging_offset
+    turn_radius_3 = (single_track_coverage_width * number_of_passes) / 2 + max_imaging_offset
     full_coverage_length = (2 * coverage_length * number_of_passes + number_of_passes * turn_radius_1 * np.pi +
                             (number_of_passes-1) * turn_radius_2 * np.pi + turn_radius_3 * np.pi)
     total_area_distance = np.mod(distance, full_coverage_length)
@@ -1880,7 +1880,7 @@ if trajectory == 'lawnmower':
     revisit_period = 24 / revisit_rate
 
     # define coverage area
-    coverage_area = coverage_length * number_of_passes * single_track_coverage
+    coverage_area = coverage_length * number_of_passes * single_track_coverage_width
 
     # only sample in straight sections of racetrack with smoothing correction from Peter
     payload_power_adjusted = payload_power * np.cos(track - start_angle) ** 2
