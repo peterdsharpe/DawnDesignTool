@@ -2310,9 +2310,8 @@ if draw_initial_guess_config:
 
 if __name__ == "__main__":
     import csv
-    output_file = "lawnmower_tests"
-    runs =  [i for i in range(0, 168 + 1)]
-    runs = [0, 1, 37]
+    output_file = "lawnmower_new_obj"
+    runs = [0, 1] #, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41]
     combinations = []
     with open(f'outputs/{output_file}/0_parameter_combinations.csv', newline='\n') as csvfile:
         # Create a CSV reader object
@@ -2321,20 +2320,17 @@ if __name__ == "__main__":
         for row in csv_reader:
             # Append the row to the list
             combinations.append(row)
-    combinations = combinations[::-1]
     for run_num in runs:
                     if run_num == 0:
                         opti.set_value(track_scaler, 0)
                     else:
                         opti.set_value(track_scaler, 1)
-                        opti.set_value(wingspan_adjustment, 30) # electra wingspan demonstrator
-                        opti.set_value(spatial_adjustment, 10) # spatial resolution from 50x improvement in current
-                        # measurements and best guess to represent necessary resolution to resolve stress at fracture tip
-                        opti.set_value(coverage_adjustment, 1.9e+10) # 10% of the total Thwaites glacier area
-
                     opti.set_value(wingspan_optimization_scaling_term, float(combinations[run_num][0]))
                     opti.set_value(azimuth_optimization_scaling_term, float(combinations[run_num][1]))
                     opti.set_value(coverage_optimization_scaling_term, float(combinations[run_num][2]))
+                    opti.set_value(day_optimization_scaling_term, float(combinations[run_num][3]))
+                    opti.set_value(precision_optimization_scaling_term, float(combinations[run_num][4]))
+
                     try:
                         if run_num == 0:
                             sol = opti.solve(
