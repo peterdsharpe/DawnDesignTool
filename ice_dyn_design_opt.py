@@ -1620,7 +1620,7 @@ if trajectory == "racetrack":
     # initialize variables
     track_scaler = opti.parameter(value=0)
     swath_overlap = opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, category='ops')
-    coverage_length = opti.variable(init_guess=50000, lower_bound=0, scale=1000, category='ops')
+    coverage_length = opti.variable(init_guess=100, lower_bound=0, category='ops')
     distance = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e5, category='ops')
 
     # assume north/south sampling
@@ -1712,9 +1712,7 @@ if trajectory == 'lawnmower':
     # initialize variables
     track_scaler = opti.parameter(value=0)
     swath_overlap = opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, category='ops')
-    coverage_length = opti.variable(init_guess=10000, lower_bound=0, scale=1000, category='ops')
-    # coverage_width = opti.variable(init_guess=10000, scale=1000, lower_bound=0,
-    #                                category='des')
+    coverage_length = opti.variable(init_guess=10000, lower_bound=0, scale=100, category='ops')
     distance = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e5, category='ops')
 
     # assume north/south sampling
