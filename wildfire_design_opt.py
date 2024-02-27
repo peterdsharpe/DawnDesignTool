@@ -1,6 +1,5 @@
 import sys
-# sys.path.append("C:\\Users\\AnnickDewald\\PycharmProjects\\AeroSandbox")
-sys.path.append("/home/gridsan/adewald/aerosandbox")
+sys.path.append("C:\\Users\\AnnickDewald\\PycharmProjects\\AeroSandbox")
 import aerosandbox as asb
 import aerosandbox.library.aerodynamics as aero_lib
 from aerosandbox.atmosphere import Atmosphere as atmo
@@ -41,7 +40,7 @@ des = dict(category="design")
 ops = dict(category="operations")
 
 ##### optimization assumptions
-optimization_mode = 'payload_mass'  # 'wingspan' or 'payload_mass
+optimization_mode = 'wingspan'  # 'wingspan' or 'payload_mass
 if optimization_mode == 'wingspan':
     minimize = ('wing_span / 30')
 if optimization_mode == 'payload_mass':
@@ -75,20 +74,20 @@ day_of_year = opti.parameter(value=200)  # Julian day, the day of the year the s
 strat_offset_value = 1000  # meters, margin above the stratosphere height the aircraft is required to stay above
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 climb_opt = False  # are we optimizing for the climb as well?
-hold_cruise_altitude = False  # must we hold the cruise altitude (True) or can we altitude cycle (False)?
+hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we altitude cycle (False)?
 
 # Trajectory Parameters
 min_speed = 0.5 # specify a minimum groundspeed (bad convergence if less than 0.5 m/s)
 wind_direction = 135 # degrees, the direction the wind is blowing from 0 being North and aligned with the x-axis
-run_with_95th_percentile_wind_condition = False # do we want to run the sizing with the 95th percentile wind condition?
+run_with_95th_percentile_wind_condition = True # do we want to run the sizing with the 95th percentile wind condition?
 
 # todo finalize trajectory parameterization
-# trajectory = 'straight'   # do we want to assume a straight line trajectory?
+trajectory = 'straight'   # do we want to assume a straight line trajectory?
 required_headway_per_day = 100000
 vehicle_heading = 0 # degrees
 
-trajectory = 'circular' # do we want to assume a circular trajectory?
-revisit_rate = opti.parameter(value=2)
+# trajectory = 'circular' # do we want to assume a circular trajectory?
+required_revisit_rate = opti.parameter(value=2)
 coverage_radius = opti.parameter(value=2000)  # meters # average fire is less than 1km^2
 
 # trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
@@ -1151,11 +1150,11 @@ if trajectory == 'straight':
         distance[time_periodic_end_index] / 1e5 > (distance[time_periodic_start_index] + required_headway_per_day) / 1e5,
     ])
     # vehicle_bearing = vehicle_heading
+    revisit_rate = np.nan
 
 if trajectory == 'circular':
     guess_altitude = 18000
-    guess_speed = 30
-    ground_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10, category='ops')
+    ground_speed = opti.variable(init_guess=3, n_vars=n_timesteps, lower_bound=min_speed, scale=10, category='ops')
     start_angle = opti.variable(init_guess=-12, scale=1, category='ops')
     distance = opti.variable(init_guess=np.linspace(0, 1406264, n_timesteps), scale=1e5, category='ops')
     opti.constrain_derivative(
@@ -1168,7 +1167,7 @@ if trajectory == 'circular':
     track = angle_radians + np.pi / 2
     x_e = flight_path_radius * np.cos(angle_radians)
     y_e = flight_path_radius * np.sin(angle_radians)
-    z_e = opti.variable(init_guess=-guess_altitude, scale=1e4, category='ops', upper_bound=0, lower_bound=-40000)
+    z_e = opti.variable(init_guess=-guess_altitude, n_vars=n_timesteps, scale=1e4, category='ops', upper_bound=0, lower_bound=-40000)
     altitude = -z_e
     wind_speed = wind_speed_func(altitude)
     if run_with_95th_percentile_wind_condition == False:
@@ -1180,6 +1179,8 @@ if trajectory == 'circular':
     vehicle_bearing = np.arctan2d(ground_speed_y, ground_speed_x)
     u_e = ground_speed_x + wind_speed_x
     v_e = ground_speed_y + wind_speed_y
+    vehicle_heading = np.arctan2d(v_e, u_e)
+    # air_speed = u_e / np.cosd(vehicle_heading)
     air_speed = (u_e ** 2 + v_e ** 2) ** 0.5
     w_e = opti.variable(
         init_guess=0,
@@ -1188,7 +1189,7 @@ if trajectory == 'circular':
         category='ops',
     )
     opti.constrain_derivative(
-        variable=z_e * np.ones(n_timesteps), with_respect_to=time,
+        variable=z_e, with_respect_to=time,
         derivative=w_e
     )
     gamma = np.arctan2(-w_e, air_speed)
@@ -1201,9 +1202,9 @@ if trajectory == 'circular':
     opti.subject_to([
         altitude / min_cruise_altitude > 1,
         distance[time_periodic_start_index] == 0,
-        distance[time_periodic_end_index] / circular_trajectory_length > revisit_rate,
-        air_speed == ground_speed - wind_speed,
+        distance[time_periodic_end_index] / circular_trajectory_length > required_revisit_rate,
     ])
+    revisit_rate = distance[time_periodic_end_index] / circular_trajectory_length
 
 if trajectory == 'lawnmower':
     guess_altitude = 14000
@@ -2141,7 +2142,7 @@ if __name__ == "__main__":
                             "Wing Span": f"{fmt(wing_span)} meters",
                             "Spatial Resolution": f"{fmt(spatial_resolution)} meters",
                             # "Temporal Resolution": f"{fmt(temporal_resolution)} hours",
-                            "Revisit Rate": f"{fmt(distance[time_periodic_end_index] / circular_trajectory_length)}",
+                            "Revisit Rate": f"{fmt(revisit_rate)}",
                             "Cruise Altitude": f"{fmt(cruise_altitude / 1000)} kilometers",
                             "Average Airspeed": f"{fmt(avg_airspeed)} m/s",
                             "Wing Root Chord": f"{fmt(wing_root_chord)} meters",
@@ -2158,7 +2159,7 @@ if __name__ == "__main__":
                         "Wing Span": f"{fmt(wing_span)} meters",
                         "Spatial Resolution": f"{fmt(spatial_resolution)} meters",
                         # "Temporal Resolution": f"{fmt(temporal_resolution)} hours",
-                        "Revisit Rate": f"{fmt(distance[time_periodic_end_index] / circular_trajectory_length)}",
+                        "Revisit Rate": f"{fmt(revisit_rate)}",
                         "Cruise Altitude": f"{fmt(cruise_altitude / 1000)} kilometers",
                         "Average Airspeed": f"{fmt(avg_airspeed)} m/s",
                         "Wing Root Chord": f"{fmt(wing_root_chord)} meters",
