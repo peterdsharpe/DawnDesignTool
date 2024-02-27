@@ -41,9 +41,11 @@ des = dict(category="design")
 ops = dict(category="operations")
 
 ##### optimization assumptions
-minimize = ('wingspan_optimization_scaling_term * wing_span / wingspan_adjustment '
-            '+ azimuth_optimization_scaling_term * strain_azimuth_resolution / spatial_adjustment '
-            '- coverage_optimization_scaling_term * coverage_area / coverage_adjustment')
+minimize = ('wingspan_optimization_scaling_term * wing_span / wingspan_adjustment ')
+            # '+ azimuth_optimization_scaling_term * strain_azimuth_resolution / spatial_adjustment '
+            # '- coverage_optimization_scaling_term * coverage_area / coverage_adjustment'
+            # # '- day_optimization_scaling_term * day_of_year / day_adjustment'
+            # '- precision_optimization_scaling_term * required_strain_precision / precision_adjustment')
 make_plots = True
 
 ##### Debug flags
@@ -54,13 +56,17 @@ draw_initial_guess_config = False
 ##### Section: Input Parameters
 
 # Objective Function Scaling Parameters
-wingspan_adjustment = opti.parameter(value=29)
-spatial_adjustment = opti.parameter(value=5.51307)
-coverage_adjustment = opti.parameter(value=1.24478e+09)
+wingspan_adjustment = opti.parameter(value=30)
+spatial_adjustment = opti.parameter(value=10)
+coverage_adjustment = opti.parameter(value=1e11)
+day_adjustment = opti.parameter(value=30)
+precision_adjustment = opti.parameter(value=1e-4)
 
-wingspan_optimization_scaling_term = opti.parameter(value=0) # scale from 0 to 1 to adjust the relative importance of wingspan in the objective function
-azimuth_optimization_scaling_term = opti.parameter(value=0) # scale from 0 to 1 to adjust the relative importance of spatial resolution in the objective function
+wingspan_optimization_scaling_term = opti.parameter(value=1) # scale from 0 to 1 to adjust the relative importance of wingspan in the objective function
+azimuth_optimization_scaling_term = opti.parameter(value=1) # scale from 0 to 1 to adjust the relative importance of spatial resolution in the objective function
 coverage_optimization_scaling_term = opti.parameter(value=1) # scale from 0 to 1 to adjust the relative importance of spatial coverage in the objective function
+day_optimization_scaling_term = opti.parameter(value=1) # scale from 0 to 1 to adjust the relative importance of day of year in the objective function
+precision_optimization_scaling_term = opti.parameter(value=1) # scale from 0 to 1 to adjust the relative importance of precision in the objective function
 
 # Aircraft Parameters
 battery_specific_energy_Wh_kg = 390  # cell level specific energy of the battery
@@ -77,8 +83,8 @@ use_propulsion_fits_from_FL2020_1682_undergrads = True  # Warning: Fits not yet 
 
 # Mission Operating Parameters
 latitude = -73  # degrees, the location the sizing occurs
-day_of_year = 60  # Julian day, the day of the year the sizing occurs
-mission_length = 80  # days, the length of the mission without landing to download data
+day_of_year = opti.parameter(value=60) # opti.variable(init_guess=60, scale=10, lower_bound=0, category='des') # Julian day, the day of the year the sizing occurs
+mission_length = day_of_year  # days, the length of the mission without landing to download data
 strat_offset_value = 1000  # meters, margin above the stratosphere height the aircraft is required to stay above
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 climb_opt = False  # are we optimizing for the climb as well?
@@ -89,6 +95,7 @@ min_speed = 0.5 # specify a minimum groundspeed (bad convergence if less than 0.
 wind_direction = 45 # degrees, the direction the wind is blowing from 0 being North and aligned with the x-axis
 run_with_95th_percentile_wind_condition = False # do we want to run the sizing with the 95th percentile wind condition?
 required_strain_temporal_resolution = opti.parameter(value=6) # hours
+required_coverage_area = opti.parameter(value=1e7)
 
 # todo finalize trajectory parameterization
 # trajectory = 'straight'   # do we want to assume a straight line trajectory?
@@ -107,10 +114,10 @@ mass_payload_base = 5 # kg, does not include data storage or aperture mass
 payload_volume = 0.023 * 1.5  # assuming payload mass from gamma remote sensing with 50% margin on volume
 tb_per_day = 4 # terabytes per day, the amount of data the payload collects per day, to account for storage
 strain_range_resolution = opti.variable(init_guess=0.5, scale=1, lower_bound=0.015, category='des') # meters
-strain_azimuth_resolution = opti.variable(init_guess=0.5, scale=1, lower_bound=0.015, category='des') # meters
+strain_azimuth_resolution = opti.parameter(value=10) # meters
 strain_temporal_resolution = opti.variable(init_guess=4, scale=1, category='des') # hours
 # required_snr = 20  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
-required_strain_precision = 1E-4 # 1/yr, the required precision of the strain measurement
+required_strain_precision = opti.parameter(value=1E-4) # 1/yr, the required precision of the strain measurement
 # meters given from Brent based on the properties of the ice sampled by the radar
 scattering_cross_sec_db = -10
 # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
@@ -1717,7 +1724,8 @@ if trajectory == 'lawnmower':
     single_track_coverage_width = 2 * max_swath_range - (max_swath_range * swath_overlap)
     turn_radius_1 = max_swath_range + max_imaging_offset - max_swath_range * swath_overlap / 2
     turn_radius_2 = max_imaging_offset - max_swath_range * swath_overlap / 2
-    number_of_passes = opti.variable(init_guess=1, lower_bound=1, upper_bound =10, category='ops')
+    number_of_passes = opti.parameter(value=1)
+    coverage_width = single_track_coverage_width * number_of_passes
     turn_radius_3 = (single_track_coverage_width * number_of_passes) / 2 + max_imaging_offset
     full_coverage_length = (2 * coverage_length * number_of_passes + number_of_passes * turn_radius_1 * np.pi +
                             (number_of_passes-1) * turn_radius_2 * np.pi + turn_radius_3 * np.pi)
@@ -1862,7 +1870,8 @@ if trajectory == 'lawnmower':
     revisit_period = 24 / revisit_rate
 
     # define coverage area
-    coverage_area = coverage_length * number_of_passes * single_track_coverage_width
+    coverage_area = coverage_length * coverage_width
+    opti.subject_to(required_coverage_area <= coverage_area)
 
     # only sample in straight sections of racetrack with smoothing correction from Peter
     payload_power_adjusted = payload_power * np.cos(track - start_angle) ** 2
