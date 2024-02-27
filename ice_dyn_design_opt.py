@@ -1590,11 +1590,11 @@ opti.subject_to([
     payload_pod_length >= radar_length,
     payload_pod_diameter >= radar_width,
     max_swath_range >= swath_range,
-    max_swath_range <= 10 + swath_range,
+    max_swath_range <= 1 + swath_range,
     max_swath_azimuth >= swath_azimuth,
-    max_swath_azimuth <= 10 + swath_azimuth,
+    max_swath_azimuth <= 1 + swath_azimuth,
     max_imaging_offset >= ground_imaging_offset,
-    max_imaging_offset <= ground_imaging_offset + 10,
+    max_imaging_offset <= ground_imaging_offset + 1,
 ])
 # use SAR specific equations from Ulaby and Long
 payload_power = power_trans * pulse_rep_freq * pulse_duration
