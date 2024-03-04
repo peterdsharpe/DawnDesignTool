@@ -41,12 +41,19 @@ opti = asb.Opti(
 des = dict(category="design")
 ops = dict(category="operations")
 
+mode = "parameter_sweep"
+
 ##### optimization assumptions
-minimize = ('wingspan_optimization_scaling_term * wing_span / wingspan_adjustment ')
-            # '+ azimuth_optimization_scaling_term * strain_azimuth_resolution / spatial_adjustment '
-            # '- coverage_optimization_scaling_term * coverage_area / coverage_adjustment'
-            # # '- day_optimization_scaling_term * day_of_year / day_adjustment'
-            # '- precision_optimization_scaling_term * required_strain_precision / precision_adjustment')
+if mode == "multi-objective":
+    minimize = ('wingspan_optimization_scaling_term * wing_span / wingspan_adjustment'
+    '+ azimuth_optimization_scaling_term * strain_azimuth_resolution / spatial_adjustment '
+    '- coverage_optimization_scaling_term * coverage_area / coverage_adjustment'
+    '- precision_optimization_scaling_term * required_strain_precision / precision_adjustment'
+    '+ temporal_optimization_scaling_term * required_strain_temporal_resolution / temporal_adjustment')
+
+if mode == "parameter_sweep":
+    minimize = ('wingspan_optimization_scaling_term * wing_span / wingspan_adjustment')
+
 make_plots = True
 
 ##### Debug flags
@@ -96,8 +103,12 @@ hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we
 min_speed = 0.5 # specify a minimum groundspeed (bad convergence if less than 0.5 m/s)
 wind_direction = 45 # degrees, the direction the wind is blowing from 0 being North and aligned with the x-axis
 run_with_95th_percentile_wind_condition = False # do we want to run the sizing with the 95th percentile wind condition?
-required_strain_temporal_resolution = opti.parameter(value=6) # hours
-required_coverage_area = opti.parameter(value=1e7)
+if mode == "multi-objective":
+    required_strain_temporal_resolution = opti.variable(init_guess=6, scale=1, category='des') # hours
+    required_coverage_area = opti.variable(init_guess=1000000, scale=1, lower_bound=0, category='des')
+if mode == "parameter_sweep":
+    required_strain_temporal_resolution = opti.parameter(value=6) # hours
+    required_coverage_area = opti.parameter(value=1000000)
 
 # todo finalize trajectory parameterization
 # trajectory = 'straight'   # do we want to assume a straight line trajectory?
@@ -116,10 +127,16 @@ mass_payload_base = 5 # kg, does not include data storage or aperture mass
 payload_volume = 0.023 * 1.5  # assuming payload mass from gamma remote sensing with 50% margin on volume
 tb_per_day = 4 # terabytes per day, the amount of data the payload collects per day, to account for storage
 strain_range_resolution = opti.variable(init_guess=0.5, scale=1, lower_bound=0.015, category='des') # meters
-strain_azimuth_resolution = opti.parameter(value=10) # meters
+if mode == "multi-objective":
+    strain_azimuth_resolution = opti.variable(init_guess=10, scale=1, category='des') # meters
+if mode == "parameter_sweep":
+    strain_azimuth_resolution = opti.parameter(value=10) # meters
 strain_temporal_resolution = opti.variable(init_guess=4, scale=1, category='des') # hours
 # required_snr = 20  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
-required_strain_precision = opti.parameter(value=1E-4) # 1/yr, the required precision of the strain measurement
+if mode == "multi-objective":
+    required_strain_precision = opti.variable(init_guess=1E-4, scale=1E-5, category='des')
+if mode == "parameter_sweep":
+    required_strain_precision = opti.parameter(value=1E-5) # 1/yr, the required precision of the strain measurement
 # meters given from Brent based on the properties of the ice sampled by the radar
 scattering_cross_sec_db = -10
 # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
@@ -1724,7 +1741,7 @@ if trajectory == 'lawnmower':
     single_track_coverage_width = 2 * max_swath_range - (max_swath_range * swath_overlap)
     turn_radius_1 = max_swath_range + max_imaging_offset - max_swath_range * swath_overlap / 2
     turn_radius_2 = max_imaging_offset - max_swath_range * swath_overlap / 2
-    number_of_passes = opti.parameter(value=1)
+    number_of_passes = opti.parameter(value=2)
     coverage_width = single_track_coverage_width * number_of_passes
     turn_radius_3 = (single_track_coverage_width * number_of_passes) / 2 + max_imaging_offset
     full_coverage_length = (2 * coverage_length * number_of_passes + number_of_passes * turn_radius_1 * np.pi +
@@ -2314,7 +2331,7 @@ if draw_initial_guess_config:
 if __name__ == "__main__":
     import csv
     output_file = "lawnmower_new_obj"
-    runs = [0, 1] #, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41]
+    runs = [0, 6] #, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41]
     combinations = []
     with open(f'outputs/{output_file}/0_parameter_combinations.csv', newline='\n') as csvfile:
         # Create a CSV reader object
