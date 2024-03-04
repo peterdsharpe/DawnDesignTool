@@ -86,7 +86,7 @@ use_propulsion_fits_from_FL2020_1682_undergrads = True  # Warning: Fits not yet 
 # Mission Operating Parameters
 latitude = -73  # degrees, the location the sizing occurs
 day_of_year = opti.parameter(value=60) # opti.variable(init_guess=60, scale=10, lower_bound=0, category='des') # Julian day, the day of the year the sizing occurs
-mission_length = day_of_year  # days, the length of the mission without landing to download data
+mission_length = day_of_year+10  # days, the length of the mission without landing to download data
 strat_offset_value = 1000  # meters, margin above the stratosphere height the aircraft is required to stay above
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 climb_opt = False  # are we optimizing for the climb as well?
