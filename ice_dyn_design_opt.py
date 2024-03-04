@@ -59,15 +59,16 @@ draw_initial_guess_config = False
 # Objective Function Scaling Parameters
 wingspan_adjustment = opti.parameter(value=30)
 spatial_adjustment = opti.parameter(value=10)
-coverage_adjustment = opti.parameter(value=1e11)
-day_adjustment = opti.parameter(value=30)
+coverage_adjustment = opti.parameter(value=1e6)
+temporal_adjustment = opti.parameter(value=6)
 precision_adjustment = opti.parameter(value=1e-4)
 
-wingspan_optimization_scaling_term = opti.parameter(value=1) # scale from 0 to 1 to adjust the relative importance of wingspan in the objective function
-azimuth_optimization_scaling_term = opti.parameter(value=1) # scale from 0 to 1 to adjust the relative importance of spatial resolution in the objective function
-coverage_optimization_scaling_term = opti.parameter(value=1) # scale from 0 to 1 to adjust the relative importance of spatial coverage in the objective function
-day_optimization_scaling_term = opti.parameter(value=1) # scale from 0 to 1 to adjust the relative importance of day of year in the objective function
-precision_optimization_scaling_term = opti.parameter(value=1) # scale from 0 to 1 to adjust the relative importance of precision in the objective function
+wingspan_optimization_scaling_term = opti.parameter(value=1)
+azimuth_optimization_scaling_term = opti.parameter(value=1)
+coverage_optimization_scaling_term = opti.parameter(value=1)
+day_optimization_scaling_term = opti.parameter(value=1)
+precision_optimization_scaling_term = opti.parameter(value=1)
+temporal_optimization_scaling_term = opti.parameter(value=1)
 
 # Aircraft Parameters
 battery_specific_energy_Wh_kg = 390  # cell level specific energy of the battery
