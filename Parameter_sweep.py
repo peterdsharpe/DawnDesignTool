@@ -20,7 +20,7 @@ required_temporal_resolutions = np.linspace(6, 24, 3)
 ### Turn parallelization on/off.
 parallel = False
 
-def create_grid(resolution, coverage, day, precision, temporal):
+def create_grid(file, resolution, coverage, day, precision, temporal):
     # Create grid of all combinations
     strain_grid, coverage_grid, day_grid, precision_grid, temporal_grid = np.meshgrid(resolution,
                                                                        coverage,
@@ -35,14 +35,15 @@ def create_grid(resolution, coverage, day, precision, temporal):
     day_flat = day_grid.flatten()
     precision_flat = precision_grid.flatten()
     temporal_flat = temporal_grid.flatten()
-    index = np.arange(2, len(strain_flat)+2)
+    index = np.arange(0, len(strain_flat))
+    files = np.array([file] * len(strain_flat))
 
     # Create array with column titles
-    column_titles = ['index','strain_azimuth_resolution', 'coverage_area_requirement', 'day_of_year',
+    column_titles = ['file', 'index', 'strain_azimuth_resolution', 'coverage_area_requirement', 'day_of_year',
                      'required_strain_precision', 'required_temporal_resolution']
 
     # Combine arrays into a single 2D array
-    combined_array = np.column_stack((index, strain_flat, coverage_flat, day_flat, precision_flat, temporal_flat))
+    combined_array = np.column_stack((files, index, strain_flat, coverage_flat, day_flat, precision_flat, temporal_flat))
 
     return combined_array
 
@@ -311,33 +312,32 @@ if __name__ == '__main__':
             f"{'Spans'.ljust(l)}\n"
         )
 
-    parameter_array = create_grid(strain_azimuth_resolutions, coverage_area_requirements, days_of_year, required_strain_rate_precisions, required_temporal_resolutions)
-    parameter_array = np.vstack([[1, 10, 1000000, 60, 1e-4, 6], parameter_array])
-    parameter_array = np.vstack([[0, 10, 1000000, 60, 1e-4, 6], parameter_array])
-    # if parallel:
-    #     with mp.Pool(mp.cpu_count()) as p:
-    #         for index, resolution_val, coverage_val, day_val, precision_val, temporal_val, span_val in p.imap_unordered(
-    #                 func=run_wrapped,
-    #                 iterable=parameter_array,
-    #         ):
-    #             with open(filename, "a") as f:
-    #                 f.write(
-    #                     f"{str(resolution_val).ljust(l)},"
-    #                     f"{str(coverage_val).ljust(l)},"
-    #                     f"{str(day_val).ljust(l)},"
-    #                     f"{str(precision_val).ljust(l)},"
-    #                     f"{str(temporal_val).ljust(l)},"
-    #                     f"{str(span_val).ljust(l)}\n"
-    #                 )
-    # else:
-    #     for input in parameter_array:
-    #         index, resolution_val, coverage_val, day_val, precision_val, temporal_val, span_val = run_wrapped(input)
-    #         with open(filename, "a") as f:
-    #             f.write(
-    #                 f"{str(resolution_val).ljust(l)},"
-    #                 f"{str(coverage_val).ljust(l)},"
-    #                 f"{str(day_val).ljust(l)},"
-    #                 f"{str(precision_val).ljust(l)},"
-    #                 f"{str(temporal_val).ljust(l)},"
-    #                 f"{str(span_val).ljust(l)}\n"
-    #             )
+    parameter_array = create_grid(run_name, strain_azimuth_resolutions, coverage_area_requirements, days_of_year, required_strain_rate_precisions, required_temporal_resolutions)
+
+    if parallel:
+        with mp.Pool(mp.cpu_count()) as p:
+            for index, resolution_val, coverage_val, day_val, precision_val, temporal_val, span_val in p.imap_unordered(
+                    func=run_wrapped,
+                    iterable=parameter_array,
+            ):
+                with open(filename, "a") as f:
+                    f.write(
+                        f"{str(resolution_val).ljust(l)},"
+                        f"{str(coverage_val).ljust(l)},"
+                        f"{str(day_val).ljust(l)},"
+                        f"{str(precision_val).ljust(l)},"
+                        f"{str(temporal_val).ljust(l)},"
+                        f"{str(span_val).ljust(l)}\n"
+                    )
+    else:
+        for input in parameter_array:
+            index, resolution_val, coverage_val, day_val, precision_val, temporal_val, span_val = run_wrapped(input)
+            with open(filename, "a") as f:
+                f.write(
+                    f"{str(resolution_val).ljust(l)},"
+                    f"{str(coverage_val).ljust(l)},"
+                    f"{str(day_val).ljust(l)},"
+                    f"{str(precision_val).ljust(l)},"
+                    f"{str(temporal_val).ljust(l)},"
+                    f"{str(span_val).ljust(l)}\n"
+                )
