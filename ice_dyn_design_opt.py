@@ -67,7 +67,7 @@ draw_initial_guess_config = False
 # Objective Function Scaling Parameters
 wingspan_adjustment = opti.parameter(value=30)
 spatial_adjustment = opti.parameter(value=10)
-coverage_adjustment = opti.parameter(value=1e6)
+coverage_adjustment = opti.parameter(value=1e10)
 temporal_adjustment = opti.parameter(value=6)
 precision_adjustment = opti.parameter(value=1e-4)
 day_adjustment = opti.parameter(value=30)
