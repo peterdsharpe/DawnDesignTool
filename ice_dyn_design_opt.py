@@ -1746,7 +1746,7 @@ if trajectory == 'lawnmower':
     single_track_coverage_width = 2 * max_swath_range - (max_swath_range * swath_overlap)
     turn_radius_1 = max_swath_range + max_imaging_offset - max_swath_range * swath_overlap / 2
     turn_radius_2 = max_imaging_offset - max_swath_range * swath_overlap / 2
-    number_of_passes = opti.parameter(value=2)
+    number_of_passes = opti.parameter(value=1)
     coverage_width = single_track_coverage_width * number_of_passes
     turn_radius_3 = (single_track_coverage_width * number_of_passes) / 2 + max_imaging_offset
     full_coverage_length = (2 * coverage_length * number_of_passes + number_of_passes * turn_radius_1 * np.pi +
