@@ -13,7 +13,7 @@ import itertools
 run_name = "lawnmower_new_obj"
 
 ### define sweep ranges
-max_weighting = 5
+max_weighting = 4
 number_of_objective_terms = 6
 
 ### Turn parallelization on/off.
@@ -21,7 +21,7 @@ parallel = False
 
 def create_grid(max, num_objective_terms, run_name):
     # Generating permutations
-    permutations = list(itertools.permutations(range(1, max+1), num_objective_terms))
+    permutations = list(itertools.product(range(1, max+1), repeat=num_objective_terms))
 
     # Writing permutations to a CSV file
     with open(f'outputs\\{run_name}\\0_parameter_combinations.csv', 'w', newline='') as csvfile:
