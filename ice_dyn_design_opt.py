@@ -41,7 +41,7 @@ opti = asb.Opti(
 des = dict(category="design")
 ops = dict(category="operations")
 
-mode = "parameter_sweep"
+mode = "multi-objective"
 
 ##### optimization assumptions
 if mode == "multi-objective":
@@ -104,7 +104,7 @@ min_speed = 0.5 # specify a minimum groundspeed (bad convergence if less than 0.
 wind_direction = 45 # degrees, the direction the wind is blowing from 0 being North and aligned with the x-axis
 run_with_95th_percentile_wind_condition = False # do we want to run the sizing with the 95th percentile wind condition?
 if mode == "multi-objective":
-    required_strain_temporal_resolution = opti.variable(init_guess=6, scale=1, category='des') # hours
+    required_strain_temporal_resolution = opti.variable(init_guess=6, scale=1, upper_bound=24, category='des') # hours
     required_coverage_area = opti.variable(init_guess=1000000, scale=1, lower_bound=0, category='des')
 if mode == "parameter_sweep":
     required_strain_temporal_resolution = opti.parameter(value=6) # hours
@@ -128,13 +128,13 @@ payload_volume = 0.023 * 1.5  # assuming payload mass from gamma remote sensing 
 tb_per_day = 4 # terabytes per day, the amount of data the payload collects per day, to account for storage
 strain_range_resolution = opti.variable(init_guess=0.5, scale=1, lower_bound=0.015, category='des') # meters
 if mode == "multi-objective":
-    strain_azimuth_resolution = opti.variable(init_guess=10, scale=1, category='des') # meters
+    strain_azimuth_resolution = opti.variable(init_guess=10, scale=1, upper_bound = 1000, category='des') # meters
 if mode == "parameter_sweep":
     strain_azimuth_resolution = opti.parameter(value=10) # meters
-strain_temporal_resolution = opti.variable(init_guess=4, scale=1, category='des') # hours
+strain_temporal_resolution = opti.variable(init_guess=4, scale=1, upper_bound=24, category='des') # hours
 # required_snr = 20  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
 if mode == "multi-objective":
-    required_strain_precision = opti.variable(init_guess=1E-4, scale=1E-5, category='des')
+    required_strain_precision = opti.variable(init_guess=1E-4, scale=1E-5, upper_bound=1, category='des')
 if mode == "parameter_sweep":
     required_strain_precision = opti.parameter(value=1E-5) # 1/yr, the required precision of the strain measurement
 # meters given from Brent based on the properties of the ice sampled by the radar
