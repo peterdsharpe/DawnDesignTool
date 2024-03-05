@@ -18,7 +18,7 @@ required_strain_rate_precisions = np.linspace(1e-5, 1e-4, 4)
 required_temporal_resolutions = np.linspace(6, 24, 3)
 
 ### Turn parallelization on/off.
-parallel = False
+parallel = True
 
 def create_grid(file, resolution, coverage, day, precision, temporal):
     # Create grid of all combinations
@@ -309,6 +309,7 @@ if __name__ == '__main__':
     l = 20
     with open(filename, "w+") as f:
         f.write(
+            f"{'Index'.ljust(l)},"
             f"{'Spatial_Resolutions'.ljust(l)},"
             f"{'Coverage_Areas'.ljust(l)},"
             f"{'Days'.ljust(l)},"
@@ -327,6 +328,7 @@ if __name__ == '__main__':
             ):
                 with open(filename, "a") as f:
                     f.write(
+                        f"{str(index).ljust(l)},"
                         f"{str(resolution_val).ljust(l)},"
                         f"{str(coverage_val).ljust(l)},"
                         f"{str(day_val).ljust(l)},"
@@ -339,6 +341,7 @@ if __name__ == '__main__':
             index, resolution_val, coverage_val, day_val, precision_val, temporal_val, span_val = run_wrapped(input)
             with open(filename, "a") as f:
                 f.write(
+                    f"{str(index).ljust(l)},"
                     f"{str(resolution_val).ljust(l)},"
                     f"{str(coverage_val).ljust(l)},"
                     f"{str(day_val).ljust(l)},"
