@@ -49,6 +49,7 @@ if mode == "multi-objective":
     '+ azimuth_optimization_scaling_term * strain_azimuth_resolution / spatial_adjustment '
     '- coverage_optimization_scaling_term * coverage_area / coverage_adjustment'
     '- precision_optimization_scaling_term * required_strain_precision / precision_adjustment'
+    '+ day_optimization_scaling_term * day_of_year / day_adjustment'
     '+ temporal_optimization_scaling_term * required_strain_temporal_resolution / temporal_adjustment')
 
 if mode == "parameter_sweep":
@@ -69,6 +70,7 @@ spatial_adjustment = opti.parameter(value=10)
 coverage_adjustment = opti.parameter(value=1e6)
 temporal_adjustment = opti.parameter(value=6)
 precision_adjustment = opti.parameter(value=1e-4)
+day_adjustment = opti.parameter(value=30)
 
 wingspan_optimization_scaling_term = opti.parameter(value=1)
 azimuth_optimization_scaling_term = opti.parameter(value=1)
@@ -92,7 +94,10 @@ use_propulsion_fits_from_FL2020_1682_undergrads = True  # Warning: Fits not yet 
 
 # Mission Operating Parameters
 latitude = -73  # degrees, the location the sizing occurs
-day_of_year = opti.parameter(value=60) # opti.variable(init_guess=60, scale=10, lower_bound=0, category='des') # Julian day, the day of the year the sizing occurs
+if mode == "multi-objective":
+    day_of_year = opti.variable(init_guess=60, scale=10, lower_bound=0, category='des') # Julian day, the day of the year the sizing occurs
+if mode == "parameter_sweep":
+    day_of_year = opti.parameter(value=60) # Julian day, the day of the year the sizing occurs
 mission_length = day_of_year+10  # days, the length of the mission without landing to download data
 strat_offset_value = 1000  # meters, margin above the stratosphere height the aircraft is required to stay above
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
