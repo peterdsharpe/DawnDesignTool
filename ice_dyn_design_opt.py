@@ -2418,6 +2418,7 @@ if __name__ == "__main__":
                             "Strain Azimuth Resolution": f"{fmt(strain_azimuth_resolution)} meters",
                             "Strain Temporal Resolution": f"{fmt(strain_temporal_resolution)} hours",
                             "Coverage Area": f"{fmt(coverage_area)} meters^2",
+                            "Day of Year": f"{fmt(day_of_year)}",
                             "Cruise Altitude": f"{fmt(cruise_altitude / 1000)} kilometers",
                             "Average Airspeed": f"{fmt(avg_airspeed)} m/s",
                             "Wing Root Chord": f"{fmt(wing_root_chord)} meters",
