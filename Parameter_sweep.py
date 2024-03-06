@@ -314,7 +314,7 @@ if __name__ == '__main__':
             f"{'Coverage_Areas'.ljust(l)},"
             f"{'Days'.ljust(l)},"
             f"{'Precisions'.ljust(l)},"
-            f"{'Temporal_Resolutions'.ljust(l)}, "
+            f"{'Temporal_Resolutions'.ljust(l)},"
             f"{'Spans'.ljust(l)}\n"
         )
 
