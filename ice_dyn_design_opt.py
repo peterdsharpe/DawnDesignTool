@@ -70,7 +70,7 @@ spatial_adjustment = opti.parameter(value=10)
 coverage_adjustment = opti.parameter(value=1e10)
 temporal_adjustment = opti.parameter(value=6)
 precision_adjustment = opti.parameter(value=1e-4)
-day_adjustment = opti.parameter(value=30)
+day_adjustment = opti.parameter(value=14)
 
 wingspan_optimization_scaling_term = opti.parameter(value=1)
 azimuth_optimization_scaling_term = opti.parameter(value=1)
@@ -95,7 +95,7 @@ use_propulsion_fits_from_FL2020_1682_undergrads = True  # Warning: Fits not yet 
 # Mission Operating Parameters
 latitude = -73  # degrees, the location the sizing occurs
 if mode == "multi-objective":
-    day_of_year = opti.variable(init_guess=60, scale=10, lower_bound=0, category='des') # Julian day, the day of the year the sizing occurs
+    day_of_year = opti.variable(init_guess=60, scale=10, lower_bound=0, upper_bound=90, category='des') # Julian day, the day of the year the sizing occurs
 if mode == "parameter_sweep":
     day_of_year = opti.parameter(value=60) # Julian day, the day of the year the sizing occurs
 mission_length = day_of_year+10  # days, the length of the mission without landing to download data
@@ -2336,7 +2336,7 @@ if draw_initial_guess_config:
 if __name__ == "__main__":
     import csv
     output_file = "lawnmower_new_obj"
-    runs = [0, 6] #, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41]
+    runs = [0, 1] #, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41]
     combinations = []
     with open(f'outputs/{output_file}/0_parameter_combinations.csv', newline='\n') as csvfile:
         # Create a CSV reader object
@@ -2419,6 +2419,7 @@ if __name__ == "__main__":
                             "Strain Temporal Resolution": f"{fmt(strain_temporal_resolution)} hours",
                             "Coverage Area": f"{fmt(coverage_area)} meters^2",
                             "Day of Year": f"{fmt(day_of_year)}",
+                            "Strain Precision": f"{fmt(max_precision)} 1 / yr",
                             "Cruise Altitude": f"{fmt(cruise_altitude / 1000)} kilometers",
                             "Average Airspeed": f"{fmt(avg_airspeed)} m/s",
                             "Wing Root Chord": f"{fmt(wing_root_chord)} meters",
