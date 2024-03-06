@@ -17,18 +17,18 @@ max_weighting = 4
 number_of_objective_terms = 6
 
 ### Turn parallelization on/off.
-parallel = False
+parallel = True
 
 def create_grid(max, num_objective_terms, run_name):
     # Generating permutations
     permutations = list(itertools.product(range(1, max+1), repeat=num_objective_terms))
 
-    # Writing permutations to a CSV file
-    with open(f'outputs\\{run_name}\\0_parameter_combinations.csv', 'w', newline='') as csvfile:
-        csv_writer = csv.writer(csvfile)
-        csv_writer.writerows(permutations)
-
-    print("Permutations saved to permutations.csv")
+    # # Writing permutations to a CSV file
+    # with open(f'outputs\\{run_name}\\0_parameter_combinations.csv', 'w', newline='') as csvfile:
+    #     csv_writer = csv.writer(csvfile)
+    #     csv_writer.writerows(permutations)
+    #
+    # print("Permutations saved")
 
     # create np.array of permutations where the first column is the index of the run
     permutations = np.array(permutations)
@@ -295,7 +295,7 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
         print(e)
         span = np.nan
 
-    return index_val, resolution_val, coverage_val, precision_val, temporal_val, span
+    return index_val, resolution_val, coverage_val, day_val, precision_val, temporal_val, span
 
 def run_wrapped(input):
     return run(*input)
@@ -309,6 +309,7 @@ if __name__ == '__main__':
         f.write(
             f"{'Spatial_Resolutions'.ljust(l)},"
             f"{'Coverage_Areas'.ljust(l)},"
+            f"{'Days'.ljust(l)},"
             f"{'Precisions'.ljust(l)},"
             f"{'Temporal_Resolutions'.ljust(l)}, "
             f"{'Spans'.ljust(l)}\n"
@@ -317,7 +318,7 @@ if __name__ == '__main__':
     parameter_array = create_grid(max_weighting, number_of_objective_terms, run_name)
     if parallel:
         with mp.Pool(mp.cpu_count()) as p:
-            for index, resolution_val, coverage_val, precision_val, temporal_val, span_val in p.imap_unordered(
+            for index, resolution_val, coverage_val, day_val, precision_val, temporal_val, span_val in p.imap_unordered(
                     func=run_wrapped,
                     iterable=parameter_array,
             ):
@@ -325,17 +326,19 @@ if __name__ == '__main__':
                     f.write(
                         f"{str(resolution_val).ljust(l)},"
                         f"{str(coverage_val).ljust(l)},"
+                        f"{str(day_val).ljust(l)},"
                         f"{str(precision_val).ljust(l)},"
                         f"{str(temporal_val).ljust(l)},"
                         f"{str(span_val).ljust(l)}\n"
                     )
     else:
         for input in parameter_array:
-            index, resolution_val, coverage_val, precision_val, temporal_val, span_val = run_wrapped(input)
+            index, resolution_val, coverage_val, day_val, precision_val, temporal_val, span_val = run_wrapped(input)
             with open(filename, "a") as f:
                 f.write(
                     f"{str(resolution_val).ljust(l)},"
                     f"{str(coverage_val).ljust(l)},"
+                    f"{str(day_val).ljust(l)},"
                     f"{str(precision_val).ljust(l)},"
                     f"{str(temporal_val).ljust(l)},"
                     f"{str(span_val).ljust(l)}\n"
