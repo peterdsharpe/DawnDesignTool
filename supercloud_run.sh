@@ -7,4 +7,4 @@
 module load anaconda/2021b
 
 # run the script
-python Parameter_sweep.py
+python objective_sweep.py
