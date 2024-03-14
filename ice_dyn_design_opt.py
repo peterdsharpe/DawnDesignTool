@@ -2907,7 +2907,7 @@ if __name__ == "__main__":
                     # if make_plots == True:
                     #     draw()
                     if converged == True:
-                        opti.set_initial_from_sol(sol)
+                        opti.set_initial_from_sol(sol, initialize_primals=True, initialize_duals=True,)
 
     # plt.plot(wingspan, spatial, linestyle='--', marker='o')
     # plt.title('Pareto Front')
