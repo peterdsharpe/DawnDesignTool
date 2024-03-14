@@ -289,11 +289,21 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
             print('Failed to solve with track_scaler = 1')
             print(e)
             span = np.nan
+            resolution_val = np.nan
+            coverage_val = np.nan
+            day_val = np.nan
+            precision_val = np.nan
+            temporal_val = np.nan
 
     except Exception as e:
         print("Does not converge with track_scaler = 0")
         print(e)
         span = np.nan
+        resolution_val = np.nan
+        coverage_val = np.nan
+        day_val = np.nan
+        precision_val = np.nan
+        temporal_val = np.nan
 
     return index_val, resolution_val, coverage_val, day_val, precision_val, temporal_val, span
 
