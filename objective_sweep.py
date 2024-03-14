@@ -10,10 +10,10 @@ import itertools
 
 
 ### where is parameter cominations file and where should outputs go?
-run_name = "lawnmower_new_obj"
+run_name = "lawnmower_obj_100"
 
 ### define sweep ranges
-max_weighting = 4
+max_weighting = 100
 number_of_objective_terms = 6
 
 ### Turn parallelization on/off.
@@ -37,6 +37,21 @@ def create_grid(max, num_objective_terms, run_name):
     combined_array = np.column_stack((files, permutations))
 
     return combined_array
+def create_diagonal_array(max, num_objective_terms, run_name):
+    arr = np.full((num_objective_terms, num_objective_terms), 1)
+    np.fill_diagonal(arr, max)
+    arr = np.array(arr)
+    with open(f'outputs\\{run_name}\\0_parameter_combinations.csv', 'w', newline='') as csvfile:
+        csv_writer = csv.writer(csvfile)
+        csv_writer.writerows(arr)
+
+    print("Permutations saved")
+    arr = np.insert(arr, 0, np.arange(0, arr.shape[0]), axis=1)
+    files = np.array([run_name] * len(arr))
+    array = np.column_stack((files, arr))
+    # Writing permutations to a CSV file
+
+    return array
 
 def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, coverage_scaling_term, day_scaling_term,
         precision_scaling_term, temporal_scaling_term):
@@ -325,7 +340,7 @@ if __name__ == '__main__':
             f"{'Spans'.ljust(l)}\n"
         )
 
-    parameter_array = create_grid(max_weighting, number_of_objective_terms, run_name)
+    parameter_array = create_diagonal_array(max_weighting, number_of_objective_terms, run_name)
     if parallel:
         with mp.Pool(mp.cpu_count()) as p:
             for index, resolution_val, coverage_val, day_val, precision_val, temporal_val, span_val in p.imap_unordered(
