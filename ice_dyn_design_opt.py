@@ -45,12 +45,12 @@ mode = "multi-objective"
 
 ##### optimization assumptions
 if mode == "multi-objective":
-    minimize = ('wingspan_optimization_scaling_term * wing_span / wingspan_adjustment'
-    '+ azimuth_optimization_scaling_term * strain_azimuth_resolution / spatial_adjustment '
+    minimize = ('(wingspan_optimization_scaling_term * wing_span / wingspan_adjustment'
+    '+ azimuth_optimization_scaling_term * strain_azimuth_resolution / spatial_adjustment'
     '- coverage_optimization_scaling_term * coverage_area / coverage_adjustment'
     '+ precision_optimization_scaling_term * required_strain_precision / precision_adjustment'
     '- day_optimization_scaling_term * day_of_year / day_adjustment'
-    '+ temporal_optimization_scaling_term * required_strain_temporal_resolution / temporal_adjustment')
+    '+ temporal_optimization_scaling_term * required_strain_temporal_resolution / temporal_adjustment) / normalization_term')
 
 if mode == "parameter_sweep":
     minimize = ('wingspan_optimization_scaling_term * wing_span / wingspan_adjustment')
@@ -78,6 +78,9 @@ coverage_optimization_scaling_term = opti.parameter(value=1)
 day_optimization_scaling_term = opti.parameter(value=1)
 precision_optimization_scaling_term = opti.parameter(value=1)
 temporal_optimization_scaling_term = opti.parameter(value=1)
+normalization_term = (1/6*(wingspan_optimization_scaling_term**2 + azimuth_optimization_scaling_term**2 +
+                      coverage_optimization_scaling_term**2 + day_optimization_scaling_term**2 +
+                      precision_optimization_scaling_term**2+ temporal_optimization_scaling_term**2))**0.5
 
 # Aircraft Parameters
 battery_specific_energy_Wh_kg = 390  # cell level specific energy of the battery
