@@ -2336,9 +2336,9 @@ if draw_initial_guess_config:
 if __name__ == "__main__":
     import csv
     output_file = "lawnmower_new_obj"
-    runs = [0, 1] #, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41]
+    runs = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41]
     combinations = []
-    with open(f'outputs/{output_file}/0_parameter_combinations.csv', newline='\n') as csvfile:
+    with open(f'outputs/{output_file}/00_parameter_combinations.csv', newline='\n') as csvfile:
         # Create a CSV reader object
         csv_reader = csv.reader(csvfile)
         # Iterate over each row in the CSV file
