@@ -8,7 +8,7 @@ import matplotlib as mpl
 import csv
 
 ### where is parameter cominations file and where should outputs go?
-run_name = "lawnmower_pass=1_test"
+run_name = "test"
 
 ### define sweep ranges
 strain_azimuth_resolutions = np.linspace(10, 100, 4)
@@ -318,34 +318,34 @@ if __name__ == '__main__':
             f"{'Spans'.ljust(l)}\n"
         )
 
-    parameter_array = create_grid(run_name, strain_azimuth_resolutions, coverage_area_requirements, days_of_year, required_strain_rate_precisions, required_temporal_resolutions)
-
-    if parallel:
-        with mp.Pool(mp.cpu_count()) as p:
-            for index, resolution_val, coverage_val, day_val, precision_val, temporal_val, span_val in p.imap_unordered(
-                    func=run_wrapped,
-                    iterable=parameter_array,
-            ):
-                with open(filename, "a") as f:
-                    f.write(
-                        f"{str(index).ljust(l)},"
-                        f"{str(resolution_val).ljust(l)},"
-                        f"{str(coverage_val).ljust(l)},"
-                        f"{str(day_val).ljust(l)},"
-                        f"{str(precision_val).ljust(l)},"
-                        f"{str(temporal_val).ljust(l)},"
-                        f"{str(span_val).ljust(l)}\n"
-                    )
-    else:
-        for input in parameter_array:
-            index, resolution_val, coverage_val, day_val, precision_val, temporal_val, span_val = run_wrapped(input)
-            with open(filename, "a") as f:
-                f.write(
-                    f"{str(index).ljust(l)},"
-                    f"{str(resolution_val).ljust(l)},"
-                    f"{str(coverage_val).ljust(l)},"
-                    f"{str(day_val).ljust(l)},"
-                    f"{str(precision_val).ljust(l)},"
-                    f"{str(temporal_val).ljust(l)},"
-                    f"{str(span_val).ljust(l)}\n"
-                )
+    parameter_array = create_grid(run_name, strain_azimuth_resolutions, coverage_area_requirements, days_of_year, required_strain_rate_precisions, required_temporal_resolutions)[800:]
+    #
+    # if parallel:
+    #     with mp.Pool(mp.cpu_count()) as p:
+    #         for index, resolution_val, coverage_val, day_val, precision_val, temporal_val, span_val in p.imap_unordered(
+    #                 func=run_wrapped,
+    #                 iterable=parameter_array,
+    #         ):
+    #             with open(filename, "a") as f:
+    #                 f.write(
+    #                     f"{str(index).ljust(l)},"
+    #                     f"{str(resolution_val).ljust(l)},"
+    #                     f"{str(coverage_val).ljust(l)},"
+    #                     f"{str(day_val).ljust(l)},"
+    #                     f"{str(precision_val).ljust(l)},"
+    #                     f"{str(temporal_val).ljust(l)},"
+    #                     f"{str(span_val).ljust(l)}\n"
+    #                 )
+    # else:
+    #     for input in parameter_array:
+    #         index, resolution_val, coverage_val, day_val, precision_val, temporal_val, span_val = run_wrapped(input)
+    #         with open(filename, "a") as f:
+    #             f.write(
+    #                 f"{str(index).ljust(l)},"
+    #                 f"{str(resolution_val).ljust(l)},"
+    #                 f"{str(coverage_val).ljust(l)},"
+    #                 f"{str(day_val).ljust(l)},"
+    #                 f"{str(precision_val).ljust(l)},"
+    #                 f"{str(temporal_val).ljust(l)},"
+    #                 f"{str(span_val).ljust(l)}\n"
+    #             )
