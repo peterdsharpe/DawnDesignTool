@@ -77,7 +77,7 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
         sol = opti.solve(
             max_iter=30000,
             options={
-                "ipopt.max_cpu_time": 600,
+                "ipopt.max_cpu_time": 6000,
             },
             verbose=False
         )
@@ -90,7 +90,7 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
             sol = opti.solve(
                 max_iter=30000,
                 options={
-                    "ipopt.max_cpu_time": 600,
+                    "ipopt.max_cpu_time": 6000,
                 },
                 verbose=False
             )
