@@ -72,7 +72,7 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
     opti.set_value(day_optimization_scaling_term, float(day_scaling_term))
     opti.set_value(precision_optimization_scaling_term, float(precision_scaling_term))
     opti.set_value(temporal_optimization_scaling_term, float(temporal_scaling_term))
-
+    opti.set_value(track_scaler, 0)
     try:
         sol = opti.solve(
             max_iter=30000,
