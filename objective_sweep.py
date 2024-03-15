@@ -327,6 +327,8 @@ def run_wrapped(input):
 
 if __name__ == '__main__':
 
+    assert mode == "multi-objective", "This script is only for multi-objective optimization."
+
     ### Make a data file
     filename = f"outputs/{run_name}/sweep_results.csv"
     l = 20

@@ -304,6 +304,8 @@ def run_wrapped(input):
 
 if __name__ == '__main__':
 
+    assert mode == "parameter_sweep", "This script is only for parameter sweeps."
+
     ### Make a data file
     filename = f"outputs/{run_name}/sweep_results.csv"
     l = 20
