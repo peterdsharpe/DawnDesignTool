@@ -39,7 +39,6 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
             },
             verbose=False
         )
-
         print("converged for track = 0 case!")
         opti.set_initial_from_sol(sol)
         opti.set_value(track_scaler, 1)
@@ -52,7 +51,10 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
                 verbose=False
             )
             print("converged for track = 1 case!")
-            opti.save_solution()
+            primals = sol(opti.x)
+            duals = sol(opti.lam_g)
+            np.save(f"outputs/{run_name}/primals.npy", primals)
+            np.save(f"outputs/{run_name}/duals.npy", duals)
             print("Saved solution")
 
         except Exception as e:
