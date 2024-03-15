@@ -10,10 +10,10 @@ import itertools
 
 
 ### where is parameter cominations file and where should outputs go?
-run_name = "lawnmower_obj_100"
+run_name = "lawnmower_new_obj"
 
 ### define sweep ranges
-max_weighting = 100
+max_weighting = 10
 number_of_objective_terms = 6
 
 ### Turn parallelization on/off.
