@@ -315,6 +315,7 @@ if __name__ == '__main__':
     l = 20
     with open(filename, "w+") as f:
         f.write(
+            f"{'Run'.ljust(l)},"
             f"{'Spatial_Resolutions'.ljust(l)},"
             f"{'Coverage_Areas'.ljust(l)},"
             f"{'Days'.ljust(l)},"
@@ -332,6 +333,7 @@ if __name__ == '__main__':
             ):
                 with open(filename, "a") as f:
                     f.write(
+                        f"{str(index).ljust(l)},"
                         f"{str(resolution_val).ljust(l)},"
                         f"{str(coverage_val).ljust(l)},"
                         f"{str(day_val).ljust(l)},"
@@ -344,6 +346,7 @@ if __name__ == '__main__':
             index, resolution_val, coverage_val, day_val, precision_val, temporal_val, span_val = run_wrapped(input)
             with open(filename, "a") as f:
                 f.write(
+                    f"{str(index).ljust(l)},"
                     f"{str(resolution_val).ljust(l)},"
                     f"{str(coverage_val).ljust(l)},"
                     f"{str(day_val).ljust(l)},"
