@@ -48,9 +48,10 @@ if mode == "multi-objective":
     minimize = ('(wingspan_optimization_scaling_term * wing_span / wingspan_adjustment'
     '+ azimuth_optimization_scaling_term * strain_azimuth_resolution / spatial_adjustment'
     '- coverage_optimization_scaling_term * coverage_area / coverage_adjustment'
-    '+ precision_optimization_scaling_term * required_strain_precision / precision_adjustment'
     '- day_optimization_scaling_term * day_of_year / day_adjustment'
-    '+ temporal_optimization_scaling_term * required_strain_temporal_resolution / temporal_adjustment) / normalization_term')
+    '+ precision_optimization_scaling_term * required_strain_precision / precision_adjustment'
+    '+ temporal_optimization_scaling_term * required_strain_temporal_resolution / temporal_adjustment) / '
+    'normalization_term')
 
 if mode == "parameter_sweep":
     minimize = ('wingspan_optimization_scaling_term * wing_span / wingspan_adjustment')
@@ -2358,6 +2359,7 @@ if __name__ == "__main__":
                     opti.set_value(coverage_optimization_scaling_term, float(combinations[run_num][2]))
                     opti.set_value(day_optimization_scaling_term, float(combinations[run_num][3]))
                     opti.set_value(precision_optimization_scaling_term, float(combinations[run_num][4]))
+                    opti.set_value(temporal_optimization_scaling_term, float(combinations[run_num][5]))
                     if run_num == 0:
                         opti.set_initial(opti.x, primals)
                         opti.set_initial(opti.lam_g, duals)
