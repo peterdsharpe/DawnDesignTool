@@ -324,7 +324,10 @@ if __name__ == '__main__':
             f"{'Spans'.ljust(l)}\n"
         )
 
-    parameter_array = create_diagonal_array(max_weighting, number_of_objective_terms, run_name)
+    parameter_array = np.genfromtxt(f'outputs/{run_name}/0_parameter_combinations.csv', delimiter=',')
+    parameter_array = np.insert(parameter_array, 0, np.arange(0, parameter_array.shape[0]), axis=1)
+    index_array = parameter_array[:, 0]
+    files = np.array([run_name] * len(parameter_array))
     if parallel:
         with mp.Pool(mp.cpu_count()) as p:
             for index, resolution_val, coverage_val, day_val, precision_val, temporal_val, span_val in p.imap_unordered(
