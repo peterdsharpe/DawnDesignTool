@@ -2340,6 +2340,9 @@ if draw_initial_guess_config:
 if __name__ == "__main__":
     import csv
     output_file = "lawnmower_new_obj"
+    primals = np.load(f"outputs/{output_file}/0_primals.npy")
+    duals = np.load(f"outputs/{output_file}/0_duals.npy")
+
     runs = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41]
     combinations = []
     with open(f'outputs/{output_file}/00_parameter_combinations.csv', newline='\n') as csvfile:
@@ -2350,30 +2353,15 @@ if __name__ == "__main__":
             # Append the row to the list
             combinations.append(row)
     for run_num in runs:
-                    if run_num == 0:
-                        opti.set_value(track_scaler, 0)
-                    else:
-                        opti.set_value(track_scaler, 1)
                     opti.set_value(wingspan_optimization_scaling_term, float(combinations[run_num][0]))
                     opti.set_value(azimuth_optimization_scaling_term, float(combinations[run_num][1]))
                     opti.set_value(coverage_optimization_scaling_term, float(combinations[run_num][2]))
                     opti.set_value(day_optimization_scaling_term, float(combinations[run_num][3]))
                     opti.set_value(precision_optimization_scaling_term, float(combinations[run_num][4]))
-
+                    if run_num == 0:
+                        opti.set_initial(opti.x, primals)
+                        opti.set_initial(opti.lam_g, duals)
                     try:
-                        if run_num == 0:
-                            sol = opti.solve(
-                                max_iter=3000,
-                                options={
-                                    "ipopt.max_cpu_time": 60000
-                                }
-                            )
-                            print("Success!")
-                            converged = True
-                        # spatial.append(opti.value(strain_azimuth_resolution))
-                        # wingspan.append(opti.value(wing_span))
-                        # coverage.append(opti.value(coverage_area))
-                        else:
                             sol = opti.solve(
                                 max_iter=30000,
                                 options={
@@ -2909,6 +2897,9 @@ if __name__ == "__main__":
                     #     draw()
                     if converged == True:
                         opti.set_initial_from_sol(sol, initialize_primals=True, initialize_duals=True,)
+                    else:
+                        opti.set_initial(opti.x, primals)
+                        opti.set_initial(opti.lam_g, duals)
 
     # plt.plot(wingspan, spatial, linestyle='--', marker='o')
     # plt.title('Pareto Front')
