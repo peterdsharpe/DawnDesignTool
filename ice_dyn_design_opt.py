@@ -98,7 +98,7 @@ use_propulsion_fits_from_FL2020_1682_undergrads = True  # Warning: Fits not yet 
 # Mission Operating Parameters
 latitude = -73  # degrees, the location the sizing occurs
 if mode == "multi-objective":
-    day_of_year = opti.variable(init_guess=60, scale=10, lower_bound=0, upper_bound=90, category='des') # Julian day, the day of the year the sizing occurs
+    day_of_year = opti.variable(init_guess=60, scale=10, lower_bound=0, upper_bound=90, **des) # Julian day, the day of the year the sizing occurs
 if mode == "parameter_sweep":
     day_of_year = opti.parameter(value=60) # Julian day, the day of the year the sizing occurs
 mission_length = day_of_year+10  # days, the length of the mission without landing to download data
@@ -112,8 +112,8 @@ min_speed = 0.5 # specify a minimum groundspeed (bad convergence if less than 0.
 wind_direction = 45 # degrees, the direction the wind is blowing from 0 being North and aligned with the x-axis
 run_with_95th_percentile_wind_condition = False # do we want to run the sizing with the 95th percentile wind condition?
 if mode == "multi-objective":
-    required_strain_temporal_resolution = opti.variable(init_guess=6, scale=1, upper_bound=24, category='des') # hours
-    required_coverage_area = opti.variable(init_guess=1000000, scale=1, lower_bound=0, category='des')
+    required_strain_temporal_resolution = opti.variable(init_guess=6, scale=1, upper_bound=24, **des) # hours
+    required_coverage_area = opti.variable(init_guess=1000000, scale=1, lower_bound=0, **des)
 if mode == "parameter_sweep":
     required_strain_temporal_resolution = opti.parameter(value=6) # hours
     required_coverage_area = opti.parameter(value=1000000)
@@ -124,7 +124,7 @@ required_headway_per_day = 100000
 vehicle_heading = opti.parameter(value=0) # degrees
 
 # trajectory = 'circular' # do we want to assume a circular trajectory?
-# temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0.5, category='des')  # hours
+# temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0.5, **des)  # hours
 
 # trajectory = 'racetrack'
 
@@ -134,15 +134,15 @@ trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
 mass_payload_base = 5 # kg, does not include data storage or aperture mass
 payload_volume = 0.023 * 1.5  # assuming payload mass from gamma remote sensing with 50% margin on volume
 tb_per_day = 4 # terabytes per day, the amount of data the payload collects per day, to account for storage
-strain_range_resolution = opti.variable(init_guess=0.5, scale=1, lower_bound=0.015, category='des') # meters
+strain_range_resolution = opti.variable(init_guess=0.5, scale=1, lower_bound=0.015, **des) # meters
 if mode == "multi-objective":
-    strain_azimuth_resolution = opti.variable(init_guess=10, scale=1, upper_bound = 1000, category='des') # meters
+    strain_azimuth_resolution = opti.variable(init_guess=10, scale=1, upper_bound = 1000, **des) # meters
 if mode == "parameter_sweep":
     strain_azimuth_resolution = opti.parameter(value=10) # meters
-strain_temporal_resolution = opti.variable(init_guess=4, scale=1, upper_bound=24, category='des') # hours
+strain_temporal_resolution = opti.variable(init_guess=4, scale=1, upper_bound=24, **des) # hours
 # required_snr = 20  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
 if mode == "multi-objective":
-    required_strain_precision = opti.variable(init_guess=1E-4, scale=1E-5, upper_bound=1, category='des')
+    required_strain_precision = opti.variable(init_guess=1E-4, scale=1E-5, upper_bound=1, **des)
 if mode == "parameter_sweep":
     required_strain_precision = opti.parameter(value=1E-5) # 1/yr, the required precision of the strain measurement
 # meters given from Brent based on the properties of the ice sampled by the radar
@@ -165,7 +165,7 @@ q_ne_over_q_max = 2
 n_timesteps_per_segment = 300  # number of timesteps per segment (started at 180, 300 improved penalty term slightly)
 # Quick convergence testing indicates you can get bad analyses below 150 or so...
 if climb_opt:  # roughly 1-day-plus-climb window, starting at ground. Periodicity enforced for last 24 hours.
-    time_start = opti.variable(init_guess=-12 * 3600, scale=3600, category="ops")
+    time_start = opti.variable(init_guess=-12 * 3600, scale=3600, **ops,)
     # optimizer selects most optimal start time
     opti.subject_to([
         time_start / 3600 < 0,
@@ -235,21 +235,21 @@ payload_pod_length = opti.variable(
     scale=1,
     lower_bound=0.5,
     # upper_bound=5,
-    category="des",
+    **des,
 ) # meters
 payload_pod_diameter = opti.variable(
     init_guess=0.25,
     scale=0.1,
     lower_bound=0.2,
     upper_bound=1,
-    category="des",
+    **des,
 )  # meters
 
 payload_pod_y_offset = 1.5  # meters # this matches the demonstrator vehicle configuration
 x_payload_pod = opti.variable(
     init_guess=-0.5,
     scale=0.1,
-    category="des",
+    **des,
     lower_bound=0 - payload_pod_length,
     upper_bound=0 + payload_pod_length,
 ) # x location of payload pod constrained to be no more or less than the length of the pod from the wing LE
@@ -275,7 +275,7 @@ break_location = 0.67  # as a fraction of the half-span
 wing_span = opti.variable(
     init_guess=30,
     scale=6,
-    category="des"
+    **des
 )
 
 boom_offset = boom_location * wing_span / 2  # in real units (meters)
@@ -285,13 +285,13 @@ opti.subject_to([wing_span > 1])
 wing_root_chord = opti.variable(
     init_guess=1.8,
     scale=0.1,
-    category="des",
+    **des,
     lower_bound=1,
 )
 wing_x_quarter_chord = opti.variable(
     init_guess=0,
     scale=0.01,
-    category="des"
+    **des
 )
 wing_y_taper_break = break_location * wing_span / 2
 wing_taper_ratio = 0.5  # TODO analyze this more
@@ -300,7 +300,7 @@ wing_taper_ratio = 0.5  # TODO analyze this more
 center_hstab_span = opti.variable(
     init_guess=5.3,
     scale=1,
-    category="des",
+    **des,
     lower_bound=0.1,
 )
 opti.subject_to(center_hstab_span < wing_span / 6)
@@ -308,14 +308,14 @@ opti.subject_to(center_hstab_span < wing_span / 6)
 center_hstab_chord = opti.variable(
     init_guess=1,
     scale=0.1,
-    category="des",
+    **des,
     lower_bound=0.1,
 )
 
 center_hstab_twist = opti.variable(
     init_guess=0,
     scale=2,
-    category="ops",
+    **ops,
     lower_bound=-15,
     upper_bound=0,
 )
@@ -324,7 +324,7 @@ center_hstab_twist = opti.variable(
 outboard_hstab_span = opti.variable(
     init_guess=2,
     scale=1,
-    category="des",
+    **des,
     lower_bound=2, # TODO review this, driven by Trevor's ASWing findings on turn radius sizing, 8/16/20
 
 )
@@ -333,7 +333,7 @@ opti.subject_to(outboard_hstab_span < wing_span / 6)
 outboard_hstab_chord = opti.variable(
     init_guess=0.8,
     scale=0.1,
-    category="des",
+    **des,
     lower_bound=0.8, # TODO review this, driven by Trevor's ASWing findings on turn radius sizing, 8/16/20
 )
 
@@ -342,21 +342,21 @@ outboard_hstab_twist = opti.variable(
     scale=0.1,
     lower_bound=-15,
     upper_bound=0,
-    category="ops"
+    **ops,
 )
 
 # center_vstab
 center_vstab_span = opti.variable(
     init_guess=4,
     scale=2,
-    category="des",
+    **des,
     lower_bound=0.1,
 )
 
 center_vstab_chord = opti.variable(
     init_guess=1.6,
     scale=0.5,
-    category="des",
+    **des,
     lower_bound=0.1,
 )
 
@@ -364,7 +364,7 @@ center_vstab_chord = opti.variable(
 center_boom_length = opti.variable(
     init_guess=7.2,
     scale=2,
-    category="des"
+    **des
 )
 opti.subject_to([
     center_boom_length - center_vstab_chord - center_hstab_chord > wing_x_quarter_chord + wing_root_chord * 3 / 4
@@ -374,7 +374,7 @@ opti.subject_to([
 outboard_boom_length = opti.variable(
     init_guess=2.3,
     scale=2,
-    category="des"
+    **des
 )
 opti.subject_to([
     outboard_boom_length > wing_root_chord,
@@ -386,7 +386,7 @@ opti.subject_to([
 propeller_diameter = opti.variable(
     init_guess=1,
     scale=1,
-    category="des",
+    **des,
     upper_bound=10,
     lower_bound=1
 )
@@ -759,7 +759,7 @@ opti.subject_to([
 q_ne = opti.variable(
     init_guess=93,
     scale=10,
-    category="des"
+    **des
 )  # Never-exceed dynamic pressure [Pa].
 
 def mass_hstab(
@@ -787,7 +787,7 @@ def mass_hstab(
 n_ribs_center_hstab = opti.variable(
     init_guess=17,
     scale=10,
-    category="des",
+    **des,
     log_transform=True
 )
 
@@ -803,7 +803,7 @@ mass_props['center_hstab'] = asb.mass_properties_from_radius_of_gyration(
 n_ribs_outboard_hstab = opti.variable(
     init_guess=7.5,
     scale=1,
-    category="des",
+    **des,
     log_transform=True,
 )
 
@@ -853,7 +853,7 @@ def mass_vstab(
 n_ribs_vstab = opti.variable(
     init_guess=10,
     scale=1,
-    category="des"
+    **des
 )
 opti.subject_to(n_ribs_vstab > 0)
 
@@ -1030,7 +1030,7 @@ battery_capacity = opti.variable(
     init_guess=114072085,
     scale=1e8,
     lower_bound=0,
-    category="des",
+    **des,
 )
 battery_capacity_watt_hours = battery_capacity / 3600
 
@@ -1139,7 +1139,7 @@ if trajectory == 'straight':
         init_guess=-guess_altitude,
         n_vars=n_timesteps,
         scale=1e4,
-        category='ops',
+        **ops,
         upper_bound=0,
         lower_bound=-40000,
     )
@@ -1154,8 +1154,8 @@ if trajectory == 'straight':
     ground_speed = (ground_speed_x ** 2 + ground_speed_y ** 2) ** 0.5
     opti.subject_to(ground_speed > min_speed)
     vehicle_bearing = np.arctan2d(ground_speed_y, ground_speed_x)
-    x_e = opti.variable(init_guess=0, n_vars=n_timesteps, scale=1e4, category='ops')
-    y_e = opti.variable(init_guess=0, n_vars=n_timesteps, scale=1e4, category='ops')
+    x_e = opti.variable(init_guess=0, n_vars=n_timesteps, scale=1e4, **ops)
+    y_e = opti.variable(init_guess=0, n_vars=n_timesteps, scale=1e4, **ops)
     opti.constrain_derivative(
         variable=x_e, with_respect_to=time,
         derivative=ground_speed_x
@@ -1169,7 +1169,7 @@ if trajectory == 'straight':
         init_guess=0,
         n_vars=n_timesteps,
         scale=1e-4,
-        category='ops',
+        **ops,
     )
     # speed = (u_e ** 2 + v_e ** 2) ** 0.5
     gamma = np.arctan2(-w_e, air_speed)
@@ -1177,9 +1177,9 @@ if trajectory == 'straight':
         init_guess=5,
         n_vars=n_timesteps,
         scale=4,
-        category='ops'
+        **ops
     )
-    distance = opti.variable(init_guess=0, n_vars=n_timesteps, scale=1e5, category='ops')
+    distance = opti.variable(init_guess=0, n_vars=n_timesteps, scale=1e5, **ops)
     opti.subject_to([
         altitude[time_periodic_start_index:] / min_cruise_altitude > 1,
         distance[time_periodic_start_index] / 1e5 == 0,
@@ -1190,11 +1190,11 @@ if trajectory == 'straight':
 if trajectory == 'circular':
     guess_altitude = 11500
     guess_speed = 16
-    ground_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10, category='ops')
-    start_angle = opti.variable(init_guess=-12, scale=1, category='ops')
-    distance = opti.variable(init_guess=np.linspace(0, 1406264, n_timesteps), scale=1e5, category='ops')
+    ground_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10, **ops)
+    start_angle = opti.variable(init_guess=-12, scale=1, **ops)
+    distance = opti.variable(init_guess=np.linspace(0, 1406264, n_timesteps), scale=1e5, **ops)
     opti.constrain_derivative(variable=distance, with_respect_to=time, derivative=ground_speed)
-    flight_path_radius = opti.variable(init_guess=57073, lower_bound=0, scale=10000, category='ops')
+    flight_path_radius = opti.variable(init_guess=57073, lower_bound=0, scale=10000, **ops)
     circular_trajectory_length = 2 * np.pi * flight_path_radius
     angle_radians = distance / flight_path_radius + start_angle
     track = angle_radians + np.pi / 2
@@ -1204,7 +1204,7 @@ if trajectory == 'circular':
         init_guess=-guess_altitude,
         n_vars=n_timesteps,
         scale=1e4,
-        category='ops',
+        **ops,
         upper_bound=0,
         lower_bound=-40000,
     )
@@ -1224,14 +1224,14 @@ if trajectory == 'circular':
         init_guess=0,
         n_vars=n_timesteps,
         scale=1e-4,
-        category='ops',
+        **ops,
     )
     gamma = np.arctan2(-w_e, air_speed)
     alpha = opti.variable(
         init_guess=5,
         n_vars=n_timesteps,
         scale=4,
-        category='ops'
+        **ops
     )
     opti.subject_to([
         altitude[time_periodic_start_index:] / min_cruise_altitude > 1,
@@ -1247,12 +1247,12 @@ if trajectory == "racetrack":
 
     #intialize trajectory variables that are needed for other models
     air_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10,
-                              category='ops')
+                              **ops)
     z_e = opti.variable(
         init_guess=-guess_altitude,
         n_vars=n_timesteps,
         scale=1e4,
-        category='ops',
+        **ops,
         upper_bound=0,
         lower_bound=-40000,
     )
@@ -1261,7 +1261,7 @@ if trajectory == "racetrack":
         init_guess=5,
         n_vars=n_timesteps,
         scale=4,
-        category='ops'
+        **ops
     )
 
 if trajectory == 'lawnmower':
@@ -1270,13 +1270,13 @@ if trajectory == 'lawnmower':
     guess_speed = 20
 
     #intialize trajectory variables that are needed for other models
-    air_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10, category='ops')
+    air_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10, **ops)
 
     z_e = opti.variable(
         init_guess=-guess_altitude,
         n_vars=n_timesteps,
         scale=1e4,
-        category='ops',
+        **ops,
         upper_bound=0,
         lower_bound=-40000,
     )
@@ -1285,13 +1285,13 @@ if trajectory == 'lawnmower':
         init_guess=5,
         n_vars=n_timesteps,
         scale=4,
-        category='ops'
+        **ops
     )
 
 z_km = altitude / 1e3
 
 if hold_cruise_altitude == True:
-    cruise_altitude = opti.variable(init_guess=14000, scale=1e4, category='ops')
+    cruise_altitude = opti.variable(init_guess=14000, scale=1e4, **ops)
     opti.subject_to(altitude[time_periodic_start_index:] == cruise_altitude)
 
 # start on the ground if doing climb optimization
@@ -1581,7 +1581,7 @@ power_trans = opti.variable(
     scale=1e5,
     lower_bound=0,
     upper_bound=1e8,
-    **ops
+    **des
 )  # watts
 
 # define key radar parameters
@@ -1599,7 +1599,7 @@ sigma0 = scattering_cross_sec / ground_area
 antenna_gain = 4 * np.pi * radar_aperture_area * 0.7 / wavelength ** 2
 max_swath_range = opti.variable(init_guess=8500,scale=1e3,lower_bound=0,**ops)
 max_swath_azimuth = opti.variable(init_guess=8500,scale=1e3,lower_bound=0,**ops)
-max_imaging_offset = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, category='ops')
+max_imaging_offset = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, **ops)
 
 # Assumed constants
 a_hs = 0.88  # aperture-illumination taper factor associated with the synthetic aperture (value from Ulaby and Long)
@@ -1634,7 +1634,7 @@ if trajectory == 'straight':
 
 if trajectory == 'circular':
     coverage_radius = opti.variable(init_guess=2500, scale=1000, lower_bound=0,
-                                    category='des')  # meters
+                                    **des)  # meters
     opti.subject_to([
         flight_path_radius >= ground_imaging_offset + swath_range,
         coverage_radius <= swath_range,
@@ -1645,9 +1645,9 @@ if trajectory == 'circular':
 if trajectory == "racetrack":
     # initialize variables
     track_scaler = opti.parameter(value=0)
-    swath_overlap = opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, category='ops')
-    coverage_length = opti.variable(init_guess=100, lower_bound=0, category='ops')
-    distance = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e5, category='ops')
+    swath_overlap = opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, **ops)
+    coverage_length = opti.variable(init_guess=100, lower_bound=0, **ops)
+    distance = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e5, **ops)
 
     # assume north/south sampling
     start_angle = 0 # in radians
@@ -1694,8 +1694,8 @@ if trajectory == "racetrack":
     vehicle_bearing = np.arctan2d(ground_speed_y, ground_speed_x)
 
     # define x and y positions
-    x_e = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e4, category='ops')
-    y_e = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e4, category='ops')
+    x_e = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e4, **ops)
+    y_e = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e4, **ops)
     opti.constrain_derivative(
         variable=x_e, with_respect_to=time,
         derivative=ground_speed_x
@@ -1710,7 +1710,7 @@ if trajectory == "racetrack":
         init_guess=0,
         n_vars=n_timesteps,
         scale=1e-4,
-        category='ops',
+        **ops,
     )
 
     # define gamma from speed in z direction and airspeed
@@ -1737,10 +1737,10 @@ if trajectory == "racetrack":
 
 if trajectory == 'lawnmower':
     # initialize variables
-    track_scaler = opti.parameter(value=0)
-    swath_overlap = opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, category='ops')
-    coverage_length = opti.variable(init_guess=10000, lower_bound=0, scale=100, category='ops')
-    distance = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e5, category='ops')
+    track_scaler = opti.parameter(value=1)
+    swath_overlap = opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, **ops)
+    coverage_length = opti.variable(init_guess=10000, lower_bound=0, scale=100, **ops)
+    distance = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e5, **ops)
 
     # assume north/south sampling
     start_angle = 0  # in radians
@@ -1860,8 +1860,8 @@ if trajectory == 'lawnmower':
     vehicle_bearing = np.arctan2d(ground_speed_y, ground_speed_x)
 
     # define x and y positions
-    x_e = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e4, category='ops')
-    y_e = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e4, category='ops')
+    x_e = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e4, **ops)
+    y_e = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e4, **ops)
     opti.constrain_derivative(
         variable=x_e, with_respect_to=time,
         derivative=ground_speed_x
@@ -1876,7 +1876,7 @@ if trajectory == 'lawnmower':
         init_guess=0,
         n_vars=n_timesteps,
         scale=1e-4,
-        category='ops',
+        **ops,
     )
 
     # define gamma from speed in z direction and airspeed
@@ -1915,9 +1915,9 @@ opti.subject_to([
 ])
 
 # translate to final data product Terms
-N_i_range = opti.variable(init_guess=5, scale=1, lower_bound=10, category='des')
-N_i_azimuth = opti.variable(init_guess=5, scale=1, lower_bound=10, category='des')
-N_i_time = opti.variable(init_guess=5, scale=1, lower_bound=1, category='des')
+N_i_range = opti.variable(init_guess=5, scale=1, lower_bound=10, **des)
+N_i_azimuth = opti.variable(init_guess=5, scale=1, lower_bound=10, **des)
+N_i_time = opti.variable(init_guess=5, scale=1, lower_bound=1, **des)
 N_i = N_i_range * N_i_azimuth * N_i_time # number of pixels in the incoherent averaging window
 
 # assume deviation based on GPS uncertainty
@@ -1958,7 +1958,7 @@ thrust = opti.variable(
     n_vars=n_timesteps,
     init_guess=100,
     scale=20,
-    category="ops",
+    **ops,
 )
 opti.subject_to([
     thrust >= 0
@@ -2104,19 +2104,19 @@ net_accel_x_e = opti.variable(
     n_vars=n_timesteps,
     init_guess=0,
     scale=1e-4,
-    category="ops"
+    **ops,
 )
 net_accel_y_e = opti.variable(
     n_vars=n_timesteps,
     init_guess=0,
     scale=1e-4,
-    category="ops"
+    **ops,
 )
 net_accel_z_e = opti.variable(
     n_vars=n_timesteps,
     init_guess=0,
     scale=1e-5,
-    category="ops"
+    **ops,
 )
 
 # start by defining speed, then groundspeed vector,then constrain position on circle as a function of time, track angle is then
@@ -2209,6 +2209,7 @@ battery_charge_state = opti.variable(
     n_vars=n_timesteps,
     lower_bound=1-allowable_battery_depth_of_discharge,
     upper_bound=1,
+    **ops
 )
 
 net_power = power_in - power_out
