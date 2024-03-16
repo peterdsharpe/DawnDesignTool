@@ -65,8 +65,8 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
         f"Precision: {precision_scaling_term}",
         f"Temporal: {temporal_scaling_term}",
     ]))
-    primals = np.load(f"outputs/{run_name}/primals.npy")
-    duals = np.load(f"outputs/{run_name}/duals.npy")
+    primals = np.load(f"outputs/{run_name}/0_primals.npy")
+    duals = np.load(f"outputs/{run_name}/0_duals.npy")
     run_num = index_val
     opti.set_value(wingspan_optimization_scaling_term, float(wingspan_scaling_term))
     opti.set_value(azimuth_optimization_scaling_term, float(resolution_scaling_term))
