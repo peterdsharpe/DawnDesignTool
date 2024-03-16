@@ -301,7 +301,7 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
         precision_val = np.nan
         temporal_val = np.nan
 
-    return index_val, resolution_val, coverage_val, day_val, precision_val, temporal_val, span
+    return index_val, span, resolution_val, coverage_val, day_val, precision_val, temporal_val
 
 def run_wrapped(input):
     return run(*input)
@@ -316,44 +316,44 @@ if __name__ == '__main__':
     with open(filename, "w+") as f:
         f.write(
             f"{'Run'.ljust(l)},"
+            f"{'Spans'.ljust(l)},"
             f"{'Spatial_Resolutions'.ljust(l)},"
             f"{'Coverage_Areas'.ljust(l)},"
             f"{'Days'.ljust(l)},"
             f"{'Precisions'.ljust(l)},"
-            f"{'Temporal_Resolutions'.ljust(l)},"
-            f"{'Spans'.ljust(l)}\n"
-        )
+            f"{'Temporal_Resolutions'.ljust(l)}\n")
 
     parameter_array = np.genfromtxt(f'outputs/{run_name}/0_parameter_combinations.csv', delimiter=',')
     parameter_array = np.insert(parameter_array, 0, np.arange(0, parameter_array.shape[0]), axis=1)
     index_array = parameter_array[:, 0]
     files = np.array([run_name] * len(parameter_array))
+    parameter_array = np.column_stack((files, parameter_array))
     if parallel:
         with mp.Pool(mp.cpu_count()) as p:
-            for index, resolution_val, coverage_val, day_val, precision_val, temporal_val, span_val in p.imap_unordered(
+            for index, span_val, resolution_val, coverage_val, day_val, precision_val, temporal_val in p.imap_unordered(
                     func=run_wrapped,
                     iterable=parameter_array,
             ):
                 with open(filename, "a") as f:
                     f.write(
                         f"{str(index).ljust(l)},"
+                        f"{str(span_val).ljust(l)},"
                         f"{str(resolution_val).ljust(l)},"
                         f"{str(coverage_val).ljust(l)},"
                         f"{str(day_val).ljust(l)},"
                         f"{str(precision_val).ljust(l)},"
-                        f"{str(temporal_val).ljust(l)},"
-                        f"{str(span_val).ljust(l)}\n"
+                        f"{str(temporal_val).ljust(l)}\n"
                     )
     else:
         for input in parameter_array:
-            index, resolution_val, coverage_val, day_val, precision_val, temporal_val, span_val = run_wrapped(input)
+            index, span_val, resolution_val, coverage_val, day_val, precision_val, temporal_val = run_wrapped(input)
             with open(filename, "a") as f:
                 f.write(
                     f"{str(index).ljust(l)},"
+                    f"{str(span_val).ljust(l)},"
                     f"{str(resolution_val).ljust(l)},"
                     f"{str(coverage_val).ljust(l)},"
                     f"{str(day_val).ljust(l)},"
                     f"{str(precision_val).ljust(l)},"
-                    f"{str(temporal_val).ljust(l)},"
-                    f"{str(span_val).ljust(l)}\n"
+                    f"{str(temporal_val).ljust(l)}\n"
                 )
