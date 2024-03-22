@@ -65,13 +65,13 @@ draw_initial_guess_config = False
 
 ##### Section: Input Parameters
 
-# Objective Function Scaling Parameters
+# Objective Function Scaling Parameters (scaled by threshold values defined by Minchew in spring of 2023)
 wingspan_adjustment = opti.parameter(value=30)
 spatial_adjustment = opti.parameter(value=10)
-coverage_adjustment = opti.parameter(value=1e10)
-temporal_adjustment = opti.parameter(value=6)
-precision_adjustment = opti.parameter(value=1e-4)
+coverage_adjustment = opti.parameter(value=9e8) #9e8
 day_adjustment = opti.parameter(value=14)
+precision_adjustment = opti.parameter(value=1e-4)
+temporal_adjustment = opti.parameter(value=24)
 
 wingspan_optimization_scaling_term = opti.parameter(value=1)
 azimuth_optimization_scaling_term = opti.parameter(value=1)
