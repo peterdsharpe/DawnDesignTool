@@ -1,9 +1,6 @@
 import multiprocessing as mp
 from ice_dyn_design_opt import *
 import aerosandbox.numpy as np
-import pandas as pd
-import plotly.express as px
-import plotly.io as pio
 import matplotlib as mpl
 import csv
 import itertools
