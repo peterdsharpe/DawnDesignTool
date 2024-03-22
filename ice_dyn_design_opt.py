@@ -81,7 +81,7 @@ precision_optimization_scaling_term = opti.parameter(value=1)
 temporal_optimization_scaling_term = opti.parameter(value=1)
 normalization_term = (1/6*(wingspan_optimization_scaling_term**2 + azimuth_optimization_scaling_term**2 +
                       coverage_optimization_scaling_term**2 + day_optimization_scaling_term**2 +
-                      precision_optimization_scaling_term**2+ temporal_optimization_scaling_term**2))**0.5
+                      precision_optimization_scaling_term**2 + temporal_optimization_scaling_term**2))**0.5
 
 # Aircraft Parameters
 battery_specific_energy_Wh_kg = 390  # cell level specific energy of the battery
@@ -1865,11 +1865,11 @@ if trajectory == 'lawnmower':
     y_e = opti.variable(init_guess=np.linspace(0, 10000, n_timesteps), scale=1e4, **ops)
     opti.constrain_derivative(
         variable=x_e, with_respect_to=time,
-        derivative=ground_speed_x
+        derivative=u_e
     )
     opti.constrain_derivative(
         variable=y_e, with_respect_to=time,
-        derivative=ground_speed_y
+        derivative=v_e
     )
 
     # define airspeed in z direction
@@ -2107,12 +2107,12 @@ net_accel_x_e = opti.variable(
     scale=1e-4,
     **ops,
 )
-net_accel_y_e = opti.variable(
-    n_vars=n_timesteps,
-    init_guess=0,
-    scale=1e-4,
-    **ops,
-)
+# net_accel_y_e = opti.variable(
+#     n_vars=n_timesteps,
+#     init_guess=0,
+#     scale=1e-4,
+#     **ops,
+# )
 net_accel_z_e = opti.variable(
     n_vars=n_timesteps,
     init_guess=0,
@@ -2139,7 +2139,7 @@ opti.constrain_derivative(
 #     derivative=ground_speed
 # )
 opti.constrain_derivative(
-    variable=u_e, with_respect_to=time,
+    variable=air_speed, with_respect_to=time,
     derivative=net_accel_x_e,
 )
 # opti.constrain_derivative(
@@ -2170,7 +2170,7 @@ gravity_force = g * mass_total
 Fx_e = (- np.cosd(gamma) * drag_force \
         + np.sind(gamma) * lift_force) \
         + np.cosd(gamma + alpha) * thrust
-Fy_e = 0
+# Fy_e = 0
 Fz_e = np.sind(gamma) * drag_force \
        - np.cosd(gamma) * lift_force \
        + np.sind(gamma + alpha) * thrust \
@@ -2179,7 +2179,7 @@ Fz_e = np.sind(gamma) * drag_force \
 
 opti.subject_to([
     net_accel_x_e * mass_total / 1e1 == Fx_e / 1e1,
-    net_accel_y_e * mass_total / 1e1 == Fy_e / 1e1,
+    # net_accel_y_e * mass_total / 1e1 == Fy_e / 1e1,
     net_accel_z_e * mass_total / 1e2 == Fz_e / 1e2,
 ])
 
