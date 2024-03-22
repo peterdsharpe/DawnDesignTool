@@ -99,7 +99,7 @@ use_propulsion_fits_from_FL2020_1682_undergrads = True  # Warning: Fits not yet 
 # Mission Operating Parameters
 latitude = -73  # degrees, the location the sizing occurs
 if mode == "multi-objective":
-    day_of_year = opti.variable(init_guess=60, scale=10, lower_bound=0, upper_bound=90, **des) # Julian day, the day of the year the sizing occurs
+    day_of_year = opti.variable(init_guess=60, scale=10, lower_bound=0, upper_bound=150, **des) # Julian day, the day of the year the sizing occurs
 if mode == "parameter_sweep":
     day_of_year = opti.parameter(value=60) # Julian day, the day of the year the sizing occurs
 mission_length = day_of_year+10  # days, the length of the mission without landing to download data
