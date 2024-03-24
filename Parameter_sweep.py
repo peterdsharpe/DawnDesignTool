@@ -5,14 +5,14 @@ import matplotlib as mpl
 import csv
 
 ### where is parameter cominations file and where should outputs go?
-run_name = "test"
+run_name = "parameter_sweep"
 
 ### define sweep ranges
-strain_azimuth_resolutions = np.linspace(10, 100, 4)
-coverage_area_requirements = np.linspace(1e6, 1e9, 5)
-days_of_year = np.linspace(0, 60, 4)
-required_strain_rate_precisions = np.linspace(1e-5, 1e-4, 4)
-required_temporal_resolutions = np.linspace(6, 24, 3)
+strain_azimuth_resolutions = [5, 10, 25, 50]
+coverage_area_requirements = [1e8, 1e9, 1e10, 1e11]
+days_of_year = [0, 30, 60, 90]
+required_strain_rate_precisions = [1e-6, 1e-5, 1e-4]
+required_temporal_resolutions = [8, 12, 24, 48, 72]
 
 ### Turn parallelization on/off.
 parallel = True
