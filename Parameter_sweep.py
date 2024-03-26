@@ -77,7 +77,7 @@ def run(run_name, index_val, resolution_val, coverage_val, day_val, precision_va
         sol = opti.solve(
             max_iter=30000,
             options={
-                "ipopt.max_cpu_time": 3000,
+                "ipopt.max_cpu_time": 30000,
             },
             verbose=False
         )
