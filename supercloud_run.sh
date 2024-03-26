@@ -7,4 +7,4 @@
 module load anaconda/2023a
 
 # run the script
-python objective_sweep.py
+python Parameter_sweep.py
