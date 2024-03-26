@@ -101,7 +101,7 @@ latitude = -73  # degrees, the location the sizing occurs
 if mode == "multi-objective":
     day_of_year = opti.variable(init_guess=60, scale=10, lower_bound=0, upper_bound=150, **des) # Julian day, the day of the year the sizing occurs
 if mode == "parameter_sweep":
-    day_of_year = opti.parameter(value=60) # Julian day, the day of the year the sizing occurs
+    day_of_year = opti.parameter(value=30) # Julian day, the day of the year the sizing occurs
 mission_length = day_of_year+10  # days, the length of the mission without landing to download data
 strat_offset_value = 1000  # meters, margin above the stratosphere height the aircraft is required to stay above
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
@@ -116,7 +116,7 @@ if mode == "multi-objective":
     required_strain_temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0, **des) # hours
     required_coverage_area = opti.variable(init_guess=1000000, scale=1, lower_bound=0, **des)
 if mode == "parameter_sweep":
-    required_strain_temporal_resolution = opti.parameter(value=6) # hours
+    required_strain_temporal_resolution = opti.parameter(value=24) # hours
     required_coverage_area = opti.parameter(value=1000000)
 
 # todo finalize trajectory parameterization
