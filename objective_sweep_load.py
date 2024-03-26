@@ -20,12 +20,12 @@ def create_grid(max, num_objective_terms, run_name):
     # Generating permutations
     permutations = list(itertools.product(range(1, max+1), repeat=num_objective_terms))
 
-    # # Writing permutations to a CSV file
-    # with open(f'outputs\\{run_name}\\0_parameter_combinations.csv', 'w', newline='') as csvfile:
-    #     csv_writer = csv.writer(csvfile)
-    #     csv_writer.writerows(permutations)
-    #
-    # print("Permutations saved")
+    # Writing permutations to a CSV file
+    with open(f'outputs\\{run_name}\\0_parameter_combinations.csv', 'w', newline='') as csvfile:
+        csv_writer = csv.writer(csvfile)
+        csv_writer.writerows(permutations)
+
+    print("Permutations saved")
 
     # create np.array of permutations where the first column is the index of the run
     permutations = np.array(permutations)
@@ -322,11 +322,13 @@ if __name__ == '__main__':
             f"{'Precisions'.ljust(l)},"
             f"{'Temporal_Resolutions'.ljust(l)}\n")
 
+    # parameter_array = create_grid(max_weighting, number_of_objective_terms, run_name)
     parameter_array = np.genfromtxt(f'outputs/{run_name}/0_parameter_combinations.csv', delimiter=',')
     parameter_array = np.insert(parameter_array, 0, np.arange(0, parameter_array.shape[0]), axis=1)
     index_array = parameter_array[:, 0]
     files = np.array([run_name] * len(parameter_array))
     parameter_array = np.column_stack((files, parameter_array))[8:]
+
     if parallel:
         with mp.Pool(mp.cpu_count()) as p:
             for index, span_val, resolution_val, coverage_val, day_val, precision_val, temporal_val in p.imap_unordered(
