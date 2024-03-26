@@ -8,9 +8,9 @@ import csv
 run_name = "parameter_sweep"
 
 ### define sweep ranges
-strain_azimuth_resolutions = [5, 10, 25, 50]
-coverage_area_requirements = [1e8, 1e9, 1e10, 1e11]
-days_of_year = [0, 30, 60, 90]
+strain_azimuth_resolutions = [10, 25, 50, 100]
+coverage_area_requirements = [1e7, 1e8, 1e9, 1e10]
+days_of_year = [0, 30, 60]
 required_strain_rate_precisions = [1e-6, 1e-5, 1e-4]
 required_temporal_resolutions = [8, 12, 24, 48, 72]
 
