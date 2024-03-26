@@ -282,7 +282,6 @@ def run(run_name, index_val, resolution_val, coverage_val, day_val, precision_va
              save_name=f"outputs/{run_name}/trajectory_{run_num}.png"
              )
 
-        plt.savefig(f"outputs/{run_name}/mass_pie_chart_{run_num}.png")
 
     except Exception as e:
         print(f"Does not converge for run {run_num}")
