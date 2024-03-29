@@ -77,9 +77,65 @@ def plot_parallel_coordinates(df, attribute):
 
 
 
-# plot_parallel_coordinates(df_span, 'Wing Span')
+def spider(df, *, id_column, title=None, max_values=None, padding=1.25):
+    categories = df.dtypes[(df.dtypes == 'float') | (df.dtypes == 'int')].index.tolist()
+    categories = categories[1:]
+    data = df[categories].to_dict(orient='list')
+    ids = df[id_column].tolist()
+    if max_values is None:
+        max_values = {key: padding * max(value) for key, value in data.items()}
+
+    normalized_data = {key: np.array(value) / max_values[key] for key, value in data.items()}
+    num_vars = len(data.keys())
+    tiks = list(data.keys())
+    tiks += tiks[:1]
+    angles = np.linspace(0, 2 * np.pi, num_vars, endpoint=False).tolist() + [0]
+    fig, ax = plt.subplots(figsize=(8, 8), subplot_kw=dict(polar=True))
+    # If you want the first axis to be on top:
+    ax.set_theta_offset(np.pi / 2)
+    ax.set_theta_direction(-1)
+    for i, model_name in enumerate(ids):
+        values = [normalized_data[key][i] for key in data.keys()]
+        actual_values = [data[key][i] for key in data.keys()]
+        values += values[:1]  # Close the plot for a better look
+        ax.plot(angles, values, label=f'Run {model_name}')
+        ax.fill(angles, values, alpha=0.15)
+        for _x, _y, t in zip(angles, values, actual_values):
+            t = f'{t:.2f}' if isinstance(t, float) else str(t)
+            ax.text(_x, _y, t, size='xx-small')
+
+    ax.fill(angles, np.ones(num_vars + 1), alpha=0.05)
+    ax.set_yticklabels([])
+    ax.set_xticks(angles)
+    ax.set_xticklabels(tiks)
+    ax.legend(loc='upper right', bbox_to_anchor=(0.1, 0.2))
+    if title is not None: plt.suptitle(f"Effects of increasing weighting on {title} in objective function")
+    plt.show()
+
+
+radar = spider
+def plot_radar(df, attribute):
+    df.loc[:, 'Coverage_Areas'] = df['Coverage_Areas'].div(1e6).round(2)
+    df.loc[:, 'Precisions'] = df['Precisions'].multiply(1e3).round(2)
+    columns = ['Run', 'Spans [m]', 'Spatial Resolutions [m]', 'Coverage Areas [km^2]', 'Days', 'Precisions [1e3/yr]', 'Temporal Resolutions [hrs]']
+    df.columns = columns
+
+    spider(
+        df,
+        id_column='Run',
+        title=attribute,
+        padding=1.1
+    )
+
+plot_parallel_coordinates(df_span, 'Wing Span')
 # plot_parallel_coordinates(df_spatial, 'Spatial Resolution')
 # plot_parallel_coordinates(df_coverage, 'Coverage Area')
 # plot_parallel_coordinates(df_days, 'Days')
 # plot_parallel_coordinates(df_precision, 'Precision')
 # plot_parallel_coordinates(df_temporal, 'Temporal Resolution')
+plot_radar(df_span, 'Wing Span')
+plot_radar(df_spatial, 'Spatial Resolution')
+plot_radar(df_coverage, 'Coverage Area')
+plot_radar(df_days, 'Days')
+plot_radar(df_precision, 'Precision')
+plot_radar(df_temporal, 'Temporal Resolution')
