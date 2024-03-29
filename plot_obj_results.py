@@ -6,10 +6,8 @@ import sys
 sys.path.append("C:\\Users\\AnnickDewald\\PycharmProjects\\AeroSandbox")
 from aerosandbox.tools.pretty_plots import plt, sns, mpl, show_plot
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
 import seaborn as sns
-import matplotlib.colors as mcolors
 
 #### inputs
 file_name = 'run_from_cache'
@@ -127,15 +125,49 @@ def plot_radar(df, attribute):
         padding=1.1
     )
 
-plot_parallel_coordinates(df_span, 'Wing Span')
+
+def plot_scatter_matrix(df):
+    df.loc[:, 'Coverage_Areas'] = df['Coverage_Areas'].div(1e6).round(2)
+    columns = ['Run', 'Spans [m]', 'Spatial Resolutions [m]', 'Coverage Areas [km^2]', 'Days', 'Precisions [1/yr]', 'Temporal Resolutions [hrs]']
+    df.columns = columns
+    df = df.drop(columns=['Run'])
+    df = df.drop([8])
+    df = df.drop([10])
+
+    sns.set_theme(style="ticks")
+
+    # df = sns.load_dataset("penguins")
+    sns.pairplot(df, diag_kind='kde', plot_kws={'color': 'black'})
+    sns.pairplot(df, plot_kws={'color': 'black'})
+    plt.show()
+
+def corr_heatmap(df):
+    # Correlation Matrix Heatmap
+    df.loc[:, 'Coverage_Areas'] = df['Coverage_Areas'].div(1e6).round(2)
+    columns = ['Run', 'Spans', 'Spatial Resolutions', 'Coverage Areas', 'Days', 'Precisions', 'Temporal Resolutions']
+    df.columns = columns
+    df = df.drop(columns=['Run'])
+    df = df.drop([8])
+    df = df.drop([10])
+    heatmap = sns.heatmap(df.corr(), annot=True, vmin=-1, vmax=1,cmap='coolwarm', linewidths=0.5)
+    # Give a title to the heatmap. Pad defines the distance of the title from the top of the heatmap.
+    heatmap.set_title('Correlation Heatmap', fontdict={'fontsize': 12}, pad=12)
+    # add blank boundary around plot
+    plt.tight_layout()
+
+    plt.show()
+
+# plot_parallel_coordinates(df_span, 'Wing Span')
 # plot_parallel_coordinates(df_spatial, 'Spatial Resolution')
 # plot_parallel_coordinates(df_coverage, 'Coverage Area')
 # plot_parallel_coordinates(df_days, 'Days')
 # plot_parallel_coordinates(df_precision, 'Precision')
 # plot_parallel_coordinates(df_temporal, 'Temporal Resolution')
-plot_radar(df_span, 'Wing Span')
-plot_radar(df_spatial, 'Spatial Resolution')
-plot_radar(df_coverage, 'Coverage Area')
-plot_radar(df_days, 'Days')
-plot_radar(df_precision, 'Precision')
-plot_radar(df_temporal, 'Temporal Resolution')
+# plot_radar(df_span, 'Wing Span')
+# plot_radar(df_spatial, 'Spatial Resolution')
+# plot_radar(df_coverage, 'Coverage Area')
+# plot_radar(df_days, 'Days')
+# plot_radar(df_precision, 'Precision')
+# plot_radar(df_temporal, 'Temporal Resolution')
+# plot_scatter_matrix(df)
+corr_heatmap(df)
