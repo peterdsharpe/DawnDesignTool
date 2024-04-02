@@ -118,7 +118,7 @@ def plot_parallel_coordinates(df, attribute):
 
 def spider(df, *, id_column, title=None, max_values=None, padding=1.25):
     categories = df.dtypes[(df.dtypes == 'float') | (df.dtypes == 'int')].index.tolist()
-    categories = categories[1:]
+    categories = categories[:-1]
     data = df[categories].to_dict(orient='list')
     ids = df[id_column].tolist()
     if max_values is None:
@@ -137,7 +137,7 @@ def spider(df, *, id_column, title=None, max_values=None, padding=1.25):
         values = [normalized_data[key][i] for key in data.keys()]
         actual_values = [data[key][i] for key in data.keys()]
         values += values[:1]  # Close the plot for a better look
-        ax.plot(angles, values, label=f'Run {model_name}')
+        ax.plot(angles, values, label=f'Weighting {model_name}')
         ax.fill(angles, values, alpha=0.15)
         for _x, _y, t in zip(angles, values, actual_values):
             t = f'{t:.2f}' if isinstance(t, float) else str(t)
@@ -155,26 +155,25 @@ def spider(df, *, id_column, title=None, max_values=None, padding=1.25):
 
 def plot_radar(df, attribute):
     # df = df.drop([27])
-    df.astype(float)
     df.loc[:, 'Coverage_Areas'] = df['Coverage_Areas'].div(1e6).round(2)
+    # df.loc[:, 'Coverage_Areas'] = 1 / df['Coverage_Areas']
     df.loc[:, 'Precisions'] = df['Precisions'].multiply(1e6).round(2)
+    # df.loc[:, 'Days'] = 1 /  df['Days']
     try:
         df = df.drop([4])
         df = df.drop([8])
         df = df.drop([9])
 
-
     except:
         pass
-
-    columns = ['Run', 'Spans [m]', 'Spatial Resolutions [m]', 'Coverage Areas [km^2]', 'Days', 'Precisions [1e6/yr]', 'Temporal Resolutions [hrs]']
+    columns = ['Spans [m]', 'Spatial Resolutions [m]', 'Coverage Areas [km^2]', 'Days', 'Precisions [1e6/yr]', 'Temporal Resolutions [hrs]', 'Weight']
     df.columns = columns
 
     spider(
         df,
-        id_column='Run',
+        id_column='Weight',
         title=attribute,
-        padding=1.1
+        padding=1.1,
     )
 
 
