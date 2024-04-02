@@ -12,20 +12,23 @@ import seaborn as sns
 #### inputs
 file_name = 'lawnmower_new_obj'
 variables = ['Spatial_Resolutions', 'Coverage_Areas', 'Days', 'Precisions', 'Temporal_Resolutions', 'Spans']
-x_axis = 'Coverage_Areas'
-y_axis = 'Spans'
-lines = 'Temporal_Resolutions'
-shape = 'Spatial_Resolutions'
-
-# size ='Days'
-# style = 'Precisions'
 
 # Load the data
 file = f'outputs\\{file_name}\\sweep_results.csv'
+weighting_file = f'outputs\\{file_name}\\0_parameter_combinations.csv'
 df = pd.read_csv(file)
+
+# load the weighting file
+df_weighting = pd.read_csv(weighting_file)
+df_weighting.columns = ['Spans', 'Spatial Resolutions', 'Coverage Areas', 'Days', 'Precisions', 'Temporal Resolutions']
+
+# find runs to split into different dataframes
+rows_with_zero = df_weighting[(df_weighting == 0).any(axis=1)]
 
 # drop spaces in the column names
 df.columns = df.columns.str.replace(' ', '')
+
+# make sure all values are floats
 df['Spans'] = df['Spans'].values.astype(float)
 df['Spatial_Resolutions'] = df['Spatial_Resolutions'].values.astype(float)
 df['Coverage_Areas'] = df['Coverage_Areas'].values.astype(float)
@@ -39,16 +42,17 @@ df = df.dropna(subset=['Spans'])
 df = df.sort_values(by=['Run'])
 
 even_weighting = df[df['Run'] == 0]
-df_span = df[df['Run'] < 11]
-df_spatial = df[ (df['Run'] > 11) & (df['Run'] < 22)]
+
+df_span = df[df['Run'] < rows_with_zero.index[0]+1]
+df_spatial = df[ (df['Run'] > rows_with_zero.index[0]+1) & (df['Run'] < rows_with_zero.index[1]+1)]
 df_spatial = pd.concat([even_weighting, df_spatial])
-df_coverage = df[ (df['Run'] > 22) & (df['Run'] < 32)]
+df_coverage = df[ (df['Run'] > rows_with_zero.index[1]+1) & (df['Run'] < rows_with_zero.index[2]+1)]
 df_coverage = pd.concat([even_weighting, df_coverage])
-df_days = df[ (df['Run'] > 32) & (df['Run'] < 42)]
+df_days = df[ (df['Run'] > rows_with_zero.index[2]+1) & (df['Run'] < rows_with_zero.index[3]+1)]
 df_days = pd.concat([even_weighting, df_days])
-df_precision = df[(df['Run'] > 42) & (df['Run'] < 52)]
+df_precision = df[(df['Run'] > rows_with_zero.index[3]+1) & (df['Run'] < rows_with_zero.index[4]+1)]
 df_precision = pd.concat([even_weighting, df_precision])
-df_temporal = df[(df['Run'] > 52) & (df['Run'] < 62)]
+df_temporal = df[(df['Run'] > rows_with_zero.index[4]+1) & (df['Run'] < rows_with_zero.index[5]+1)]
 df_temporal = pd.concat([even_weighting, df_temporal])
 
 def plot_parallel_coordinates(df, attribute):
