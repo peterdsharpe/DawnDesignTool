@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 import seaborn as sns
 
 #### inputs
-file_name = 'run_from_cache'
+file_name = 'lawnmower_new_obj'
 variables = ['Spatial_Resolutions', 'Coverage_Areas', 'Days', 'Precisions', 'Temporal_Resolutions', 'Spans']
 x_axis = 'Coverage_Areas'
 y_axis = 'Spans'
@@ -27,16 +27,29 @@ df = pd.read_csv(file)
 # drop spaces in the column names
 df.columns = df.columns.str.replace(' ', '')
 df['Spans'] = df['Spans'].values.astype(float)
+df['Spatial_Resolutions'] = df['Spatial_Resolutions'].values.astype(float)
+df['Coverage_Areas'] = df['Coverage_Areas'].values.astype(float)
+df['Days'] = df['Days'].values.astype(float)
+df['Precisions'] = df['Precisions'].values.astype(float)
+df['Temporal_Resolutions'] = df['Temporal_Resolutions'].values.astype(float)
+
 
 # drop rows with NaN values in the columns of interest
 df = df.dropna(subset=['Spans'])
+df = df.sort_values(by=['Run'])
 
-df_span = df[df['Run'] < 7]
-df_spatial = df[(df['Run'] > 7) & (df['Run'] < 15)]
-df_coverage = df[(df['Run'] > 14) & (df['Run'] < 22)]
-df_days = df[(df['Run'] > 21) & (df['Run'] < 29)]
-df_precision = df[(df['Run'] > 28) & (df['Run'] < 36)]
-df_temporal = df[(df['Run'] > 35) & (df['Run'] < 43)]
+even_weighting = df[df['Run'] == 0]
+df_span = df[df['Run'] < 11]
+df_spatial = df[ (df['Run'] > 11) & (df['Run'] < 22)]
+df_spatial = pd.concat([even_weighting, df_spatial])
+df_coverage = df[ (df['Run'] > 22) & (df['Run'] < 32)]
+df_coverage = pd.concat([even_weighting, df_coverage])
+df_days = df[ (df['Run'] > 32) & (df['Run'] < 42)]
+df_days = pd.concat([even_weighting, df_days])
+df_precision = df[(df['Run'] > 42) & (df['Run'] < 52)]
+df_precision = pd.concat([even_weighting, df_precision])
+df_temporal = df[(df['Run'] > 52) & (df['Run'] < 62)]
+df_temporal = pd.concat([even_weighting, df_temporal])
 
 def plot_parallel_coordinates(df, attribute):
         # Add a column 'Colors' with different colors for each row
@@ -106,16 +119,27 @@ def spider(df, *, id_column, title=None, max_values=None, padding=1.25):
     ax.set_yticklabels([])
     ax.set_xticks(angles)
     ax.set_xticklabels(tiks)
-    ax.legend(loc='upper right', bbox_to_anchor=(0.1, 0.2))
+    ax.legend(loc='upper right', bbox_to_anchor=(0.05, 0.1))
     if title is not None: plt.suptitle(f"Effects of increasing weighting on {title} in objective function")
+    plt.tight_layout()
     plt.show()
 
 
-radar = spider
 def plot_radar(df, attribute):
+    # df = df.drop([27])
+    df.astype(float)
     df.loc[:, 'Coverage_Areas'] = df['Coverage_Areas'].div(1e6).round(2)
-    df.loc[:, 'Precisions'] = df['Precisions'].multiply(1e3).round(2)
-    columns = ['Run', 'Spans [m]', 'Spatial Resolutions [m]', 'Coverage Areas [km^2]', 'Days', 'Precisions [1e3/yr]', 'Temporal Resolutions [hrs]']
+    df.loc[:, 'Precisions'] = df['Precisions'].multiply(1e6).round(2)
+    try:
+        df = df.drop([4])
+        df = df.drop([8])
+        df = df.drop([9])
+
+
+    except:
+        pass
+
+    columns = ['Run', 'Spans [m]', 'Spatial Resolutions [m]', 'Coverage Areas [km^2]', 'Days', 'Precisions [1e6/yr]', 'Temporal Resolutions [hrs]']
     df.columns = columns
 
     spider(
@@ -131,8 +155,7 @@ def plot_scatter_matrix(df):
     columns = ['Run', 'Spans [m]', 'Spatial Resolutions [m]', 'Coverage Areas [km^2]', 'Days', 'Precisions [1/yr]', 'Temporal Resolutions [hrs]']
     df.columns = columns
     df = df.drop(columns=['Run'])
-    df = df.drop([8])
-    df = df.drop([10])
+    df = df.drop([27])
 
     sns.set_theme(style="ticks")
 
@@ -147,8 +170,7 @@ def corr_heatmap(df):
     columns = ['Run', 'Spans', 'Spatial Resolutions', 'Coverage Areas', 'Days', 'Precisions', 'Temporal Resolutions']
     df.columns = columns
     df = df.drop(columns=['Run'])
-    df = df.drop([8])
-    df = df.drop([10])
+    df = df.drop([27])
     heatmap = sns.heatmap(df.corr(), annot=True, vmin=-1, vmax=1,cmap='coolwarm', linewidths=0.5)
     # Give a title to the heatmap. Pad defines the distance of the title from the top of the heatmap.
     heatmap.set_title('Correlation Heatmap', fontdict={'fontsize': 12}, pad=12)
@@ -162,12 +184,12 @@ def corr_heatmap(df):
 # plot_parallel_coordinates(df_coverage, 'Coverage Area')
 # plot_parallel_coordinates(df_days, 'Days')
 # plot_parallel_coordinates(df_precision, 'Precision')
-# plot_parallel_coordinates(df_temporal, 'Temporal Resolution')
-# plot_radar(df_span, 'Wing Span')
-# plot_radar(df_spatial, 'Spatial Resolution')
-# plot_radar(df_coverage, 'Coverage Area')
-# plot_radar(df_days, 'Days')
-# plot_radar(df_precision, 'Precision')
-# plot_radar(df_temporal, 'Temporal Resolution')
+# # plot_parallel_coordinates(df_temporal, 'Temporal Resolution')
+plot_radar(df_span, 'wingspan')
+plot_radar(df_spatial, 'Spatial Resolution')
+plot_radar(df_coverage, 'Coverage Area')
+plot_radar(df_days, 'Days')
+plot_radar(df_precision, 'Precision')
+plot_radar(df_temporal, 'Temporal Resolution')
 # plot_scatter_matrix(df)
-corr_heatmap(df)
+# corr_heatmap(df)
