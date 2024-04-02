@@ -2310,7 +2310,7 @@ opti.subject_to([
     thrust[time_periodic_end_index] / 1e2 == thrust[time_periodic_start_index] / 1e2,
 ])
 
-
+n_passes_penalty = np.mod(number_of_passes, 1)
 ##### Add objective
 objective = eval(minimize)
 
