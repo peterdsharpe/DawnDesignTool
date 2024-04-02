@@ -7,7 +7,7 @@ import itertools
 
 
 ### where is parameter cominations file and where should outputs go?
-run_name = "lawnmower_600"
+run_name = "full_run"
 
 ### define sweep ranges
 max_weighting = 10
@@ -78,7 +78,7 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
         sol = opti.solve(
             max_iter=30000,
             options={
-                "ipopt.max_cpu_time": 9000,
+                "ipopt.max_cpu_time": 15000,
             },
             verbose=False
         )
@@ -233,6 +233,8 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
                 "swath overlap": f"{fmt(swath_overlap)}",
                 "coverage length": f"{fmt(coverage_length)} meters",
                 "coverage width": f"{fmt(2 * max_swath_range - (max_swath_range * swath_overlap))} meters",
+                "imaging offset": f"{fmt(max_imaging_offset)} meters",
+                "number of racetracks": f"{fmt(number_of_passes)}",
             }.items():
                 writer.writerow({"Property": k, "Value": v})
             for k, v in {
@@ -287,8 +289,6 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
              title="Optimal Trajectory over Simulation",
              save_name=f"outputs/{run_name}/trajectory_{run_num}.png"
              )
-
-        plt.savefig(f"outputs/{run_name}/mass_pie_chart_{run_num}.png")
 
     except Exception as e:
         print('Failed to solve for track=0')
