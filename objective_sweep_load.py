@@ -7,14 +7,14 @@ import itertools
 
 
 ### where is parameter cominations file and where should outputs go?
-run_name = "run_from_cache"
+run_name = "lawnmower_600"
 
 ### define sweep ranges
 max_weighting = 10
 number_of_objective_terms = 6
 
 ### Turn parallelization on/off.
-parallel = False
+parallel = True
 
 def create_grid(max, num_objective_terms, run_name):
     # Generating permutations
@@ -78,7 +78,7 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
         sol = opti.solve(
             max_iter=30000,
             options={
-                "ipopt.max_cpu_time": 30000,
+                "ipopt.max_cpu_time": 9000,
             },
             verbose=False
         )
@@ -327,7 +327,7 @@ if __name__ == '__main__':
     parameter_array = np.insert(parameter_array, 0, np.arange(0, parameter_array.shape[0]), axis=1)
     index_array = parameter_array[:, 0]
     files = np.array([run_name] * len(parameter_array))
-    parameter_array = np.column_stack((files, parameter_array))[8:]
+    parameter_array = np.column_stack((files, parameter_array))
 
     if parallel:
         with mp.Pool(mp.cpu_count()) as p:
