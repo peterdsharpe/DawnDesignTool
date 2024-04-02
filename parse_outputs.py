@@ -1,7 +1,7 @@
 import pandas as pd
 import re
 
-output_file = "sweeps_new_weighting3"
+output_file = "lawnmower_new_obj"
 annotation = "airspeed"
 sizing = ('look_angle')
 runs = [i for i in range(1, 170 + 1)]
@@ -22,7 +22,7 @@ swath_range = []
 
 for run_num in runs:
     try:
-        csv_file = f"outputs/{output_file}/outputs_data_run_{run_num}.csv"
+        csv_file = f"outputs/{output_file}/outputs_data_run_{run_num}.0.csv"
         df = pd.read_csv(csv_file)
         df = df.T
         df.columns = df.iloc[0,]
