@@ -19,7 +19,7 @@ weighting_file = f'outputs\\{file_name}\\0_parameter_combinations.csv'
 df = pd.read_csv(file)
 
 # load the weighting file
-df_weighting = pd.read_csv(weighting_file)
+df_weighting = pd.read_csv(weighting_file, header = None)
 df_weighting.columns = ['Spans', 'Spatial Resolutions', 'Coverage Areas', 'Days', 'Precisions', 'Temporal Resolutions']
 
 # find runs to split into different dataframes
@@ -48,36 +48,43 @@ even_weighting = df[df['Run'] == 0]
 df_span = df[df['Run'] < rows_with_zero.index[0]]
 df_span = df_span.set_index('Run')
 df_span.loc[:, 'weight'] = df_weighting.loc[df_span.index, 'Spans']
+df_span = df_span.sort_values(by=['weight'])
 
 # make spatial df
 df_spatial = df[ (df['Run'] > rows_with_zero.index[0]+1) & (df['Run'] < rows_with_zero.index[1])]
 df_spatial = pd.concat([even_weighting, df_spatial])
 df_spatial = df_spatial.set_index('Run')
 df_spatial.loc[:, 'weight'] = df_weighting.loc[df_spatial.index, 'Spatial Resolutions']
+df_spatial = df_spatial.sort_values(by=['weight'])
 
 # make coverage df
 df_coverage = df[ (df['Run'] > rows_with_zero.index[1]+1) & (df['Run'] < rows_with_zero.index[2])]
 df_coverage = pd.concat([even_weighting, df_coverage])
 df_coverage = df_coverage.set_index('Run')
 df_coverage.loc[:, 'weight'] = df_weighting.loc[df_coverage.index, 'Coverage Areas']
+df_coverage = df_coverage.sort_values(by=['weight'])
 
 # make days df
 df_days = df[ (df['Run'] > rows_with_zero.index[2]+1) & (df['Run'] < rows_with_zero.index[3])]
 df_days = pd.concat([even_weighting, df_days])
 df_days = df_days.set_index('Run')
 df_days.loc[:, 'weight'] = df_weighting.loc[df_days.index, 'Days']
+df_days = df_days.sort_values(by=['weight'])
 
 # make precision df
 df_precision = df[(df['Run'] > rows_with_zero.index[3]+1) & (df['Run'] < rows_with_zero.index[4])]
 df_precision = pd.concat([even_weighting, df_precision])
 df_precision = df_precision.set_index('Run')
 df_precision.loc[:, 'weight'] = df_weighting.loc[df_precision.index, 'Precisions']
+df_precision = df_precision.sort_values(by=['weight'])
 
 # make temporal df
 df_temporal = df[(df['Run'] > rows_with_zero.index[4]+1) & (df['Run'] < rows_with_zero.index[5])]
 df_temporal = pd.concat([even_weighting, df_temporal])
 df_temporal = df_temporal.set_index('Run')
 df_temporal.loc[:, 'weight'] = df_weighting.loc[df_temporal.index, 'Temporal Resolutions']
+df_temporal = df_temporal.sort_values(by=['weight'])
+
 
 def plot_parallel_coordinates(df, attribute):
         # Add a column 'Colors' with different colors for each row
