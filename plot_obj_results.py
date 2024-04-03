@@ -360,6 +360,7 @@ def histogram(df):
     plt.tight_layout()
     plt.show()
 
+plot_parallel_coordinates(df, 'all')
 # plot_parallel_coordinates(df_span, 'Wing Span')
 # plot_parallel_coordinates(df_spatial, 'Spatial Resolution')
 # plot_parallel_coordinates(df_coverage, 'Coverage Area')
@@ -369,8 +370,14 @@ def histogram(df):
 plot_radar(df_span, 'wingspan')
 plot_radar(df_spatial, 'Spatial Resolution')
 plot_radar(df_coverage, 'Coverage Area')
-plot_radar(df_days, 'Days')
+plot_radar(df_days, 'Duration')
 plot_radar(df_precision, 'Precision')
 plot_radar(df_temporal, 'Temporal Resolution')
 # plot_scatter_matrix(df)
 # corr_heatmap(df)
+# corr_heatmap(big_df)
+big_df = big_df.drop(columns = ['Wavelength [m]'])
+histogram(big_df)
+
+big_df = big_df.drop(columns = ['Swath Overlap', 'Pulse Repetition Frequency [Hz]'])
+corr_heatmap(big_df)
