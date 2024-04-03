@@ -292,14 +292,8 @@ def plot_radar(df, attribute):
     # df.loc[:, 'Coverage_Areas'] = 1 / df['Coverage_Areas']
     df.loc[:, 'Precisions'] = df['Precisions'].multiply(1e6).round(2)
     # df.loc[:, 'Days'] = 1 /  df['Days']
-    try:
-        df = df.drop([4])
-        df = df.drop([8])
-        df = df.drop([9])
 
-    except:
-        pass
-    columns = ['Spans [m]', 'Spatial Resolutions [m]', 'Coverage Areas [km^2]', 'Days', 'Precisions [1e6/yr]', 'Temporal Resolutions [hrs]', 'Weight']
+    columns = ['Spans [m]', 'Spatial Resolutions [m]', 'Coverage Areas [km^2]', 'Duration [days]', 'Precisions [1e6/yr]', 'Temporal Resolutions [hrs]', 'Weight']
     df.columns = columns
 
     spider(
