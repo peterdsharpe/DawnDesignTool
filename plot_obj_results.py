@@ -323,8 +323,41 @@ def corr_heatmap(df):
 
     plt.show()
 
-    plt.tight_layout()
+def histogram(df):
+    # Plot histograms for each column
 
+    # first check distribution of the data
+    std_columns = []
+    for column in df.columns:
+        std = df[column].std()
+        mean = df[column].mean()
+        if std/mean < 1e-3:
+            std_columns.append(column)
+
+    # Calculate the number of rows and columns needed for subplots
+    num_cols = len(df.columns)
+    num_rows = (num_cols - 1) // 5 + 1  # Ensure at least 1 row
+
+    # Create subplots
+    fig, axes = plt.subplots(num_rows, 5, figsize=(20, num_rows * 4))
+    axes = axes.flatten()
+
+    # Plot histograms for each column
+    for i, col in enumerate(df.columns):
+        if col in std_columns:  # Adjust settings for specific column
+            # sns.histplot(df[col], ax=axes[i], kde=True, bins=1)  # Adjust bin size
+            sns.histplot(df[col], ax=axes[i], kde=True, bins=10)
+            axes[i].set_title(col)
+        else:  # Adjust settings for another specific column
+            sns.histplot(df[col], ax=axes[i], kde=True, bins=10)
+            axes[i].set_title(col)
+
+    # Remove extra empty subplots if necessary
+    for j in range(num_cols, num_rows * 5):
+        fig.delaxes(axes[j])
+
+    # Adjust layout
+    plt.tight_layout()
     plt.show()
 
 # plot_parallel_coordinates(df_span, 'Wing Span')
