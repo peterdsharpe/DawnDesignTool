@@ -305,30 +305,24 @@ def plot_radar(df, attribute):
 
 
 def plot_scatter_matrix(df):
-    df.loc[:, 'Coverage_Areas'] = df['Coverage_Areas'].div(1e6).round(2)
-    columns = ['Run', 'Spans [m]', 'Spatial Resolutions [m]', 'Coverage Areas [km^2]', 'Days', 'Precisions [1/yr]', 'Temporal Resolutions [hrs]']
-    df.columns = columns
-    df = df.drop(columns=['Run'])
-    df = df.drop([27])
 
     sns.set_theme(style="ticks")
 
-    # df = sns.load_dataset("penguins")
     sns.pairplot(df, diag_kind='kde', plot_kws={'color': 'black'})
     sns.pairplot(df, plot_kws={'color': 'black'})
     plt.show()
 
 def corr_heatmap(df):
     # Correlation Matrix Heatmap
-    df.loc[:, 'Coverage_Areas'] = df['Coverage_Areas'].div(1e6).round(2)
-    columns = ['Run', 'Spans', 'Spatial Resolutions', 'Coverage Areas', 'Days', 'Precisions', 'Temporal Resolutions']
-    df.columns = columns
-    df = df.drop(columns=['Run'])
-    df = df.drop([27])
-    heatmap = sns.heatmap(df.corr(), annot=True, vmin=-1, vmax=1,cmap='coolwarm', linewidths=0.5)
-    # Give a title to the heatmap. Pad defines the distance of the title from the top of the heatmap.
-    heatmap.set_title('Correlation Heatmap', fontdict={'fontsize': 12}, pad=12)
-    # add blank boundary around plot
+    f, ax = plt.subplots(figsize=(10, 6))
+    corr = df.corr()
+    hm = sns.heatmap(round(corr, 2), annot=False, ax=ax, vmax=1, vmin=-1, cmap="coolwarm", fmt='.2f',
+                     linewidths=.05)
+    f.subplots_adjust(top=0.93)
+    plt.tight_layout()
+
+    plt.show()
+
     plt.tight_layout()
 
     plt.show()
