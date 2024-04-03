@@ -291,7 +291,7 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
              )
 
     except Exception as e:
-        print('Failed to solve for track=0')
+        print('Failed to solve')
         print(e)
         span = np.nan
         resolution_val = np.nan
