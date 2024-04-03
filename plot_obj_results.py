@@ -222,18 +222,14 @@ def plot_parallel_coordinates(df, attribute):
 
         # Convert DataFrame to dictionary
         data_dict = df.to_dict(orient='list')
+        list = []
+        for i in df.columns:
+            list.append(dict(label=i, values=data_dict[i]))
 
         # Create a parallel coordinates plot using graph_objects
         fig = go.Figure(data=go.Parcoords(
-            line=dict(color=df['Run'], colorscale='portland'),
-            dimensions=list([
-                dict(label='Spatial Resolutions', values=df['Spatial_Resolutions']),
-                dict(label='Precisions', values=df['Precisions']),
-                dict(label='Temporal Resolutions', values=df['Temporal_Resolutions']),
-                dict(label='Coverage Areas', values=df['Coverage_Areas']),
-                dict(label='Days', values=df['Days']),
-                dict(label='Spans', values=df['Spans'])
-            ]),
+            line=dict(color=df.index, colorscale='portland'),
+            dimensions=list,
             unselected=dict(line=dict(color='black', opacity=0))
         ))
 
