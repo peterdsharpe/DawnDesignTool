@@ -226,18 +226,33 @@ big_df_temporal = big_df[big_df.index.isin(df_temporal.index)]
 def plot_parallel_coordinates(df, attribute):
         # Add a column 'Colors' with different colors for each row
         # df['Colors'] = df['Run']
+        try:
+            df = df.drop(columns = ['weight'])
+        except:
+            pass
+        df = df.reset_index()
+        df = df.drop(columns=['Run'])
 
         # Convert DataFrame to dictionary
         data_dict = df.to_dict(orient='list')
         list = []
         for i in df.columns:
-            list.append(dict(label=i, values=data_dict[i]))
+            if i == 'Coverage_Area [km^2]':
+                values = [ - x for x in data_dict[i]]
+                list.append(dict(range =[round(min(values) - 1), round(max(values) + 1)], label='- Coverage_Areas [1/km^2]', values=values))
+            elif i == 'Duration [days]':
+                values = [- x for x in data_dict[i]]
+                list.append(dict(range =[round(min(values) - 1), 0], label='- Duration [1/days]', values=values))
+            elif i == 'Precision [1/yr]':
+                list.append(dict(range =[round(min(data_dict[i]) - 1e-6, 6), round(max(data_dict[i]), 6)  + 1e-6], label='Precisions [1/yr]', values=data_dict[i]))
+            else:
+                list.append(dict(range =[round(min(data_dict[i]) - 1), round(max(data_dict[i])+ 1)],label=i, values=data_dict[i]))
 
         # Create a parallel coordinates plot using graph_objects
         fig = go.Figure(data=go.Parcoords(
-            line=dict(color=df.index, colorscale='portland'),
+            line=dict(color=df.index, colorscale='hsv'),
             dimensions=list,
-            unselected=dict(line=dict(color='black', opacity=0))
+            unselected=dict(line=dict(color='black', opacity=0.2))
         ))
 
         # Add labels and title
