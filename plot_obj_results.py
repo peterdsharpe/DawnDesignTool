@@ -201,8 +201,8 @@ def load_variables(output_file, runs):
 
     # make dict
     dict = {'Run': runs, 'Wavelength [m]': wavelengths, 'Look_Angle [deg]': look_angles, 'SNR [dB]': SNRs, 'Payload Power [W]': payload_powers,
-            'Average Airspeed [m/s]': airspeeds, 'Cruise Altitudes [km]': cruise_altitudes, 'SAR Range Resolutions [m]': SAR_range_resolutions,
-            'SAR Azimuth Resolutions [m]': SAR_azimuth_resolutions, 'Swath Range [km]': swath_ranges, 'Swath Azimuth [km]': swath_azimuths,
+            'Average Airspeed [m/s]': airspeeds, 'Cruise Altitude [km]': cruise_altitudes, 'SAR Range Resolution [m]': SAR_range_resolutions,
+            'SAR Azimuth Resolution [m]': SAR_azimuth_resolutions, 'Swath Range [km]': swath_ranges, 'Swath Azimuth [km]': swath_azimuths,
             'Payload Mass [kg]': payload_masses, 'Bandwidth [Hz]': bandwidths, 'Aperture Width [m]': aperture_widths, 'Aperture Length [m]': aperture_lengths,
             'Mass TOGW [kg]': mass_TOGWs, 'Coverage Length [km]': coverage_lengths, 'Coverage Width [km]': coverage_widths, 'Revisit Period [hrs]': revisit_period,
             'Swath Overlap': swath_overlap, 'Pulse Repetition Frequency [Hz]': PRFs, 'Battery Mass [kg]': battery_mass}
