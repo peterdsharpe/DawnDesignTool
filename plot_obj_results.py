@@ -36,10 +36,15 @@ df['Days'] = df['Days'].values.astype(float)
 df['Precisions'] = df['Precisions'].values.astype(float)
 df['Temporal_Resolutions'] = df['Temporal_Resolutions'].values.astype(float)
 
-
 # drop rows with NaN values in the columns of interest
 df = df.dropna(subset=['Spans'])
 df = df.sort_values(by=['Run'])
+
+# df formatting
+df.loc[:, 'Coverage_Areas'] = df['Coverage_Areas'].div(1e6).round(2)
+df.columns = ['Run', 'Span [m]', 'Spatial_Resolution [m]', 'Coverage_Area [km^2]', 'Duration [days]', 'Precision [1/yr]', 'Temporal_Resolution [hrs]']
+
+
 
 # record the output for the all objectives weighted equally case
 even_weighting = df[df['Run'] == 0]
@@ -89,10 +94,6 @@ df = df.set_index('Run')
 
 # drop ones with only single attribute weighted
 df = df[~df.index.isin(rows_with_zero.index)]
-
-# df formatting
-df.loc[:, 'Coverage_Areas'] = df['Coverage_Areas'].div(1e6).round(2)
-df.columns = ['Spans [m]', 'Spatial_Resolutions [m]', 'Coverage_Areas [km^2]', 'Duration [days]', 'Precisions [1/yr]', 'Temporal_Resolutions [hrs]']
 
 # what runs converged?
 converged_runs = df.index.values
