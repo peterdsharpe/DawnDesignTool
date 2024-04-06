@@ -382,6 +382,33 @@ def histogram(df):
     plt.tight_layout()
     plt.show()
 
+def show_changes(df, attribute):
+    # plot bar chart
+    # df = df.drop(columns = ['weight'])
+    # Calculate the number of rows and columns needed for subplots
+    num_cols = len(df.columns)
+    num_rows = (num_cols - 1) // 5 + 1  # Ensure at least 1 row
+
+    # Create subplots
+    fig, axes = plt.subplots(num_rows, 5, figsize=(20, num_rows * 4))
+    axes = axes.flatten()
+
+    # Plot bar chart for each column
+    for i, col in enumerate(df.columns):
+            sns.scatterplot(x=df[attribute], y=col, data=df, ax=axes[i], s=100)
+            axes[i].set_title(col)
+            axes[i].set_xlabel(attribute)
+            axes[i].set_ylabel(col)
+
+    # Remove extra empty subplots if necessary
+    for j in range(num_cols, num_rows * 5):
+        fig.delaxes(axes[j])
+
+    # Adjust layout
+    plt.tight_layout()
+    plt.show()
+
+
 # plot_parallel_coordinates(df, 'all')
 plot_parallel_coordinates(df_span, 'Wing Span')
 plot_parallel_coordinates(df_spatial, 'Spatial Resolution')
