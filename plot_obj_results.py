@@ -44,11 +44,10 @@ if run_type == 'sweep all':
     df = df.dropna(subset=['Spans'])
     df = df.sort_values(by=['Run'])
 
-# df formatting
-df.loc[:, 'Coverage_Areas'] = df['Coverage_Areas'].div(1e6).round(2)
-df.columns = ['Run', 'Span [m]', 'Spatial_Resolution [m]', 'Coverage_Area [km^2]', 'Duration [days]', 'Precision [1/yr]', 'Temporal_Resolution [hrs]']
-
-
+    # df formatting
+    df.loc[:, 'Coverage_Areas'] = df['Coverage_Areas'].div(1e6).round(2)
+    df.columns = ['Run', 'Span [m]', 'Spatial Resolution [m]', 'Coverage Area [km^2]', 'Duration [days]',
+                  'Precision [1/yr]', 'Temporal Resolution [hrs]']
 
     # record the output for the all objectives weighted equally case
     even_weighting = df[df['Run'] == 0]
@@ -267,7 +266,7 @@ def plot_parallel_coordinates(df, attribute):
         data_dict = df.to_dict(orient='list')
         list = []
         for i in df.columns:
-            if i == 'Coverage_Area [km^2]':
+            if i == 'Coverage Area [km^2]':
                 values = [ - x for x in data_dict[i]]
                 list.append(dict(range =[round(min(values) - 1), round(max(values) + 1)], label='- Coverage_Areas [1/km^2]', values=values))
             elif i == 'Duration [days]':
@@ -339,20 +338,22 @@ def spider(df, *, id_column, title=None, max_values=None, padding=1.25):
 
 
 def plot_radar(df, attribute):
-    # df = df.drop([27])
-    df.loc[:, 'Coverage_Areas'] = df['Coverage_Areas'].div(1e6).round(2)
-    # df.loc[:, 'Coverage_Areas'] = 1 / df['Coverage_Areas']
-    df.loc[:, 'Precisions'] = df['Precisions'].multiply(1e6).round(2)
-    # df.loc[:, 'Days'] = 1 /  df['Days']
 
-    columns = ['Spans [m]', 'Spatial Resolutions [m]', 'Coverage Areas [km^2]', 'Duration [days]', 'Precisions [1e6/yr]', 'Temporal Resolutions [hrs]', 'Weight']
-    df.columns = columns
-
+    df.loc[:, 'Coverage Area [km^2]'] = 1/ df['Coverage Area [km^2]']
+    df.loc[:, 'Precision [1/yr]'] = df['Precision [1/yr]'].multiply(1e6).round(2)
+    df.loc[:, 'Duration [days]'] = 1/df['Duration [days]']
+    max_values = {'Span [m]': df['Span [m]'].max(),
+                  'Spatial Resolution [m]': df['Spatial Resolution [m]'].max(),
+                  'Coverage Area [km^2]': df['Coverage Area [km^2]'].max(),
+                  'Duration [days]': df['Duration [days]'].max(),
+                  'Precision [1/yr]':  df['Precision [1/yr]'].max(),
+                  'Temporal Resolution [hrs]': df['Temporal Resolution [hrs]'].max()}
     spider(
         df,
-        id_column='Weight',
+        id_column='weight',
         title=attribute,
-        padding=1.1,
+        max_values=max_values,
+        padding=1,
     )
 
 
@@ -440,12 +441,13 @@ def show_changes(df, attribute):
 
 
 # plot_parallel_coordinates(df, 'all')
-plot_parallel_coordinates(df_span, 'Wing Span')
-plot_parallel_coordinates(df_spatial, 'Spatial Resolution')
-plot_parallel_coordinates(df_coverage, 'Coverage Area')
-plot_parallel_coordinates(df_days, 'Days')
-plot_parallel_coordinates(df_precision, 'Precision')
-plot_parallel_coordinates(df_temporal, 'Temporal Resolution')
+# plot_parallel_coordinates(df_span, 'Wing Span')
+# plot_parallel_coordinates(df_spatial, 'Spatial Resolution')
+# plot_parallel_coordinates(df_coverage, 'Coverage Area')
+# plot_parallel_coordinates(df_days, 'Days')
+# plot_parallel_coordinates(df_precision, 'Precision')
+# plot_parallel_coordinates(df_temporal, 'Temporal Resolution')
+# plot_radar(df, 'Coverage Area [km^2]')
 # plot_radar(df_span, 'wingspan')
 # plot_radar(df_spatial, 'Spatial Resolution')
 # plot_radar(df_coverage, 'Coverage Area')
@@ -460,6 +462,7 @@ plot_parallel_coordinates(df_temporal, 'Temporal Resolution')
 #
 # big_df = big_df.drop(columns = ['Swath Overlap', 'Pulse Repetition Frequency [Hz]'])
 # corr_heatmap(big_df)
+show_changes(big_df, 'Coverage Area [km^2]')
 # show_changes(big_df_spans, 'Span [m]')
 # show_changes(big_df_spatial, 'Spatial_Resolution [m]')
 # show_changes(big_df_coverage, 'Coverage_Area [km^2]')
