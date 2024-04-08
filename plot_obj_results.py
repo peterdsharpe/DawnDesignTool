@@ -10,8 +10,11 @@ import plotly.graph_objects as go
 import seaborn as sns
 
 #### inputs
-file_name = 'full_run'
+file_name = 'sweep_area_n_free'
 variables = ['Spatial_Resolutions', 'Coverage_Areas', 'Days', 'Precisions', 'Temporal_Resolutions', 'Spans']
+# run_type = 'sweep all'
+run_type = 'sweep requirement'
+attribute = 'Coverage_Areas'
 
 # Load the data
 file = f'outputs\\{file_name}\\sweep_results.csv'
@@ -20,25 +23,26 @@ df = pd.read_csv(file)
 
 # load the weighting file
 df_weighting = pd.read_csv(weighting_file, header = None)
-df_weighting.columns = ['Spans', 'Spatial Resolutions', 'Coverage Areas', 'Days', 'Precisions', 'Temporal Resolutions']
+if run_type == 'sweep all':
 
-# find runs to split into different dataframes
-rows_with_zero = df_weighting[(df_weighting == 0).any(axis=1)]
+    df_weighting.columns = ['Spans', 'Spatial Resolutions', 'Coverage Areas', 'Days', 'Precisions', 'Temporal Resolutions']
+    # find runs to split into different dataframes
+    rows_with_zero = df_weighting[(df_weighting == 0).any(axis=1)]
 
-# drop spaces in the column names
-df.columns = df.columns.str.replace(' ', '')
+    # drop spaces in the column names
+    df.columns = df.columns.str.replace(' ', '')
 
-# make sure all values are floats
-df['Spans'] = df['Spans'].values.astype(float)
-df['Spatial_Resolutions'] = df['Spatial_Resolutions'].values.astype(float)
-df['Coverage_Areas'] = df['Coverage_Areas'].values.astype(float)
-df['Days'] = df['Days'].values.astype(float)
-df['Precisions'] = df['Precisions'].values.astype(float)
-df['Temporal_Resolutions'] = df['Temporal_Resolutions'].values.astype(float)
+    # make sure all values are floats
+    df['Spans'] = df['Spans'].values.astype(float)
+    df['Spatial_Resolutions'] = df['Spatial_Resolutions'].values.astype(float)
+    df['Coverage_Areas'] = df['Coverage_Areas'].values.astype(float)
+    df['Days'] = df['Days'].values.astype(float)
+    df['Precisions'] = df['Precisions'].values.astype(float)
+    df['Temporal_Resolutions'] = df['Temporal_Resolutions'].values.astype(float)
 
-# drop rows with NaN values in the columns of interest
-df = df.dropna(subset=['Spans'])
-df = df.sort_values(by=['Run'])
+    # drop rows with NaN values in the columns of interest
+    df = df.dropna(subset=['Spans'])
+    df = df.sort_values(by=['Run'])
 
 # df formatting
 df.loc[:, 'Coverage_Areas'] = df['Coverage_Areas'].div(1e6).round(2)
@@ -46,57 +50,82 @@ df.columns = ['Run', 'Span [m]', 'Spatial_Resolution [m]', 'Coverage_Area [km^2]
 
 
 
-# record the output for the all objectives weighted equally case
-even_weighting = df[df['Run'] == 0]
+    # record the output for the all objectives weighted equally case
+    even_weighting = df[df['Run'] == 0]
 
-# make span df
-df_span = df[df['Run'] < rows_with_zero.index[0]]
-df_span = df_span.set_index('Run')
-df_span.loc[:, 'weight'] = df_weighting.loc[df_span.index, 'Spans']
-df_span = df_span.sort_values(by=['weight'])
+    # make span df
+    df_span = df[df['Run'] < rows_with_zero.index[0]]
+    df_span = df_span.set_index('Run')
+    df_span.loc[:, 'weight'] = df_weighting.loc[df_span.index, 'Spans']
+    df_span = df_span.sort_values(by=['weight'])
 
-# make spatial df
-df_spatial = df[ (df['Run'] > rows_with_zero.index[0]+1) & (df['Run'] < rows_with_zero.index[1])]
-df_spatial = pd.concat([even_weighting, df_spatial])
-df_spatial = df_spatial.set_index('Run')
-df_spatial.loc[:, 'weight'] = df_weighting.loc[df_spatial.index, 'Spatial Resolutions']
-df_spatial = df_spatial.sort_values(by=['weight'])
+    # make spatial df
+    df_spatial = df[(df['Run'] > rows_with_zero.index[0] + 1) & (df['Run'] < rows_with_zero.index[1])]
+    df_spatial = pd.concat([even_weighting, df_spatial])
+    df_spatial = df_spatial.set_index('Run')
+    df_spatial.loc[:, 'weight'] = df_weighting.loc[df_spatial.index, 'Spatial Resolutions']
+    df_spatial = df_spatial.sort_values(by=['weight'])
 
-# make coverage df
-df_coverage = df[ (df['Run'] > rows_with_zero.index[1]+1) & (df['Run'] < rows_with_zero.index[2])]
-df_coverage = pd.concat([even_weighting, df_coverage])
-df_coverage = df_coverage.set_index('Run')
-df_coverage.loc[:, 'weight'] = df_weighting.loc[df_coverage.index, 'Coverage Areas']
-df_coverage = df_coverage.sort_values(by=['weight'])
+    # make coverage df
+    df_coverage = df[(df['Run'] > rows_with_zero.index[1] + 1) & (df['Run'] < rows_with_zero.index[2])]
+    df_coverage = pd.concat([even_weighting, df_coverage])
+    df_coverage = df_coverage.set_index('Run')
+    df_coverage.loc[:, 'weight'] = df_weighting.loc[df_coverage.index, 'Coverage Areas']
+    df_coverage = df_coverage.sort_values(by=['weight'])
 
-# make days df
-df_days = df[ (df['Run'] > rows_with_zero.index[2]+1) & (df['Run'] < rows_with_zero.index[3])]
-df_days = pd.concat([even_weighting, df_days])
-df_days = df_days.set_index('Run')
-df_days.loc[:, 'weight'] = df_weighting.loc[df_days.index, 'Days']
-df_days = df_days.sort_values(by=['weight'])
+    # make days df
+    df_days = df[(df['Run'] > rows_with_zero.index[2] + 1) & (df['Run'] < rows_with_zero.index[3])]
+    df_days = pd.concat([even_weighting, df_days])
+    df_days = df_days.set_index('Run')
+    df_days.loc[:, 'weight'] = df_weighting.loc[df_days.index, 'Days']
+    df_days = df_days.sort_values(by=['weight'])
 
-# make precision df
-df_precision = df[(df['Run'] > rows_with_zero.index[3]+1) & (df['Run'] < rows_with_zero.index[4])]
-df_precision = pd.concat([even_weighting, df_precision])
-df_precision = df_precision.set_index('Run')
-df_precision.loc[:, 'weight'] = df_weighting.loc[df_precision.index, 'Precisions']
-df_precision = df_precision.sort_values(by=['weight'])
+    # make precision df
+    df_precision = df[(df['Run'] > rows_with_zero.index[3] + 1) & (df['Run'] < rows_with_zero.index[4])]
+    df_precision = pd.concat([even_weighting, df_precision])
+    df_precision = df_precision.set_index('Run')
+    df_precision.loc[:, 'weight'] = df_weighting.loc[df_precision.index, 'Precisions']
+    df_precision = df_precision.sort_values(by=['weight'])
 
-# make temporal df
-df_temporal = df[(df['Run'] > rows_with_zero.index[4]+1) & (df['Run'] < rows_with_zero.index[5])]
-df_temporal = pd.concat([even_weighting, df_temporal])
-df_temporal = df_temporal.set_index('Run')
-df_temporal.loc[:, 'weight'] = df_weighting.loc[df_temporal.index, 'Temporal Resolutions']
-df_temporal = df_temporal.sort_values(by=['weight'])
+    # make temporal df
+    df_temporal = df[(df['Run'] > rows_with_zero.index[4] + 1) & (df['Run'] < rows_with_zero.index[5])]
+    df_temporal = pd.concat([even_weighting, df_temporal])
+    df_temporal = df_temporal.set_index('Run')
+    df_temporal.loc[:, 'weight'] = df_weighting.loc[df_temporal.index, 'Temporal Resolutions']
+    df_temporal = df_temporal.sort_values(by=['weight'])
 
-df = df.set_index('Run')
+    df = df.set_index('Run')
 
-# drop ones with only single attribute weighted
-df = df[~df.index.isin(rows_with_zero.index)]
+    # drop ones with only single attribute weighted
+    df = df[~df.index.isin(rows_with_zero.index)]
 
-# what runs converged?
-converged_runs = df.index.values
+    # what runs converged?
+    converged_runs = df.index.values
+if run_type == 'sweep requirement':
+    # drop spaces in the column names
+    df.columns = df.columns.str.replace(' ', '')
+
+    # make sure all values are floats
+    df['Spans'] = df['Spans'].values.astype(float)
+    df['Spatial_Resolutions'] = df['Spatial_Resolutions'].values.astype(float)
+    df['Coverage_Areas'] = df['Coverage_Areas'].values.astype(float)
+    df['Days'] = df['Days'].values.astype(float)
+    df['Precisions'] = df['Precisions'].values.astype(float)
+    df['Temporal_Resolutions'] = df['Temporal_Resolutions'].values.astype(float)
+
+    # drop rows with NaN values in the columns of interest
+    df = df.dropna(subset=['Spans'])
+    df = df.sort_values(by=['Run'])
+
+    # df formatting
+    df.loc[:, 'Coverage_Areas'] = df['Coverage_Areas'].div(1e6).round(2)
+    df.columns = ['Run', 'Span [m]', 'Spatial Resolution [m]', 'Coverage Area [km^2]', 'Duration [days]',
+                  'Precision [1/yr]', 'Temporal Resolution [hrs]']
+
+    df = df.set_index('Run')
+
+    # what runs converged?
+    converged_runs = df.index.values
 
 
 def load_variables(output_file, runs):
