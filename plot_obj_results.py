@@ -245,12 +245,13 @@ def load_variables(output_file, runs):
 
 design_variable_df = load_variables(file_name, converged_runs)
 big_df = pd.concat([df, design_variable_df], axis=1)
-big_df_spans = big_df[big_df.index.isin(df_span.index)]
-big_df_spatial = big_df[big_df.index.isin(df_spatial.index)]
-big_df_coverage = big_df[big_df.index.isin(df_coverage.index)]
-big_df_days = big_df[big_df.index.isin(df_days.index)]
-big_df_precision = big_df[big_df.index.isin(df_precision.index)]
-big_df_temporal = big_df[big_df.index.isin(df_temporal.index)]
+if run_type == 'sweep all':
+    big_df_spans = big_df[big_df.index.isin(df_span.index)]
+    big_df_spatial = big_df[big_df.index.isin(df_spatial.index)]
+    big_df_coverage = big_df[big_df.index.isin(df_coverage.index)]
+    big_df_days = big_df[big_df.index.isin(df_days.index)]
+    big_df_precision = big_df[big_df.index.isin(df_precision.index)]
+    big_df_temporal = big_df[big_df.index.isin(df_temporal.index)]
 
 def plot_parallel_coordinates(df, attribute):
         # Add a column 'Colors' with different colors for each row
