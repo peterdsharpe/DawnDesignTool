@@ -10,11 +10,11 @@ import plotly.graph_objects as go
 import seaborn as sns
 
 #### inputs
-file_name = 'sweep_area_n_free'
+file_name = 'full_run'
 variables = ['Spatial_Resolutions', 'Coverage_Areas', 'Days', 'Precisions', 'Temporal_Resolutions', 'Spans']
-# run_type = 'sweep all'
-run_type = 'sweep requirement'
-attribute = 'Coverage_Areas'
+run_type = 'sweep all'
+# run_type = 'sweep requirement'
+# attribute = 'Coverage_Areas'
 
 # Load the data
 file = f'outputs\\{file_name}\\sweep_results.csv'
@@ -268,14 +268,14 @@ def plot_parallel_coordinates(df, attribute):
         for i in df.columns:
             if i == 'Coverage Area [km^2]':
                 values = [ - x for x in data_dict[i]]
-                list.append(dict(range =[round(min(values) - 1), round(max(values) + 1)], label='- Coverage_Areas [1/km^2]', values=values))
+                list.append(dict(range =[round(min(values)-500, -3), 0], label='- Coverage_Areas [km^2]', values=values))
             elif i == 'Duration [days]':
                 values = [- x for x in data_dict[i]]
-                list.append(dict(range =[round(min(values) - 1), 0], label='- Duration [1/days]', values=values))
+                list.append(dict(range =[round(min(values) - 1), 0], label='- Duration [days]', values=values))
             elif i == 'Precision [1/yr]':
-                list.append(dict(range =[round(min(data_dict[i]) - 1e-6, 6), round(max(data_dict[i]), 6)  + 1e-6], label='Precisions [1/yr]', values=data_dict[i]))
+                list.append(dict(range =[0, round(max(data_dict[i]), 6)  + 1e-6], label='Precisions [1/yr]', values=data_dict[i]))
             else:
-                list.append(dict(range =[round(min(data_dict[i]) - 1), round(max(data_dict[i])+ 1)],label=i, values=data_dict[i]))
+                list.append(dict(range =[0, round(max(data_dict[i])+ 1)],label=i, values=data_dict[i]))
 
         # Create a parallel coordinates plot using graph_objects
         fig = go.Figure(data=go.Parcoords(
@@ -418,10 +418,11 @@ def show_changes(df, attribute):
     # df = df.drop(columns = ['weight'])
     # Calculate the number of rows and columns needed for subplots
     num_cols = len(df.columns)
-    num_rows = (num_cols - 1) // 5 + 1  # Ensure at least 1 row
+    cols_in_plot = 7
+    num_rows = (num_cols - 1) // cols_in_plot + 1  # Ensure at least 1 row
 
     # Create subplots
-    fig, axes = plt.subplots(num_rows, 5, figsize=(20, num_rows * 4))
+    fig, axes = plt.subplots(num_rows, cols_in_plot, figsize=(4 * cols_in_plot, num_rows * 4))
     axes = axes.flatten()
 
     # Plot bar chart for each column
@@ -432,13 +433,12 @@ def show_changes(df, attribute):
             axes[i].set_ylabel(col)
 
     # Remove extra empty subplots if necessary
-    for j in range(num_cols, num_rows * 5):
+    for j in range(num_cols, num_rows * cols_in_plot):
         fig.delaxes(axes[j])
 
     # Adjust layout
     plt.tight_layout()
     plt.show()
-
 
 # plot_parallel_coordinates(df, 'all')
 # plot_parallel_coordinates(df_span, 'Wing Span')
@@ -462,12 +462,11 @@ def show_changes(df, attribute):
 #
 # big_df = big_df.drop(columns = ['Swath Overlap', 'Pulse Repetition Frequency [Hz]'])
 # corr_heatmap(big_df)
-show_changes(big_df, 'Coverage Area [km^2]')
-# show_changes(big_df_spans, 'Span [m]')
-# show_changes(big_df_spatial, 'Spatial_Resolution [m]')
-# show_changes(big_df_coverage, 'Coverage_Area [km^2]')
-# show_changes(big_df_days, 'Duration [days]')
-# show_changes(big_df_precision, 'Precision [1/yr]')
-# show_changes(big_df_temporal, 'Temporal_Resolution [hrs]')
+show_changes(big_df_spans, 'Span [m]')
+show_changes(big_df_spatial, 'Spatial Resolution [m]')
+show_changes(big_df_coverage, 'Coverage Area [km^2]')
+show_changes(big_df_days, 'Duration [days]')
+show_changes(big_df_precision, 'Precision [1/yr]')
+show_changes(big_df_temporal, 'Temporal Resolution [hrs]')
 
 
