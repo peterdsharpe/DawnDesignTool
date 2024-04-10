@@ -7,4 +7,4 @@
 module load anaconda/2023a
 
 # run the script
-python objective_sweep_load.py
+python cache_init_guess.py
