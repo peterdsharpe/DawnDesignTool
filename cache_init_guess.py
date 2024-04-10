@@ -10,7 +10,7 @@ import itertools
 
 
 ### where is parameter cominations file and where should outputs go?
-run_name = "lawnmower_new_obj"
+run_name = "lawnmower_n_sweep"
 
 def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, coverage_scaling_term, day_scaling_term,
         precision_scaling_term, temporal_scaling_term):
