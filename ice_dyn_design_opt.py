@@ -1949,7 +1949,7 @@ if trajectory == 'lawnmower':
         distance[time_periodic_start_index] / 1e5 == 0,
         x_e[0] == 0,
         y_e[0] == 0,
-        # coverage_length == coverage_width
+        coverage_length == coverage_width
     ])
 
     # define revisit rate and period from number of times track is sampled
