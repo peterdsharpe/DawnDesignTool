@@ -163,8 +163,7 @@ q_ne_over_q_max = 2
 ##### end section
 
 ##### Time Discretization
-n_timesteps_per_segment = 300  # number of timesteps per segment (started at 180, 300 improved penalty term slightly)
-# Quick convergence testing indicates you can get bad analyses below 150 or so...
+n_timesteps_per_segment = 180  # number of timesteps per segment
 if climb_opt:  # roughly 1-day-plus-climb window, starting at ground. Periodicity enforced for last 24 hours.
     time_start = opti.variable(init_guess=-12 * 3600, scale=3600, **ops,)
     # optimizer selects most optimal start time
