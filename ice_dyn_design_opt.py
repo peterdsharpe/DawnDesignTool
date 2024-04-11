@@ -2400,11 +2400,24 @@ if draw_initial_guess_config:
 
 if __name__ == "__main__":
     import csv
-    output_file = "lawnmower_600"
+    output_file = "lawnmower_n_sweep"
     # primals = np.load(f"outputs/{output_file}/0_primals.npy")
     # duals = np.load(f"outputs/{output_file}/0_duals.npy")
 
-    runs = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41]
+    ### Make a data file
+    filename = f"outputs/{output_file}/sweep_results.csv"
+    l = 20
+    with open(filename, "w+") as f:
+        f.write(
+            f"{'Run'.ljust(l)},"
+            f"{'Spans'.ljust(l)},"
+            f"{'Spatial_Resolutions'.ljust(l)},"
+            f"{'Coverage_Areas'.ljust(l)},"
+            f"{'Days'.ljust(l)},"
+            f"{'Precisions'.ljust(l)},"
+            f"{'Temporal_Resolutions'.ljust(l)}\n")
+
+    # runs = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41]
     runs = [0, 1]
     combinations = []
     with open(f'outputs/{output_file}/0_parameter_combinations.csv', newline='\n') as csvfile:
@@ -2414,17 +2427,19 @@ if __name__ == "__main__":
         for row in csv_reader:
             # Append the row to the list
             combinations.append(row)
+    # opti.set_initial(opti.x, primals)
+    # opti.set_initial(opti.lam_g, duals)
     for run_num in runs:
-        opti.set_value(wingspan_optimization_scaling_term, float(combinations[run_num][0]))
-        opti.set_value(azimuth_optimization_scaling_term, float(combinations[run_num][1]))
-        opti.set_value(coverage_optimization_scaling_term, float(combinations[run_num][2]))
-        opti.set_value(day_optimization_scaling_term, float(combinations[run_num][3]))
-        opti.set_value(precision_optimization_scaling_term, float(combinations[run_num][4]))
-        opti.set_value(temporal_optimization_scaling_term, float(combinations[run_num][5]))
+        # opti.set_value(wingspan_optimization_scaling_term, float(combinations[run_num][0]))
+        # opti.set_value(azimuth_optimization_scaling_term, float(combinations[run_num][1]))
+        # opti.set_value(coverage_optimization_scaling_term, float(combinations[run_num][2]))
+        # opti.set_value(day_optimization_scaling_term, float(combinations[run_num][3]))
+        # opti.set_value(precision_optimization_scaling_term, float(combinations[run_num][4]))
+        # opti.set_value(temporal_optimization_scaling_term, float(combinations[run_num][5]))
+        opti.set_value(number_of_passes, float(combinations[run_num][0]))
         opti.set_value(track_scaler, 1)
+
         if run_num ==0:
-            # opti.set_initial(opti.x, primals)
-            # opti.set_initial(opti.lam_g, duals)
             opti.set_value(track_scaler, 0)
         else:
             opti.set_value(track_scaler, 1)
@@ -2432,11 +2447,16 @@ if __name__ == "__main__":
                 sol = opti.solve(
                     max_iter=100000,
                     options={
-                        "ipopt.max_cpu_time": 60000
+                        "ipopt.max_cpu_time": 6000
                     }
                 )
                 print("Success!")
                 converged = True
+                # if run_num == 1:
+                #     # primals = sol(opti.x)
+                #     # duals = sol(opti.lam_g)
+                #     # np.save(f"outputs/{output_file}/0_primals.npy", primals)
+                #     # np.save(f"outputs/{output_file}/0_duals.npy", duals)
         except:
                 sol = opti.debug
                 converged = False
@@ -2481,6 +2501,7 @@ if __name__ == "__main__":
             "Coverage Area": f"{fmt(coverage_area)} meters^2",
             "Day of Year": f"{fmt(day_of_year)}",
             "Strain Precision": f"{fmt(max_precision)} 1 / yr",
+            "Number of Racetracks": f"{fmt(number_of_passes)}",
             "Cruise Altitude": f"{fmt(cruise_altitude / 1000)} kilometers",
             "Average Airspeed": f"{fmt(avg_airspeed)} m/s",
             "Wing Root Chord": f"{fmt(wing_root_chord)} meters",
@@ -2499,6 +2520,9 @@ if __name__ == "__main__":
             "Strain Azimuth Resolution": f"{fmt(strain_azimuth_resolution)} meters",
             "Strain Temporal Resolution": f"{fmt(strain_temporal_resolution)} hours",
             "Coverage Area": f"{fmt(coverage_area)} meters^2",
+            "Day of Year": f"{fmt(day_of_year)}",
+            "Strain Precision": f"{fmt(max_precision)} 1 / yr",
+            "Number of Racetracks": f"{fmt(number_of_passes)}",
             "Cruise Altitude": f"{fmt(cruise_altitude / 1000)} kilometers",
             "Average Airspeed": f"{fmt(avg_airspeed)} m/s",
             "Wing Root Chord": f"{fmt(wing_root_chord)} meters",
@@ -2966,11 +2990,22 @@ if __name__ == "__main__":
                     #     draw()
                     # if converged == True:
         # if run_num == 0:
-        # if converged == True:
-        opti.set_initial_from_sol(sol, initialize_primals=True, initialize_duals=True,)
-        # else:
-        #     opti.set_initial(opti.x, primals)
-        #     opti.set_initial(opti.lam_g, duals)
+        if converged == True:
+            opti.set_initial_from_sol(sol, initialize_primals=True, initialize_duals=True,)
+            with open(filename, "a") as f:
+                f.write(
+                    f"{str(run_num).ljust(l)},"
+                    f"{str(s(wing_span)).ljust(l)},"
+                    f"{str(s(strain_azimuth_resolution)).ljust(l)},"
+                    f"{str(s(coverage_area)).ljust(l)},"
+                    f"{str(s(day_of_year)).ljust(l)},"
+                    f"{str(s(max_precision)).ljust(l)},"
+                    f"{str(s(strain_temporal_resolution)).ljust(l)}\n"
+                )
+        else:
+            opti.set_initial(opti.x, primals)
+            opti.set_initial(opti.lam_g, duals)
+
 
     # plt.plot(wingspan, spatial, linestyle='--', marker='o')
     # plt.title('Pareto Front')
