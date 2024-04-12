@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 import seaborn as sns
 
 #### inputs
-file_name = 'full_run'
+file_name = 'lawnmower_n=free_var'
 variables = ['Spatial_Resolutions', 'Coverage_Areas', 'Days', 'Precisions', 'Temporal_Resolutions', 'Spans']
 run_type = 'sweep all'
 # run_type = 'sweep requirement'
@@ -151,6 +151,8 @@ def load_variables(output_file, runs):
     swath_overlap = []
     PRFs = []
     battery_mass = []
+    number_of_racetracks = []
+    offset_distances = []
 
     for run_num in runs:
         try:
@@ -223,17 +225,27 @@ def load_variables(output_file, runs):
             battery = df['battery_pack'].values[0]
             battery = re.search(r'([\d.]+)', battery).group(1)
             battery_mass.append(float(battery))
+            number_of_racetrack = df['Number of Racetracks'].values[0]
+            number_of_racetracks.append(float(number_of_racetrack))
+            offset_distance = df['imaging offset'].values[0]
+            offset_distance = re.search(r'([\d.]+)', offset_distance).group(1)
+            offset_distances.append(float(offset_distance) / 1e3)
+
 
         except FileNotFoundError:
             pass
 
     # make dict
-    dict = {'Run': runs, 'Wavelength [m]': wavelengths, 'Look_Angle [deg]': look_angles, 'SNR [dB]': SNRs, 'Payload Power [W]': payload_powers,
-            'Average Airspeed [m/s]': airspeeds, 'Cruise Altitude [km]': cruise_altitudes, 'SAR Range Resolution [m]': SAR_range_resolutions,
-            'SAR Azimuth Resolution [m]': SAR_azimuth_resolutions, 'Swath Range [km]': swath_ranges, 'Swath Azimuth [km]': swath_azimuths,
-            'Payload Mass [kg]': payload_masses, 'Bandwidth [Hz]': bandwidths, 'Aperture Width [m]': aperture_widths, 'Aperture Length [m]': aperture_lengths,
-            'Mass TOGW [kg]': mass_TOGWs, 'Coverage Length [km]': coverage_lengths, 'Coverage Width [km]': coverage_widths, 'Revisit Period [hrs]': revisit_period,
-            'Swath Overlap': swath_overlap, 'Pulse Repetition Frequency [Hz]': PRFs, 'Battery Mass [kg]': battery_mass}
+    dict = {'Run': runs, 'SNR [dB]': SNRs,
+
+            'Mass TOGW [kg]': mass_TOGWs,'Payload Power [W]': payload_powers, 'Payload Mass [kg]': payload_masses, 'Battery Mass [kg]': battery_mass,'Average Airspeed [m/s]': airspeeds,
+            'Cruise Altitude [km]': cruise_altitudes, 'Revisit Period [hrs]': revisit_period, 'Coverage Area Dimension [km]': coverage_lengths,
+
+            'Number of Racetracks':number_of_racetracks, 'Imaging Offset Distance [km]': offset_distances,
+            'Look Angle [deg]': look_angles, 'Swath Overlap': swath_overlap, 'Swath Range Dimension [km]': swath_ranges, 'Swath Azimuth Dimension [km]': swath_azimuths,
+
+            'SAR Range Resolution [m]': SAR_range_resolutions, 'SAR Azimuth Resolution [m]': SAR_azimuth_resolutions,
+            'Wavelength [m]': wavelengths,  'Bandwidth [Hz]': bandwidths,'Pulse Repetition Frequency [Hz]': PRFs, 'Aperture Width [m]': aperture_widths, 'Aperture Length [m]': aperture_lengths }
 
     # create dataframe with all the variables of interest
     design_variables = pd.DataFrame(dict)
@@ -279,7 +291,7 @@ def plot_parallel_coordinates(df, attribute):
 
         # Create a parallel coordinates plot using graph_objects
         fig = go.Figure(data=go.Parcoords(
-            line=dict(color=df.index, colorscale='hsv'),
+            line=dict(color=df.index, colorscale='rainbow'),
             dimensions=list,
             unselected=dict(line=dict(color='black', opacity=0.2))
         ))
@@ -441,12 +453,12 @@ def show_changes(df, attribute):
     plt.show()
 
 # plot_parallel_coordinates(df, 'all')
-# plot_parallel_coordinates(df_span, 'Wing Span')
-# plot_parallel_coordinates(df_spatial, 'Spatial Resolution')
-# plot_parallel_coordinates(df_coverage, 'Coverage Area')
-# plot_parallel_coordinates(df_days, 'Days')
-# plot_parallel_coordinates(df_precision, 'Precision')
-# plot_parallel_coordinates(df_temporal, 'Temporal Resolution')
+plot_parallel_coordinates(df_span, 'Wing Span')
+plot_parallel_coordinates(df_spatial, 'Spatial Resolution')
+plot_parallel_coordinates(df_coverage, 'Coverage Area')
+plot_parallel_coordinates(df_days, 'Days')
+plot_parallel_coordinates(df_precision, 'Precision')
+plot_parallel_coordinates(df_temporal, 'Temporal Resolution')
 # plot_radar(df, 'Coverage Area [km^2]')
 # plot_radar(df_span, 'wingspan')
 # plot_radar(df_spatial, 'Spatial Resolution')
