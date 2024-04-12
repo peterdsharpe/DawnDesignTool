@@ -7,7 +7,7 @@ import itertools
 
 
 ### where is parameter cominations file and where should outputs go?
-run_name = "full_run"
+run_name = "lawnmower_n=free_var"
 
 ### define sweep ranges
 max_weighting = 10
@@ -187,6 +187,7 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
             "Strain Precision": f"{fmt(required_strain_precision)} 1 / yr",
             "Coverage Area": f"{fmt(coverage_area)} meters^2",
             "Day of Year": f"{fmt(day_of_year)}",
+            "Number of Racetracks": f"{fmt(number_of_passes)}",
             "Cruise Altitude": f"{fmt(cruise_altitude / 1000)} kilometers",
             "Average Airspeed": f"{fmt(avg_airspeed)} m/s",
             "Wing Root Chord": f"{fmt(wing_root_chord)} meters",
