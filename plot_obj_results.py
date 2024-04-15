@@ -207,6 +207,135 @@ def show_changes(df, attribute, index=None):
     plt.show()
 
 
+def load_variables(output_file, runs):
+    # pull the additional variables from the csv output files
+    wavelengths = []
+    look_angles = []
+    SNRs = []
+    payload_powers = []
+    airspeeds = []
+    cruise_altitudes = []
+    SAR_range_resolutions = []
+    SAR_azimuth_resolutions = []
+    swath_ranges = []
+    swath_azimuths = []
+    payload_masses = []
+    bandwidths = []
+    aperture_widths = []
+    aperture_lengths = []
+    mass_TOGWs = []
+    coverage_lengths = []
+    coverage_widths = []
+    revisit_period = []
+    swath_overlap = []
+    PRFs = []
+    battery_mass = []
+    number_of_racetracks = []
+    offset_distances = []
+
+    for run_num in runs:
+        try:
+            csv_file = f"outputs/{output_file}/outputs_data_run_{run_num}.csv"
+            df = pd.read_csv(csv_file)
+            df = df.T
+            df.columns = df.iloc[0,]
+            # Remove the first row (column names)
+            df = df[1:]
+            wavelength = df['center wavelength'].values[0]
+            wavelength = re.search(r'([\d.]+)', wavelength).group(1)
+            wavelengths.append(float(wavelength))
+            look_angle = df['look angle'].values[0]
+            look_angle = re.search(r'([\d.]+)', look_angle).group(1)
+            look_angles.append(float(look_angle))
+            SNR = df['SNR'].values[0]
+            SNR = float(SNR.split()[0])
+            SNRs.append(SNR)
+            payload_power = df['payload power'].values[0]
+            payload_power = re.search(r'([\d.]+)', payload_power).group(1)
+            payload_powers.append(float(payload_power))
+            airspeed = df['Average Airspeed'].values[0]
+            airspeed = re.search(r'([\d.]+)', airspeed).group(1)
+            airspeeds.append(float(airspeed))
+            cruise_altitude = df['Cruise Altitude'].values[0]
+            cruise_altitude = re.search(r'([\d.]+)', cruise_altitude).group(1)
+            cruise_altitudes.append(float(cruise_altitude))
+            SAR_range_resolution = df['SAR range resolution'].values[0]
+            SAR_range_resolution = re.search(r'([\d.]+)', SAR_range_resolution).group(1)
+            SAR_range_resolutions.append(float(SAR_range_resolution))
+            SAR_azimuth_resolution = df['SAR azimuth resolution'].values[0]
+            SAR_azimuth_resolution = re.search(r'([\d.]+)', SAR_azimuth_resolution).group(1)
+            SAR_azimuth_resolutions.append(float(SAR_azimuth_resolution))
+            swath_range = df['swath range'].values[0]
+            swath_range = re.search(r'([\d.]+)', swath_range).group(1)
+            swath_ranges.append(float(swath_range) / 1e3)
+            swath_azimuth = df['swath azimuth'].values[0]
+            swath_azimuth = re.search(r'([\d.]+)', swath_azimuth).group(1)
+            swath_azimuths.append(float(swath_azimuth) / 1e3)
+            payload_mass = df['payload mass'].values[0]
+            payload_mass = re.search(r'([\d.]+)', payload_mass).group(1)
+            payload_masses.append(float(payload_mass))
+            bandwidth = df['bandwidth'].values[0]
+            bandwidth = float(bandwidth.split()[0])
+            bandwidths.append(float(bandwidth))
+            aperture_width = df['aperture width'].values[0]
+            aperture_width = re.search(r'([\d.]+)', aperture_width).group(1)
+            aperture_widths.append(float(aperture_width))
+            aperture_length = df['aperture length'].values[0]
+            aperture_length = re.search(r'([\d.]+)', aperture_length).group(1)
+            aperture_lengths.append(float(aperture_length))
+            mass_TOGW = df['mass_TOGW'].values[0]
+            mass_TOGW = re.search(r'([\d.]+)', mass_TOGW).group(1)
+            mass_TOGWs.append(float(mass_TOGW))
+            coverage_length = df['coverage length'].values[0]
+            coverage_length = re.search(r'([\d.]+)', coverage_length).group(1)
+            coverage_lengths.append(float(coverage_length) / 1e3)
+            coverage_width = df['coverage width'].values[0]
+            coverage_width = re.search(r'([\d.]+)', coverage_width).group(1)
+            coverage_widths.append(float(coverage_width) / 1e3)
+            revisit = df['SAR revisit period'].values[0]
+            revisit = re.search(r'([\d.]+)', revisit).group(1)
+            revisit_period.append(float(revisit))
+            swath_overlap_ = df['swath overlap'].values[0]
+            swath_overlap_ = float(swath_overlap_.split()[0])
+            swath_overlap.append(swath_overlap_)
+            PRF = df['pulse repetition frequency'].values[0]
+            PRF = float(PRF.split()[0])
+            PRFs.append(PRF)
+            battery = df['battery_pack'].values[0]
+            battery = re.search(r'([\d.]+)', battery).group(1)
+            battery_mass.append(float(battery))
+            number_of_racetrack = df['Number of Racetracks'].values[0]
+            number_of_racetracks.append(float(number_of_racetrack))
+            offset_distance = df['imaging offset'].values[0]
+            offset_distance = re.search(r'([\d.]+)', offset_distance).group(1)
+            offset_distances.append(float(offset_distance) / 1e3)
+
+
+        except FileNotFoundError:
+            pass
+
+    # make dict
+    dict = {'Run': runs, 'SNR [dB]': SNRs,
+
+            'Mass TOGW [kg]': mass_TOGWs, 'Payload Power [W]': payload_powers, 'Payload Mass [kg]': payload_masses,
+            'Battery Mass [kg]': battery_mass, 'Average Airspeed [m/s]': airspeeds,
+            'Cruise Altitude [km]': cruise_altitudes, 'Revisit Period [hrs]': revisit_period,
+            'Coverage Area Dimension [km]': coverage_lengths,
+
+            'Number of Racetracks': number_of_racetracks, 'Imaging Offset Distance [km]': offset_distances,
+            'Look Angle [deg]': look_angles, 'Swath Overlap': swath_overlap, 'Swath Range Dimension [km]': swath_ranges,
+            'Swath Azimuth Dimension [km]': swath_azimuths,
+
+            'SAR Range Resolution [m]': SAR_range_resolutions, 'SAR Azimuth Resolution [m]': SAR_azimuth_resolutions,
+            'Wavelength [m]': wavelengths, 'Bandwidth [Hz]': bandwidths, 'Pulse Repetition Frequency [Hz]': PRFs,
+            'Aperture Width [m]': aperture_widths, 'Aperture Length [m]': aperture_lengths}
+
+    # create dataframe with all the variables of interest
+    design_variables = pd.DataFrame(dict)
+    design_variables = design_variables.set_index('Run')
+
+    return design_variables
+
 
 if __name__ == '__main__':
         # Load the data
@@ -320,131 +449,6 @@ if __name__ == '__main__':
             converged_runs = df.index.values
 
 
-        def load_variables(output_file, runs):
-
-            # pull the additional variables from the csv output files
-            wavelengths = []
-            look_angles = []
-            SNRs = []
-            payload_powers = []
-            airspeeds = []
-            cruise_altitudes = []
-            SAR_range_resolutions = []
-            SAR_azimuth_resolutions = []
-            swath_ranges = []
-            swath_azimuths = []
-            payload_masses = []
-            bandwidths = []
-            aperture_widths = []
-            aperture_lengths = []
-            mass_TOGWs = []
-            coverage_lengths = []
-            coverage_widths = []
-            revisit_period = []
-            swath_overlap = []
-            PRFs = []
-            battery_mass = []
-            number_of_racetracks = []
-            offset_distances = []
-
-            for run_num in runs:
-                try:
-                    csv_file = f"outputs/{output_file}/outputs_data_run_{run_num}.csv"
-                    df = pd.read_csv(csv_file)
-                    df = df.T
-                    df.columns = df.iloc[0,]
-                    # Remove the first row (column names)
-                    df = df[1:]
-                    wavelength = df['center wavelength'].values[0]
-                    wavelength = re.search(r'([\d.]+)', wavelength).group(1)
-                    wavelengths.append(float(wavelength))
-                    look_angle = df['look angle'].values[0]
-                    look_angle = re.search(r'([\d.]+)', look_angle).group(1)
-                    look_angles.append(float(look_angle))
-                    SNR = df['SNR'].values[0]
-                    SNR = float(SNR.split()[0])
-                    SNRs.append(SNR)
-                    payload_power = df['payload power'].values[0]
-                    payload_power = re.search(r'([\d.]+)', payload_power).group(1)
-                    payload_powers.append(float(payload_power))
-                    airspeed = df['Average Airspeed'].values[0]
-                    airspeed = re.search(r'([\d.]+)', airspeed).group(1)
-                    airspeeds.append(float(airspeed))
-                    cruise_altitude = df['Cruise Altitude'].values[0]
-                    cruise_altitude = re.search(r'([\d.]+)', cruise_altitude).group(1)
-                    cruise_altitudes.append(float(cruise_altitude))
-                    SAR_range_resolution = df['SAR range resolution'].values[0]
-                    SAR_range_resolution = re.search(r'([\d.]+)', SAR_range_resolution).group(1)
-                    SAR_range_resolutions.append(float(SAR_range_resolution))
-                    SAR_azimuth_resolution = df['SAR azimuth resolution'].values[0]
-                    SAR_azimuth_resolution = re.search(r'([\d.]+)', SAR_azimuth_resolution).group(1)
-                    SAR_azimuth_resolutions.append(float(SAR_azimuth_resolution))
-                    swath_range = df['swath range'].values[0]
-                    swath_range = re.search(r'([\d.]+)', swath_range).group(1)
-                    swath_ranges.append(float(swath_range) / 1e3)
-                    swath_azimuth = df['swath azimuth'].values[0]
-                    swath_azimuth = re.search(r'([\d.]+)', swath_azimuth).group(1)
-                    swath_azimuths.append(float(swath_azimuth) / 1e3)
-                    payload_mass = df['payload mass'].values[0]
-                    payload_mass = re.search(r'([\d.]+)', payload_mass).group(1)
-                    payload_masses.append(float(payload_mass))
-                    bandwidth = df['bandwidth'].values[0]
-                    bandwidth = float(bandwidth.split()[0])
-                    bandwidths.append(float(bandwidth))
-                    aperture_width = df['aperture width'].values[0]
-                    aperture_width = re.search(r'([\d.]+)', aperture_width).group(1)
-                    aperture_widths.append(float(aperture_width))
-                    aperture_length = df['aperture length'].values[0]
-                    aperture_length = re.search(r'([\d.]+)', aperture_length).group(1)
-                    aperture_lengths.append(float(aperture_length))
-                    mass_TOGW = df['mass_TOGW'].values[0]
-                    mass_TOGW = re.search(r'([\d.]+)', mass_TOGW).group(1)
-                    mass_TOGWs.append(float(mass_TOGW))
-                    coverage_length = df['coverage length'].values[0]
-                    coverage_length = re.search(r'([\d.]+)', coverage_length).group(1)
-                    coverage_lengths.append(float(coverage_length) / 1e3)
-                    coverage_width = df['coverage width'].values[0]
-                    coverage_width = re.search(r'([\d.]+)', coverage_width).group(1)
-                    coverage_widths.append(float(coverage_width) / 1e3)
-                    revisit = df['SAR revisit period'].values[0]
-                    revisit = re.search(r'([\d.]+)', revisit).group(1)
-                    revisit_period.append(float(revisit))
-                    swath_overlap_ = df['swath overlap'].values[0]
-                    swath_overlap_ = float(swath_overlap_.split()[0])
-                    swath_overlap.append(swath_overlap_)
-                    PRF = df['pulse repetition frequency'].values[0]
-                    PRF = float(PRF.split()[0])
-                    PRFs.append(PRF)
-                    battery = df['battery_pack'].values[0]
-                    battery = re.search(r'([\d.]+)', battery).group(1)
-                    battery_mass.append(float(battery))
-                    number_of_racetrack = df['Number of Racetracks'].values[0]
-                    number_of_racetracks.append(float(number_of_racetrack))
-                    offset_distance = df['imaging offset'].values[0]
-                    offset_distance = re.search(r'([\d.]+)', offset_distance).group(1)
-                    offset_distances.append(float(offset_distance) / 1e3)
-
-
-                except FileNotFoundError:
-                    pass
-
-            # make dict
-            dict = {'Run': runs, 'SNR [dB]': SNRs,
-
-                    'Mass TOGW [kg]': mass_TOGWs,'Payload Power [W]': payload_powers, 'Payload Mass [kg]': payload_masses, 'Battery Mass [kg]': battery_mass,'Average Airspeed [m/s]': airspeeds,
-                    'Cruise Altitude [km]': cruise_altitudes, 'Revisit Period [hrs]': revisit_period, 'Coverage Area Dimension [km]': coverage_lengths,
-
-                    'Number of Racetracks':number_of_racetracks, 'Imaging Offset Distance [km]': offset_distances,
-                    'Look Angle [deg]': look_angles, 'Swath Overlap': swath_overlap, 'Swath Range Dimension [km]': swath_ranges, 'Swath Azimuth Dimension [km]': swath_azimuths,
-
-                    'SAR Range Resolution [m]': SAR_range_resolutions, 'SAR Azimuth Resolution [m]': SAR_azimuth_resolutions,
-                    'Wavelength [m]': wavelengths,  'Bandwidth [Hz]': bandwidths,'Pulse Repetition Frequency [Hz]': PRFs, 'Aperture Width [m]': aperture_widths, 'Aperture Length [m]': aperture_lengths }
-
-            # create dataframe with all the variables of interest
-            design_variables = pd.DataFrame(dict)
-            design_variables = design_variables.set_index('Run')
-
-            return design_variables
 
 
         design_variable_df = load_variables(file_name, converged_runs)
