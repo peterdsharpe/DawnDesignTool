@@ -10,259 +10,11 @@ import plotly.graph_objects as go
 import seaborn as sns
 
 #### inputs
-file_name = ('sweep_area_n=5')
+file_name = ('sweep_area_n=2')
 variables = ['Spatial_Resolutions', 'Coverage_Areas', 'Days', 'Precisions', 'Temporal_Resolutions', 'Spans']
 # run_type = 'sweep all'
 run_type = 'sweep requirement'
 attribute = 'Coverage_Areas'
-
-# Load the data
-file = f'outputs\\{file_name}\\sweep_results.csv'
-weighting_file = f'outputs\\{file_name}\\0_parameter_combinations.csv'
-df = pd.read_csv(file)
-
-# load the weighting file
-df_weighting = pd.read_csv(weighting_file, header = None)
-if run_type == 'sweep all':
-
-    df_weighting.columns = ['Spans', 'Spatial Resolutions', 'Coverage Areas', 'Days', 'Precisions', 'Temporal Resolutions']
-    # find runs to split into different dataframes
-    rows_with_zero = df_weighting[(df_weighting == 0).any(axis=1)]
-
-    # drop spaces in the column names
-    df.columns = df.columns.str.replace(' ', '')
-
-    # make sure all values are floats
-    df['Spans'] = df['Spans'].values.astype(float)
-    df['Spatial_Resolutions'] = df['Spatial_Resolutions'].values.astype(float)
-    df['Coverage_Areas'] = df['Coverage_Areas'].values.astype(float)
-    df['Days'] = df['Days'].values.astype(float)
-    df['Precisions'] = df['Precisions'].values.astype(float)
-    df['Temporal_Resolutions'] = df['Temporal_Resolutions'].values.astype(float)
-
-    # drop rows with NaN values in the columns of interest
-    df = df.dropna(subset=['Spans'])
-    df = df.sort_values(by=['Run'])
-
-    # df formatting
-    df.loc[:, 'Coverage_Areas'] = df['Coverage_Areas'].div(1e6).round(2)
-    df.columns = ['Run', 'Span [m]', 'Spatial Resolution [m]', 'Coverage Area [km^2]', 'Duration [days]',
-                  'Precision [1/yr]', 'Temporal Resolution [hrs]']
-
-    # record the output for the all objectives weighted equally case
-    even_weighting = df[df['Run'] == 0]
-
-    # make span df
-    df_span = df[df['Run'] < rows_with_zero.index[0]]
-    df_span = df_span.set_index('Run')
-    df_span.loc[:, 'weight'] = df_weighting.loc[df_span.index, 'Spans']
-    df_span = df_span.sort_values(by=['weight'])
-
-    # make spatial df
-    df_spatial = df[(df['Run'] > rows_with_zero.index[0] + 1) & (df['Run'] < rows_with_zero.index[1])]
-    df_spatial = pd.concat([even_weighting, df_spatial])
-    df_spatial = df_spatial.set_index('Run')
-    df_spatial.loc[:, 'weight'] = df_weighting.loc[df_spatial.index, 'Spatial Resolutions']
-    df_spatial = df_spatial.sort_values(by=['weight'])
-
-    # make coverage df
-    df_coverage = df[(df['Run'] > rows_with_zero.index[1] + 1) & (df['Run'] < rows_with_zero.index[2])]
-    df_coverage = pd.concat([even_weighting, df_coverage])
-    df_coverage = df_coverage.set_index('Run')
-    df_coverage.loc[:, 'weight'] = df_weighting.loc[df_coverage.index, 'Coverage Areas']
-    df_coverage = df_coverage.sort_values(by=['weight'])
-
-    # make days df
-    df_days = df[(df['Run'] > rows_with_zero.index[2] + 1) & (df['Run'] < rows_with_zero.index[3])]
-    df_days = pd.concat([even_weighting, df_days])
-    df_days = df_days.set_index('Run')
-    df_days.loc[:, 'weight'] = df_weighting.loc[df_days.index, 'Days']
-    df_days = df_days.sort_values(by=['weight'])
-
-    # make precision df
-    df_precision = df[(df['Run'] > rows_with_zero.index[3] + 1) & (df['Run'] < rows_with_zero.index[4])]
-    df_precision = pd.concat([even_weighting, df_precision])
-    df_precision = df_precision.set_index('Run')
-    df_precision.loc[:, 'weight'] = df_weighting.loc[df_precision.index, 'Precisions']
-    df_precision = df_precision.sort_values(by=['weight'])
-
-    # make temporal df
-    df_temporal = df[(df['Run'] > rows_with_zero.index[4] + 1) & (df['Run'] < rows_with_zero.index[5])]
-    df_temporal = pd.concat([even_weighting, df_temporal])
-    df_temporal = df_temporal.set_index('Run')
-    df_temporal.loc[:, 'weight'] = df_weighting.loc[df_temporal.index, 'Temporal Resolutions']
-    df_temporal = df_temporal.sort_values(by=['weight'])
-
-    df = df.set_index('Run')
-
-    # drop ones with only single attribute weighted
-    df = df[~df.index.isin(rows_with_zero.index)]
-
-    # what runs converged?
-    converged_runs = df.index.values
-if run_type == 'sweep requirement':
-    # drop spaces in the column names
-    df.columns = df.columns.str.replace(' ', '')
-
-    # make sure all values are floats
-    df['Spans'] = df['Spans'].values.astype(float)
-    df['Spatial_Resolutions'] = df['Spatial_Resolutions'].values.astype(float)
-    df['Coverage_Areas'] = df['Coverage_Areas'].values.astype(float)
-    df['Days'] = df['Days'].values.astype(float)
-    df['Precisions'] = df['Precisions'].values.astype(float)
-    df['Temporal_Resolutions'] = df['Temporal_Resolutions'].values.astype(float)
-
-    # drop rows with NaN values in the columns of interest
-    df = df.dropna(subset=['Spans'])
-    df = df.sort_values(by=['Run'])
-
-    # df formatting
-    df.loc[:, 'Coverage_Areas'] = df['Coverage_Areas'].div(1e6).round(2)
-    df.columns = ['Run', 'Span [m]', 'Spatial Resolution [m]', 'Coverage Area [km^2]', 'Duration [days]',
-                  'Precision [1/yr]', 'Temporal Resolution [hrs]']
-
-    df = df.set_index('Run')
-
-    # what runs converged?
-    converged_runs = df.index.values
-
-
-def load_variables(output_file, runs):
-
-    # pull the additional variables from the csv output files
-    wavelengths = []
-    look_angles = []
-    SNRs = []
-    payload_powers = []
-    airspeeds = []
-    cruise_altitudes = []
-    SAR_range_resolutions = []
-    SAR_azimuth_resolutions = []
-    swath_ranges = []
-    swath_azimuths = []
-    payload_masses = []
-    bandwidths = []
-    aperture_widths = []
-    aperture_lengths = []
-    mass_TOGWs = []
-    coverage_lengths = []
-    coverage_widths = []
-    revisit_period = []
-    swath_overlap = []
-    PRFs = []
-    battery_mass = []
-    number_of_racetracks = []
-    offset_distances = []
-
-    for run_num in runs:
-        try:
-            csv_file = f"outputs/{output_file}/outputs_data_run_{run_num}.csv"
-            df = pd.read_csv(csv_file)
-            df = df.T
-            df.columns = df.iloc[0,]
-            # Remove the first row (column names)
-            df = df[1:]
-            wavelength = df['center wavelength'].values[0]
-            wavelength = re.search(r'([\d.]+)', wavelength).group(1)
-            wavelengths.append(float(wavelength))
-            look_angle = df['look angle'].values[0]
-            look_angle = re.search(r'([\d.]+)', look_angle).group(1)
-            look_angles.append(float(look_angle))
-            SNR = df['SNR'].values[0]
-            SNR = float(SNR.split()[0])
-            SNRs.append(SNR)
-            payload_power = df['payload power'].values[0]
-            payload_power = re.search(r'([\d.]+)', payload_power).group(1)
-            payload_powers.append(float(payload_power))
-            airspeed = df['Average Airspeed'].values[0]
-            airspeed = re.search(r'([\d.]+)', airspeed).group(1)
-            airspeeds.append(float(airspeed))
-            cruise_altitude = df['Cruise Altitude'].values[0]
-            cruise_altitude = re.search(r'([\d.]+)', cruise_altitude).group(1)
-            cruise_altitudes.append(float(cruise_altitude))
-            SAR_range_resolution = df['SAR range resolution'].values[0]
-            SAR_range_resolution = re.search(r'([\d.]+)', SAR_range_resolution).group(1)
-            SAR_range_resolutions.append(float(SAR_range_resolution))
-            SAR_azimuth_resolution = df['SAR azimuth resolution'].values[0]
-            SAR_azimuth_resolution = re.search(r'([\d.]+)', SAR_azimuth_resolution).group(1)
-            SAR_azimuth_resolutions.append(float(SAR_azimuth_resolution))
-            swath_range = df['swath range'].values[0]
-            swath_range = re.search(r'([\d.]+)', swath_range).group(1)
-            swath_ranges.append(float(swath_range) / 1e3)
-            swath_azimuth = df['swath azimuth'].values[0]
-            swath_azimuth = re.search(r'([\d.]+)', swath_azimuth).group(1)
-            swath_azimuths.append(float(swath_azimuth) / 1e3)
-            payload_mass = df['payload mass'].values[0]
-            payload_mass = re.search(r'([\d.]+)', payload_mass).group(1)
-            payload_masses.append(float(payload_mass))
-            bandwidth = df['bandwidth'].values[0]
-            bandwidth = float(bandwidth.split()[0])
-            bandwidths.append(float(bandwidth))
-            aperture_width = df['aperture width'].values[0]
-            aperture_width = re.search(r'([\d.]+)', aperture_width).group(1)
-            aperture_widths.append(float(aperture_width))
-            aperture_length = df['aperture length'].values[0]
-            aperture_length = re.search(r'([\d.]+)', aperture_length).group(1)
-            aperture_lengths.append(float(aperture_length))
-            mass_TOGW = df['mass_TOGW'].values[0]
-            mass_TOGW = re.search(r'([\d.]+)', mass_TOGW).group(1)
-            mass_TOGWs.append(float(mass_TOGW))
-            coverage_length = df['coverage length'].values[0]
-            coverage_length = re.search(r'([\d.]+)', coverage_length).group(1)
-            coverage_lengths.append(float(coverage_length) / 1e3)
-            coverage_width = df['coverage width'].values[0]
-            coverage_width = re.search(r'([\d.]+)', coverage_width).group(1)
-            coverage_widths.append(float(coverage_width) / 1e3)
-            revisit = df['SAR revisit period'].values[0]
-            revisit = re.search(r'([\d.]+)', revisit).group(1)
-            revisit_period.append(float(revisit))
-            swath_overlap_ = df['swath overlap'].values[0]
-            swath_overlap_ = float(swath_overlap_.split()[0])
-            swath_overlap.append(swath_overlap_)
-            PRF = df['pulse repetition frequency'].values[0]
-            PRF = float(PRF.split()[0])
-            PRFs.append(PRF)
-            battery = df['battery_pack'].values[0]
-            battery = re.search(r'([\d.]+)', battery).group(1)
-            battery_mass.append(float(battery))
-            number_of_racetrack = df['Number of Racetracks'].values[0]
-            number_of_racetracks.append(float(number_of_racetrack))
-            offset_distance = df['imaging offset'].values[0]
-            offset_distance = re.search(r'([\d.]+)', offset_distance).group(1)
-            offset_distances.append(float(offset_distance) / 1e3)
-
-
-        except FileNotFoundError:
-            pass
-
-    # make dict
-    dict = {'Run': runs, 'SNR [dB]': SNRs,
-
-            'Mass TOGW [kg]': mass_TOGWs,'Payload Power [W]': payload_powers, 'Payload Mass [kg]': payload_masses, 'Battery Mass [kg]': battery_mass,'Average Airspeed [m/s]': airspeeds,
-            'Cruise Altitude [km]': cruise_altitudes, 'Revisit Period [hrs]': revisit_period, 'Coverage Area Dimension [km]': coverage_lengths,
-
-            'Number of Racetracks':number_of_racetracks, 'Imaging Offset Distance [km]': offset_distances,
-            'Look Angle [deg]': look_angles, 'Swath Overlap': swath_overlap, 'Swath Range Dimension [km]': swath_ranges, 'Swath Azimuth Dimension [km]': swath_azimuths,
-
-            'SAR Range Resolution [m]': SAR_range_resolutions, 'SAR Azimuth Resolution [m]': SAR_azimuth_resolutions,
-            'Wavelength [m]': wavelengths,  'Bandwidth [Hz]': bandwidths,'Pulse Repetition Frequency [Hz]': PRFs, 'Aperture Width [m]': aperture_widths, 'Aperture Length [m]': aperture_lengths }
-
-    # create dataframe with all the variables of interest
-    design_variables = pd.DataFrame(dict)
-    design_variables = design_variables.set_index('Run')
-
-    return design_variables
-
-
-design_variable_df = load_variables(file_name, converged_runs)
-big_df = pd.concat([df, design_variable_df], axis=1)
-if run_type == 'sweep all':
-    big_df_spans = big_df[big_df.index.isin(df_span.index)]
-    big_df_spatial = big_df[big_df.index.isin(df_spatial.index)]
-    big_df_coverage = big_df[big_df.index.isin(df_coverage.index)]
-    big_df_days = big_df[big_df.index.isin(df_days.index)]
-    big_df_precision = big_df[big_df.index.isin(df_precision.index)]
-    big_df_temporal = big_df[big_df.index.isin(df_temporal.index)]
 
 def plot_parallel_coordinates(df, attribute):
         # Add a column 'Colors' with different colors for each row
@@ -425,7 +177,7 @@ def histogram(df):
     plt.tight_layout()
     plt.show()
 
-def show_changes(df, attribute):
+def show_changes(df, attribute, index=None):
     # plot bar chart
     # df = df.drop(columns = ['weight'])
     # Calculate the number of rows and columns needed for subplots
@@ -448,38 +200,293 @@ def show_changes(df, attribute):
     for j in range(num_cols, num_rows * cols_in_plot):
         fig.delaxes(axes[j])
 
+    plt.legend(f"n racetracks = {index}")
+
     # Adjust layout
     plt.tight_layout()
     plt.show()
 
-plot_parallel_coordinates(df, 'all')
-# plot_parallel_coordinates(df_span, 'Wing Span')
-# plot_parallel_coordinates(df_spatial, 'Spatial Resolution')
-# plot_parallel_coordinates(df_coverage, 'Coverage Area')
-# plot_parallel_coordinates(df_days, 'Days')
-# plot_parallel_coordinates(df_precision, 'Precision')
-# plot_parallel_coordinates(df_temporal, 'Temporal Resolution')
-# plot_radar(df, 'Coverage Area [km^2]')
-# plot_radar(df_span, 'wingspan')
-# plot_radar(df_spatial, 'Spatial Resolution')
-# plot_radar(df_coverage, 'Coverage Area')
-# plot_radar(df_days, 'Duration')
-# plot_radar(df_precision, 'Precision')
-# plot_radar(df_temporal, 'Temporal Resolution')
-# # plot_scatter_matrix(df)
-# # corr_heatmap(df)
-# # corr_heatmap(big_df)
-# big_df = big_df.drop(columns = ['Wavelength [m]'])
-# histogram(big_df)
-#
-# big_df = big_df.drop(columns = ['Swath Overlap', 'Pulse Repetition Frequency [Hz]'])
-# corr_heatmap(big_df)
-# show_changes(big_df_spans, 'Span [m]')
-# show_changes(big_df_spatial, 'Spatial Resolution [m]')
-# show_changes(big_df_coverage, 'Coverage Area [km^2]')
-# show_changes(big_df_days, 'Duration [days]')
-# show_changes(big_df_precision, 'Precision [1/yr]')
-# show_changes(big_df_temporal, 'Temporal Resolution [hrs]')
-show_changes(big_df, 'Coverage Area [km^2]')
+
+
+if __name__ == '__main__':
+        # Load the data
+        file = f'outputs\\{file_name}\\sweep_results.csv'
+        weighting_file = f'outputs\\{file_name}\\0_parameter_combinations.csv'
+        df = pd.read_csv(file)
+
+        # load the weighting file
+        df_weighting = pd.read_csv(weighting_file, header = None)
+        if run_type == 'sweep all':
+
+            df_weighting.columns = ['Spans', 'Spatial Resolutions', 'Coverage Areas', 'Days', 'Precisions', 'Temporal Resolutions']
+            # find runs to split into different dataframes
+            rows_with_zero = df_weighting[(df_weighting == 0).any(axis=1)]
+
+            # drop spaces in the column names
+            df.columns = df.columns.str.replace(' ', '')
+
+            # make sure all values are floats
+            df['Spans'] = df['Spans'].values.astype(float)
+            df['Spatial_Resolutions'] = df['Spatial_Resolutions'].values.astype(float)
+            df['Coverage_Areas'] = df['Coverage_Areas'].values.astype(float)
+            df['Days'] = df['Days'].values.astype(float)
+            df['Precisions'] = df['Precisions'].values.astype(float)
+            df['Temporal_Resolutions'] = df['Temporal_Resolutions'].values.astype(float)
+
+            # drop rows with NaN values in the columns of interest
+            df = df.dropna(subset=['Spans'])
+            df = df.sort_values(by=['Run'])
+
+            # df formatting
+            df.loc[:, 'Coverage_Areas'] = df['Coverage_Areas'].div(1e6).round(2)
+            df.columns = ['Run', 'Span [m]', 'Spatial Resolution [m]', 'Coverage Area [km^2]', 'Duration [days]',
+                          'Precision [1/yr]', 'Temporal Resolution [hrs]']
+
+            # record the output for the all objectives weighted equally case
+            even_weighting = df[df['Run'] == 0]
+
+            # make span df
+            df_span = df[df['Run'] < rows_with_zero.index[0]]
+            df_span = df_span.set_index('Run')
+            df_span.loc[:, 'weight'] = df_weighting.loc[df_span.index, 'Spans']
+            df_span = df_span.sort_values(by=['weight'])
+
+            # make spatial df
+            df_spatial = df[(df['Run'] > rows_with_zero.index[0] + 1) & (df['Run'] < rows_with_zero.index[1])]
+            df_spatial = pd.concat([even_weighting, df_spatial])
+            df_spatial = df_spatial.set_index('Run')
+            df_spatial.loc[:, 'weight'] = df_weighting.loc[df_spatial.index, 'Spatial Resolutions']
+            df_spatial = df_spatial.sort_values(by=['weight'])
+
+            # make coverage df
+            df_coverage = df[(df['Run'] > rows_with_zero.index[1] + 1) & (df['Run'] < rows_with_zero.index[2])]
+            df_coverage = pd.concat([even_weighting, df_coverage])
+            df_coverage = df_coverage.set_index('Run')
+            df_coverage.loc[:, 'weight'] = df_weighting.loc[df_coverage.index, 'Coverage Areas']
+            df_coverage = df_coverage.sort_values(by=['weight'])
+
+            # make days df
+            df_days = df[(df['Run'] > rows_with_zero.index[2] + 1) & (df['Run'] < rows_with_zero.index[3])]
+            df_days = pd.concat([even_weighting, df_days])
+            df_days = df_days.set_index('Run')
+            df_days.loc[:, 'weight'] = df_weighting.loc[df_days.index, 'Days']
+            df_days = df_days.sort_values(by=['weight'])
+
+            # make precision df
+            df_precision = df[(df['Run'] > rows_with_zero.index[3] + 1) & (df['Run'] < rows_with_zero.index[4])]
+            df_precision = pd.concat([even_weighting, df_precision])
+            df_precision = df_precision.set_index('Run')
+            df_precision.loc[:, 'weight'] = df_weighting.loc[df_precision.index, 'Precisions']
+            df_precision = df_precision.sort_values(by=['weight'])
+
+            # make temporal df
+            df_temporal = df[(df['Run'] > rows_with_zero.index[4] + 1) & (df['Run'] < rows_with_zero.index[5])]
+            df_temporal = pd.concat([even_weighting, df_temporal])
+            df_temporal = df_temporal.set_index('Run')
+            df_temporal.loc[:, 'weight'] = df_weighting.loc[df_temporal.index, 'Temporal Resolutions']
+            df_temporal = df_temporal.sort_values(by=['weight'])
+
+            df = df.set_index('Run')
+
+            # drop ones with only single attribute weighted
+            df = df[~df.index.isin(rows_with_zero.index)]
+
+            # what runs converged?
+            converged_runs = df.index.values
+        if run_type == 'sweep requirement':
+            # drop spaces in the column names
+            df.columns = df.columns.str.replace(' ', '')
+
+            # make sure all values are floats
+            df['Spans'] = df['Spans'].values.astype(float)
+            df['Spatial_Resolutions'] = df['Spatial_Resolutions'].values.astype(float)
+            df['Coverage_Areas'] = df['Coverage_Areas'].values.astype(float)
+            df['Days'] = df['Days'].values.astype(float)
+            df['Precisions'] = df['Precisions'].values.astype(float)
+            df['Temporal_Resolutions'] = df['Temporal_Resolutions'].values.astype(float)
+
+            # drop rows with NaN values in the columns of interest
+            df = df.dropna(subset=['Spans'])
+            df = df.sort_values(by=['Run'])
+
+            # df formatting
+            df.loc[:, 'Coverage_Areas'] = df['Coverage_Areas'].div(1e6).round(2)
+            df.columns = ['Run', 'Span [m]', 'Spatial Resolution [m]', 'Coverage Area [km^2]', 'Duration [days]',
+                          'Precision [1/yr]', 'Temporal Resolution [hrs]']
+
+            df = df.set_index('Run')
+
+            # what runs converged?
+            converged_runs = df.index.values
+
+
+        def load_variables(output_file, runs):
+
+            # pull the additional variables from the csv output files
+            wavelengths = []
+            look_angles = []
+            SNRs = []
+            payload_powers = []
+            airspeeds = []
+            cruise_altitudes = []
+            SAR_range_resolutions = []
+            SAR_azimuth_resolutions = []
+            swath_ranges = []
+            swath_azimuths = []
+            payload_masses = []
+            bandwidths = []
+            aperture_widths = []
+            aperture_lengths = []
+            mass_TOGWs = []
+            coverage_lengths = []
+            coverage_widths = []
+            revisit_period = []
+            swath_overlap = []
+            PRFs = []
+            battery_mass = []
+            number_of_racetracks = []
+            offset_distances = []
+
+            for run_num in runs:
+                try:
+                    csv_file = f"outputs/{output_file}/outputs_data_run_{run_num}.csv"
+                    df = pd.read_csv(csv_file)
+                    df = df.T
+                    df.columns = df.iloc[0,]
+                    # Remove the first row (column names)
+                    df = df[1:]
+                    wavelength = df['center wavelength'].values[0]
+                    wavelength = re.search(r'([\d.]+)', wavelength).group(1)
+                    wavelengths.append(float(wavelength))
+                    look_angle = df['look angle'].values[0]
+                    look_angle = re.search(r'([\d.]+)', look_angle).group(1)
+                    look_angles.append(float(look_angle))
+                    SNR = df['SNR'].values[0]
+                    SNR = float(SNR.split()[0])
+                    SNRs.append(SNR)
+                    payload_power = df['payload power'].values[0]
+                    payload_power = re.search(r'([\d.]+)', payload_power).group(1)
+                    payload_powers.append(float(payload_power))
+                    airspeed = df['Average Airspeed'].values[0]
+                    airspeed = re.search(r'([\d.]+)', airspeed).group(1)
+                    airspeeds.append(float(airspeed))
+                    cruise_altitude = df['Cruise Altitude'].values[0]
+                    cruise_altitude = re.search(r'([\d.]+)', cruise_altitude).group(1)
+                    cruise_altitudes.append(float(cruise_altitude))
+                    SAR_range_resolution = df['SAR range resolution'].values[0]
+                    SAR_range_resolution = re.search(r'([\d.]+)', SAR_range_resolution).group(1)
+                    SAR_range_resolutions.append(float(SAR_range_resolution))
+                    SAR_azimuth_resolution = df['SAR azimuth resolution'].values[0]
+                    SAR_azimuth_resolution = re.search(r'([\d.]+)', SAR_azimuth_resolution).group(1)
+                    SAR_azimuth_resolutions.append(float(SAR_azimuth_resolution))
+                    swath_range = df['swath range'].values[0]
+                    swath_range = re.search(r'([\d.]+)', swath_range).group(1)
+                    swath_ranges.append(float(swath_range) / 1e3)
+                    swath_azimuth = df['swath azimuth'].values[0]
+                    swath_azimuth = re.search(r'([\d.]+)', swath_azimuth).group(1)
+                    swath_azimuths.append(float(swath_azimuth) / 1e3)
+                    payload_mass = df['payload mass'].values[0]
+                    payload_mass = re.search(r'([\d.]+)', payload_mass).group(1)
+                    payload_masses.append(float(payload_mass))
+                    bandwidth = df['bandwidth'].values[0]
+                    bandwidth = float(bandwidth.split()[0])
+                    bandwidths.append(float(bandwidth))
+                    aperture_width = df['aperture width'].values[0]
+                    aperture_width = re.search(r'([\d.]+)', aperture_width).group(1)
+                    aperture_widths.append(float(aperture_width))
+                    aperture_length = df['aperture length'].values[0]
+                    aperture_length = re.search(r'([\d.]+)', aperture_length).group(1)
+                    aperture_lengths.append(float(aperture_length))
+                    mass_TOGW = df['mass_TOGW'].values[0]
+                    mass_TOGW = re.search(r'([\d.]+)', mass_TOGW).group(1)
+                    mass_TOGWs.append(float(mass_TOGW))
+                    coverage_length = df['coverage length'].values[0]
+                    coverage_length = re.search(r'([\d.]+)', coverage_length).group(1)
+                    coverage_lengths.append(float(coverage_length) / 1e3)
+                    coverage_width = df['coverage width'].values[0]
+                    coverage_width = re.search(r'([\d.]+)', coverage_width).group(1)
+                    coverage_widths.append(float(coverage_width) / 1e3)
+                    revisit = df['SAR revisit period'].values[0]
+                    revisit = re.search(r'([\d.]+)', revisit).group(1)
+                    revisit_period.append(float(revisit))
+                    swath_overlap_ = df['swath overlap'].values[0]
+                    swath_overlap_ = float(swath_overlap_.split()[0])
+                    swath_overlap.append(swath_overlap_)
+                    PRF = df['pulse repetition frequency'].values[0]
+                    PRF = float(PRF.split()[0])
+                    PRFs.append(PRF)
+                    battery = df['battery_pack'].values[0]
+                    battery = re.search(r'([\d.]+)', battery).group(1)
+                    battery_mass.append(float(battery))
+                    number_of_racetrack = df['Number of Racetracks'].values[0]
+                    number_of_racetracks.append(float(number_of_racetrack))
+                    offset_distance = df['imaging offset'].values[0]
+                    offset_distance = re.search(r'([\d.]+)', offset_distance).group(1)
+                    offset_distances.append(float(offset_distance) / 1e3)
+
+
+                except FileNotFoundError:
+                    pass
+
+            # make dict
+            dict = {'Run': runs, 'SNR [dB]': SNRs,
+
+                    'Mass TOGW [kg]': mass_TOGWs,'Payload Power [W]': payload_powers, 'Payload Mass [kg]': payload_masses, 'Battery Mass [kg]': battery_mass,'Average Airspeed [m/s]': airspeeds,
+                    'Cruise Altitude [km]': cruise_altitudes, 'Revisit Period [hrs]': revisit_period, 'Coverage Area Dimension [km]': coverage_lengths,
+
+                    'Number of Racetracks':number_of_racetracks, 'Imaging Offset Distance [km]': offset_distances,
+                    'Look Angle [deg]': look_angles, 'Swath Overlap': swath_overlap, 'Swath Range Dimension [km]': swath_ranges, 'Swath Azimuth Dimension [km]': swath_azimuths,
+
+                    'SAR Range Resolution [m]': SAR_range_resolutions, 'SAR Azimuth Resolution [m]': SAR_azimuth_resolutions,
+                    'Wavelength [m]': wavelengths,  'Bandwidth [Hz]': bandwidths,'Pulse Repetition Frequency [Hz]': PRFs, 'Aperture Width [m]': aperture_widths, 'Aperture Length [m]': aperture_lengths }
+
+            # create dataframe with all the variables of interest
+            design_variables = pd.DataFrame(dict)
+            design_variables = design_variables.set_index('Run')
+
+            return design_variables
+
+
+        design_variable_df = load_variables(file_name, converged_runs)
+        big_df = pd.concat([df, design_variable_df], axis=1)
+        if run_type == 'sweep all':
+            big_df_spans = big_df[big_df.index.isin(df_span.index)]
+            big_df_spatial = big_df[big_df.index.isin(df_spatial.index)]
+            big_df_coverage = big_df[big_df.index.isin(df_coverage.index)]
+            big_df_days = big_df[big_df.index.isin(df_days.index)]
+            big_df_precision = big_df[big_df.index.isin(df_precision.index)]
+            big_df_temporal = big_df[big_df.index.isin(df_temporal.index)]
+
+
+        # plot_parallel_coordinates(df, 'all')
+        # plot_parallel_coordinates(df_span, 'Wing Span')
+        # plot_parallel_coordinates(df_spatial, 'Spatial Resolution')
+        # plot_parallel_coordinates(df_coverage, 'Coverage Area')
+        # plot_parallel_coordinates(df_days, 'Days')
+        # plot_parallel_coordinates(df_precision, 'Precision')
+        # plot_parallel_coordinates(df_temporal, 'Temporal Resolution')
+        # plot_radar(df, 'Coverage Area [km^2]')
+        # plot_radar(df_span, 'wingspan')
+        # plot_radar(df_spatial, 'Spatial Resolution')
+        # plot_radar(df_coverage, 'Coverage Area')
+        # plot_radar(df_days, 'Duration')
+        # plot_radar(df_precision, 'Precision')
+        # plot_radar(df_temporal, 'Temporal Resolution')
+        # # plot_scatter_matrix(df)
+        # # corr_heatmap(df)
+        # # corr_heatmap(big_df)
+        # big_df = big_df.drop(columns = ['Wavelength [m]'])
+        # histogram(big_df)
+        #
+        # big_df = big_df.drop(columns = ['Swath Overlap', 'Pulse Repetition Frequency [Hz]'])
+        # corr_heatmap(big_df)
+        # show_changes(big_df_spans, 'Span [m]')
+        # show_changes(big_df_spatial, 'Spatial Resolution [m]')
+        # show_changes(big_df_coverage, 'Coverage Area [km^2]')
+        # show_changes(big_df_days, 'Duration [days]')
+        # show_changes(big_df_precision, 'Precision [1/yr]')
+        # show_changes(big_df_temporal, 'Temporal Resolution [hrs]')
+        show_changes(big_df, 'Coverage Area [km^2]')
+
 
 
