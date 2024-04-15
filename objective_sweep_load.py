@@ -7,7 +7,7 @@ import itertools
 
 
 ### where is parameter cominations file and where should outputs go?
-run_name = "lawnmower_n=free_var"
+run_name = "lawnmower_n=5"
 
 ### define sweep ranges
 max_weighting = 10
@@ -78,7 +78,7 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
         sol = opti.solve(
             max_iter=30000,
             options={
-                "ipopt.max_cpu_time": 15000,
+                "ipopt.max_cpu_time": 8000,
             },
             verbose=False
         )
