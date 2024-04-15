@@ -10,11 +10,11 @@ import plotly.graph_objects as go
 import seaborn as sns
 
 #### inputs
-file_name = 'lawnmower_n=free_var'
+file_name = ('sweep_area_n=5')
 variables = ['Spatial_Resolutions', 'Coverage_Areas', 'Days', 'Precisions', 'Temporal_Resolutions', 'Spans']
-run_type = 'sweep all'
-# run_type = 'sweep requirement'
-# attribute = 'Coverage_Areas'
+# run_type = 'sweep all'
+run_type = 'sweep requirement'
+attribute = 'Coverage_Areas'
 
 # Load the data
 file = f'outputs\\{file_name}\\sweep_results.csv'
@@ -452,13 +452,13 @@ def show_changes(df, attribute):
     plt.tight_layout()
     plt.show()
 
-# plot_parallel_coordinates(df, 'all')
-plot_parallel_coordinates(df_span, 'Wing Span')
-plot_parallel_coordinates(df_spatial, 'Spatial Resolution')
-plot_parallel_coordinates(df_coverage, 'Coverage Area')
-plot_parallel_coordinates(df_days, 'Days')
-plot_parallel_coordinates(df_precision, 'Precision')
-plot_parallel_coordinates(df_temporal, 'Temporal Resolution')
+plot_parallel_coordinates(df, 'all')
+# plot_parallel_coordinates(df_span, 'Wing Span')
+# plot_parallel_coordinates(df_spatial, 'Spatial Resolution')
+# plot_parallel_coordinates(df_coverage, 'Coverage Area')
+# plot_parallel_coordinates(df_days, 'Days')
+# plot_parallel_coordinates(df_precision, 'Precision')
+# plot_parallel_coordinates(df_temporal, 'Temporal Resolution')
 # plot_radar(df, 'Coverage Area [km^2]')
 # plot_radar(df_span, 'wingspan')
 # plot_radar(df_spatial, 'Spatial Resolution')
@@ -474,11 +474,12 @@ plot_parallel_coordinates(df_temporal, 'Temporal Resolution')
 #
 # big_df = big_df.drop(columns = ['Swath Overlap', 'Pulse Repetition Frequency [Hz]'])
 # corr_heatmap(big_df)
-show_changes(big_df_spans, 'Span [m]')
-show_changes(big_df_spatial, 'Spatial Resolution [m]')
-show_changes(big_df_coverage, 'Coverage Area [km^2]')
-show_changes(big_df_days, 'Duration [days]')
-show_changes(big_df_precision, 'Precision [1/yr]')
-show_changes(big_df_temporal, 'Temporal Resolution [hrs]')
+# show_changes(big_df_spans, 'Span [m]')
+# show_changes(big_df_spatial, 'Spatial Resolution [m]')
+# show_changes(big_df_coverage, 'Coverage Area [km^2]')
+# show_changes(big_df_days, 'Duration [days]')
+# show_changes(big_df_precision, 'Precision [1/yr]')
+# show_changes(big_df_temporal, 'Temporal Resolution [hrs]')
+show_changes(big_df, 'Coverage Area [km^2]')
 
 
