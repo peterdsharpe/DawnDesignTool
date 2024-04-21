@@ -392,7 +392,7 @@ if __name__ == '__main__':
     big_df_all = pd.DataFrame()
     df_all = pd.DataFrame()
 
-    nums = ['free_var', 2, 3, 4, 5]
+    nums = [1, 2, 3, 4,5]
     for i in nums:
         #### inputs
         file_name = (f'sweep_area_n={i}')
