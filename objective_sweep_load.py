@@ -163,10 +163,14 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
                 # Create a rectangle patch
                 rectangle = mpl.patches.Rectangle((0, s(max_imaging_offset) / 1000), s(coverage_length) / 1000,
                                                   s(coverage_width) / 1000, edgecolor='red',
-                                                  facecolor='red', linewidth=2, label='Coverage Area')
-
+                                                  facecolor='red', alpha = 0.5, linewidth=2, label='Coverage Area')
                 # Add the rectangle patch to the axis
                 ax.add_patch(rectangle)
+                # create an elliptical patch
+                ellipse = mpl.patches.Ellipse((0, s(max_imaging_offset + max_swath_range / 2) / 1000),
+                                              s(max_swath_azimuth) / 1000, s(max_swath_range) / 1000, edgecolor='green',
+                                              facecolor='green', linewidth=2, label='Swath Area')
+                ax.add_patch(ellipse)
             #     plt.xlim(-75, 150)
             #     plt.ylim(-25, 125)
 
