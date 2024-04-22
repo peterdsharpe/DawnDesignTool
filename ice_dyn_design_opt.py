@@ -99,7 +99,7 @@ use_propulsion_fits_from_FL2020_1682_undergrads = True  # Warning: Fits not yet 
 # Mission Operating Parameters
 latitude = -73  # degrees, the location the sizing occurs
 if mode == "multi-objective":
-    day_of_year = opti.variable(init_guess=60, scale=10, lower_bound=0, upper_bound=150, **des) # Julian day, the day of the year the sizing occurs
+    day_of_year = opti.variable(init_guess=60, scale=10, lower_bound=14, upper_bound=150, **des) # Julian day, the day of the year the sizing occurs
 if mode == "parameter_sweep":
     day_of_year = opti.parameter(value=30) # Julian day, the day of the year the sizing occurs
 mission_length = day_of_year+10  # days, the length of the mission without landing to download data
@@ -113,8 +113,9 @@ min_speed = 0.5 # specify a minimum groundspeed (bad convergence if less than 0.
 wind_direction = 45 # degrees, the direction the wind is blowing from 0 being North and aligned with the x-axis
 run_with_95th_percentile_wind_condition = False # do we want to run the sizing with the 95th percentile wind condition?
 if mode == "multi-objective":
-    required_strain_temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0, **des) # hours
-    required_coverage_area = opti.variable(init_guess=1000000, scale=1, lower_bound=0, **des)
+    required_strain_temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0, upper_bound=24, **des) # hours
+    required_coverage_area = opti.variable(init_guess=5000*1e6, scale=1000*1e6, lower_bound=3000*1e6, **des)
+    # required_coverage_area = opti.parameter(value=100000)
 if mode == "parameter_sweep":
     required_strain_temporal_resolution = opti.parameter(value=24) # hours
     required_coverage_area = opti.parameter(value=1000000)
@@ -137,13 +138,13 @@ payload_volume = 0.023 * 1.5  # assuming payload mass from gamma remote sensing 
 tb_per_day = 4 # terabytes per day, the amount of data the payload collects per day, to account for storage
 strain_range_resolution = opti.variable(init_guess=0.5, scale=1, lower_bound=0, **des) # meters
 if mode == "multi-objective":
-    strain_azimuth_resolution = opti.variable(init_guess=10, scale=1, lower_bound=0, **des) # meters
+    strain_azimuth_resolution = opti.variable(init_guess=10, scale=1, lower_bound=0, upper_bound=100, **des) # meters
 if mode == "parameter_sweep":
     strain_azimuth_resolution = opti.parameter(value=10) # meters
 strain_temporal_resolution = opti.variable(init_guess=4, scale=1, **des) # hours
 # required_snr = 20  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
 if mode == "multi-objective":
-    required_strain_precision = opti.variable(init_guess=1E-4, scale=1E-5, lower_bound=0, **des)
+    required_strain_precision = opti.variable(init_guess=1E-4, scale=1E-5, lower_bound=0, upper_bound=1E-4, **des)
 if mode == "parameter_sweep":
     required_strain_precision = opti.parameter(value=1E-5) # 1/yr, the required precision of the strain measurement
 # meters given from Brent based on the properties of the ice sampled by the radar
