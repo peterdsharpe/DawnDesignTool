@@ -67,8 +67,8 @@ draw_initial_guess_config = False
 
 # Objective Function Scaling Parameters (scaled by threshold values defined by Minchew in spring of 2023)
 wingspan_adjustment = opti.parameter(value=30)
-spatial_adjustment = opti.parameter(value=10)
-coverage_adjustment = opti.parameter(value=9e8) #9e8
+spatial_adjustment = opti.parameter(value=100)
+coverage_adjustment = opti.parameter(value=3000*1e6) #9e8
 day_adjustment = opti.parameter(value=14)
 precision_adjustment = opti.parameter(value=1e-4)
 temporal_adjustment = opti.parameter(value=24)
