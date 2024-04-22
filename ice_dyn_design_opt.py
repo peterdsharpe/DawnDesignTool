@@ -2721,6 +2721,9 @@ if __name__ == "__main__":
 
                 # Add the rectangle patch to the axis
                 ax.add_patch(rectangle)
+                # create an elliptical patch
+                ellipse = mpl.patches.Ellipse((0, s(max_imaging_offset + max_swath_range/2)/1000), s(max_swath_azimuth)/1000, s(max_swath_range)/1000, edgecolor='green', facecolor='green', linewidth=2, label='Swath Area')
+                ax.add_patch(ellipse)
             #     plt.xlim(-75, 150)
             #     plt.ylim(-25, 125)
 
