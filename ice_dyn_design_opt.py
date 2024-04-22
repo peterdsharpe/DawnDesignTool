@@ -2554,7 +2554,9 @@ if __name__ == "__main__":
             "SNR": f"{fmt(max_snr)} dB",
             "swath overlap": f"{fmt(swath_overlap)}",
             "coverage length": f"{fmt(coverage_length)} meters",
-            "coverage width": f"{fmt(2 * max_swath_range - (max_swath_range * swath_overlap))} meters",
+            "coverage width": f"{fmt(coverage_width)} meters",
+            "imaging offset": f"{fmt(max_imaging_offset)} meters",
+            "number of racetracks": f"{fmt(number_of_passes)}",
         }.items():
             print(f"{k.rjust(25)} = {v}")
 
