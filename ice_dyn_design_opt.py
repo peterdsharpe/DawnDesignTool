@@ -2719,7 +2719,7 @@ if __name__ == "__main__":
                 # Create a rectangle patch
                 rectangle = mpl.patches.Rectangle((0, s(max_imaging_offset)/1000), s(coverage_length)/1000,
                                                   s(coverage_width)/1000, edgecolor='red',
-                                                  facecolor='red', linewidth=2, label='Coverage Area')
+                                                  facecolor='red', alpha=0.5, linewidth=2, label='Coverage Area')
 
                 # Add the rectangle patch to the axis
                 ax.add_patch(rectangle)
