@@ -52,6 +52,7 @@ def create_diagonal_array(max, num_objective_terms, run_name):
 
 def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, coverage_scaling_term, day_scaling_term,
         precision_scaling_term, temporal_scaling_term):
+    n_passes = float(run_name[-1])
     print("\n".join([
         "-" * 50,
         f"Run number: {index_val}",
@@ -61,6 +62,7 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
         f"Day: {day_scaling_term}",
         f"Precision: {precision_scaling_term}",
         f"Temporal: {temporal_scaling_term}",
+        f"Number of passes: {n_passes}",
     ]))
     primals = np.load(f"outputs/{run_name}/0_primals.npy")
     duals = np.load(f"outputs/{run_name}/0_duals.npy")
@@ -71,6 +73,7 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
     opti.set_value(day_optimization_scaling_term, float(day_scaling_term))
     opti.set_value(precision_optimization_scaling_term, float(precision_scaling_term))
     opti.set_value(temporal_optimization_scaling_term, float(temporal_scaling_term))
+    opti.set_value(number_of_passes, n_passes)
     opti.set_value(track_scaler, 1)
     opti.set_initial(opti.x, primals)
     opti.set_initial(opti.lam_g, duals)
