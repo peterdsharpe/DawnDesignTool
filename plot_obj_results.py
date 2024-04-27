@@ -483,13 +483,13 @@ if __name__ == '__main__':
             big_df_temporal = big_df[big_df.index.isin(df_temporal.index)]
 
 
-        # plot_parallel_coordinates(df, 'all')
-        # plot_parallel_coordinates(df_span, 'Wing Span')
-        # plot_parallel_coordinates(df_spatial, 'Spatial Resolution')
-        # plot_parallel_coordinates(df_coverage, 'Coverage Area')
-        # plot_parallel_coordinates(df_days, 'Days')
-        # plot_parallel_coordinates(df_precision, 'Precision')
-        # plot_parallel_coordinates(df_temporal, 'Temporal Resolution')
+        # plot_parallel_coordinates(df, 'all', num_of_racetracks)
+        plot_parallel_coordinates(df_span, 'Wingspan [m]', num_of_racetracks)
+        plot_parallel_coordinates(df_spatial, 'Spatial Resolution [m]', num_of_racetracks)
+        plot_parallel_coordinates(df_coverage, '-Spatial Coverage [km^2]', num_of_racetracks)
+        plot_parallel_coordinates(df_days, '-Temporal Coverage [days]', num_of_racetracks)
+        plot_parallel_coordinates(df_precision, 'Precision [yr^-1]', num_of_racetracks)
+        plot_parallel_coordinates(df_temporal, 'Temporal Resolution [hrs]', num_of_racetracks)
         # plot_radar(df, 'Coverage Area [km^2]')
         # plot_radar(df_span, 'wingspan')
         # plot_radar(df_spatial, 'Spatial Resolution')
