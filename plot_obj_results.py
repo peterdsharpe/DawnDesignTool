@@ -513,5 +513,8 @@ if __name__ == '__main__':
         # show_changes(big_df_temporal, 'Temporal Resolution [hrs]')
         # show_changes(big_df, 'Coverage Area [km^2]')
 
-
+        # sns.scatterplot(x=df_days['Temporal Coverage [days]'], y=df_days['Span [m]'])
+        # plt.title('Temporal Coverage against Wingspan')
+        # plt.tight_layout()
+        # plt.show()
 
