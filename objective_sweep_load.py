@@ -261,6 +261,17 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
         is_daytime = s(solar_flux_on_horizontal) >= 1  # 1 W/m^2 or greater insolation
         is_nighttime = np.logical_not(is_daytime)
 
+        def three_view(save_name=None, show=True):
+            airplane.substitute_solution(sol)
+            airplane.draw_three_view(show=False)
+            if save_name is not None:
+                plt.savefig(save_name)
+            if show:
+                plt.show()
+            plt.clf()
+
+        three_view(save_name=f"outputs/{run_name}/three_view_{run_num}.png")
+
         plot("hour", "z_km",
              xlabel="Hours after Solar Noon",
              ylabel="Altitude [km]",
