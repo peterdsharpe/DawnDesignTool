@@ -2408,12 +2408,13 @@ if __name__ == "__main__":
                 #     # duals = sol(opti.lam_g)
                 #     # np.save(f"outputs/{output_file}/0_primals.npy", primals)
                 #     # np.save(f"outputs/{output_file}/0_duals.npy", duals)
+                # airplane.substitute_solution(sol)
+                concrete_airplane = sol(airplane)
         except:
-                sol = opti.debug
+                sol = asb.OptiSol(opti, opti.debug)
                 converged = False
-
-
-                        # Print a warning if the penalty term is unreasonably high
+                concrete_airplane = sol(airplane)
+                # Print a warning if the penalty term is unreasonably high
         penalty_objective_ratio = np.abs(sol.value(penalty / objective))
         if penalty_objective_ratio > 0.01:
             print(
@@ -2690,8 +2691,16 @@ if __name__ == "__main__":
 
             return fig, ax
 
+        def three_view(save_name=None, show=True):
+            concrete_airplane.draw_three_view(show=False)
+            if save_name is not None:
+                plt.savefig(save_name)
+            if show:
+                plt.show()
 
         if make_plots:
+            three_view(save_name=f"outputs/{output_file}/three_view_{run_num}.png")
+
             plot("hour", "z_km",
                  xlabel="Hours after Solar Noon",
                  ylabel="Altitude [km]",
@@ -2940,11 +2949,9 @@ if __name__ == "__main__":
         # opti.set_value(vehicle_heading, heading)
         #
         def draw():  # Draw the geometry of the optimal airplane
-            airplane.substitute_solution(sol)
-            airplane.draw()
+            concrete_airplane.draw()
 
-
-                    # if make_plots == True:
+            # if make_plots == True:
                     #     draw()
                     # if converged == True:
         # if run_num == 0:
