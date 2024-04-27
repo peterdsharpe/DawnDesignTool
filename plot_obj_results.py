@@ -507,11 +507,11 @@ if __name__ == '__main__':
         # corr_heatmap(big_df)
         # show_changes(big_df_spans, 'Span [m]')
         # show_changes(big_df_spatial, 'Spatial Resolution [m]')
-        # show_changes(big_df_coverage, 'Coverage Area [km^2]')
-        # show_changes(big_df_days, 'Duration [days]')
+        # show_changes(big_df_coverage, 'Spatial Coverage [km^2]')
+        # show_changes(big_df_days, 'Temporal Coverage [days]')
         # show_changes(big_df_precision, 'Precision [1/yr]')
         # show_changes(big_df_temporal, 'Temporal Resolution [hrs]')
-        show_changes(big_df, 'Coverage Area [km^2]')
+        # show_changes(big_df, 'Coverage Area [km^2]')
 
 
 
