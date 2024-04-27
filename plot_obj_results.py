@@ -359,6 +359,8 @@ if __name__ == '__main__':
         file = f'outputs\\{file_name}\\sweep_results.csv'
         weighting_file = f'outputs\\{file_name}\\0_parameter_combinations.csv'
         df = pd.read_csv(file)
+        num_of_racetracks = float(file_name[-1])
+
 
         # load the weighting file
         df_weighting = pd.read_csv(weighting_file, header = None)
