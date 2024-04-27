@@ -67,7 +67,7 @@ draw_initial_guess_config = False
 
 # Objective Function Scaling Parameters (scaled by threshold values defined by Minchew in spring of 2023)
 wingspan_adjustment = opti.parameter(value=30)
-spatial_adjustment = opti.parameter(value=100)
+spatial_adjustment = opti.parameter(value=50)
 coverage_adjustment = opti.parameter(value=3000*1e6) #9e8
 day_adjustment = opti.parameter(value=14)
 precision_adjustment = opti.parameter(value=1e-4)
@@ -138,7 +138,7 @@ payload_volume = 0.023 * 1.5  # assuming payload mass from gamma remote sensing 
 tb_per_day = 4 # terabytes per day, the amount of data the payload collects per day, to account for storage
 strain_range_resolution = opti.variable(init_guess=0.5, scale=1, lower_bound=0, **des) # meters
 if mode == "multi-objective":
-    strain_azimuth_resolution = opti.variable(init_guess=10, scale=1, lower_bound=0, upper_bound=100, **des) # meters
+    strain_azimuth_resolution = opti.variable(init_guess=10, scale=1, lower_bound=0, upper_bound=50, **des) # meters
 if mode == "parameter_sweep":
     strain_azimuth_resolution = opti.parameter(value=10) # meters
 strain_temporal_resolution = opti.variable(init_guess=4, scale=1, **des) # hours
