@@ -2163,101 +2163,53 @@ opti.subject_to([
 # endregion
 
 #### section: Constrain Dynamics
-net_accel_x_e = opti.variable(
+net_accel_parallel = opti.variable(
     n_vars=n_timesteps,
     init_guess=0,
     scale=1e-4,
     **ops,
 )
-# net_accel_y_e = opti.variable(
-#     n_vars=n_timesteps,
-#     init_guess=0,
-#     scale=1e-4,
-#     **ops,
-# )
-net_accel_z_e = opti.variable(
+
+net_accel_perpendicular = opti.variable(
     n_vars=n_timesteps,
     init_guess=0,
     scale=1e-5,
     **ops,
 )
 
-# start by defining speed, then groundspeed vector,then constrain position on circle as a function of time, track angle is then
-
-# opti.constrain_derivative(
-#     variable=x_e, with_respect_to=time,
-#     derivative=(u_e)
-# )
-# opti.constrain_derivative(
-#     variable=y_e, with_respect_to=time,
-#     derivative=(v_e)
-# )
 opti.constrain_derivative(
     variable=z_e, with_respect_to=time,
     derivative=w_e,
 )
-# opti.constrain_derivative(
-#     variable=distance, with_respect_to=time,
-#     derivative=ground_speed
-# )
+
 opti.constrain_derivative(
     variable=air_speed, with_respect_to=time,
-    derivative=net_accel_x_e,
+    derivative=net_accel_parallel,
 )
-# opti.constrain_derivative(
-#     variable=v_e, with_respect_to=time,
-#     derivative=net_accel_y_e,
-# )
+
 opti.constrain_derivative(
     variable=w_e, with_respect_to=time,
-    derivative=net_accel_z_e,
+    derivative=net_accel_perpendicular,
 )
-# opti.subject_to(ground_speed == air_speed - wind_speed)
-# dyn.add_force(
-#     Fx=-np.cosd(dyn.gamma) * drag_force,
-#     Fz=np.sind(dyn.gamma) * drag_force,
-#     axes="earth"
-# )
-# dyn.add_force(
-#     Fx=np.sind(dyn.gamma) * lift_force,
-#     Fz=-np.cosd(dyn.gamma) * lift_force,
-#     axes='earth'
-# )
-# dyn.add_force(
-#     Fx=np.cosd(dyn.gamma + dyn.alpha) * thrust,
-#     Fz=np.sind(dyn.gamma + dyn.alpha) * thrust,
-#     axes="earth"
-# )
+
 gravity_force = g * mass_total
-Fx_e = (- np.cosd(gamma) * drag_force \
+F_parallel = (- np.cosd(gamma) * drag_force \
         + np.sind(gamma) * lift_force) \
         + np.cosd(gamma + alpha) * thrust
 # Fy_e = 0
-Fz_e = np.sind(gamma) * drag_force \
+F_perpendicular = np.sind(gamma) * drag_force \
        - np.cosd(gamma) * lift_force \
        + np.sind(gamma + alpha) * thrust \
        + gravity_force
 
 
 opti.subject_to([
-    net_accel_x_e * mass_total / 1e1 == Fx_e / 1e1,
+    net_accel_parallel * mass_total / 1e1 == F_parallel / 1e1,
     # net_accel_y_e * mass_total / 1e1 == Fy_e / 1e1,
-    net_accel_z_e * mass_total / 1e2 == Fz_e / 1e2,
+    net_accel_perpendicular * mass_total / 1e2 == F_perpendicular / 1e2,
 ])
 
-# Fx_w, Fy_w, Fz_w = dyn.convert_axes(Fx_e, Fy_e, Fz_e,'earth','wind')
-# opti.subject_to([
-#     net_accel_x_e * mass_total / 1e1 == Fx_e / 1e1,
-#     net_accel_y_e * mass_total / 1e1 == Fy_e / 1e1,
-#     net_accel_z_e * mass_total / 1e2 == Fz_e / 1e2
-# ])
-# opti.subject_to([
-#     dyn.speed ** 2 == dyn.u_e ** 2 + dyn.v_e ** 2,
-# ])
-# opti.subject_to([
-#     dyn.Fy_w == 0,
-#     dyn.Fz_w == 0,
-# ])
+
 # excess_power = Fx_w * speed
 # climb_rate = excess_power / 9.81 / mass_total
 # opti.constrain_derivative(
@@ -2377,8 +2329,8 @@ penalty = 0
 
 for penalty_input in [
     thrust / 10,
-    Fz_e / 1e-1,
-    Fx_e / 1e-1,
+    F_parallel / 1e-1,
+    F_perpendicular / 1e-1,
     air_speed / 0.1,
     gamma / 2,
     alpha / 1
