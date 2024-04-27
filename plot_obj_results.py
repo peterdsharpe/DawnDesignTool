@@ -439,7 +439,7 @@ if __name__ == '__main__':
             df = df.set_index('Run')
 
             # drop ones with only single attribute weighted
-            df = df[~df.index.isin(rows_with_zero.index)]
+            # df = df[~df.index.isin(rows_with_zero.index)]
 
             # what runs converged?
             converged_runs = df.index.values
