@@ -296,7 +296,6 @@ def load_variables(output_file, runs):
     offset_distances = []
 
     for run_num in runs:
-        try:
             csv_file = f"outputs/{output_file}/outputs_data_run_{run_num}.csv"
             df = pd.read_csv(csv_file)
             df = df.T
@@ -371,10 +370,6 @@ def load_variables(output_file, runs):
             offset_distance = df['imaging offset'].values[0]
             offset_distance = re.search(r'([\d.]+)', offset_distance).group(1)
             offset_distances.append(float(offset_distance) / 1e3)
-
-
-        except FileNotFoundError:
-            pass
 
     # make dict
     dict = {'Run': runs, 'SNR [dB]': SNRs,
