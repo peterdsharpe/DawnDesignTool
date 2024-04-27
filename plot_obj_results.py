@@ -10,11 +10,11 @@ import plotly.graph_objects as go
 import seaborn as sns
 
 #### inputs
-file_name = ('sweep_area_n=2')
+file_name = ('lawnmower_n=4')
 variables = ['Spatial_Resolutions', 'Coverage_Areas', 'Days', 'Precisions', 'Temporal_Resolutions', 'Spans']
-# run_type = 'sweep all'
-run_type = 'sweep requirement'
-attribute = 'Coverage_Areas'
+run_type = 'sweep all'
+# run_type = 'sweep requirement'
+# attribute = 'Coverage_Areas'
 
 def plot_parallel_coordinates(df, attribute, n):
         # Add a column 'Colors' with different colors for each row
