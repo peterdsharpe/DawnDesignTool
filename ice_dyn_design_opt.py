@@ -2967,7 +2967,13 @@ if __name__ == "__main__":
                     f"{str(s(max_precision)).ljust(l)},"
                     f"{str(s(strain_temporal_resolution)).ljust(l)}\n"
                 )
+            primals = sol(opti.x)
+            duals = sol(opti.lam_g)
+            np.save(f"outputs/{output_file}/0_primals.npy", primals)
+            np.save(f"outputs/{output_file}/0_duals.npy", duals)
         else:
+            primals = np.load(f"outputs/{output_file}/0_primals.npy")
+            duals = np.load(f"outputs/{output_file}/0_duals.npy")
             opti.set_initial(opti.x, primals)
             opti.set_initial(opti.lam_g, duals)
 
