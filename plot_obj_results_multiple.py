@@ -255,6 +255,19 @@ def show_changes(df, attribute):
     plt.tight_layout()
     plt.show()
 
+def check_pareto_optimality(df_all):
+    df_all = df_all.reset_index(drop=True)
+    df = df_all.drop(columns=['n'])
+    costs = df.values
+    is_efficient = np.ones(costs.shape[0], dtype=bool)
+    for i, c in enumerate(costs):
+        # Check if solution i is dominated by any other solution
+        is_efficient[i] = np.all(np.any(costs[:i] < c, axis=1)) and np.all(np.any(costs[i+1:] < c, axis=1))
+        if is_efficient[i] == False:
+            df_all = df_all.drop([i])
+
+    return df_all
+
 
 def load_variables(output_file, runs):
     # pull the additional variables from the csv output files
@@ -558,8 +571,9 @@ if __name__ == '__main__':
         # show_changes(big_df_precision, 'Precision [1/yr]')
         # show_changes(big_df_temporal, 'Temporal Resolution [hrs]')
 
-    plot_parallel_coordinates_all(df_all, 'all')
-    show_changes(big_df_all, 'Coverage Area [km^2]')
+    pareto_optimal_all = check_pareto_optimality(df_all)
+    plot_parallel_coordinates_all(pareto_optimal_all, 'all')
+    # show_changes(big_df_all, 'Coverage Area [km^2]')
 
 
 
