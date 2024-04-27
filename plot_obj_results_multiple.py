@@ -400,10 +400,11 @@ if __name__ == '__main__':
     big_df_all = pd.DataFrame()
     df_all = pd.DataFrame()
 
-    nums = [1, 2, 3, 4,5]
+    nums = [1, 2, 3, 4, 5, 6, 7, 8]
     for i in nums:
         #### inputs
-        file_name = (f'sweep_area_n={i}')
+        # file_name = (f'sweep_area_n={i}')
+        file_name = (f'lawnmower_n={i}')
         variables = ['Spatial_Resolutions', 'Coverage_Areas', 'Days', 'Precisions', 'Temporal_Resolutions', 'Spans']
         # run_type = 'sweep all'
         run_type = 'sweep requirement'
