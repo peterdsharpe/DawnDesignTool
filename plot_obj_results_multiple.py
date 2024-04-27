@@ -40,7 +40,7 @@ def plot_parallel_coordinates(df, attribute):
         fig = go.Figure(data=go.Parcoords(
             line=dict(color=df.index, colorscale='rainbow', showscale=True),
             dimensions=list,
-            unselected=dict(line=dict(color='black', opacity=0.2))
+            unselected=dict(line=dict(color='black', opacity=0.05))
         ))
 
         # Add labels and title
