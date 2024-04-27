@@ -1614,8 +1614,9 @@ azimuth_resolution = radar_length / 2
 critical_baseline = wavelength * dist / (2 * range_resolution * (np.cosd(look_angle)) ** 2)
 
 opti.subject_to([
-    payload_pod_length >= radar_length,
-    payload_pod_diameter >= radar_width,
+    0.85 * payload_pod_length >= radar_length,
+    0.85 * payload_pod_diameter >= radar_width,
+    radar_length / radar_width <= 100,
     max_swath_range >= swath_range,
     max_swath_range <= 1 + swath_range,
     max_swath_azimuth >= swath_azimuth,
