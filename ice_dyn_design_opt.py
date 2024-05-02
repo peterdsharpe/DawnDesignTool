@@ -47,8 +47,8 @@ mode = "multi-objective"
 if mode == "multi-objective":
     minimize = ('(wingspan_optimization_scaling_term * wing_span / wingspan_adjustment'
     '+ azimuth_optimization_scaling_term * strain_azimuth_resolution / spatial_adjustment'
-    '+ coverage_optimization_scaling_term * coverage_adjustment / coverage_area'
-    '+ day_optimization_scaling_term * day_adjustment / day_of_year'
+    '+ coverage_optimization_scaling_term * coverage_adjustment / spatial_coverage'
+    '+ duration_optimization_scaling_term * day_adjustment / temporal_coverage'
     '+ precision_optimization_scaling_term * required_strain_precision / precision_adjustment'
     '+ temporal_optimization_scaling_term * required_strain_temporal_resolution / temporal_adjustment) / '
     'normalization_term')
@@ -76,12 +76,12 @@ temporal_adjustment = opti.parameter(value=24)
 wingspan_optimization_scaling_term = opti.parameter(value=1)
 azimuth_optimization_scaling_term = opti.parameter(value=1)
 coverage_optimization_scaling_term = opti.parameter(value=1)
-day_optimization_scaling_term = opti.parameter(value=1)
+duration_optimization_scaling_term = opti.parameter(value=1)
 precision_optimization_scaling_term = opti.parameter(value=1)
 temporal_optimization_scaling_term = opti.parameter(value=1)
-normalization_term = (1/6*(wingspan_optimization_scaling_term**2 + azimuth_optimization_scaling_term**2 +
-                      coverage_optimization_scaling_term**2 + day_optimization_scaling_term**2 +
-                      precision_optimization_scaling_term**2 + temporal_optimization_scaling_term**2))**0.5
+normalization_term = (1/6*(wingspan_optimization_scaling_term ** 2 + azimuth_optimization_scaling_term ** 2 +
+                           coverage_optimization_scaling_term ** 2 + duration_optimization_scaling_term ** 2 +
+                           precision_optimization_scaling_term ** 2 + temporal_optimization_scaling_term ** 2))**0.5
 
 # Aircraft Parameters
 battery_specific_energy_Wh_kg = 390  # cell level specific energy of the battery
@@ -99,10 +99,10 @@ use_propulsion_fits_from_FL2020_1682_undergrads = True  # Warning: Fits not yet 
 # Mission Operating Parameters
 latitude = -73  # degrees, the location the sizing occurs
 if mode == "multi-objective":
-    day_of_year = opti.variable(init_guess=60, scale=10, lower_bound=14, upper_bound=150, **des) # Julian day, the day of the year the sizing occurs
+    temporal_coverage = opti.variable(init_guess=60, scale=10, lower_bound=14, upper_bound=150, **des) # Julian day, the day of the year the sizing occurs
 if mode == "parameter_sweep":
-    day_of_year = opti.parameter(value=30) # Julian day, the day of the year the sizing occurs
-mission_length = day_of_year+10  # days, the length of the mission without landing to download data
+    temporal_coverage = opti.parameter(value=30) # Julian day, the day of the year the sizing occurs
+day_of_year = temporal_coverage / 2 - 10 # days, the length of the mission without landing to download data
 strat_offset_value = 1000  # meters, margin above the stratosphere height the aircraft is required to stay above
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 climb_opt = False  # are we optimizing for the climb as well?
@@ -114,11 +114,11 @@ wind_direction = 45 # degrees, the direction the wind is blowing from 0 being No
 run_with_95th_percentile_wind_condition = False # do we want to run the sizing with the 95th percentile wind condition?
 if mode == "multi-objective":
     required_strain_temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0, upper_bound=24, **des) # hours
-    required_coverage_area = opti.variable(init_guess=5000*1e6, scale=1000*1e6, lower_bound=3000*1e6, **des)
-    # required_coverage_area = opti.parameter(value=100000)
+    required_spatial_coverage = opti.variable(init_guess=5000 * 1e6, scale=1000 * 1e6, lower_bound=3000 * 1e6, **des)
+    # required_spatial_coverage = opti.parameter(value=100000)
 if mode == "parameter_sweep":
     required_strain_temporal_resolution = opti.parameter(value=24) # hours
-    required_coverage_area = opti.parameter(value=1000000)
+    required_spatial_coverage = opti.parameter(value=1000000)
 
 # todo finalize trajectory parameterization
 # trajectory = 'straight'   # do we want to assume a straight line trajectory?
@@ -1629,8 +1629,8 @@ payload_power = power_trans * pulse_rep_freq * pulse_duration
 
 if trajectory == 'straight':
     ground_area = max_swath_range * max_swath_azimuth * np.pi / 4  # meters ** 2
-    coverage_area = ground_area * distance[time_periodic_end_index]
-    # opti.subject_to(coverage_area >= coverage)
+    spatial_coverage = ground_area * distance[time_periodic_end_index]
+    # opti.subject_to(spatial_coverage >= coverage)
     revisit_period = 1 # todo change this
 
 
@@ -1641,7 +1641,7 @@ if trajectory == 'circular':
         flight_path_radius >= ground_imaging_offset + swath_range,
         coverage_radius <= swath_range,
                 ])
-    coverage_area = np.pi * coverage_radius ** 2
+    spatial_coverage = np.pi * coverage_radius ** 2
     payload_power_adjusted = payload_power
 
 if trajectory == "racetrack":
@@ -1731,8 +1731,8 @@ if trajectory == "racetrack":
     revisit_period = 24 / revisit_rate
 
     # define coverage area
-    coverage_area = coverage_length * (2 * max_swath_range - (max_swath_range * swath_overlap))
-    opti.subject_to(coverage_area >= required_coverage_area)
+    spatial_coverage = coverage_length * (2 * max_swath_range - (max_swath_range * swath_overlap))
+    opti.subject_to(spatial_coverage >= required_spatial_coverage)
 
     # only sample in straight sections of racetrack with smoothing correction from Peter
     payload_power_adjusted = payload_power * np.cos(track - start_angle) ** 2
@@ -1959,8 +1959,8 @@ if trajectory == 'lawnmower':
     revisit_period = 24 / revisit_rate
 
     # define coverage area
-    coverage_area = coverage_length * coverage_width
-    opti.subject_to(required_coverage_area <= coverage_area)
+    spatial_coverage = coverage_length * coverage_width
+    opti.subject_to(required_spatial_coverage <= spatial_coverage)
 
     # only sample in straight sections of racetrack with smoothing correction from Peter
     payload_power_adjusted = payload_power * np.cos(track - start_angle) ** 2
@@ -2010,7 +2010,7 @@ opti.subject_to(required_strain_precision >= (precision * 24 * 365))
 mass_of_data_storage = 0.0053  # kg per TB of data
 mass_props['payload'] = asb.MassProperties(
     mass=mass_payload_base +
-         mission_length * tb_per_day * mass_of_data_storage +
+         temporal_coverage * tb_per_day * mass_of_data_storage +
          mass_radar_aperture
 )
 
@@ -2387,11 +2387,11 @@ if __name__ == "__main__":
         # opti.set_value(wingspan_optimization_scaling_term, float(combinations[run_num][0]))
         # opti.set_value(azimuth_optimization_scaling_term, float(combinations[run_num][1]))
         # opti.set_value(coverage_optimization_scaling_term, float(combinations[run_num][2]))
-        # opti.set_value(day_optimization_scaling_term, float(combinations[run_num][3]))
+        # opti.set_value(duration_optimization_scaling_term, float(combinations[run_num][3]))
         # opti.set_value(precision_optimization_scaling_term, float(combinations[run_num][4]))
         # opti.set_value(temporal_optimization_scaling_term, float(combinations[run_num][5]))
         # opti.set_value(number_of_passes, float(combinations[run_num]))
-        # opti.set_value(required_coverage_area, float(combinations[run_num]) * 1e6)
+        # opti.set_value(required_spatial_coverage, float(combinations[run_num]) * 1e6)
         opti.set_value(track_scaler, 1)
 
         try:
@@ -2450,8 +2450,8 @@ if __name__ == "__main__":
             "Strain Range Resolution": f"{fmt(strain_range_resolution)} meters",
             "Strain Azimuth Resolution": f"{fmt(strain_azimuth_resolution)} meters",
             "Strain Temporal Resolution": f"{fmt(strain_temporal_resolution)} hours",
-            "Coverage Area": f"{fmt(coverage_area)} meters^2",
-            "Day of Year": f"{fmt(day_of_year)}",
+            "Coverage Area": f"{fmt(spatial_coverage)} meters^2",
+            "Temporal Coverage": f"{fmt(temporal_coverage)}",
             "Strain Precision": f"{fmt(max_precision)} 1 / yr",
             "Number of Racetracks": f"{fmt(number_of_passes)}",
             "Cruise Altitude": f"{fmt(cruise_altitude / 1000)} kilometers",
@@ -2460,6 +2460,7 @@ if __name__ == "__main__":
             "mass_TOGW": f"{fmt(mass_total)} kg",
             "Average Cruise L/D": fmt(avg_cruise_LD),
             "CG location": "(" + ", ".join([fmt(xyz) for xyz in mass_props_TOGW.xyz_cg]) + ") m",
+            "Sizing Day of Year": f"{fmt(day_of_year)}",
         }.items():
             print(f"{k.rjust(25)} = {v}")
 
@@ -2471,8 +2472,8 @@ if __name__ == "__main__":
             "Strain Range Resolution": f"{fmt(strain_range_resolution)} meters",
             "Strain Azimuth Resolution": f"{fmt(strain_azimuth_resolution)} meters",
             "Strain Temporal Resolution": f"{fmt(strain_temporal_resolution)} hours",
-            "Coverage Area": f"{fmt(coverage_area)} meters^2",
-            "Day of Year": f"{fmt(day_of_year)}",
+            "Coverage Area": f"{fmt(spatial_coverage)} meters^2",
+            "Temporal Coverage": f"{fmt(temporal_coverage)}",
             "Strain Precision": f"{fmt(max_precision)} 1 / yr",
             "Number of Racetracks": f"{fmt(number_of_passes)}",
             "Cruise Altitude": f"{fmt(cruise_altitude / 1000)} kilometers",
@@ -2481,6 +2482,7 @@ if __name__ == "__main__":
             "mass_TOGW": f"{fmt(mass_total)} kg",
             "Average Cruise L/D": fmt(avg_cruise_LD),
             "CG location": "(" + ", ".join([fmt(xyz) for xyz in mass_props_TOGW.xyz_cg]) + ") m",
+            "Sizing Day of Year": f"{fmt(day_of_year)}",
         }
 
         fmtpow = lambda x: fmt(x) + " W"
@@ -2962,8 +2964,8 @@ if __name__ == "__main__":
                     f"{str(run_num).ljust(l)},"
                     f"{str(s(wing_span)).ljust(l)},"
                     f"{str(s(strain_azimuth_resolution)).ljust(l)},"
-                    f"{str(s(coverage_area)).ljust(l)},"
-                    f"{str(s(day_of_year)).ljust(l)},"
+                    f"{str(s(spatial_coverage)).ljust(l)},"
+                    f"{str(s(temporal_coverage)).ljust(l)},"
                     f"{str(s(max_precision)).ljust(l)},"
                     f"{str(s(strain_temporal_resolution)).ljust(l)}\n"
                 )
