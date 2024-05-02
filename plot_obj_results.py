@@ -408,9 +408,9 @@ if __name__ == '__main__':
             # df formatting
             df.loc[:, 'Coverage_Areas'] = df['Coverage_Areas'].div(1e6).round(2)
             df.columns = ['Run', 'Wingspan [m]', 'Spatial Resolution [m]', 'Spatial Coverage [km^2]', 'Temporal Coverage [days]',
-                          'Precision [1/yr]', 'Temporal Resolution [hrs]']
+                          'Precision [yr^-1]', 'Temporal Resolution [hrs]']
             df = df[['Run', 'Wingspan [m]', 'Spatial Resolution [m]', 'Spatial Coverage [km^2]',
-                     'Temporal Resolution [hrs]','Temporal Coverage [days]', 'Precision [1/yr]']]
+                     'Temporal Resolution [hrs]','Temporal Coverage [days]', 'Precision [yr^-1]']]
 
             # record the output for the all objectives weighted equally case
             even_weighting = df[df['Run'] == 0]
@@ -481,7 +481,7 @@ if __name__ == '__main__':
 
             # df formatting
             df.loc[:, 'Coverage_Areas'] = df['Coverage_Areas'].div(1e6).round(2)
-            df.columns = ['Run', 'Wingspan [m]', 'Spatial Resolution [m]', 'Spatial Coverage [km^2]',, 'Temporal Resolution [hrs]', 'Temporal Coverage [days]',
+            df.columns = ['Run', 'Wingspan [m]', 'Spatial Resolution [m]', 'Spatial Coverage [km^2]','Temporal Resolution [hrs]', 'Temporal Coverage [days]',
                           'Precision [1/yr]']
 
             df = df.set_index('Run')
