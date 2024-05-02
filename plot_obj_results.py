@@ -31,6 +31,17 @@ def plot_parallel_coordinates(df, attribute, n):
 
         # Convert DataFrame to dictionary
         data_dict = df.to_dict(orient='list')
+
+        # Define color palette based on the number of rows in df
+        color_palette = sns.color_palette('turbo', len(df))
+        color_palette = [(r * 255, g * 255, b * 255) for r, g, b in color_palette]
+
+        # Normalize color level values
+        normalized_values = [i / (len(df) - 1) for i in range(len(df))]
+
+        # Create a list of 2-element lists with normalized values and color string
+        colorscale = [[val, f'rgb{rgb_tuple}'] for val, rgb_tuple in zip(normalized_values, color_palette)]
+
         list = []
         for i in df.columns:
             if i == 'Spatial Coverage [km^2]':
@@ -56,7 +67,7 @@ def plot_parallel_coordinates(df, attribute, n):
 
         # Create a parallel coordinates plot using graph_objects
         fig = go.Figure(data=go.Parcoords(
-            line=dict(color=df.index, colorscale='rainbow'),
+            line=dict(color=df.index, colorscale=colorscale),  # Use the same color palette
             dimensions=list,
             labelfont=dict(size=20),
             rangefont=dict(size=1),
