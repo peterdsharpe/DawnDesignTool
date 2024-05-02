@@ -70,7 +70,7 @@ def run(run_name, index_val, coverage):
     # opti.set_value(duration_optimization_scaling_term, float(day_scaling_term))
     # opti.set_value(precision_optimization_scaling_term, float(precision_scaling_term))
     # opti.set_value(temporal_optimization_scaling_term, float(temporal_scaling_term))
-    opti.set_value(required_coverage_area, float(coverage) * 1e6)
+    opti.set_value(required_spatial_coverage, float(coverage) * 1e6)
     opti.set_value(track_scaler, 1)
     opti.set_initial(opti.x, primals)
     opti.set_initial(opti.lam_g, duals)

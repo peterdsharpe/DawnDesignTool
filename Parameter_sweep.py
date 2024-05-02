@@ -66,7 +66,7 @@ def run(run_name, index_val, resolution_val, coverage_val, day_val, precision_va
 
     run_num = index_val
     opti.set_value(strain_azimuth_resolution, float(resolution_val))
-    opti.set_value(required_coverage_area, float(coverage_val))
+    opti.set_value(required_spatial_coverage, float(coverage_val))
     opti.set_value(day_of_year, float(day_val))
     opti.set_value(required_strain_precision, float(precision_val))
     opti.set_value(required_strain_temporal_resolution, float(temporal_val))

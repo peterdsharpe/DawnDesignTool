@@ -114,7 +114,7 @@ wind_direction = 45 # degrees, the direction the wind is blowing from 0 being No
 run_with_95th_percentile_wind_condition = False # do we want to run the sizing with the 95th percentile wind condition?
 if mode == "multi-objective":
     required_strain_temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0, upper_bound=24, **des) # hours
-    # required_coverage_area = opti.variable(init_guess=100*1e6, scale=1, lower_bound=0, **des)
+    # required_spatial_coverage = opti.variable(init_guess=100*1e6, scale=1, lower_bound=0, **des)
     required_coverage_area = opti.parameter(value=100000)
 if mode == "parameter_sweep":
     required_strain_temporal_resolution = opti.parameter(value=24) # hours
@@ -2439,7 +2439,7 @@ if __name__ == "__main__":
         # opti.set_value(temporal_optimization_scaling_term, float(combinations[run_num][5]))
         # opti.set_value(number_of_passes, float(combinations[run_num][0]))
         opti.set_value(required_coverage_area, float(combinations[run_num]) * 1e6)
-        # opti.set_value(required_coverage_area, 1000 * 1e6)
+        # opti.set_value(required_spatial_coverage, 1000 * 1e6)
         opti.set_value(track_scaler, 1)
 
         # if run_num ==0:
