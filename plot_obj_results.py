@@ -46,16 +46,16 @@ def plot_parallel_coordinates(df, attribute, n):
         for i in df.columns:
             if i == 'Spatial Coverage [km^2]':
                 values = [ - x for x in data_dict[i]]
-                list.append(dict(range =[round(min(values)-500, -3), -3000], label='-Spatial Coverage [km^2]', values=values))
+                list.append(dict(range =[round(min(values)-500, -3), 0], label='-Spatial Coverage [km^2]', values=values))
             elif i == 'Temporal Coverage [days]':
                 values = [- x for x in data_dict[i]]
-                list.append(dict(range =[round(min(values) - 1), -14], label='-Temporal Coverage [days]', values=values))
-            elif i == 'Precision [1/yr]':
-                list.append(dict(range =[0, 1E-4], label='Precision [yr^-1]', values=data_dict[i]))
+                list.append(dict(range =[round(min(values) - 1), 0], label='-Temporal Coverage [days]', values=values))
+            elif i == 'Precision [yr^-1]':
+                list.append(dict(range =[0, 1.005E-4], label='Precision [yr^-1]', values=data_dict[i]))
             elif i == 'Temporal Resolution [hrs]':
-                list.append(dict(range =[0, 24],label='Temporal Resolution [hrs]', values=data_dict[i]))
+                list.append(dict(range =[0, 25],label='Temporal Resolution [hrs]', values=data_dict[i]))
             elif i == 'Spatial Resolution [m]':
-                list.append(dict(range =[0, 50],label='Spatial Resolution [m]', values=data_dict[i]))
+                list.append(dict(range =[0, 55],label='Spatial Resolution [m]', values=data_dict[i]))
             else:
                 list.append(dict(range =[0, round(max(data_dict[i])+ 1)],label=i, values=data_dict[i]))
 
@@ -77,7 +77,7 @@ def plot_parallel_coordinates(df, attribute, n):
 
         # Add labels and title
         fig.update_layout(
-            xaxis=dict(title='Variables', titlefont=dict(color='red')),
+            xaxis=dict(title='Variables'),
             yaxis=dict(title='Values'),
             # title=f'Parallel Coordinates Plot as Weighting on {attribute} Changes with {n} Racetracks',
             autosize=False,  # Disable autosizing
