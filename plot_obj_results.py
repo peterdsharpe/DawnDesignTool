@@ -209,8 +209,11 @@ def histogram(df):
     plt.show()
 
 def show_changes(df, attribute, index=None):
-    # plot bar chart
-    # df = df.drop(columns = ['weight'])
+
+    df = df.sort_values(by=attribute)
+    df = df.reset_index(drop=True)
+
+
     # Calculate the number of rows and columns needed for subplots
     num_cols = len(df.columns)
     cols_in_plot = 7
@@ -220,18 +223,21 @@ def show_changes(df, attribute, index=None):
     fig, axes = plt.subplots(num_rows, cols_in_plot, figsize=(4 * cols_in_plot, num_rows * 4))
     axes = axes.flatten()
 
+    pal = sns.color_palette("turbo", len(df))
+
     # Plot bar chart for each column
     for i, col in enumerate(df.columns):
-            sns.scatterplot(x=df[attribute], y=col, data=df, ax=axes[i], s=100)
-            axes[i].set_title(col)
-            axes[i].set_xlabel(attribute)
-            axes[i].set_ylabel(col)
+        for j in range(len(df)):
+            sns.scatterplot(x=[df[attribute][j]], y=[df[col][j]], ax=axes[i], s=100, color=[pal[j]], edgecolor='black')
+        axes[i].set_title(col)
+        axes[i].set_xlabel(attribute)
+        axes[i].set_ylabel(col)
 
     # Remove extra empty subplots if necessary
     for j in range(num_cols, num_rows * cols_in_plot):
         fig.delaxes(axes[j])
 
-    plt.legend(f"n racetracks = {index}")
+    # plt.legend(f"n racetracks = {index}")
 
     # Adjust layout
     plt.tight_layout()
