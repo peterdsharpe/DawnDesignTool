@@ -47,8 +47,8 @@ mode = "multi-objective"
 if mode == "multi-objective":
     minimize = ('(wingspan_optimization_scaling_term * wing_span / wingspan_adjustment'
     '+ azimuth_optimization_scaling_term * strain_azimuth_resolution / spatial_adjustment'
-    # '+ coverage_optimization_scaling_term * coverage_adjustment / coverage_area'
-    '+ day_optimization_scaling_term * day_adjustment / day_of_year'
+    # '+ coverage_optimization_scaling_term * coverage_adjustment / spatial_coverage'
+    '+ duration_optimization_scaling_term * duration_adjustment / day_of_year'
     '+ precision_optimization_scaling_term * required_strain_precision / precision_adjustment'
     '+ temporal_optimization_scaling_term * required_strain_temporal_resolution / temporal_adjustment) / '
     'normalization_term')
@@ -1629,7 +1629,7 @@ payload_power = power_trans * pulse_rep_freq * pulse_duration
 if trajectory == 'straight':
     ground_area = max_swath_range * max_swath_azimuth * np.pi / 4  # meters ** 2
     coverage_area = ground_area * distance[time_periodic_end_index]
-    # opti.subject_to(coverage_area >= coverage)
+    # opti.subject_to(spatial_coverage >= coverage)
     revisit_period = 1 # todo change this
 
 
@@ -2434,7 +2434,7 @@ if __name__ == "__main__":
         # opti.set_value(wingspan_optimization_scaling_term, float(combinations[run_num][0]))
         # opti.set_value(azimuth_optimization_scaling_term, float(combinations[run_num][1]))
         # opti.set_value(coverage_optimization_scaling_term, float(combinations[run_num][2]))
-        # opti.set_value(day_optimization_scaling_term, float(combinations[run_num][3]))
+        # opti.set_value(duration_optimization_scaling_term, float(combinations[run_num][3]))
         # opti.set_value(precision_optimization_scaling_term, float(combinations[run_num][4]))
         # opti.set_value(temporal_optimization_scaling_term, float(combinations[run_num][5]))
         # opti.set_value(number_of_passes, float(combinations[run_num][0]))

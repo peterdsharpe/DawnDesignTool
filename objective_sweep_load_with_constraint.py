@@ -67,7 +67,7 @@ def run(run_name, index_val, coverage):
     # opti.set_value(wingspan_optimization_scaling_term, float(wingspan_scaling_term))
     # opti.set_value(azimuth_optimization_scaling_term, float(resolution_scaling_term))
     # opti.set_value(coverage_optimization_scaling_term, float(coverage_scaling_term))
-    # opti.set_value(day_optimization_scaling_term, float(day_scaling_term))
+    # opti.set_value(duration_optimization_scaling_term, float(day_scaling_term))
     # opti.set_value(precision_optimization_scaling_term, float(precision_scaling_term))
     # opti.set_value(temporal_optimization_scaling_term, float(temporal_scaling_term))
     opti.set_value(required_coverage_area, float(coverage) * 1e6)
@@ -90,7 +90,7 @@ def run(run_name, index_val, coverage):
 
         span = s(wing_span)
         resolution_val = s(strain_azimuth_resolution)
-        coverage_val = s(coverage_area)
+        coverage_val = s(spatial_coverage)
         day_val = s(day_of_year)
         precision_val = s(required_strain_precision)
         temporal_val = s(strain_temporal_resolution)
@@ -185,7 +185,7 @@ def run(run_name, index_val, coverage):
             "Strain Azimuth Resolution": f"{fmt(strain_azimuth_resolution)} meters",
             "Strain Temporal Resolution": f"{fmt(strain_temporal_resolution)} hours",
             "Strain Precision": f"{fmt(required_strain_precision)} 1 / yr",
-            "Coverage Area": f"{fmt(coverage_area)} meters^2",
+            "Coverage Area": f"{fmt(spatial_coverage)} meters^2",
             "Day of Year": f"{fmt(day_of_year)}",
             "Cruise Altitude": f"{fmt(cruise_altitude / 1000)} kilometers",
             "Average Airspeed": f"{fmt(avg_airspeed)} m/s",

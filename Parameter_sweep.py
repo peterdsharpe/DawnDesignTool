@@ -179,7 +179,7 @@ def run(run_name, index_val, resolution_val, coverage_val, day_val, precision_va
             "Strain Azimuth Resolution": f"{fmt(strain_azimuth_resolution)} meters",
             "Strain Temporal Resolution": f"{fmt(strain_temporal_resolution)} hours",
             "Strain Precision": f"{fmt(required_strain_precision)} 1 / yr",
-            "Coverage Area": f"{fmt(coverage_area)} meters^2",
+            "Coverage Area": f"{fmt(spatial_coverage)} meters^2",
             "Day of Year": f"{fmt(day_of_year)}",
             "Cruise Altitude": f"{fmt(cruise_altitude / 1000)} kilometers",
             "Average Airspeed": f"{fmt(avg_airspeed)} m/s",
