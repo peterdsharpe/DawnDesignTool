@@ -443,9 +443,9 @@ if __name__ == '__main__':
         # file_name = (f'sweep_area_n={i}')
         file_name = (f'lawnmower_n={i}')
         variables = ['Spatial_Resolutions', 'Coverage_Areas', 'Days', 'Precisions', 'Temporal_Resolutions', 'Spans']
-        # run_type = 'sweep all'
-        run_type = 'sweep requirement'
-        attribute = 'Coverage_Areas'
+        run_type = 'sweep all'
+        # run_type = 'sweep requirement'
+        # attribute = 'Coverage_Areas'
 
         # Load the data
         file = f'outputs\\{file_name}\\sweep_results.csv'
