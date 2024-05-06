@@ -2354,7 +2354,7 @@ if draw_initial_guess_config:
 
 if __name__ == "__main__":
     import csv
-    output_file = "lawnmower_n=1"
+    output_file = "lawnmower_n=4"
     primals = np.load(f"outputs/{output_file}/0_primals.npy")
     duals = np.load(f"outputs/{output_file}/0_duals.npy")
 
@@ -2372,6 +2372,7 @@ if __name__ == "__main__":
             f"{'Temporal_Resolutions'.ljust(l)}\n")
 
     runs = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41]
+    runs = [1]
     combinations = []
     with open(f'outputs/{output_file}/0_parameter_combinations.csv', newline='\n') as csvfile:
         # Create a CSV reader object
@@ -2381,8 +2382,8 @@ if __name__ == "__main__":
             # Append the row to the list
             combinations.append(row)
     # combinations = np.linspace(100, 10000, 23)
-    opti.set_initial(opti.x, primals)
-    opti.set_initial(opti.lam_g, duals)
+    # opti.set_initial(opti.x, primals)
+    # opti.set_initial(opti.lam_g, duals)
     for run_num in runs:
         # opti.set_value(wingspan_optimization_scaling_term, float(combinations[run_num][0]))
         # opti.set_value(azimuth_optimization_scaling_term, float(combinations[run_num][1]))
@@ -2393,7 +2394,10 @@ if __name__ == "__main__":
         # opti.set_value(number_of_passes, float(combinations[run_num]))
         # opti.set_value(required_spatial_coverage, float(combinations[run_num]) * 1e6)
         opti.set_value(track_scaler, 1)
-
+        if run_num == 0:
+            opti.set_value(track_scaler, 0)
+        else:
+            opti.set_value(track_scaler, 1)
         try:
                 sol = opti.solve(
                     max_iter=100000,
