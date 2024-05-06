@@ -78,40 +78,59 @@ def plot_parallel_coordinates_all(df, attribute):
         df = df.drop(columns=['weight'])
     except:
         pass
+    color = df['n']
+    try:
+        df = df.sort_values(by=attribute)
+    except:
+        pass
     df = df.reset_index(drop=True)
 
     # Convert DataFrame to dictionary
     data_dict = df.to_dict(orient='list')
     list = []
-    color = df['n']
-
-    # df = df.drop(columns=['n'])
-
     for i in df.columns:
-        if i == 'Coverage Area [km^2]':
+        if i == 'Spatial Coverage [km^2]':
             values = [- x for x in data_dict[i]]
-            list.append(dict(range=[round(min(values) - 500, -3), 0], label='- Coverage_Areas [km^2]', values=values))
-        elif i == 'Duration [days]':
-            values = [- x for x in data_dict[i]]
-            list.append(dict(range=[round(min(values) - 1), 0], label='- Duration [days]', values=values))
-        elif i == 'Precision [1/yr]':
             list.append(
-                dict(range=[0, round(max(data_dict[i]), 6) + 1e-6], label='Precisions [1/yr]', values=data_dict[i]))
+                dict(range=[round(min(values) - 500, -3), 0], label='-Spatial Coverage [km^2]', values=values))
+        elif i == 'Temporal Coverage [days]':
+            values = [- x for x in data_dict[i]]
+            list.append(dict(range=[round(min(values) - 1), 0], label='-Temporal Coverage [days]', values=values))
+        elif i == 'Precision [1/yr]':
+            list.append(dict(range=[0, 1.005E-4], label='Precision [yr^-1]', values=data_dict[i]))
+        elif i == 'Temporal Resolution [hrs]':
+            list.append(dict(range=[0, 25], label='Temporal Resolution [hrs]', values=data_dict[i]))
+        elif i == 'Spatial Resolution [m]':
+            list.append(dict(range=[0, 55], label='Spatial Resolution [m]', values=data_dict[i]))
         else:
             list.append(dict(range=[0, round(max(data_dict[i]) + 1)], label=i, values=data_dict[i]))
 
+    # bring attribute to the top of the list
+    for i in range(len(list)):
+        if list[i]['label'] == attribute:
+            list.insert(0, list.pop(i))
+            break
+
     # Create a parallel coordinates plot using graph_objects
     fig = go.Figure(data=go.Parcoords(
-        line=dict(color=color, colorscale='rainbow'),
+        line=dict(color=df.index, colorscale='rainbow'),  # Use the same color palette
         dimensions=list,
+        labelfont=dict(size=20),
+        rangefont=dict(size=1),
+        tickfont=dict(size=16),
         unselected=dict(line=dict(color='black', opacity=0.2))
     ))
 
     # Add labels and title
+    # Add labels and title
     fig.update_layout(
         xaxis=dict(title='Variables'),
         yaxis=dict(title='Values'),
-        title=f'Parallel Coordinates Plot as Weighting on {attribute} Changes',
+        # title=f'Parallel Coordinates Plot as Weighting on {attribute} Changes with {n} Racetracks',
+        autosize=False,  # Disable autosizing
+        width=2000,  # Set width of the plot
+        height=1000,  # Set height of the plot
+        margin=dict(l=140, r=130, t=80, b=40),  # Adjust margins
     )
 
     # Save the plot as an HTML file
