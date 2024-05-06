@@ -525,16 +525,22 @@ if __name__ == '__main__':
         #
         # big_df = big_df.drop(columns = ['Swath Overlap', 'Pulse Repetition Frequency [Hz]'])
         # corr_heatmap(big_df)
-        # show_changes(big_df_spans, 'Span [m]')
+        # show_changes(big_df_spans, 'Wingspan [m]')
         # show_changes(big_df_spatial, 'Spatial Resolution [m]')
         # show_changes(big_df_coverage, 'Spatial Coverage [km^2]')
         # show_changes(big_df_days, 'Temporal Coverage [days]')
         # show_changes(big_df_precision, 'Precision [1/yr]')
         # show_changes(big_df_temporal, 'Temporal Resolution [hrs]')
         # show_changes(big_df, 'Coverage Area [km^2]')
-
-        # sns.scatterplot(x=df_days['Temporal Coverage [days]'], y=df_days['Span [m]'])
+        # pal = sns.color_palette("turbo", len(df_days["Temporal Coverage [days]"]))
+        # df_days = df_days.reset_index(drop=True)
+        #
+        # # Plot bar chart for each column
+        # for i in range(len(df_days["Temporal Coverage [days]"])):
+        #     sns.scatterplot(x=[df_days['Temporal Coverage [days]'][i]], y=[df_days['Wingspan [m]'][i]], color=pal[i], edgecolor='black', s=150)
         # plt.title('Temporal Coverage against Wingspan')
+        # plt.xlabel('Temporal Coverage [days]')
+        # plt.ylabel('Wingspan [m]')
         # plt.tight_layout()
         # plt.show()
 
