@@ -560,8 +560,6 @@ if __name__ == '__main__':
 
             # what runs converged?
             converged_runs = df.index.values
-        if i == 'free_var':
-            i = 1
         df['n'] = [i] * len(converged_runs)
         df_all = pd.concat([df_all, df.reset_index(drop=True)])
         # df_all = df_all.drop(columns = ['Run'])
