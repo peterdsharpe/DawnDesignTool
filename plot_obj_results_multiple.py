@@ -290,11 +290,16 @@ def show_changes(df, attribute):
 def check_pareto_optimality(df_all):
     df_all = df_all.reset_index(drop=True)
     df = df_all.drop(columns=['n'])
+    try:
+        df['Temporal Coverage [days]'] = -df['Temporal Coverage [days]']
+        df['Spatial Coverage [km^2]'] = -df['Spatial Coverage [km^2]']
+    except:
+        pass
     costs = df.values
     is_efficient = np.ones(costs.shape[0], dtype=bool)
     for i, c in enumerate(costs):
         # Check if solution i is dominated by any other solution
-        is_efficient[i] = np.all(np.any(costs[:i] < c, axis=1)) and np.all(np.any(costs[i+1:] < c, axis=1))
+        is_efficient[i] = np.all(np.any(costs[:i] > c, axis=1)) and np.all(np.any(costs[i+1:] > c, axis=1))
         if is_efficient[i] == False:
             df_all = df_all.drop([i])
 
