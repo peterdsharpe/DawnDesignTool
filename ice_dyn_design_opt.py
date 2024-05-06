@@ -47,7 +47,7 @@ mode = "multi-objective"
 if mode == "multi-objective":
     minimize = ('(wingspan_optimization_scaling_term * wing_span / wingspan_adjustment'
     '+ azimuth_optimization_scaling_term * strain_azimuth_resolution / spatial_adjustment'
-    '+ coverage_optimization_scaling_term * coverage_adjustment / spatial_coverage'
+    '+ coverage_optimization_scaling_term * coverage_adjustment * revisit_period / (temporal_adjustment * spatial_coverage)'
     '+ duration_optimization_scaling_term * day_adjustment / temporal_coverage'
     '+ precision_optimization_scaling_term * required_strain_precision / precision_adjustment'
     '+ temporal_optimization_scaling_term * required_strain_temporal_resolution / temporal_adjustment) / '
