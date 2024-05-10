@@ -7,14 +7,14 @@ import itertools
 
 
 ### where is parameter cominations file and where should outputs go?
-run_name = "lawnmower_n=5"
+run_name = "lawnmower_n=4_no_duration"
 
 ### define sweep ranges
 max_weighting = 10
 number_of_objective_terms = 6
 
 ### Turn parallelization on/off.
-parallel = True
+parallel = False
 
 def create_grid(max, num_objective_terms, run_name):
     # Generating permutations
@@ -94,7 +94,7 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
         span = s(wing_span)
         resolution_val = s(strain_azimuth_resolution)
         coverage_val = s(spatial_coverage)
-        day_val = s(day_of_year)
+        day_val = s(temporal_coverage)
         precision_val = s(required_strain_precision)
         temporal_val = s(strain_temporal_resolution)
 
@@ -191,9 +191,9 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
             "Strain Range Resolution": f"{fmt(strain_range_resolution)} meters",
             "Strain Azimuth Resolution": f"{fmt(strain_azimuth_resolution)} meters",
             "Strain Temporal Resolution": f"{fmt(strain_temporal_resolution)} hours",
-            "Strain Precision": f"{fmt(required_strain_precision)} 1 / yr",
             "Coverage Area": f"{fmt(spatial_coverage)} meters^2",
-            "Day of Year": f"{fmt(day_of_year)}",
+            "Temporal Coverage": f"{fmt(temporal_coverage)}",
+            "Strain Precision": f"{fmt(required_strain_precision)} 1 / yr",
             "Number of Racetracks": f"{fmt(number_of_passes)}",
             "Cruise Altitude": f"{fmt(cruise_altitude / 1000)} kilometers",
             "Average Airspeed": f"{fmt(avg_airspeed)} m/s",
@@ -201,6 +201,7 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
             "mass_TOGW": f"{fmt(mass_total)} kg",
             "Average Cruise L/D": fmt(avg_cruise_LD),
             "CG location": "(" + ", ".join([fmt(xyz) for xyz in mass_props_TOGW.xyz_cg]) + ") m",
+            "Sizing Day of Year": f"{fmt(day_of_year)}",
         }
 
         fmtpow = lambda x: fmt(x) + " W"
@@ -240,7 +241,7 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
                 "SNR": f"{fmt(max_snr)} dB",
                 "swath overlap": f"{fmt(swath_overlap)}",
                 "coverage length": f"{fmt(coverage_length)} meters",
-                "coverage width": f"{fmt(2 * max_swath_range - (max_swath_range * swath_overlap))} meters",
+                "coverage width": f"{fmt(coverage_width)} meters",
                 "imaging offset": f"{fmt(max_imaging_offset)} meters",
                 "number of racetracks": f"{fmt(number_of_passes)}",
             }.items():
