@@ -1992,7 +1992,7 @@ opti.subject_to([
     strain_range_resolution >= N_i_range * range_resolution,
     strain_temporal_resolution >= N_i_time * revisit_period,
     required_strain_temporal_resolution >= strain_temporal_resolution,
-    strain_range_resolution <= strain_azimuth_resolution,
+    strain_range_resolution == strain_azimuth_resolution,
 ])
 
 # calculate decorrelation terms
