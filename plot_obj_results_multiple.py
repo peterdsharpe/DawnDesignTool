@@ -437,7 +437,7 @@ if __name__ == '__main__':
     big_df_all = pd.DataFrame()
     df_all = pd.DataFrame()
 
-    nums = [1, 2, 3, 4, 5, 6, 7, 8]
+    nums = [1, 2, 3, 4, 5, 6, 7]
     for i in nums:
         #### inputs
         # file_name = (f'sweep_area_n={i}')
@@ -605,7 +605,7 @@ if __name__ == '__main__':
         # show_changes(big_df_days, 'Duration [days]')
         # show_changes(big_df_precision, 'Precision [1/yr]')
         # show_changes(big_df_temporal, 'Temporal Resolution [hrs]')
-
+    plot_parallel_coordinates_all(df_all, "all")
     pareto_optimal_all = check_pareto_optimality(df_all)
     plot_parallel_coordinates_all(pareto_optimal_all, 'all')
     # show_changes(big_df_all, 'Coverage Area [km^2]')
