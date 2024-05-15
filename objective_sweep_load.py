@@ -7,28 +7,35 @@ import itertools
 
 
 ### where is parameter cominations file and where should outputs go?
-run_name = "lawnmower_n=4_no_duration"
+run_name = "lawnmower_n=4"
 
 ### define sweep ranges
-max_weighting = 10
+max_weighting = 100
 number_of_objective_terms = 6
+grid_sample_number = 4
 
 ### Turn parallelization on/off.
-parallel = False
+parallel = True
 
-def create_grid(max, num_objective_terms, run_name):
-    # Generating permutations
-    permutations = list(itertools.product(range(1, max+1), repeat=num_objective_terms))
+def create_grid(sample_number, max_value, num_objective_terms, run_name):
+    # Define the range of values in each dimension
+    value_range = np.linspace(0, max_value, sample_number)  # Ranging from 0 to 100 with steps of 25
+
+    # Generate the coordinates for each dimension
+    coordinates = [list(value_range) for _ in range(num_objective_terms)]
+
+    # Generate all combinations of coordinates
+    grid_points = list(itertools.product(*coordinates))
 
     # Writing permutations to a CSV file
     with open(f'outputs\\{run_name}\\0_parameter_combinations.csv', 'w', newline='') as csvfile:
         csv_writer = csv.writer(csvfile)
-        csv_writer.writerows(permutations)
+        csv_writer.writerows(grid_points)
 
     print("Permutations saved")
 
     # create np.array of permutations where the first column is the index of the run
-    permutations = np.array(permutations)
+    permutations = np.array(grid_points)
     permutations = np.insert(permutations, 0, np.arange(0, permutations.shape[0]), axis=1)
     files = np.array([run_name] * len(permutations))
     combined_array = np.column_stack((files, permutations))
@@ -342,13 +349,13 @@ if __name__ == '__main__':
             f"{'Precisions'.ljust(l)},"
             f"{'Temporal_Resolutions'.ljust(l)}\n")
 
-    # parameter_array = create_grid(max_weighting, number_of_objective_terms, run_name)
-    parameter_array = np.genfromtxt(f'outputs/{run_name}/0_parameter_combinations.csv', delimiter=',')
-    parameter_array = np.insert(parameter_array, 0, np.arange(0, parameter_array.shape[0]), axis=1)
-    index_array = parameter_array[:, 0]
-    files = np.array([run_name] * len(parameter_array))
-    parameter_array = np.column_stack((files, parameter_array))
-
+    parameter_array = create_grid(grid_sample_number, max_weighting, number_of_objective_terms, run_name)
+    # parameter_array = np.genfromtxt(f'outputs/{run_name}/0_parameter_combinations.csv', delimiter=',')
+    # parameter_array = np.insert(parameter_array, 0, np.arange(0, parameter_array.shape[0]), axis=1)
+    # index_array = parameter_array[:, 0]
+    # files = np.array([run_name] * len(parameter_array))
+    # parameter_array = np.column_stack((files, parameter_array))
+    #
     if parallel:
         with mp.Pool(mp.cpu_count()) as p:
             for index, span_val, resolution_val, coverage_val, day_val, precision_val, temporal_val in p.imap_unordered(
