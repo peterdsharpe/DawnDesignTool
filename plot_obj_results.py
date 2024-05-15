@@ -242,6 +242,7 @@ def show_changes(df, attribute, index=None):
 
     # Adjust layout
     plt.tight_layout()
+    plt.savefig(f'C:\\Users\\AnnickDewald\\PycharmProjects\\DawnDesignTool\outputs\\{file_name}\\{attribute}_changes.png')
     plt.show()
 
 
