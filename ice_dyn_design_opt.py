@@ -2361,15 +2361,15 @@ if __name__ == "__main__":
     ### Make a data file
     filename = f"outputs/{output_file}/sweep_results.csv"
     l = 20
-    with open(filename, "w+") as f:
-        f.write(
-            f"{'Run'.ljust(l)},"
-            f"{'Spans'.ljust(l)},"
-            f"{'Spatial_Resolutions'.ljust(l)},"
-            f"{'Coverage_Areas'.ljust(l)},"
-            f"{'Days'.ljust(l)},"
-            f"{'Precisions'.ljust(l)},"
-            f"{'Temporal_Resolutions'.ljust(l)}\n")
+    # with open(filename, "w+") as f:
+    #     f.write(
+    #         f"{'Run'.ljust(l)},"
+    #         f"{'Spans'.ljust(l)},"
+    #         f"{'Spatial_Resolutions'.ljust(l)},"
+    #         f"{'Coverage_Areas'.ljust(l)},"
+    #         f"{'Days'.ljust(l)},"
+    #         f"{'Precisions'.ljust(l)},"
+    #         f"{'Temporal_Resolutions'.ljust(l)}\n")
 
     runs = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41]
     runs = [1]
@@ -2382,8 +2382,8 @@ if __name__ == "__main__":
             # Append the row to the list
             combinations.append(row)
     # combinations = np.linspace(100, 10000, 23)
-    # opti.set_initial(opti.x, primals)
-    # opti.set_initial(opti.lam_g, duals)
+    opti.set_initial(opti.x, primals)
+    opti.set_initial(opti.lam_g, duals)
     for run_num in runs:
         # opti.set_value(wingspan_optimization_scaling_term, float(combinations[run_num][0]))
         # opti.set_value(azimuth_optimization_scaling_term, float(combinations[run_num][1]))
@@ -2963,16 +2963,16 @@ if __name__ == "__main__":
         # if run_num == 0:
         if converged == True:
             opti.set_initial_from_sol(sol, initialize_primals=True, initialize_duals=True,)
-            with open(filename, "a") as f:
-                f.write(
-                    f"{str(run_num).ljust(l)},"
-                    f"{str(s(wing_span)).ljust(l)},"
-                    f"{str(s(strain_azimuth_resolution)).ljust(l)},"
-                    f"{str(s(spatial_coverage)).ljust(l)},"
-                    f"{str(s(temporal_coverage)).ljust(l)},"
-                    f"{str(s(max_precision)).ljust(l)},"
-                    f"{str(s(strain_temporal_resolution)).ljust(l)}\n"
-                )
+            # with open(filename, "a") as f:
+            #     f.write(
+            #         f"{str(run_num).ljust(l)},"
+            #         f"{str(s(wing_span)).ljust(l)},"
+            #         f"{str(s(strain_azimuth_resolution)).ljust(l)},"
+            #         f"{str(s(spatial_coverage)).ljust(l)},"
+            #         f"{str(s(temporal_coverage)).ljust(l)},"
+            #         f"{str(s(max_precision)).ljust(l)},"
+            #         f"{str(s(strain_temporal_resolution)).ljust(l)}\n"
+            #     )
             primals = sol(opti.x)
             duals = sol(opti.lam_g)
             np.save(f"outputs/{output_file}/0_primals.npy", primals)
