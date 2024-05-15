@@ -97,7 +97,7 @@ use_propulsion_fits_from_FL2020_1682_undergrads = True  # Warning: Fits not yet 
 # todo validate fits from FL2020 1682 undergrads or replace with better propulsion model
 
 # Mission Operating Parameters
-latitude = -73  # degrees, the location the sizing occurs
+latitude = -76  # degrees, the location the sizing occurs
 if mode == "multi-objective":
     temporal_coverage = opti.variable(init_guess=60, scale=10, lower_bound=14, upper_bound=150, **des) # Julian day, the day of the year the sizing occurs
 if mode == "parameter_sweep":
