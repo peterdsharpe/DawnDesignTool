@@ -135,14 +135,14 @@ def spider(df, *, id_column, title=None, max_values=None, padding=1.25):
 
 def plot_radar(df, attribute):
 
-    df.loc[:, 'Coverage Area [km^2]'] = 1/ df['Coverage Area [km^2]']
-    df.loc[:, 'Precision [1/yr]'] = df['Precision [1/yr]'].multiply(1e6).round(2)
-    df.loc[:, 'Duration [days]'] = 1/df['Duration [days]']
-    max_values = {'Span [m]': df['Span [m]'].max(),
+    df.loc[:, 'Spatial Coverage [km^2]'] = 1/ df['Spatial Coverage [km^2]']
+    df.loc[:, 'Precision [yr^-1]'] = df['Precision [yr^-1]'].multiply(1e6).round(2)
+    df.loc[:, 'Temporal Coverage [days]'] = 1/df['Temporal Coverage [days]']
+    max_values = {'Wingspan [m]': df['Wingspan [m]'].max(),
                   'Spatial Resolution [m]': df['Spatial Resolution [m]'].max(),
-                  'Coverage Area [km^2]': df['Coverage Area [km^2]'].max(),
-                  'Duration [days]': df['Duration [days]'].max(),
-                  'Precision [1/yr]':  df['Precision [1/yr]'].max(),
+                  'Spatial Coverage [km^2]': df['Spatial Coverage [km^2]'].max(),
+                  'Temporal Coverage [days]': df['Temporal Coverage [days]'].max(),
+                  'Precision [yr^-1]':  df['Precision [yr^-1]'].max(),
                   'Temporal Resolution [hrs]': df['Temporal Resolution [hrs]'].max()}
     spider(
         df,
