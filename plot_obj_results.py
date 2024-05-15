@@ -23,12 +23,13 @@ def plot_parallel_coordinates(df, attribute, n):
             df = df.drop(columns = ['weight'])
         except:
             pass
-        try:
-            df = df.sort_values(by=attribute)
-        except:
+        if attribute[0] == '-':
             df = df.sort_values(by=attribute[1:])
+        elif attribute == 'all':
+            pass
+        else:
+            df = df.sort_values(by=attribute)
         df = df.reset_index(drop=True)
-
         # Convert DataFrame to dictionary
         data_dict = df.to_dict(orient='list')
 
