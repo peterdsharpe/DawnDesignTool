@@ -515,7 +515,7 @@ if __name__ == '__main__':
         plot_parallel_coordinates(df_days, '-Temporal Coverage [days]', num_of_racetracks)
         plot_parallel_coordinates(df_precision, 'Precision [yr^-1]', num_of_racetracks)
         plot_parallel_coordinates(df_temporal, 'Temporal Resolution [hrs]', num_of_racetracks)
-        # plot_radar(df, 'Coverage Area [km^2]')
+        # plot_radar(df, 'Spatial Coverage [km^2]')
         # plot_radar(df_span, 'wingspan')
         # plot_radar(df_spatial, 'Spatial Resolution')
         # plot_radar(df_coverage, 'Coverage Area')
@@ -534,18 +534,44 @@ if __name__ == '__main__':
         # show_changes(big_df_spatial, 'Spatial Resolution [m]')
         # show_changes(big_df_coverage, 'Spatial Coverage [km^2]')
         # show_changes(big_df_days, 'Temporal Coverage [days]')
-        # show_changes(big_df_precision, 'Precision [1/yr]')
+        # show_changes(big_df_precision, 'Precision [yr^-1]')
         # show_changes(big_df_temporal, 'Temporal Resolution [hrs]')
-        # show_changes(big_df, 'Coverage Area [km^2]')
-        # pal = sns.color_palette("turbo", len(df_days["Temporal Coverage [days]"]))
-        # df_days = df_days.reset_index(drop=True)
+
+        pal = sns.color_palette("turbo", len(df_days["Temporal Coverage [days]"]))
+        df_days = df_days.reset_index(drop=True)
         #
-        # # Plot bar chart for each column
-        # for i in range(len(df_days["Temporal Coverage [days]"])):
-        #     sns.scatterplot(x=[df_days['Temporal Coverage [days]'][i]], y=[df_days['Wingspan [m]'][i]], color=pal[i], edgecolor='black', s=150)
-        # plt.title('Temporal Coverage against Wingspan')
-        # plt.xlabel('Temporal Coverage [days]')
-        # plt.ylabel('Wingspan [m]')
-        # plt.tight_layout()
-        # plt.show()
+        # Plot bar chart for each column
+        for i in range(len(df_days["Temporal Coverage [days]"])):
+            sns.scatterplot(x=[df_days['Temporal Coverage [days]'][i]], y=[df_days['Wingspan [m]'][i]], color=pal[i], edgecolor='black', s=150)
+        plt.title('Temporal Coverage against Wingspan')
+        plt.xlabel('Temporal Coverage [days]')
+        plt.ylabel('Wingspan [m]')
+        plt.tight_layout()
+        plt.show()
+
+        pal = sns.color_palette("turbo", len(df_coverage["Spatial Coverage [km^2]"]))
+        df_coverage = df_coverage.reset_index(drop=True)
+        #
+        # Plot bar chart for each column
+        for i in range(len(df_coverage["Spatial Coverage [km^2]"])):
+            sns.scatterplot(x=[df_coverage["Spatial Coverage [km^2]"][i]], y=[df_coverage["Temporal Resolution [hrs]"][i]], color=pal[i], edgecolor='black', s=150)
+        plt.title('Spatial Coverage against Temporal Resolution')
+        plt.xlabel('Spatial Coverage [km^2]')
+        plt.ylabel('Temporal Resolution [hrs]')
+        plt.tight_layout()
+        plt.show()
+        #
+        pal = sns.color_palette("turbo", len(df_temporal["Temporal Resolution [hrs]"]))
+        df_temporal= df_temporal.reset_index(drop=True)
+        df_temporal = df_temporal.iloc[::-1]
+        df_temporal = df_temporal.reset_index(drop=True)
+        #
+        # Plot bar chart for each column
+        for i in range(len(df_temporal["Temporal Resolution [hrs]"])):
+            sns.scatterplot(x=[df_temporal['Temporal Resolution [hrs]'][i]], y=[df_temporal['Spatial Coverage [km^2]'][i]], color=pal[i], edgecolor='black', s=150)
+        plt.title('Temporal Resolution against Spatial Coverage')
+        plt.xlabel('Temporal Resolution [hrs]')
+        plt.ylabel('Spatial Coverage [km^2]')
+        plt.tight_layout()
+        plt.show()
 
