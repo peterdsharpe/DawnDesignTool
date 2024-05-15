@@ -271,7 +271,7 @@ def load_variables(output_file, runs):
     battery_mass = []
     number_of_racetracks = []
     offset_distances = []
-
+    max_power_outputs = []
     for run_num in runs:
         try:
             csv_file = f"outputs/{output_file}/outputs_data_run_{run_num}.csv"
@@ -348,6 +348,10 @@ def load_variables(output_file, runs):
             offset_distance = df['imaging offset'].values[0]
             offset_distance = re.search(r'([\d.]+)', offset_distance).group(1)
             offset_distances.append(float(offset_distance) / 1e3)
+            max_power_output = df['max_power_out'].values[0]
+            max_power_output = re.search(r'([\d.]+)', max_power_output).group(1)
+            max_power_outputs.append(float(max_power_output)/ 1e3)
+
 
 
         except FileNotFoundError:
@@ -359,7 +363,7 @@ def load_variables(output_file, runs):
             'Mass TOGW [kg]': mass_TOGWs, 'Payload Power [W]': payload_powers, 'Payload Mass [kg]': payload_masses,
             'Battery Mass [kg]': battery_mass, 'Average Airspeed [m/s]': airspeeds,
             'Cruise Altitude [km]': cruise_altitudes, 'Revisit Period [hrs]': revisit_period,
-            'Coverage Area Dimension [km]': coverage_lengths,
+            'Max Power Output [kW]': max_power_outputs,
 
             'Number of Racetracks': number_of_racetracks, 'Imaging Offset Distance [km]': offset_distances,
             'Look Angle [deg]': look_angles, 'Swath Overlap': swath_overlap, 'Swath Range Dimension [km]': swath_ranges,
