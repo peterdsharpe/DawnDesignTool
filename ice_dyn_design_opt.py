@@ -73,6 +73,14 @@ day_adjustment = opti.parameter(value=14)
 precision_adjustment = opti.parameter(value=1e-4)
 temporal_adjustment = opti.parameter(value=24)
 
+# Objective Function Scaling Parameters (scaled by max values tested on 5/19)
+# wingspan_adjustment = opti.parameter(value=13.55)
+# spatial_adjustment = opti.parameter(value=11.43)
+# coverage_adjustment = opti.parameter(value=3.55e+10) #9e8
+# day_adjustment = opti.parameter(value=165.58)
+# precision_adjustment = opti.parameter(value=1.04e-06)
+# temporal_adjustment = opti.parameter(value=6.1876)
+
 wingspan_optimization_scaling_term = opti.parameter(value=1)
 azimuth_optimization_scaling_term = opti.parameter(value=1)
 coverage_optimization_scaling_term = opti.parameter(value=1)
