@@ -2463,7 +2463,7 @@ if __name__ == "__main__":
             "Strain Azimuth Resolution": f"{fmt(strain_azimuth_resolution)} meters",
             "Strain Temporal Resolution": f"{fmt(strain_temporal_resolution)} hours",
             "Coverage Area": f"{fmt(spatial_coverage)} meters^2",
-            "Temporal Coverage": f"{fmt(temporal_coverage)}",
+            "Temporal Coverage": f"{fmt(temporal_coverage)} days",
             "Strain Precision": f"{fmt(required_strain_precision)} 1 / yr",
             "Number of Racetracks": f"{fmt(number_of_passes)}",
             "Cruise Altitude": f"{fmt(cruise_altitude / 1000)} kilometers",
@@ -2472,7 +2472,7 @@ if __name__ == "__main__":
             "mass_TOGW": f"{fmt(mass_total)} kg",
             "Average Cruise L/D": fmt(avg_cruise_LD),
             "CG location": "(" + ", ".join([fmt(xyz) for xyz in mass_props_TOGW.xyz_cg]) + ") m",
-            "Sizing Day of Year": f"{fmt(day_of_year)}",
+            "Sizing Day of Year": f"{fmt(day_of_year)} days since Jan 1",
         }.items():
             print(f"{k.rjust(25)} = {v}")
 
@@ -2485,7 +2485,7 @@ if __name__ == "__main__":
             "Strain Azimuth Resolution": f"{fmt(strain_azimuth_resolution)} meters",
             "Strain Temporal Resolution": f"{fmt(strain_temporal_resolution)} hours",
             "Coverage Area": f"{fmt(spatial_coverage)} meters^2",
-            "Temporal Coverage": f"{fmt(temporal_coverage)}",
+            "Temporal Coverage": f"{fmt(temporal_coverage)} days",
             "Strain Precision": f"{fmt(required_strain_precision)} 1 / yr",
             "Number of Racetracks": f"{fmt(number_of_passes)}",
             "Cruise Altitude": f"{fmt(cruise_altitude / 1000)} kilometers",
@@ -2494,7 +2494,7 @@ if __name__ == "__main__":
             "mass_TOGW": f"{fmt(mass_total)} kg",
             "Average Cruise L/D": fmt(avg_cruise_LD),
             "CG location": "(" + ", ".join([fmt(xyz) for xyz in mass_props_TOGW.xyz_cg]) + ") m",
-            "Sizing Day of Year": f"{fmt(day_of_year)}",
+            "Sizing Day of Year": f"{fmt(day_of_year)} days since Jan 1",
         }
 
         fmtpow = lambda x: fmt(x) + " W"
@@ -2981,10 +2981,10 @@ if __name__ == "__main__":
             #         f"{str(s(max_precision)).ljust(l)},"
             #         f"{str(s(strain_temporal_resolution)).ljust(l)}\n"
             #     )
-            primals = sol(opti.x)
-            duals = sol(opti.lam_g)
-            np.save(f"outputs/{output_file}/0_primals.npy", primals)
-            np.save(f"outputs/{output_file}/0_duals.npy", duals)
+            # primals = sol(opti.x)
+            # duals = sol(opti.lam_g)
+            # np.save(f"outputs/{output_file}/0_primals.npy", primals)
+            # np.save(f"outputs/{output_file}/0_duals.npy", duals)
         else:
             primals = np.load(f"outputs/{output_file}/0_primals.npy")
             duals = np.load(f"outputs/{output_file}/0_duals.npy")
