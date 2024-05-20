@@ -86,9 +86,9 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
     opti.set_initial(opti.lam_g, duals)
     try:
         sol = opti.solve(
-            max_iter=100000,
+            max_iter=10000,
             options={
-                "ipopt.max_cpu_time": 10000,
+                "ipopt.max_cpu_time": 1000,
             },
             verbose=False
         )
