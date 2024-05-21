@@ -13,6 +13,7 @@ run_name = "lawnmower_n=4_fine"
 max_weighting = 1
 number_of_objective_terms = 6
 grid_sample_number = 4
+number_of_runs = 1000
 
 ### Turn parallelization on/off.
 parallel = True
