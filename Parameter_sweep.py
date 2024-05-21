@@ -76,9 +76,9 @@ def run(run_name, index_val, resolution_val, coverage_val, duration_val, precisi
     opti.set_initial(opti.lam_g, duals)
     try:
         sol = opti.solve(
-            max_iter=30000,
+            max_iter=50000,
             options={
-                "ipopt.max_cpu_time": 30000,
+                "ipopt.max_cpu_time": 10000,
             },
             verbose=False
         )
