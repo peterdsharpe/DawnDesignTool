@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 import seaborn as sns
 
 #### inputs
-file_name = ('lawnmower_n=4')
+file_name = ('lawnmower_n=5')
 variables = ['Spatial_Resolutions', 'Coverage_Areas', 'Days', 'Precisions', 'Temporal_Resolutions', 'Spans']
 run_type = 'sweep all'
 # run_type = 'sweep requirement'
@@ -382,8 +382,8 @@ def load_variables(output_file, runs):
 
 if __name__ == '__main__':
         # Load the data
-        file = f'outputs\\{file_name}\\sweep_results.csv'
-        weighting_file = f'outputs\\{file_name}\\0_parameter_combinations.csv'
+        file = f'outputs\\old_runs\\one_variation_at_a_time\\{file_name}\\sweep_results.csv'
+        weighting_file = f'outputs\\old_runs\\one_variation_at_a_time\\{file_name}\\0_parameter_combinations.csv'
         df = pd.read_csv(file)
         num_of_racetracks = ''.join([n for n in file_name if n.isdigit()])
 
