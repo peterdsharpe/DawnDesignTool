@@ -83,18 +83,18 @@ def create_diagonal_array(max, num_objective_terms, run_name):
 
     return array
 
-def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, coverage_scaling_term, day_scaling_term,
+def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, coverage_scaling_term, duration_scaling_term,
         precision_scaling_term, temporal_scaling_term):
     n_passes = ''.join([n for n in run_name if n.isdigit()])
     print("\n".join([
         "-" * 50,
         f"Run number: {index_val}",
         f"Wingspan: {wingspan_scaling_term}",
-        f"Resolution: {resolution_scaling_term}",
-        f"Coverage: {coverage_scaling_term}",
-        f"Day: {day_scaling_term}",
+        f"Spatial Res: {resolution_scaling_term}",
+        f"Spatial Coverage: {coverage_scaling_term}",
+        f"Duration: {duration_scaling_term}",
         f"Precision: {precision_scaling_term}",
-        f"Temporal: {temporal_scaling_term}",
+        f"Temporal Res: {temporal_scaling_term}",
         f"Number of passes: {n_passes}",
     ]))
     primals = np.load(f"outputs/{run_name}/0_primals.npy")
@@ -103,7 +103,7 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
     opti.set_value(wingspan_optimization_scaling_term, float(wingspan_scaling_term))
     opti.set_value(azimuth_optimization_scaling_term, float(resolution_scaling_term))
     opti.set_value(coverage_optimization_scaling_term, float(coverage_scaling_term))
-    opti.set_value(duration_optimization_scaling_term, float(day_scaling_term))
+    opti.set_value(duration_optimization_scaling_term, float(duration_scaling_term))
     opti.set_value(precision_optimization_scaling_term, float(precision_scaling_term))
     opti.set_value(temporal_optimization_scaling_term, float(temporal_scaling_term))
     opti.set_value(number_of_passes, float(n_passes))
@@ -127,7 +127,7 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
         span = s(wing_span)
         resolution_val = s(strain_azimuth_resolution)
         coverage_val = s(spatial_coverage)
-        day_val = s(temporal_coverage)
+        duration_val = s(temporal_coverage)
         precision_val = s(required_strain_precision)
         temporal_val = s(strain_temporal_resolution)
 
@@ -349,11 +349,11 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
         span = np.nan
         resolution_val = np.nan
         coverage_val = np.nan
-        day_val = np.nan
+        duration_val = np.nan
         precision_val = np.nan
         temporal_val = np.nan
 
-    return index_val, span, resolution_val, coverage_val, day_val, precision_val, temporal_val
+    return index_val, span, resolution_val, coverage_val, duration_val, precision_val, temporal_val
 
 def run_wrapped(input):
     return run(*input)
@@ -371,7 +371,7 @@ if __name__ == '__main__':
             f"{'Spans'.ljust(l)},"
             f"{'Spatial_Resolutions'.ljust(l)},"
             f"{'Coverage_Areas'.ljust(l)},"
-            f"{'Days'.ljust(l)},"
+            f"{'Duration'.ljust(l)},"
             f"{'Precisions'.ljust(l)},"
             f"{'Temporal_Resolutions'.ljust(l)}\n")
 
@@ -385,7 +385,7 @@ if __name__ == '__main__':
     #
     if parallel:
         with mp.Pool(mp.cpu_count()) as p:
-            for index, span_val, resolution_val, coverage_val, day_val, precision_val, temporal_val in p.imap_unordered(
+            for index, span_val, resolution_val, coverage_val, duration_val, precision_val, temporal_val in p.imap_unordered(
                     func=run_wrapped,
                     iterable=parameter_array,
             ):
@@ -395,20 +395,20 @@ if __name__ == '__main__':
                         f"{str(span_val).ljust(l)},"
                         f"{str(resolution_val).ljust(l)},"
                         f"{str(coverage_val).ljust(l)},"
-                        f"{str(day_val).ljust(l)},"
+                        f"{str(duration_val).ljust(l)},"
                         f"{str(precision_val).ljust(l)},"
                         f"{str(temporal_val).ljust(l)}\n"
                     )
     else:
         for input in parameter_array:
-            index, span_val, resolution_val, coverage_val, day_val, precision_val, temporal_val = run_wrapped(input)
+            index, span_val, resolution_val, coverage_val, duration_val, precision_val, temporal_val = run_wrapped(input)
             with open(filename, "a") as f:
                 f.write(
                     f"{str(index).ljust(l)},"
                     f"{str(span_val).ljust(l)},"
                     f"{str(resolution_val).ljust(l)},"
                     f"{str(coverage_val).ljust(l)},"
-                    f"{str(day_val).ljust(l)},"
+                    f"{str(duration_val).ljust(l)},"
                     f"{str(precision_val).ljust(l)},"
                     f"{str(temporal_val).ljust(l)}\n"
                 )
