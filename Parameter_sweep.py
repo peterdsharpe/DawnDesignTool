@@ -52,15 +52,15 @@ def create_grid(file, resolution, coverage, day, precision, temporal):
 
     return combined_array
 
-def run(run_name, index_val, resolution_val, coverage_val, day_val, precision_val, temporal_val):
+def run(run_name, index_val, resolution_val, coverage_val, duration_val, precision_val, temporal_val):
     print("\n".join([
         "-" * 50,
         f"Run number: {index_val}",
-        f"Resolution: {resolution_val}",
-        f"Coverage: {coverage_val}",
-        f"Day: {day_val}",
-        f"Precision: {precision_val}",
-        f"Temporal: {temporal_val}"
+        f"Spatial Res: {resolution_val} m",
+        f"Spatial Coverage: {coverage_val} m^2",
+        f"Temporal Coverage: {duration_val} days",
+        f"Precision: {precision_val} yr^-1",
+        f"Temporal Res: {temporal_val} hrs"
     ]))
     primals = np.load(f"outputs/{run_name}/0_primals.npy")
     duals = np.load(f"outputs/{run_name}/0_duals.npy")
@@ -68,7 +68,7 @@ def run(run_name, index_val, resolution_val, coverage_val, day_val, precision_va
     run_num = index_val
     opti.set_value(strain_azimuth_resolution, float(resolution_val))
     opti.set_value(required_spatial_coverage, float(coverage_val))
-    opti.set_value(day_of_year, float(day_val))
+    opti.set_value(temporal_coverage, float(duration_val))
     opti.set_value(required_strain_precision, float(precision_val))
     opti.set_value(required_strain_temporal_resolution, float(temporal_val))
     opti.set_value(track_scaler, 1)
@@ -303,14 +303,13 @@ if __name__ == '__main__':
     l = 20
     with open(filename, "w+") as f:
         f.write(
-            f"{'Index'.ljust(l)},"
+            f"{'Run'.ljust(l)},"
+            f"{'Spans'.ljust(l)},"
             f"{'Spatial_Resolutions'.ljust(l)},"
             f"{'Coverage_Areas'.ljust(l)},"
             f"{'Days'.ljust(l)},"
             f"{'Precisions'.ljust(l)},"
-            f"{'Temporal_Resolutions'.ljust(l)},"
-            f"{'Spans'.ljust(l)}\n"
-        )
+            f"{'Temporal_Resolutions'.ljust(l)}\n")
 
     ### Create grid of parameter combinations
     spatial_values = np.linspace(strain_azimuth_resolution_best, spatial_adjustment, n_samples)
@@ -329,12 +328,12 @@ if __name__ == '__main__':
                 with open(filename, "a") as f:
                     f.write(
                         f"{str(index).ljust(l)},"
+                        f"{str(span_val).ljust(l)}"
                         f"{str(resolution_val).ljust(l)},"
                         f"{str(coverage_val).ljust(l)},"
                         f"{str(day_val).ljust(l)},"
                         f"{str(precision_val).ljust(l)},"
-                        f"{str(temporal_val).ljust(l)},"
-                        f"{str(span_val).ljust(l)}\n"
+                        f"{str(temporal_val).ljust(l)}\n"
                     )
     else:
         for input in parameter_array:
@@ -342,10 +341,10 @@ if __name__ == '__main__':
             with open(filename, "a") as f:
                 f.write(
                     f"{str(index).ljust(l)},"
+                    f"{str(span_val).ljust(l)},"
                     f"{str(resolution_val).ljust(l)},"
                     f"{str(coverage_val).ljust(l)},"
                     f"{str(day_val).ljust(l)},"
                     f"{str(precision_val).ljust(l)},"
-                    f"{str(temporal_val).ljust(l)},"
-                    f"{str(span_val).ljust(l)}\n"
+                    f"{str(temporal_val).ljust(l)}\n"
                 )
