@@ -155,10 +155,14 @@ def run(run_name, index_val, resolution_val, coverage_val, duration_val, precisi
                 # Create a rectangle patch
                 rectangle = mpl.patches.Rectangle((0, s(max_imaging_offset) / 1000), s(coverage_length) / 1000,
                                                   s(coverage_width) / 1000, edgecolor='red',
-                                                  facecolor='red', linewidth=2, label='Coverage Area')
-
+                                                  facecolor='red', alpha = 0.5, linewidth=2, label='Coverage Area')
                 # Add the rectangle patch to the axis
                 ax.add_patch(rectangle)
+                # create an elliptical patch
+                ellipse = mpl.patches.Ellipse((0, s(max_imaging_offset + max_swath_range / 2) / 1000),
+                                              s(max_swath_azimuth) / 1000, s(max_swath_range) / 1000, edgecolor='green',
+                                              facecolor='green', linewidth=2, label='Swath Area')
+                ax.add_patch(ellipse)
             #     plt.xlim(-75, 150)
             #     plt.ylim(-25, 125)
 
@@ -179,15 +183,17 @@ def run(run_name, index_val, resolution_val, coverage_val, duration_val, precisi
             "Strain Range Resolution": f"{fmt(strain_range_resolution)} meters",
             "Strain Azimuth Resolution": f"{fmt(strain_azimuth_resolution)} meters",
             "Strain Temporal Resolution": f"{fmt(strain_temporal_resolution)} hours",
-            "Strain Precision": f"{fmt(required_strain_precision)} 1 / yr",
             "Coverage Area": f"{fmt(spatial_coverage)} meters^2",
-            "Day of Year": f"{fmt(day_of_year)}",
+            "Temporal Coverage": f"{fmt(temporal_coverage)}",
+            "Strain Precision": f"{fmt(required_strain_precision)} 1 / yr",
+            "Number of Racetracks": f"{fmt(number_of_passes)}",
             "Cruise Altitude": f"{fmt(cruise_altitude / 1000)} kilometers",
             "Average Airspeed": f"{fmt(avg_airspeed)} m/s",
             "Wing Root Chord": f"{fmt(wing_root_chord)} meters",
             "mass_TOGW": f"{fmt(mass_total)} kg",
             "Average Cruise L/D": fmt(avg_cruise_LD),
             "CG location": "(" + ", ".join([fmt(xyz) for xyz in mass_props_TOGW.xyz_cg]) + ") m",
+            "Sizing Day of Year": f"{fmt(day_of_year)}",
         }
 
         fmtpow = lambda x: fmt(x) + " W"
@@ -227,7 +233,9 @@ def run(run_name, index_val, resolution_val, coverage_val, duration_val, precisi
                 "SNR": f"{fmt(max_snr)} dB",
                 "swath overlap": f"{fmt(swath_overlap)}",
                 "coverage length": f"{fmt(coverage_length)} meters",
-                "coverage width": f"{fmt(2 * max_swath_range - (max_swath_range * swath_overlap))} meters",
+                "coverage width": f"{fmt(coverage_width)} meters",
+                "imaging offset": f"{fmt(max_imaging_offset)} meters",
+                "number of racetracks": f"{fmt(number_of_passes)}",
             }.items():
                 writer.writerow({"Property": k, "Value": v})
             for k, v in {
@@ -245,6 +253,17 @@ def run(run_name, index_val, resolution_val, coverage_val, duration_val, precisi
         # Find dusk and dawn
         is_daytime = s(solar_flux_on_horizontal) >= 1  # 1 W/m^2 or greater insolation
         is_nighttime = np.logical_not(is_daytime)
+
+        def three_view(save_name=None, show=True):
+            airplane.substitute_solution(sol)
+            airplane.draw_three_view(show=False)
+            if save_name is not None:
+                plt.savefig(save_name)
+            if show:
+                plt.show()
+            plt.clf()
+
+        three_view(save_name=f"outputs/{run_name}/three_view_{run_num}.png")
 
         plot("hour", "z_km",
              xlabel="Hours after Solar Noon",
@@ -289,7 +308,7 @@ def run(run_name, index_val, resolution_val, coverage_val, duration_val, precisi
         print(e)
         span = np.nan
 
-    return index_val, resolution_val, coverage_val, day_val, precision_val, temporal_val, span
+    return index_val, resolution_val, coverage_val, duration_val, precision_val, temporal_val, span
 
 def run_wrapped(input):
     return run(*input)
