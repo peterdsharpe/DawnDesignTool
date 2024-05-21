@@ -41,6 +41,31 @@ def create_grid(sample_number, max_value, num_objective_terms, run_name):
     combined_array = np.column_stack((files, permutations))
 
     return combined_array
+
+def create_random_grid(total_runs, num_objective_terms, run_name):
+
+    # Generate a random array of shape (1000, 6)
+    random_array = np.random.rand(total_runs, num_objective_terms)
+
+    # Normalize each row so that the sum of each row is 1
+    normalized_array = random_array / random_array.sum(axis=1, keepdims=True)
+
+    # Writing permutations to a CSV file
+    with open(f'outputs\\{run_name}\\0_parameter_combinations.csv', 'w', newline='') as csvfile:
+        csv_writer = csv.writer(csvfile)
+        csv_writer.writerows(normalized_array)
+
+    print("Permutations saved")
+
+    # create np.array of permutations where the first column is the index of the run
+    permutations = np.array(normalized_array)
+    permutations = np.insert(permutations, 0, np.arange(0, permutations.shape[0]), axis=1)
+    files = np.array([run_name] * len(permutations))
+    combined_array = np.column_stack((files, permutations))
+    return combined_array
+
+
+
 def create_diagonal_array(max, num_objective_terms, run_name):
     arr = np.full((num_objective_terms, num_objective_terms), 1)
     np.fill_diagonal(arr, max)
@@ -350,6 +375,7 @@ if __name__ == '__main__':
             f"{'Temporal_Resolutions'.ljust(l)}\n")
 
     parameter_array = create_grid(grid_sample_number, max_weighting, number_of_objective_terms, run_name)
+    # parameter_array = create_random_grid(number_of_runs, number_of_objective_terms, run_name)
     # parameter_array = np.genfromtxt(f'outputs/{run_name}/0_parameter_combinations.csv', delimiter=',')
     # parameter_array = np.insert(parameter_array, 0, np.arange(0, parameter_array.shape[0]), axis=1)
     # index_array = parameter_array[:, 0]
