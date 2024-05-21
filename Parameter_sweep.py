@@ -44,7 +44,7 @@ def create_grid(file, resolution, coverage, day, precision, temporal):
     combined_array = np.column_stack((files, index, strain_flat, coverage_flat, day_flat, precision_flat, temporal_flat))
 
     # save the array to a csv file
-    with open(f"outputs/{file}/parameter_combinations.csv", 'w', newline='') as csvfile:
+    with open(f"outputs/{file}/0_parameter_combinations.csv", 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(column_titles)
         for row in combined_array:
