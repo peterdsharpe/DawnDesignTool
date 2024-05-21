@@ -5,14 +5,15 @@ import matplotlib as mpl
 import csv
 
 ### where is parameter cominations file and where should outputs go?
-run_name = "parameter_sweep"
+run_name = "lawnmower_n=4_parameter_sweep"
 
 ### define sweep ranges
-strain_azimuth_resolutions = [10, 25, 50, 100]
-coverage_area_requirements = [1e7, 1e8, 1e9, 1e10]
-days_of_year = [0, 30, 60]
-required_strain_rate_precisions = [1e-6, 1e-5, 1e-4]
-required_temporal_resolutions = [8, 12, 24, 48, 72]
+strain_azimuth_resolution_best = 11.4
+coverage_area_best = 3.5e+10
+duration_best = 165
+precision_best = 1e-06
+temporal_best = 6.2
+n_samples = 4
 
 ### Turn parallelization on/off.
 parallel = True
@@ -311,7 +312,13 @@ if __name__ == '__main__':
             f"{'Spans'.ljust(l)}\n"
         )
 
-    parameter_array = create_grid(run_name, strain_azimuth_resolutions, coverage_area_requirements, days_of_year, required_strain_rate_precisions, required_temporal_resolutions)
+    ### Create grid of parameter combinations
+    spatial_values = np.linspace(strain_azimuth_resolution_best, spatial_adjustment, n_samples)
+    coverage_values = np.linspace( coverage_adjustment, coverage_area_best, n_samples)
+    duration_values = np.linspace(day_adjustment, duration_best,  n_samples)
+    precision_values = np.linspace( precision_best, precision_adjustment, n_samples)
+    temporal_values = np.linspace(temporal_best, temporal_adjustment, n_samples)
+    parameter_array = create_grid(run_name, spatial_values, coverage_values, duration_values, precision_values, temporal_values)
 
     if parallel:
         with mp.Pool(mp.cpu_count()) as p:
