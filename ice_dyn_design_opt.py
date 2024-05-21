@@ -79,7 +79,7 @@ temporal_adjustment = 24
 # coverage_adjustment = opti.parameter(value=3.55e+10) #9e8
 # day_adjustment = opti.parameter(value=165.58)
 # precision_adjustment = opti.parameter(value=1.04e-06)
-# temporal_adjustment = opti.parameter(value=6.1876)
+# temporal_adjustment = opti.parameter(value=6.19)
 
 wingspan_optimization_scaling_term = opti.parameter(value=1)
 azimuth_optimization_scaling_term = opti.parameter(value=1)
