@@ -109,7 +109,7 @@ latitude = -76  # degrees, the location the sizing occurs
 if mode == "multi-objective":
     temporal_coverage = opti.variable(init_guess=60, scale=10, lower_bound=14, upper_bound=365, **des) # Julian day, the day of the year the sizing occurs
 if mode == "parameter_sweep":
-    temporal_coverage = opti.parameter(value=30) # Julian day, the day of the year the sizing occurs
+    temporal_coverage = opti.parameter(value=14) # Julian day, the day of the year the sizing occurs
 day_of_year = temporal_coverage / 2 - 10 # days, the length of the mission without landing to download data
 strat_offset_value = 1000  # meters, margin above the stratosphere height the aircraft is required to stay above
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
@@ -126,7 +126,7 @@ if mode == "multi-objective":
     # required_spatial_coverage = opti.parameter(value=100000)
 if mode == "parameter_sweep":
     required_strain_temporal_resolution = opti.parameter(value=24) # hours
-    required_spatial_coverage = opti.parameter(value=1000000)
+    required_spatial_coverage = opti.parameter(value=3000 * 1e6)
 
 # todo finalize trajectory parameterization
 # trajectory = 'straight'   # do we want to assume a straight line trajectory?
@@ -148,13 +148,13 @@ strain_range_resolution = opti.variable(init_guess=0.5, scale=1, lower_bound=0, 
 if mode == "multi-objective":
     strain_azimuth_resolution = opti.variable(init_guess=10, scale=1, lower_bound=0, upper_bound=50, **des) # meters
 if mode == "parameter_sweep":
-    strain_azimuth_resolution = opti.parameter(value=10) # meters
+    strain_azimuth_resolution = opti.parameter(value=50) # meters
 strain_temporal_resolution = opti.variable(init_guess=4, scale=1, **des) # hours
 # required_snr = 20  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
 if mode == "multi-objective":
     required_strain_precision = opti.variable(init_guess=1E-4, scale=1E-5, lower_bound=0, upper_bound=1E-4, **des)
 if mode == "parameter_sweep":
-    required_strain_precision = opti.parameter(value=1E-5) # 1/yr, the required precision of the strain measurement
+    required_strain_precision = opti.parameter(value=1E-4) # 1/yr, the required precision of the strain measurement
 # meters given from Brent based on the properties of the ice sampled by the radar
 scattering_cross_sec_db = -10
 # meters ** 2 ranges from -20 to 0 db according to Charles in 4/19/22 email
