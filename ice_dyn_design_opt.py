@@ -1200,6 +1200,8 @@ if trajectory == 'straight':
     # vehicle_bearing = vehicle_heading
 
 if trajectory == 'circular':
+    number_of_passes = 0
+    track_scaler = opti.parameter(value=1)
     guess_altitude = 11500
     guess_speed = 16
     ground_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10, **ops)
@@ -1646,14 +1648,15 @@ if trajectory == 'straight':
 
 
 if trajectory == 'circular':
-    coverage_radius = opti.variable(init_guess=2500, scale=1000, lower_bound=0,
-                                    **des)  # meters
+    swath_overlap = opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, **ops)
+    coverage_radius = max_swath_range - (max_swath_range * swath_overlap) / 2
     opti.subject_to([
-        flight_path_radius >= ground_imaging_offset + swath_range,
-        coverage_radius <= swath_range,
+        flight_path_radius >= ground_imaging_offset + coverage_radius,
                 ])
     spatial_coverage = np.pi * coverage_radius ** 2
     payload_power_adjusted = payload_power
+    coverage_length = coverage_radius
+    coverage_width = coverage_radius
 
 if trajectory == "racetrack":
     # initialize variables
