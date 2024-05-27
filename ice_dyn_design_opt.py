@@ -109,8 +109,11 @@ latitude = -76  # degrees, the location the sizing occurs
 if mode == "multi-objective":
     temporal_coverage = opti.variable(init_guess=60, scale=10, lower_bound=14, upper_bound=365, **des) # Julian day, the day of the year the sizing occurs
 if mode == "parameter_sweep":
-    temporal_coverage = opti.parameter(value=14) # Julian day, the day of the year the sizing occurs
-day_of_year = temporal_coverage / 2 - 10 # days, the length of the mission without landing to download data
+    temporal_coverage = opti.parameter(value=14) # days, the length of the mission without landing to download data
+if latitude > 0:
+    day_of_year = temporal_coverage / 2 + 171
+if latitude < 0:
+    day_of_year = temporal_coverage / 2 - 10 # Julian day, the day of the year the sizing occurs
 strat_offset_value = 1000  # meters, margin above the stratosphere height the aircraft is required to stay above
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 climb_opt = False  # are we optimizing for the climb as well?
