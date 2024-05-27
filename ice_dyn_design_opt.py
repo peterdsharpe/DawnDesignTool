@@ -2584,7 +2584,7 @@ if __name__ == "__main__":
                     writer.writerow({"Property": k, "Value": v})
                 for k, v in {
                     "max_power_in": fmtpow(power_in_after_panels_max),
-                    "max_power_out": fmtpow(power_out_propulsion_max),
+                    "max_power_out_propulsion": fmtpow(power_out_propulsion_max),
                     "battery_total_energy": fmtpow(battery_total_energy),
                 }.items():
                     writer.writerow({"Property": k, "Value": v})
