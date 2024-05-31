@@ -71,7 +71,7 @@ use_propulsion_fits_from_FL2020_1682_undergrads = False  # Warning: Fits not yet
 latitude = opti.parameter(value=40)  # degrees, the location the sizing occurs 32-40
 day_of_year = opti.parameter(value=150)  # Julian day, the day of the year the sizing occurs
 # temporal_coverage = 0  # days, the length of the mission without landing to download data
-strat_offset_value = 1000  # meters, margin above the stratosphere height the aircraft is required to stay above
+strat_offset_value = 10  # meters, margin above the stratosphere height the aircraft is required to stay above
 min_cruise_altitude = lib_winds.tropopause_altitude(latitude, day_of_year) + strat_offset_value
 climb_opt = False  # are we optimizing for the climb as well?
 hold_cruise_altitude = True  # must we hold the cruise altitude (True) or can we altitude cycle (False)?
@@ -113,7 +113,7 @@ scattering_cross_sec_db = -20
 ## ranges from -20 to -5 dB for forest regions (depending on biomass)
 
 # Margins
-structural_mass_margin_multiplier = opti.parameter(value=1.05)
+structural_mass_margin_multiplier = opti.parameter(value=1.10)
 # A value greater than 1 represents the structural components as sized are
 energy_generation_margin = 1.05
 # A value greater than 1 represents aircraft must generate said fractional surplus of energy
@@ -659,14 +659,15 @@ def estimate_mass_wing_secondary(
     area = span * chord
 
     # Rib mass
-    W_wr = n_ribs * (chord ** 2 * t_over_c * 5.50e-2 + chord * 1.91e-3) * 1.3
+    W_wr = n_ribs * (chord ** 2 * t_over_c * 5.50e-2 + chord * 1.91e-3)
     # x1.3 scales to estimates from structures subteam
+    # removed margin based on electra input
 
     # End rib mass
     W_wer = n_end_ribs * (chord ** 2 * t_over_c * 6.62e-1 + chord * 6.57e-3)
 
     # LE sheeting mass
-    # W_wLE = 0.456/2 * (span ** 2 * ratio_of_rib_spacing_to_chord ** (4 / 3) / span)
+    W_wLE = span * 0.65 # foamular LE mass as a function of span from demo build
 
     # Skin Panel Mass
     W_wsp = area * skin_density * 1.05  # assumed constant thickness from 0.9c around LE to 0.15c
@@ -677,18 +678,19 @@ def estimate_mass_wing_secondary(
     # Covering
     W_wc = area * 0.033 * 1.1  # 0.033 kg/m2 Tedlar covering on 1 sides, with 1.1 coverage factor
 
-    mass_secondary = (W_wr + W_wer + W_wTE) * scaling_factor + W_wsp + W_wc
+    mass_secondary = (W_wr + W_wer + W_wTE + W_wLE) * scaling_factor + W_wsp + W_wc
     mass_covering = W_wc
     mass_skin_panel = W_wsp
     mass_ribs = W_wr
     mass_end_ribs = W_wer
+    mass_LE = W_wLE
 
-    return mass_secondary, mass_covering, mass_skin_panel, mass_ribs, mass_end_ribs
+    return mass_secondary, mass_covering, mass_skin_panel, mass_ribs, mass_end_ribs, mass_LE
 
 # todo check skin areal density
 skin_areal_density = 0.30  # kg/m^2
 
-mass_wing_secondary, mass_covering, mass_skin_panel, mass_ribs, mass_end_ribs = estimate_mass_wing_secondary(
+mass_wing_secondary, mass_covering, mass_skin_panel, mass_ribs, mass_end_ribs, mass_LE = estimate_mass_wing_secondary(
     span=wing.span(),
     chord=wing.mean_geometric_chord(),
     # n_ribs=n_ribs_wing,
@@ -697,7 +699,7 @@ mass_wing_secondary, mass_covering, mass_skin_panel, mass_ribs, mass_end_ribs = 
     skin_density=skin_areal_density,
     n_wing_sections=4,
     t_over_c=wing_airfoil.max_thickness(),
-    scaling_factor=1.5  # Suggested by Drela # todo reavaluate this
+    scaling_factor=1  # Electra mod down from 1.5 from Drela
 )
 
 mass_wing = mass_wing_primary + mass_wing_secondary
@@ -916,7 +918,7 @@ gps_antenna_mass = 0.176
 emergency_locator_transmitter_mass = 0.908
 transponder_mass = 0.100
 transponder_antenna_mass = 0.109
-avionics_margin = 5.6
+avionics_margin = 0
 mass_props['avionics'] = asb.MassProperties(
     mass=(
             actuator_mass +
@@ -940,8 +942,8 @@ avionics_power = 180  # TODO revisit this number
 
 
 ### Power Systems Mass Accounting
-solar_cell_efficiency = opti.parameter(value=0.25947)
-# 30% efficiency of Sunpower cells at AM0, 7% knockdown for encapsulation, 7% knockdown for wing shape
+solar_cell_efficiency = opti.parameter(value=0.216)
+# 27.5% efficiency of Sunpower cells at AM0, 7% knockdown for encapsulation, 7% knockdown for wing shape
 # as decided 7/17 with Andrew Streett
 rho_solar_cells = 0.56 # kg/m^2, areal density of solar cells as determined from 7/17 discussion with Andrew Streett
 solar_cost_per_watt = 3 # $/W, cost of Sunpower solar cells
@@ -2054,7 +2056,7 @@ opti.subject_to([
 ])
 
 # Account for avionics power
-power_out_avionics = 180  # Pulled from Avionics spreadsheet on 5/13/20
+power_out_avionics = 50  # Pulled from Avionics spreadsheet on 5/13/20
 # todo update with results from avionics development
 # https://docs.google.com/spreadsheets/d/1nhz2SAcj4uplEZKqQWHYhApjsZvV9hme9DlaVmPca0w/edit?pli=1#gid=0
 
@@ -2066,6 +2068,8 @@ power_out = power_out_propulsion + payload_power + power_out_avionics
 ##### Section: Power Input (Solar)
 
 MPPT_efficiency = 0.975 # todo revisit efficiency value
+wiring_losses = 0.99
+# 12/21/21 Jean marie Bourven
 # wing_panel_azimuth = 90 # 90 is worst case
 wing_panel_azimuth = vehicle_bearing + 90
 solar_flux_on_horizontal = lib_solar.solar_flux(
@@ -2073,6 +2077,7 @@ solar_flux_on_horizontal = lib_solar.solar_flux(
     day_of_year=day_of_year,
     time=time,
     scattering=True,
+    altitude=altitude
 )
 
 left_wing_incident_solar_power = 0.5 * area_solar_wing * lib_solar.solar_flux(
@@ -2081,7 +2086,8 @@ left_wing_incident_solar_power = 0.5 * area_solar_wing * lib_solar.solar_flux(
     time=time,
     panel_azimuth_angle=wing_panel_azimuth,
     panel_tilt_angle=10,
-    scattering=True
+    scattering=True,
+    altitude=altitude
 )
 
 right_wing_incident_solar_power = 0.5 * area_solar_wing * lib_solar.solar_flux(
@@ -2090,7 +2096,8 @@ right_wing_incident_solar_power = 0.5 * area_solar_wing * lib_solar.solar_flux(
     time=time,
     panel_azimuth_angle=wing_panel_azimuth,
     panel_tilt_angle=-10,
-    scattering=True
+    scattering=True,
+    altitude=altitude
 )
 
 wing_incident_solar_power = right_wing_incident_solar_power + left_wing_incident_solar_power
@@ -2101,7 +2108,8 @@ vstab_incident_solar_power_left = area_solar_vstab * lib_solar.solar_flux(
     time=time,
     panel_azimuth_angle=wing_panel_azimuth,
     panel_tilt_angle=90,
-    scattering=True
+    scattering=True,
+    altitude=altitude
 )
 
 vstab_incident_solar_power_right = area_solar_vstab * lib_solar.solar_flux(
@@ -2110,7 +2118,8 @@ vstab_incident_solar_power_right = area_solar_vstab * lib_solar.solar_flux(
     time=time,
     panel_azimuth_angle=-wing_panel_azimuth,
     panel_tilt_angle=90,
-    scattering=True
+    scattering=True,
+    altitude=altitude
 )
 
 vstab_incident_solar_power = vstab_incident_solar_power_right + vstab_incident_solar_power_left
@@ -2120,12 +2129,9 @@ power_in_after_panels_tot = (wing_incident_solar_power * solar_cell_efficiency +
 
 power_in = (wing_incident_solar_power * solar_cell_efficiency +
             vstab_incident_solar_power * solar_cell_efficiency) \
-           * MPPT_efficiency
+           * MPPT_efficiency * wiring_losses
 
 
-### Wiring specs
-wiring_losses = 0.99
-# 12/21/21 Jean marie Bourven
 
 cost_batteries = 4 * battery_capacity_watt_hours  # dollars assuming 355 whr/kg cells
 avionics_cost = 80000
