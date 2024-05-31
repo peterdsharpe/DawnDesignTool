@@ -198,7 +198,7 @@ payload_pod_length = opti.variable(
     init_guess=0.5,
     scale=1,
     lower_bound=0.5,
-    upper_bound=5,
+    # upper_bound=5,
     category="des",
 ) # meters
 payload_pod_diameter = opti.variable(
@@ -1585,7 +1585,7 @@ critical_baseline = center_wavelength * dist / (2 * range_resolution * (np.cosd(
 opti.subject_to([
     0.85 * payload_pod_length >= radar_length,
     0.85 * payload_pod_diameter >= radar_width,
-    radar_length / radar_width <= 100,
+    radar_length / radar_width <= 10,
     max_swath_range >= swath_range,
     max_swath_range <= 1 + swath_range,
     max_swath_azimuth >= swath_azimuth,
