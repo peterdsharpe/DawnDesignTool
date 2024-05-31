@@ -2340,11 +2340,8 @@ def read_excel_data(excel_file):
     df = pd.read_excel(excel_file)
     return df.values.tolist()
 if __name__ == "__main__":
-    for run in range(0, 2):
-                    if run == 0:
-                        opti.set_value(track_scaler, 0)
-                    else:
-                        opti.set_value(track_scaler, 1)
+    for run in range(0, 1):
+                    opti.set_value(track_scaler, 1)
 
                     try:
                         # opti.set_value(wingspan_optimization_scaling_term, val)
@@ -2449,7 +2446,7 @@ if __name__ == "__main__":
                     print_title("Powers")
                     for k, v in {
                             "max_power_in": fmtpow(power_in_after_panels_max),
-                            "max_power_out": fmtpow(power_out_propulsion_max),
+                            "max_propulsion_power_out": fmtpow(power_out_propulsion_max),
                             "battery_total_energy": fmtpow(battery_total_energy),
                         }.items():
                             print(f"{k.rjust(25)} = {v}")
@@ -2778,12 +2775,9 @@ if __name__ == "__main__":
                             #     "headlength": 6,
                             # }
                         )
-                        plt.annotate(
-                            text="""
-                                                Total mass: %.1f kg
-                                                Wing span: %.2f m
-                                                """ % (s(mass_total), s(wing.span())),
-                            xy=(0.02, 0.70),
+                        plt.annotate(text="""Total mass: %.1f kg \n Wing span: %.2f m
+                                            """ % (s(mass_total), s(wing.span())),
+                            xy=(0.02, 0.7),
                             # xytext=(0.03, 0.03)
                             xycoords="figure fraction",
                             # arrowprops={
