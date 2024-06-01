@@ -10,7 +10,7 @@ import itertools
 
 
 ### where is parameter cominations file and where should outputs go?
-run_name = "lawnmower_n=9"
+run_name = "circular_sum_grid"
 
 def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, coverage_scaling_term, day_scaling_term,
         precision_scaling_term, temporal_scaling_term):
@@ -36,16 +36,19 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
     opti.set_value(precision_optimization_scaling_term, float(precision_scaling_term))
     opti.set_value(temporal_optimization_scaling_term, float(temporal_scaling_term))
     opti.set_value(track_scaler, 0)
-    opti.set_value(number_of_passes, float(n_passes))
-    opti.set_initial(opti.x, primals)
-    opti.set_initial(opti.lam_g, duals)
+    try:
+        opti.set_value(number_of_passes, float(n_passes))
+    except:
+        opti.set_value(number_of_passes, 0)
+    # opti.set_initial(opti.x, primals)
+    # opti.set_initial(opti.lam_g, duals)
     try:
         sol = opti.solve(
             max_iter=30000,
             options={
                 "ipopt.max_cpu_time": 6000,
             },
-            verbose=False
+            verbose=True
         )
         print("converged for track = 0 case!")
         opti.set_initial_from_sol(sol)
@@ -78,5 +81,5 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
 if __name__ == '__main__':
 
 
-    run(run_name, 0, 1, 1, 1, 1, 1, 1)
+    run(run_name, 0, 0.16, 0.16, 0.16, 0.16, 0.16, 0.16)
 
