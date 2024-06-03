@@ -2994,29 +2994,7 @@ if __name__ == "__main__":
                     #     draw()
                     # if converged == True:
         # if run_num == 0:
-        if converged == True:
-            opti.set_initial_from_sol(sol, initialize_primals=True, initialize_duals=True,)
-            # with open(filename, "a") as f:
-            #     f.write(
-            #         f"{str(run_num).ljust(l)},"
-            #         f"{str(s(wing_span)).ljust(l)},"
-            #         f"{str(s(strain_azimuth_resolution)).ljust(l)},"
-            #         f"{str(s(spatial_coverage)).ljust(l)},"
-            #         f"{str(s(temporal_coverage)).ljust(l)},"
-            #         f"{str(s(max_precision)).ljust(l)},"
-            #         f"{str(s(strain_temporal_resolution)).ljust(l)}\n"
-            #     )
-            # primals = sol(opti.x)
-            # duals = sol(opti.lam_g)
-            # np.save(f"outputs/{output_file}/0_primals.npy", primals)
-            # np.save(f"outputs/{output_file}/0_duals.npy", duals)
-        else:
-            primals = np.load(f"outputs/{output_file}/0_primals.npy")
-            duals = np.load(f"outputs/{output_file}/0_duals.npy")
-            opti.set_initial(opti.x, primals)
-            opti.set_initial(opti.lam_g, duals)
-
-
+        opti.set_initial_from_sol(sol, initialize_primals=True, initialize_duals=True, )
     # plt.plot(wingspan, spatial, linestyle='--', marker='o')
     # plt.title('Pareto Front')
     # plt.xlabel('Wingspan [meters]')
