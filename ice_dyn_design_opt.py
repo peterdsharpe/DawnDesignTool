@@ -1992,7 +1992,7 @@ if trajectory == 'lawnmower':
 
 # calculate snr from equation in Ulaby and Long
 snr = payload_power * antenna_gain ** 2 * wavelength ** 3 * a_hs * sigma0 * range_resolution / \
-      ((2 * 4 * np.pi) ** 3 * dist ** 3 * k_b * my_atmosphere.temperature() * F * ground_speed * a_B)
+      ((2 * 4 * np.pi) ** 3 * dist ** 3 * k_b * T * F * ground_speed * a_B)
 
 snr_db = 10 * np.log(snr)
 
