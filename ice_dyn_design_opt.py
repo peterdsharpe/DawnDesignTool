@@ -34,12 +34,20 @@ path = str(
 sns.set(font_scale=1)
 
 ##### Section: Initialize Optimization
-opti = asb.Opti(
-    freeze_style='float',
-    # variable_categories_to_freeze='design'
+output_file = "lawnmower=4_antarctica"
+opti = asb.Opti(  # Normal mode - Design Optimization
+    cache_filename=f"outputs/{output_file}/optimization_solution.json",
+    save_to_cache_on_solve=True
 )
-des = dict(category="design")
+# opti = asb.Opti( # Alternate mode - Frozen Design Optimization
+#     variable_categories_to_freeze=["aircraft"],
+#     cache_filename=f"outputs/{output_file}/optimization_solution.json",
+#     load_frozen_variables_from_cache=True,
+#     ignore_violated_parametric_constraints=True
+# )
+air = dict(category="aircraft")
 ops = dict(category="operations")
+inst = dict(category="instrument")
 
 mode = "multi-objective"
 
@@ -107,7 +115,7 @@ use_propulsion_fits_from_FL2020_1682_undergrads = True  # Warning: Fits not yet 
 # Mission Operating Parameters
 latitude = -76  # degrees, the location the sizing occurs
 if mode == "multi-objective":
-    temporal_coverage = opti.variable(init_guess=60, scale=10, lower_bound=14, upper_bound=365, **des) # Julian day, the day of the year the sizing occurs
+    temporal_coverage = opti.variable(init_guess=60, scale=10, lower_bound=14, upper_bound=365, **ops) # Julian day, the day of the year the sizing occurs
 if mode == "parameter_sweep":
     temporal_coverage = opti.parameter(value=14) # days, the length of the mission without landing to download data
 if latitude > 0:
@@ -124,8 +132,8 @@ min_speed = 0.5 # specify a minimum groundspeed (bad convergence if less than 0.
 wind_direction = 45 # degrees, the direction the wind is blowing from 0 being North and aligned with the x-axis
 run_with_95th_percentile_wind_condition = False # do we want to run the sizing with the 95th percentile wind condition?
 if mode == "multi-objective":
-    required_strain_temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0, upper_bound=24, **des) # hours
-    required_spatial_coverage = opti.variable(init_guess=5000 * 1e6, scale=1000 * 1e6, lower_bound=3000 * 1e6, **des)
+    required_strain_temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0, upper_bound=24, **inst) # hours
+    required_spatial_coverage = opti.variable(init_guess=5000 * 1e6, scale=1000 * 1e6, lower_bound=3000 * 1e6, **ops)
     # required_spatial_coverage = opti.parameter(value=100000)
 if mode == "parameter_sweep":
     required_strain_temporal_resolution = opti.parameter(value=24) # hours
@@ -147,15 +155,15 @@ trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
 mass_payload_base = 5 # kg, does not include data storage or aperture mass
 payload_volume = 0.023 * 1.5  # assuming payload mass from gamma remote sensing with 50% margin on volume
 tb_per_day = 4 # terabytes per day, the amount of data the payload collects per day, to account for storage
-strain_range_resolution = opti.variable(init_guess=0.5, scale=1, lower_bound=0, **des) # meters
+strain_range_resolution = opti.variable(init_guess=0.5, scale=1, lower_bound=0, **inst) # meters
 if mode == "multi-objective":
-    strain_azimuth_resolution = opti.variable(init_guess=10, scale=1, lower_bound=0, upper_bound=50, **des) # meters
+    strain_azimuth_resolution = opti.variable(init_guess=10, scale=1, lower_bound=0, upper_bound=50, **inst) # meters
 if mode == "parameter_sweep":
     strain_azimuth_resolution = opti.parameter(value=50) # meters
-strain_temporal_resolution = opti.variable(init_guess=4, scale=1, **des) # hours
+strain_temporal_resolution = opti.variable(init_guess=4, scale=1, **inst) # hours
 # required_snr = 20  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
 if mode == "multi-objective":
-    required_strain_precision = opti.variable(init_guess=1E-4, scale=1E-5, lower_bound=0, upper_bound=1E-4, **des)
+    required_strain_precision = opti.variable(init_guess=1E-4, scale=1E-5, lower_bound=0, upper_bound=1E-4, **inst)
 if mode == "parameter_sweep":
     required_strain_precision = opti.parameter(value=1E-4) # 1/yr, the required precision of the strain measurement
 # meters given from Brent based on the properties of the ice sampled by the radar
@@ -223,21 +231,21 @@ mass_total = opti.variable(
     init_guess=230,
     scale=100,
     lower_bound=0,
-    **des
+    **air
 )
 
 power_in_after_panels_max = opti.variable(
     init_guess=5000,
     lower_bound=0,
     scale=1000,
-    **des
+    **ops
 )
 
 power_out_propulsion_max = opti.variable(
     init_guess=1683,
     lower_bound=10,
     scale=1e3,
-    **des
+    **ops
 )
 
 ##### Initialize design optimization variables (all units in base SI or derived units)
@@ -247,21 +255,21 @@ payload_pod_length = opti.variable(
     scale=1,
     lower_bound=0.5,
     # upper_bound=5,
-    **des,
+    **air,
 ) # meters
 payload_pod_diameter = opti.variable(
     init_guess=0.25,
     scale=0.1,
     lower_bound=0.2,
     upper_bound=1,
-    **des,
+    **air,
 )  # meters
 
 payload_pod_y_offset = 1.5  # meters # this matches the demonstrator vehicle configuration
 x_payload_pod = opti.variable(
     init_guess=-0.5,
     scale=0.1,
-    **des,
+    **air,
     lower_bound=0 - payload_pod_length,
     upper_bound=0 + payload_pod_length,
 ) # x location of payload pod constrained to be no more or less than the length of the pod from the wing LE
@@ -287,7 +295,7 @@ break_location = 0.67  # as a fraction of the half-span
 wing_span = opti.variable(
     init_guess=30,
     scale=6,
-    **des
+    **air
 )
 
 boom_offset = boom_location * wing_span / 2  # in real units (meters)
@@ -297,13 +305,13 @@ opti.subject_to([wing_span > 1])
 wing_root_chord = opti.variable(
     init_guess=1.8,
     scale=0.1,
-    **des,
+    **air,
     lower_bound=1,
 )
 wing_x_quarter_chord = opti.variable(
     init_guess=0,
     scale=0.01,
-    **des
+    **air
 )
 wing_y_taper_break = break_location * wing_span / 2
 wing_taper_ratio = 0.5  # TODO analyze this more
@@ -312,7 +320,7 @@ wing_taper_ratio = 0.5  # TODO analyze this more
 center_hstab_span = opti.variable(
     init_guess=5.3,
     scale=1,
-    **des,
+    **air,
     lower_bound=0.1,
 )
 opti.subject_to(center_hstab_span < wing_span / 6)
@@ -320,14 +328,14 @@ opti.subject_to(center_hstab_span < wing_span / 6)
 center_hstab_chord = opti.variable(
     init_guess=1,
     scale=0.1,
-    **des,
+    **air,
     lower_bound=0.1,
 )
 
 center_hstab_twist = opti.variable(
     init_guess=0,
     scale=2,
-    **ops,
+    **air,
     lower_bound=-15,
     upper_bound=0,
 )
@@ -336,7 +344,7 @@ center_hstab_twist = opti.variable(
 outboard_hstab_span = opti.variable(
     init_guess=2,
     scale=1,
-    **des,
+    **air,
     lower_bound=2, # TODO review this, driven by Trevor's ASWing findings on turn radius sizing, 8/16/20
 
 )
@@ -345,7 +353,7 @@ opti.subject_to(outboard_hstab_span < wing_span / 6)
 outboard_hstab_chord = opti.variable(
     init_guess=0.8,
     scale=0.1,
-    **des,
+    **air,
     lower_bound=0.8, # TODO review this, driven by Trevor's ASWing findings on turn radius sizing, 8/16/20
 )
 
@@ -361,14 +369,14 @@ outboard_hstab_twist = opti.variable(
 center_vstab_span = opti.variable(
     init_guess=4,
     scale=2,
-    **des,
+    **air,
     lower_bound=0.1,
 )
 
 center_vstab_chord = opti.variable(
     init_guess=1.6,
     scale=0.5,
-    **des,
+    **air,
     lower_bound=0.1,
 )
 
@@ -376,7 +384,7 @@ center_vstab_chord = opti.variable(
 center_boom_length = opti.variable(
     init_guess=7.2,
     scale=2,
-    **des
+    **air
 )
 opti.subject_to([
     center_boom_length - center_vstab_chord - center_hstab_chord > wing_x_quarter_chord + wing_root_chord * 3 / 4
@@ -386,7 +394,7 @@ opti.subject_to([
 outboard_boom_length = opti.variable(
     init_guess=2.3,
     scale=2,
-    **des
+    **air
 )
 opti.subject_to([
     outboard_boom_length > wing_root_chord,
@@ -398,7 +406,7 @@ opti.subject_to([
 propeller_diameter = opti.variable(
     init_guess=1,
     scale=1,
-    **des,
+    **air,
     upper_bound=10,
     lower_bound=1
 )
@@ -660,7 +668,7 @@ wing_n_ribs = opti.variable(
     scale=50,
     lower_bound=1,
     upper_bound=500,
-    **des
+    **air
 )
 
 # wing primary mass model is interpolated model from Axalp study in Fall 2021
@@ -771,7 +779,7 @@ opti.subject_to([
 q_ne = opti.variable(
     init_guess=93,
     scale=10,
-    **des
+    **air
 )  # Never-exceed dynamic pressure [Pa].
 
 def mass_hstab(
@@ -799,7 +807,7 @@ def mass_hstab(
 n_ribs_center_hstab = opti.variable(
     init_guess=17,
     scale=10,
-    **des,
+    **air,
     log_transform=True
 )
 
@@ -815,7 +823,7 @@ mass_props['center_hstab'] = asb.mass_properties_from_radius_of_gyration(
 n_ribs_outboard_hstab = opti.variable(
     init_guess=7.5,
     scale=1,
-    **des,
+    **air,
     log_transform=True,
 )
 
@@ -865,7 +873,7 @@ def mass_vstab(
 n_ribs_vstab = opti.variable(
     init_guess=10,
     scale=1,
-    **des
+    **air
 )
 opti.subject_to(n_ribs_vstab > 0)
 
@@ -997,7 +1005,7 @@ wing_solar_area_fraction = opti.variable(
     scale=0.5,
     lower_bound=0,
     upper_bound=max_wing_solar_area_fraction,
-    **des
+    **air
 )
 
 vstab_solar_area_fraction = opti.variable(
@@ -1005,7 +1013,7 @@ vstab_solar_area_fraction = opti.variable(
     scale=0.5,
     lower_bound=0,
     upper_bound=max_vstab_solar_area_fraction,
-    **des
+    **air
 )
 
 if tail_panels == False:
@@ -1042,7 +1050,7 @@ battery_capacity = opti.variable(
     init_guess=114072085,
     scale=1e8,
     lower_bound=0,
-    **des,
+    **air,
 )
 battery_capacity_watt_hours = battery_capacity / 3600
 
@@ -1143,7 +1151,7 @@ def wind_speed_func(alt):
 if trajectory == 'straight':
     guess_altitude = 14000
     guess_speed = 20
-    air_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10)
+    air_speed = opti.variable(init_guess=guess_speed, n_vars=n_timesteps, lower_bound=min_speed, scale=10, **ops)
     track = vehicle_heading * np.pi / 180
     u_e = air_speed * np.cos(track)
     v_e = air_speed * np.sin(track)
@@ -1555,47 +1563,47 @@ radar_width = opti.variable(
     init_guess=0.3,
     scale=0.1,
     lower_bound=0.01,
-    **des
+    **inst
 )
 radar_length = opti.variable(
     init_guess=0.6,
     scale=0.1,
     lower_bound=0,
-    **des
+    **inst
 )
 look_angle = opti.variable(
     init_guess=45,
     scale=10,
     upper_bound=65,
     lower_bound=25,
-    **des
+    **inst
 ) # limited in lower bound by specular reflection which we get at low look angles and does not enable interferometry
 wavelength = opti.variable(
     init_guess=0.03,
     scale=0.01,
     lower_bound=0.015,
     upper_bound=0.3,
-    **des
+    **inst
 )
 bandwidth = opti.variable(
     init_guess=211985277,
     scale=1e7,
     lower_bound=0, # 200 MHz is typical hardware lower limt
     upper_bound=300e6, # 300 MHz is typical hardware upper limit
-    **des
+    **inst
 )  # Hz
 pulse_rep_freq = opti.variable(
     init_guess=141676,
     scale=10000,
     lower_bound=0,
-    **des
+    **inst
 ) # 1/s (Hz)
 power_trans = opti.variable(
     init_guess=862445,
     scale=1e5,
     lower_bound=0,
     upper_bound=1e8,
-    **des
+    **inst
 )  # watts
 
 # define key radar parameters
@@ -1611,9 +1619,9 @@ ground_imaging_offset = np.tand(look_angle) * altitude  # meters
 scattering_cross_sec = 10 ** (scattering_cross_sec_db / 10)
 sigma0 = scattering_cross_sec / ground_area
 antenna_gain = 4 * np.pi * radar_aperture_area * 0.7 / wavelength ** 2
-max_swath_range = opti.variable(init_guess=8500,scale=1e3,lower_bound=0,**ops)
-max_swath_azimuth = opti.variable(init_guess=8500,scale=1e3,lower_bound=0,**ops)
-max_imaging_offset = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, **ops)
+max_swath_range = opti.variable(init_guess=8500,scale=1e3,lower_bound=0,**inst)
+max_swath_azimuth = opti.variable(init_guess=8500,scale=1e3,lower_bound=0,**inst)
+max_imaging_offset = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, **inst)
 
 # Assumed constants
 a_hs = 0.88  # aperture-illumination taper factor associated with the synthetic aperture (value from Ulaby and Long)
@@ -1992,9 +2000,9 @@ opti.subject_to([
 ])
 
 # translate to final data product Terms
-N_i_range = opti.variable(init_guess=5, scale=1, lower_bound=10, **des)
-N_i_azimuth = opti.variable(init_guess=5, scale=1, lower_bound=10, **des)
-N_i_time = opti.variable(init_guess=5, scale=1, lower_bound=1, **des)
+N_i_range = opti.variable(init_guess=5, scale=1, lower_bound=10, **inst)
+N_i_azimuth = opti.variable(init_guess=5, scale=1, lower_bound=10, **inst)
+N_i_time = opti.variable(init_guess=5, scale=1, lower_bound=1, **inst)
 N_i = N_i_range * N_i_azimuth * N_i_time # number of pixels in the incoherent averaging window
 
 # assume deviation based on GPS uncertainty
