@@ -385,7 +385,7 @@ if __name__ == '__main__':
     parameter_array = np.column_stack((files, parameter_array))
     #
     if parallel:
-        with mp.Pool(mp.cpu_count()) as p:
+        with mp.Pool(48) as p:
             for index, span_val, resolution_val, coverage_val, duration_val, precision_val, temporal_val in p.imap_unordered(
                     func=run_wrapped,
                     iterable=parameter_array,
