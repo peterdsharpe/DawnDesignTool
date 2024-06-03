@@ -89,12 +89,12 @@ temporal_adjustment = 24
 # precision_adjustment = opti.parameter(value=1.04e-06)
 # temporal_adjustment = opti.parameter(value=6.19)
 
-wingspan_optimization_scaling_term = opti.parameter(value=1)
-azimuth_optimization_scaling_term = opti.parameter(value=1)
-coverage_optimization_scaling_term = opti.parameter(value=1)
-duration_optimization_scaling_term = opti.parameter(value=1)
-precision_optimization_scaling_term = opti.parameter(value=1)
-temporal_optimization_scaling_term = opti.parameter(value=1)
+wingspan_optimization_scaling_term = opti.parameter(value=0.167)
+azimuth_optimization_scaling_term = opti.parameter(value=0.167)
+coverage_optimization_scaling_term = opti.parameter(value=0.167)
+duration_optimization_scaling_term = opti.parameter(value=0.167)
+precision_optimization_scaling_term = opti.parameter(value=0.167)
+temporal_optimization_scaling_term = opti.parameter(value=0.167)
 normalization_term = (1/6*(wingspan_optimization_scaling_term ** 2 + azimuth_optimization_scaling_term ** 2 +
                            coverage_optimization_scaling_term ** 2 + duration_optimization_scaling_term ** 2 +
                            precision_optimization_scaling_term ** 2 + temporal_optimization_scaling_term ** 2))**0.5
