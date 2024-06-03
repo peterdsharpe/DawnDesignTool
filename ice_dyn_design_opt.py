@@ -711,14 +711,15 @@ def estimate_mass_wing_secondary(
     area = span * chord
 
     # Rib mass
-    W_wr = n_ribs * (chord ** 2 * t_over_c * 5.50e-2 + chord * 1.91e-3) * 1.3
+    W_wr = n_ribs * (chord ** 2 * t_over_c * 5.50e-2 + chord * 1.91e-3)
     # x1.3 scales to estimates from structures subteam
+    # removed margin based on electra input
 
     # End rib mass
     W_wer = n_end_ribs * (chord ** 2 * t_over_c * 6.62e-1 + chord * 6.57e-3)
 
     # LE sheeting mass
-    # W_wLE = 0.456/2 * (span ** 2 * ratio_of_rib_spacing_to_chord ** (4 / 3) / span)
+    W_wLE = span * 0.65 # foamular LE mass as a function of span from demo build
 
     # Skin Panel Mass
     W_wsp = area * skin_density * 1.05  # assumed constant thickness from 0.9c around LE to 0.15c
@@ -729,18 +730,19 @@ def estimate_mass_wing_secondary(
     # Covering
     W_wc = area * 0.033 * 1.1  # 0.033 kg/m2 Tedlar covering on 1 sides, with 1.1 coverage factor
 
-    mass_secondary = (W_wr + W_wer + W_wTE) * scaling_factor + W_wsp + W_wc
+    mass_secondary = (W_wr + W_wer + W_wTE + W_wLE) * scaling_factor + W_wsp + W_wc
     mass_covering = W_wc
     mass_skin_panel = W_wsp
     mass_ribs = W_wr
     mass_end_ribs = W_wer
+    mass_LE = W_wLE
 
-    return mass_secondary, mass_covering, mass_skin_panel, mass_ribs, mass_end_ribs
+    return mass_secondary, mass_covering, mass_skin_panel, mass_ribs, mass_end_ribs, mass_LE
 
 # todo check skin areal density
 skin_areal_density = 0.30  # kg/m^2
 
-mass_wing_secondary, mass_covering, mass_skin_panel, mass_ribs, mass_end_ribs = estimate_mass_wing_secondary(
+mass_wing_secondary, mass_covering, mass_skin_panel, mass_ribs, mass_end_ribs, mass_LE = estimate_mass_wing_secondary(
     span=wing.span(),
     chord=wing.mean_geometric_chord(),
     # n_ribs=n_ribs_wing,
@@ -749,7 +751,7 @@ mass_wing_secondary, mass_covering, mass_skin_panel, mass_ribs, mass_end_ribs = 
     skin_density=skin_areal_density,
     n_wing_sections=4,
     t_over_c=wing_airfoil.max_thickness(),
-    scaling_factor=1.5  # Suggested by Drela # todo reavaluate this
+    scaling_factor=1.5  # 1.5 from Drela suggestion
 )
 
 mass_wing = mass_wing_primary + mass_wing_secondary
