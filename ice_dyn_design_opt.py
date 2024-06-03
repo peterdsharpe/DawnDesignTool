@@ -2721,7 +2721,7 @@ if __name__ == "__main__":
             plt.xlabel(xlabel)
             plt.ylabel(ylabel)
             plt.title(title)
-            plt.legend(loc='upper right')
+            plt.legend(loc='upper left')
             plt.tight_layout()
             if save_name is not None:
                 plt.savefig(save_name)
