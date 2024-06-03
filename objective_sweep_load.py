@@ -7,7 +7,7 @@ import itertools
 
 
 ### where is parameter cominations file and where should outputs go?
-run_name = "lawnmower_n=4"
+run_name = "lawnmower=4_antarctica"
 
 ### define sweep ranges
 max_weighting = 1
