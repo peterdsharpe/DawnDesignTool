@@ -942,9 +942,10 @@ avionics_power = 180  # TODO revisit this number
 
 
 ### Power Systems Mass Accounting
-solar_cell_efficiency = opti.parameter(value=0.216)
-# 27.5% efficiency of Sunpower cells at AM0, 7% knockdown for encapsulation, 7% knockdown for wing shape
-# as decided 7/17 with Andrew Streett
+solar_cell_efficiency_cell_level = opti.parameter(value=0.25)
+solar_cell_efficiency = solar_cell_efficiency_cell_level * 0.93 * 0.93
+# 25% efficiency of Sunpower cells at AM0, 7% knockdown for encapsulation, 7% knockdown for wing shape
+# as decided 5/30 with craig
 rho_solar_cells = 0.56 # kg/m^2, areal density of solar cells as determined from 7/17 discussion with Andrew Streett
 solar_cost_per_watt = 3 # $/W, cost of Sunpower solar cells
 solar_power_ratio = 500 # W/kg
