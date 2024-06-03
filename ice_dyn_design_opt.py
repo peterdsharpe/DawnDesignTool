@@ -2381,7 +2381,6 @@ if draw_initial_guess_config:
 
 if __name__ == "__main__":
     import csv
-    output_file = "circular_sum_grid"
     primals = np.load(f"outputs/{output_file}/0_primals.npy")
     duals = np.load(f"outputs/{output_file}/0_duals.npy")
 
@@ -2411,12 +2410,12 @@ if __name__ == "__main__":
     opti.set_initial(opti.x, primals)
     opti.set_initial(opti.lam_g, duals)
     for run_num in runs:
-        opti.set_value(wingspan_optimization_scaling_term, float(combinations[run_num][0]))
-        opti.set_value(azimuth_optimization_scaling_term, float(combinations[run_num][1]))
-        opti.set_value(coverage_optimization_scaling_term, float(combinations[run_num][2]))
-        opti.set_value(duration_optimization_scaling_term, float(combinations[run_num][3]))
-        opti.set_value(precision_optimization_scaling_term, float(combinations[run_num][4]))
-        opti.set_value(temporal_optimization_scaling_term, float(combinations[run_num][5]))
+        # opti.set_value(wingspan_optimization_scaling_term, float(combinations[run_num][0]))
+        # opti.set_value(azimuth_optimization_scaling_term, float(combinations[run_num][1]))
+        # opti.set_value(coverage_optimization_scaling_term, float(combinations[run_num][2]))
+        # opti.set_value(duration_optimization_scaling_term, float(combinations[run_num][3]))
+        # opti.set_value(precision_optimization_scaling_term, float(combinations[run_num][4]))
+        # opti.set_value(temporal_optimization_scaling_term, float(combinations[run_num][5]))
         # opti.set_value(number_of_passes, float(combinations[run_num]))
         # opti.set_value(required_spatial_coverage, float(combinations[run_num]) * 1e6)
         opti.set_value(track_scaler, 1)
@@ -2426,7 +2425,7 @@ if __name__ == "__main__":
         #     opti.set_value(track_scaler, 1)
         try:
                 sol = opti.solve(
-                    max_iter=10000,
+                    max_iter=50000,
                     options={
                         "ipopt.max_cpu_time": 10000
                     }
