@@ -219,8 +219,7 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
             plt.tight_layout()
             if save_name is not None:
                 plt.savefig(save_name)
-
-            return fig, ax
+            plt.close()
 
         # Define the data for the "Outputs" section
         outputs_data = {
@@ -304,9 +303,7 @@ def run(run_name, index_val, wingspan_scaling_term, resolution_scaling_term, cov
             airplane.draw_three_view(show=False)
             if save_name is not None:
                 plt.savefig(save_name)
-            if show:
-                plt.show()
-            plt.clf()
+            plt.close()
 
         three_view(save_name=f"outputs/{run_name}/three_view_{run_num}.png")
 
