@@ -994,9 +994,10 @@ avionics_power = 180  # TODO revisit this number
 
 
 ### Power Systems Mass Accounting
-solar_cell_efficiency = 0.30 * 0.93 * 0.93
-# 30% efficiency of Sunpower cells at AM0, 7% knockdown for encapsulation, 7% knockdown for wing shape
-# as decided 7/17 with Andrew Streett
+solar_cell_efficiency_cell_level = 0.25
+solar_cell_efficiency = solar_cell_efficiency_cell_level * 0.93 * 0.93
+# .25 efficiency of Sunpower cells at AM1.5, 7% knockdown for encapsulation, 7% knockdown for wing shape
+# as decided 5/30 with craig based off altitude correction in solar flux
 rho_solar_cells = 0.56 # kg/m^2, areal density of solar cells as determined from 7/17 discussion with Andrew Streett
 solar_cost_per_watt = 3 # $/W, cost of Sunpower solar cells
 solar_power_ratio = 500 # W/kg
@@ -2119,6 +2120,7 @@ solar_flux_on_horizontal = lib_solar.solar_flux(
     day_of_year=day_of_year,
     time=time,
     scattering=True,
+    altitude=altitude,
 )
 
 left_wing_incident_solar_power = 0.5 * area_solar_wing * lib_solar.solar_flux(
@@ -2127,7 +2129,9 @@ left_wing_incident_solar_power = 0.5 * area_solar_wing * lib_solar.solar_flux(
     time=time,
     panel_azimuth_angle=wing_panel_azimuth,
     panel_tilt_angle=10,
-    scattering=True
+    scattering=True,
+    altitude=altitude,
+
 )
 
 right_wing_incident_solar_power = 0.5 * area_solar_wing * lib_solar.solar_flux(
@@ -2136,7 +2140,9 @@ right_wing_incident_solar_power = 0.5 * area_solar_wing * lib_solar.solar_flux(
     time=time,
     panel_azimuth_angle=wing_panel_azimuth,
     panel_tilt_angle=-10,
-    scattering=True
+    scattering=True,
+    altitude=altitude,
+
 )
 
 wing_incident_solar_power = right_wing_incident_solar_power + left_wing_incident_solar_power
@@ -2147,7 +2153,9 @@ vstab_incident_solar_power_left = area_solar_vstab * lib_solar.solar_flux(
     time=time,
     panel_azimuth_angle=wing_panel_azimuth,
     panel_tilt_angle=90,
-    scattering=True
+    scattering=True,
+    altitude=altitude,
+
 )
 
 vstab_incident_solar_power_right = area_solar_vstab * lib_solar.solar_flux(
@@ -2156,7 +2164,9 @@ vstab_incident_solar_power_right = area_solar_vstab * lib_solar.solar_flux(
     time=time,
     panel_azimuth_angle=-wing_panel_azimuth,
     panel_tilt_angle=90,
-    scattering=True
+    scattering=True,
+    altitude=altitude,
+
 )
 
 vstab_incident_solar_power = vstab_incident_solar_power_right + vstab_incident_solar_power_left
