@@ -1653,7 +1653,7 @@ payload_power = power_trans * pulse_rep_freq * pulse_duration
 if trajectory == 'straight':
     ground_area = max_swath_range * max_swath_azimuth * np.pi / 4  # meters ** 2
     spatial_coverage = ground_area * distance[time_periodic_end_index]
-    # opti.subject_to(spatial_coverage >= coverage)
+    opti.subject_to(spatial_coverage >= required_spatial_coverage)
     revisit_period = 1 # todo change this
 
 
@@ -1667,6 +1667,7 @@ if trajectory == 'circular':
     payload_power_adjusted = payload_power
     coverage_length = coverage_radius
     coverage_width = coverage_radius
+    opti.subject_to(spatial_coverage >= required_spatial_coverage)
 
 if trajectory == "racetrack":
     # initialize variables
