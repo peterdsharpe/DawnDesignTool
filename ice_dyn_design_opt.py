@@ -2114,6 +2114,8 @@ power_out = power_out_propulsion + payload_power_adjusted + power_out_avionics
 ##### Section: Power Input (Solar)
 
 MPPT_efficiency = 0.975 # todo revisit efficiency value
+wiring_losses = 0.99
+# 12/21/21 Jean marie Bourven
 # wing_panel_azimuth = 90 # 90 is worst case
 wing_panel_azimuth = vehicle_bearing + 90
 solar_flux_on_horizontal = lib_solar.solar_flux(
@@ -2177,12 +2179,7 @@ power_in_after_panels_tot = (wing_incident_solar_power * solar_cell_efficiency +
 
 power_in = (wing_incident_solar_power * solar_cell_efficiency +
             vstab_incident_solar_power * solar_cell_efficiency) \
-           * MPPT_efficiency
-
-
-### Wiring specs
-wiring_losses = 0.99
-# 12/21/21 Jean marie Bourven
+           * MPPT_efficiency * wiring_losses
 
 cost_batteries = 4 * battery_capacity_watt_hours  # dollars assuming 355 whr/kg cells
 avionics_cost = 80000
