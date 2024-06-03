@@ -375,13 +375,13 @@ if __name__ == '__main__':
             f"{'Precisions'.ljust(l)},"
             f"{'Temporal_Resolutions'.ljust(l)}\n")
 
-    parameter_array = create_grid(grid_sample_number, max_weighting, number_of_objective_terms, run_name)
+    # parameter_array = create_grid(grid_sample_number, max_weighting, number_of_objective_terms, run_name)
     # parameter_array = create_random_grid(number_of_runs, number_of_objective_terms, run_name)
-    # parameter_array = np.genfromtxt(f'outputs/{run_name}/0_parameter_combinations.csv', delimiter=',')
-    # parameter_array = np.insert(parameter_array, 0, np.arange(0, parameter_array.shape[0]), axis=1)
-    # index_array = parameter_array[:, 0]
-    # files = np.array([run_name] * len(parameter_array))
-    # parameter_array = np.column_stack((files, parameter_array))
+    parameter_array = np.genfromtxt(f'outputs/{run_name}/0_parameter_combinations.csv', delimiter=',')
+    parameter_array = np.insert(parameter_array, 0, np.arange(0, parameter_array.shape[0]), axis=1)
+    index_array = parameter_array[:, 0]
+    files = np.array([run_name] * len(parameter_array))
+    parameter_array = np.column_stack((files, parameter_array))
     #
     if parallel:
         with mp.Pool(mp.cpu_count()) as p:
