@@ -2176,14 +2176,13 @@ opti.constrain_derivative(
 )
 
 gravity_force = g * mass_total
-F_parallel = (- np.cosd(gamma) * drag_force \
-        + np.sind(gamma) * lift_force) \
-        + np.cosd(gamma + alpha) * thrust
+F_parallel = (thrust * np.cosd(alpha) -
+        drag_force -
+        gravity_force * np.sind(gamma))
 # Fy_e = 0
-F_perpendicular = np.sind(gamma) * drag_force \
-       - np.cosd(gamma) * lift_force \
-       + np.sind(gamma + alpha) * thrust \
-       + gravity_force
+F_perpendicular = (thrust * np.sind(alpha) +
+        lift_force -
+        gravity_force * np.cosd(gamma))
 
 
 opti.subject_to([
