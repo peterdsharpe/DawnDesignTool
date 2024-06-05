@@ -12,7 +12,7 @@ import itertools
 import plotly.graph_objects as go
 
 #### inputs
-file_name = ('lawnmower_n=4_sum_grid')
+file_name = ('lawnmower=4_antarctica')
 variables = ['Spatial_Resolutions', 'Coverage_Areas', 'Duration', 'Precisions', 'Temporal_Resolutions', 'Spans']
 # run_type = 'parameter_sweep'
 run_type = 'objective_sweep'
