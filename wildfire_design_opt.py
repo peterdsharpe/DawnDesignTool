@@ -939,7 +939,6 @@ mass_props['avionics'] = asb.MassProperties(
     x_cg=payload_pod_length * 0.75,  # right behind payload # TODO revisit this number
 ) # todo verify location
 avionics_volume = mass_props['avionics'].mass / 1250  # assumed density of electronics
-avionics_power = 180  # TODO revisit this number
 
 
 ### Power Systems Mass Accounting
@@ -1585,9 +1584,6 @@ azimuth_resolution = radar_length / 2
 critical_baseline = center_wavelength * dist / (2 * range_resolution * (np.cosd(look_angle)) ** 2)
 
 opti.subject_to([
-    0.85 * payload_pod_length >= radar_length,
-    0.85 * payload_pod_diameter >= radar_width,
-    radar_length / radar_width <= 10,
     max_swath_range >= swath_range,
     max_swath_range <= 1 + swath_range,
     max_swath_azimuth >= swath_azimuth,
@@ -1967,9 +1963,7 @@ if optimization_mode == 'wingspan':
     opti.subject_to([
         required_snr <= snr_db,
         pulse_rep_freq >= 2 * ground_speed / radar_length,
-        # pulse_rep_freq <= c / (2 * swath_azimuth),
         1 / pulse_rep_freq >= pulse_duration,
-        # required_precision >= precision,
     ])
 
 ### instrument data storage mass requirements
