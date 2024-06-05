@@ -216,13 +216,32 @@ def check_optimality(df_all):
 def plot_scatter_matrix(df):
 
     # sns.set_theme(style="ticks")
+    # Create a PairGrid
+    g = sns.PairGrid(df)
 
-    g = sns.pairplot(df, diag_kind='hist', plot_kws={'color': 'black'})
+    # Map the upper and lower triangle to scatter plots
+    g.map_upper(sns.scatterplot, color='black')
+    g.map_lower(sns.scatterplot, color='black')
+
+    # Define a custom function for the diagonal
+    def custom_hist(x, **kwargs):
+        bins = kwargs.pop('bins', 10)
+        plt.hist(x, bins=bins, **kwargs)
+
+    # Map the diagonal to the custom function
+    g.map_diag(custom_hist, bins=10)
+    # g = sns.pairplot(df, diag_kind='auto', plot_kws={'color': 'black'})
     # g = sns.pairplot(df, plot_kws={'color': 'black'})
-    g.fig.axes[2].invert_xaxis()
-    g.fig.axes[4].invert_xaxis()
-    g.fig.axes[12].invert_yaxis()
-    g.fig.axes[24].invert_yaxis()
+    if 'Wingspan [m]' in df.columns:
+        g.fig.axes[2].invert_xaxis()
+        g.fig.axes[4].invert_xaxis()
+        g.fig.axes[12].invert_yaxis()
+        g.fig.axes[24].invert_yaxis()
+    else:
+        g.fig.axes[1].invert_xaxis()
+        g.fig.axes[3].invert_xaxis()
+        g.fig.axes[5].invert_yaxis()
+        g.fig.axes[15].invert_yaxis()
     plt.show()
 
 def plot_parallel_coordinates(df, attribute, n):
