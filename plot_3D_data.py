@@ -466,6 +466,34 @@ def corr_heatmap(df):
 
     plt.show()
 
+def plot_distribution(df):
+
+    df = df.reset_index(drop=True)
+
+
+    # Calculate the number of rows and columns needed for subplots
+    num_cols = len(df.columns)
+    cols_in_plot = 7
+    num_rows = (num_cols - 1) // cols_in_plot + 1  # Ensure at least 1 row
+
+    # Create subplots
+    fig, axes = plt.subplots(num_rows, cols_in_plot, figsize=(4 * cols_in_plot, num_rows * 4))
+    axes = axes.flatten()
+
+    # Plot bar chart for each column
+    for i, col in enumerate(df.columns):
+        for j in range(len(df)):
+            sns.histplot(df[col], ax=axes[i], kde=False, bins=10)
+        axes[i].set_title(col)
+
+    # Remove extra empty subplots if necessary
+    for j in range(num_cols, num_rows * cols_in_plot):
+        fig.delaxes(axes[j])
+
+    # Adjust layout
+    plt.tight_layout()
+    plt.savefig(f'C:\\Users\\AnnickDewald\\PycharmProjects\\DawnDesignTool\outputs\\{file_name}\\distributions.png')
+    plt.show()
 
 design_variable_df = load_variables(file_name, converged_runs)
 big_df = pd.concat([df, design_variable_df], axis=1)
