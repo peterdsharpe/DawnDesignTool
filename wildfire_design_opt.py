@@ -109,7 +109,7 @@ spatial_resolution = opti.parameter(value=5)
 required_snr = opti.parameter(value=20)  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
 # required_precision = 1e-4 * 60 * 60 * 24 * 365 # 1/year
 # meters given from Brent based on the properties of the ice sampled by the radar
-scattering_cross_sec_db = -20
+sigma0_db = -30
 ## ranges from -15 to -30 dB for grassland
 ## ranges from -20 to -5 dB for forest regions (depending on biomass)
 
@@ -1565,8 +1565,7 @@ max_length_synth_ap = center_wavelength * dist / radar_length  # meters
 ground_area = swath_range * swath_azimuth * np.pi / 4  # meters ** 2
 radius = (swath_azimuth + swath_range) / 4  # meters
 ground_imaging_offset = np.tand(look_angle) * altitude  # meters
-scattering_cross_sec = 10 ** (scattering_cross_sec_db / 10)
-sigma0 = scattering_cross_sec / ground_area
+sigma0 = 10 ** (sigma0_db / 10)
 antenna_gain = 4 * np.pi * radar_aperture_area * 0.7 / center_wavelength ** 2
 max_swath_range = opti.variable(init_guess=8500,scale=1e3,lower_bound=0,**ops)
 max_swath_azimuth = opti.variable(init_guess=8500,scale=1e3,lower_bound=0,**ops)
