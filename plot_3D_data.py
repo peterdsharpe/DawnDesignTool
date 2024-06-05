@@ -59,8 +59,8 @@ converged_runs = df.index.values
 
 df['Spatial Coverage [km^2]'] = df['Spatial Coverage [km^2]'].round(0)
 df['Temporal Coverage [days]'] = df['Temporal Coverage [days]'].round(0)
-df['Precision [yr^-1]'] = df['Precision [yr^-1]'].round(6)
-df['Temporal Resolution [hrs]'] = df['Temporal Resolution [hrs]'].round(2)
+df['Precision [yr^-1]'] = df['Precision [yr^-1]'].round(7)
+df['Temporal Resolution [hrs]'] = df['Temporal Resolution [hrs]'].round(1)
 df['Spatial Resolution [m]'] = df['Spatial Resolution [m]'].round(2)
 df['Wingspan [m]'] = df['Wingspan [m]'].round(2)
 
