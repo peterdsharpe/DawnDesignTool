@@ -1613,12 +1613,14 @@ if trajectory == 'straight':
 
 
 if trajectory == 'circular':
-    coverage_radius = opti.variable(init_guess=2500, scale=1000, lower_bound=0,
-                                    **des)  # meters
-    opti.subject_to(flight_path_radius >= ground_imaging_offset + swath_range)
+    swath_overlap = opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, **ops)
+    coverage_radius = max_swath_range - (max_swath_range * swath_overlap) / 2
+    opti.subject_to(flight_path_radius == max_imaging_offset + max_swath_range)
     spatial_coverage = np.pi * coverage_radius ** 2
-    opti.subject_to(spatial_coverage >= required_spatial_coverage)
     payload_power_adjusted = payload_power
+    if optimization_mode == 'wingspan':
+        opti.subject_to([spatial_coverage >= required_spatial_coverage,
+                         revisit_rate >= required_revisit_rate])
 
 if trajectory == "racetrack":
     # initialize variables
