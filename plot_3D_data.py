@@ -317,12 +317,12 @@ def plot_parallel_coordinates(df, attribute, n):
 
     # Save the plot as an HTML file
     fig.write_html(
-        f'C:\\Users\\AnnickDewald\\PycharmProjects\\DawnDesignTool\outputs\\{file_name}\\parallel_coordinates_plot_{attribute}.html')
+        f'C:\\Users\\AnnickDewald\\PycharmProjects\\DawnDesignTool\\outputs\\{file_name}\\parallel_coordinates_plot_{attribute}.html')
 
     # Open the HTML file in the default web browser
     import webbrowser
     webbrowser.open(
-        f'C:\\Users\\AnnickDewald\\PycharmProjects\\DawnDesignTool\outputs\\{file_name}\\parallel_coordinates_plot_{attribute}.html')
+        f'C:\\Users\\AnnickDewald\\PycharmProjects\\DawnDesignTool\\outputs\\{file_name}\\parallel_coordinates_plot_{attribute}.html')
 
 
 
