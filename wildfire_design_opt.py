@@ -92,8 +92,8 @@ required_revisit_rate = opti.parameter(value=2)
 required_spatial_coverage = opti.parameter(value=12566370)
 
 # trajectory = 'racetrack'
-required_revisit_rate = opti.parameter(value=2)
-required_spatial_coverage = opti.parameter(value=12566370)
+# required_revisit_rate = opti.parameter(value=2)
+# required_spatial_coverage = opti.parameter(value=12566370)
 
 # trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
 sample_area_height = 10000  # meters, the height of the area the aircraft must sample
