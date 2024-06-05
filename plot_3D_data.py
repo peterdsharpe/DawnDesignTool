@@ -498,14 +498,20 @@ def plot_distribution(df):
 design_variable_df = load_variables(file_name, converged_runs)
 big_df = pd.concat([df, design_variable_df], axis=1)
 
+if 'fixed_aircraft' in file_name:
+    df = df.drop(columns=['Wingspan [m]'])
+
 # Get all combinations of 3 columns
 column_combinations = list(itertools.combinations(df.columns, 3))
 
-# Check if 'Wingspan [m]' is in any combination and move it to the end
+# Check if 'Wingspan [m]' is in any combination and move it to 2nd position
 for i, combination in enumerate(column_combinations):
     if 'Wingspan [m]' in combination:
         # Move 'Wingspan [m]' to the second position
-        column_combinations[i] = tuple(col for col in combination if col != 'Wingspan [m]') + ('Wingspan [m]',)
+        column_combinations[i] = tuple(col for col in combination if col != 'Wingspan [m]')  # Remove 'Wingspan [m]'
+        # Insert 'Wingspan [m]' at the second position
+        column_combinations[i] = (column_combinations[i][0], 'Wingspan [m]') + column_combinations[i][1:]
+
 # just give me the first one for now
 # column_combinations = column_combinations[:1]
 # for combination in column_combinations:
