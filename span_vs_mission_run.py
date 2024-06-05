@@ -34,8 +34,8 @@ def run(day_val, lat_val):
         #     }
         # )
         sol = opti.solve(
-            max_iter=2000,
-            max_runtime=600,
+            max_iter=4000,
+            max_runtime=6000,
             verbose=False
         )
 
@@ -59,7 +59,7 @@ def run_wrapped(input):
 
 if __name__ == '__main__':
 
-    run_number = 10
+    run_number = 5
 
     excel_file = "cache/Wildfire/wildfire_runs.xlsx"
 
@@ -70,9 +70,9 @@ if __name__ == '__main__':
     # adjust model inputs to match excel file
     opti.set_value(required_snr, input[0])
     opti.set_value(battery_specific_energy_Wh_kg, input[1])
-    opti.set_value(solar_cell_efficiency, input[2])
-    opti.set_value(revisit_rate, input[3])
-    opti.set_value(coverage_radius, input[4])
+    opti.set_value(solar_cell_efficiency_cell_level, input[2])
+    opti.set_value(required_revisit_rate, input[3])
+    opti.set_value(required_spatial_coverage, input[4])
     opti.set_value(spatial_resolution, input[5])
     opti.set_value(structural_mass_margin_multiplier, input[6])
 
@@ -102,7 +102,7 @@ if __name__ == '__main__':
 
     ### Crunch the numbers
     if parallel:
-        with mp.Pool(mp.cpu_count()) as p:
+        with mp.Pool(48) as p:
             for day_val, lat_val, span_val in p.imap_unordered(
                     func=run_wrapped,
                     iterable=inputs
