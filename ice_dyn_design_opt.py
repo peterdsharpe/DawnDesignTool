@@ -1584,7 +1584,7 @@ wavelength = opti.variable(
     init_guess=0.03,
     scale=0.01,
     lower_bound=0.015,
-    upper_bound=0.3,
+    upper_bound=0.03,
     **inst
 )
 bandwidth = opti.variable(
