@@ -6,7 +6,7 @@ import sys
 
 
 ### Turn parallelization on/off.
-parallel = True
+parallel = False
 
 def read_excel_data(excel_file):
     df = pd.read_excel(excel_file)
@@ -37,7 +37,7 @@ def run(day_val, lat_val):
         # )
         sol = opti.solve(
             max_iter=2000,
-            max_runtime=600,
+            max_runtime=1200,
             verbose=False
         )
         print("Success!")
@@ -60,7 +60,10 @@ def run_wrapped(input):
 
 
 if __name__ == '__main__':
-    run_number = 3
+
+    assert optimization_mode == "payload_mass", "This script is only for payload mass optimization."
+
+    run_number = 0
 
     excel_file = "cache/Wildfire/wildfire_runs_payload.xlsx"
 
@@ -70,8 +73,8 @@ if __name__ == '__main__':
 
     # adjust model inputs to match excel file
     opti.set_value(battery_specific_energy_Wh_kg, input[0])
-    opti.set_value(solar_cell_efficiency, input[1])
-    opti.set_value(revisit_rate, input[2])
+    opti.set_value(solar_cell_efficiency_cell_level, input[1])
+    opti.set_value(required_revisit_rate, input[2])
     opti.set_value(wing_span, input[3])
     opti.set_value(payload_power, input[4])
     opti.set_value(structural_mass_margin_multiplier, input[5])
