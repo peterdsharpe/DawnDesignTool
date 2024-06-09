@@ -35,7 +35,7 @@ def run(day_val, lat_val):
         # )
         sol = opti.solve(
             max_iter=4000,
-            max_runtime=6000,
+            max_runtime=1200,
             verbose=False
         )
 
@@ -59,7 +59,10 @@ def run_wrapped(input):
 
 if __name__ == '__main__':
 
-    run_number = 5
+    assert optimization_mode == "wingspan", "This script is only for multi-objective optimization."
+
+
+    run_number = 13
 
     excel_file = "cache/Wildfire/wildfire_runs.xlsx"
 
