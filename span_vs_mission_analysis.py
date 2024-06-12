@@ -40,19 +40,19 @@ for num in range(6, 7):
     # bridge_nans(spans_grid, depth=2)
     #
 
-    # Add dummy points
-    bad_points = [
-        (0, 80),
-        (0, 70),
-        (365, 80),
-        (365, 70),
-        (244, -80),
-        (244, -70),
-    ]
-    for p in bad_points:
-        days_raw = np.append(days_raw, p[0])
-        lats_raw = np.append(lats_raw, p[1])
-        spans_raw = np.append(spans_raw, 1000)
+    # # Add dummy points
+    # bad_points = [
+    #     (0, 80),
+    #     (0, 70),
+    #     (365, 80),
+    #     (365, 70),
+    #     (244, -80),
+    #     (244, -70),
+    # ]
+    # for p in bad_points:
+    #     days_raw = np.append(days_raw, p[0])
+    #     lats_raw = np.append(lats_raw, p[1])
+    #     spans_raw = np.append(spans_raw, 1000)
 
     # # Filter by nan
     nan = np.isnan(spans_raw)
@@ -67,7 +67,7 @@ for num in range(6, 7):
             lats_raw[~nan],
         )).T,
         spans_raw[~nan],
-        smoothing=0.1,
+        smoothing=50,
         kernel="cubic",
     )
 
@@ -91,7 +91,7 @@ for num in range(6, 7):
         Spans,
     ]
     kwargs = {
-        "levels": np.arange(20, 50.1, 2),
+        "levels": np.arange(14, 50.1, 4),
         "alpha" : 0.7,
         "extend": "both",
     }
@@ -237,7 +237,7 @@ for num in range(6, 7):
     #
     plt.annotate(
         text="Infeasible",
-        xy=(174, -55),
+        xy=(174, -65),
         xycoords="data",
         ha="center",
         fontsize=10,
