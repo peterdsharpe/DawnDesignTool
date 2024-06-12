@@ -1621,8 +1621,7 @@ if trajectory == 'circular':
     opti.subject_to(flight_path_radius == max_imaging_offset + coverage_radius)
     spatial_coverage = np.pi * coverage_radius ** 2
     payload_power_adjusted = payload_power
-    if optimization_mode == 'wingspan':
-        opti.subject_to([spatial_coverage >= required_spatial_coverage,
+    opti.subject_to([spatial_coverage >= required_spatial_coverage,
                          revisit_rate >= required_revisit_rate])
 
 if trajectory == "racetrack":
