@@ -5,34 +5,35 @@ import aerosandbox.numpy as np
 from scipy import interpolate
 import pandas as pd
 
-debug_mode = True
-run_num = 1
-run_name = f"payload_run_{run_num}"
+runs = [0,1,2,3]
+debug_mode = False
+
+
 def plot(run_name, title1, title2, run_number):
     # Do raw imports
     data = pd.read_csv(f"cache/Wildfire/{run_name}.csv")
     data.columns = data.columns.str.strip()
     days_raw = np.array(data['Days'], dtype=float)
     lats_raw = np.array(data['Latitudes'], dtype=float)
-    if run_num == 3: # This is a hack to fix rbf interpolator when there are nan values in clearly not converged area
-        data.loc[data['Payloads'] == 'nan                 ', 'Payloads'] = np.nan
-        data.loc[(data['Payloads'].isnull()) & (data['Latitudes'] > -15) & (data['Latitudes'] < 15), 'Payloads'] = -1000
 
     payloads_raw = np.array(data['Payloads'], dtype=float)
 
     # Add dummy points
-    bad_points = [
-        (0, 80),
-        (0, 70),
-        (365, 80),
-        (365, 70),
-        (244, -80),
-        (244, -70),
-    ]
-    for p in bad_points:
-        days_raw = np.append(days_raw, p[0])
-        lats_raw = np.append(lats_raw, p[1])
-        payloads_raw = np.append(payloads_raw, -1000)
+    # bad_points = [
+    #     (0, 80),
+    #     (0, 70),
+    #     (365, 80),
+    #     (365, 70),
+    #     (160, -80),
+    #     (160, -70),
+    #     (160, -20),
+    #     (365, 30),
+    #     (365, 40)
+    # ]
+    # for p in bad_points:
+    #     days_raw = np.append(days_raw, p[0])
+    #     lats_raw = np.append(lats_raw, p[1])
+    #     payloads_raw = np.append(payloads_raw, -1000)
 
     # # Filter by nan
     nan = np.isnan(payloads_raw)
@@ -41,24 +42,14 @@ def plot(run_name, title1, title2, run_number):
     # spans_raw[spans_raw > infeasible_value] = infeasible_value
     # nan = np.isnan(spans_raw)
 
-    if run_num == 3:
-        rbf = interpolate.RBFInterpolator(
+
+    rbf = interpolate.RBFInterpolator(
             np.vstack((
                 days_raw[~nan],
                 lats_raw[~nan],
             )).T,
             payloads_raw[~nan],
-            smoothing=1,
-            kernel="linear",
-        )
-    else:
-        rbf = interpolate.RBFInterpolator(
-            np.vstack((
-                days_raw[~nan],
-                lats_raw[~nan],
-            )).T,
-            payloads_raw[~nan],
-            smoothing=5,
+            smoothing=100,
             kernel="cubic",
         )
 
@@ -141,7 +132,7 @@ def plot(run_name, title1, title2, run_number):
 
     plt.annotate(
         text="Infeasible",
-        xy=(174, -55),
+        xy=(174, -65),
         xycoords="data",
         ha="center",
         fontsize=10,
@@ -201,11 +192,12 @@ def read_excel_data(excel_file):
     return df.values.tolist()
 
 if __name__ == '__main__':
-
-    excel_file = "cache/Wildfire/wildfire_runs_payload.xlsx"
-    # Read data from Excel
-    inputs = read_excel_data(excel_file)
-    title_1 = inputs[run_num][8]
-    title_2 = inputs[run_num][9]
-    plot(run_name, title_1, title_2, run_num)
+    for run_num in runs:
+        run_name = f"payload_run_{run_num}"
+        excel_file = "cache/Wildfire/wildfire_runs_payload.xlsx"
+        # Read data from Excel
+        inputs = read_excel_data(excel_file)
+        title_1 = inputs[run_num][8]
+        title_2 = inputs[run_num][9]
+        plot(run_name, title_1, title_2, run_num)
 
