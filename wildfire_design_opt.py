@@ -1530,7 +1530,7 @@ look_angle = opti.variable(
     lower_bound=25,
     **des
 ) # limited in lower bound by specular reflection which we get at low look angles and does not enable interferometry
-center_wavelength = opti.variable(
+wavelength = opti.variable(
     init_guess=0.03,
     scale=0.01,
     lower_bound=0.015,
@@ -1561,15 +1561,15 @@ power_trans = opti.variable(
 radar_aperture_area = radar_width * radar_length  # meters ** 2
 mass_radar_aperture = 5.55 * radar_aperture_area
 dist = altitude / np.cosd(look_angle)  # meters
-swath_azimuth = center_wavelength * dist / radar_length  # meters
-swath_range = center_wavelength * dist / (radar_width * np.cosd(look_angle))  # meters
-max_length_synth_ap = center_wavelength * dist / radar_length  # meters
+swath_azimuth = wavelength * dist / radar_length  # meters
+swath_range = wavelength * dist / (radar_width * np.cosd(look_angle))  # meters
+max_length_synth_ap = wavelength * dist / radar_length  # meters
 ground_area = swath_range * swath_azimuth * np.pi / 4  # meters ** 2
 radius = (swath_azimuth + swath_range) / 4  # meters
 ground_imaging_offset = np.tand(look_angle) * altitude  # meters
 sigma0_db = sigma0_soil(wavelength, look_angle)
 sigma0 = 10 ** (sigma0_db / 10)
-antenna_gain = 4 * np.pi * radar_aperture_area * 0.7 / center_wavelength ** 2
+antenna_gain = 4 * np.pi * radar_aperture_area * 0.7 / wavelength ** 2
 max_swath_range = opti.variable(init_guess=8500,scale=1e3,lower_bound=0,**ops)
 max_swath_azimuth = opti.variable(init_guess=8500,scale=1e3,lower_bound=0,**ops)
 max_imaging_offset = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, **ops)
@@ -1583,7 +1583,7 @@ a_B = 1  # pulse-taper factor to relate bandwidth and pulse duration
 pulse_duration = a_B / bandwidth
 range_resolution = c * pulse_duration / (2 * np.sind(look_angle))
 azimuth_resolution = radar_length / 2
-critical_baseline = center_wavelength * dist / (2 * range_resolution * (np.cosd(look_angle)) ** 2)
+critical_baseline = wavelength * dist / (2 * range_resolution * (np.cosd(look_angle)) ** 2)
 
 opti.subject_to([
     max_swath_range >= swath_range,
@@ -1946,7 +1946,7 @@ if trajectory == 'lawnmower':
     # only sample in straight sections of racetrack with smoothing correction from Peter
     payload_power_adjusted = payload_power * np.cos(track - start_angle) ** 2
 
-snr = payload_power * antenna_gain ** 2 * center_wavelength ** 3 * a_hs * sigma0 * range_resolution / \
+snr = payload_power * antenna_gain ** 2 * wavelength ** 3 * a_hs * sigma0 * range_resolution / \
       ((2 * 4 * np.pi) ** 3 * dist ** 3 * k_b * T * F * ground_speed * a_B)
 
 snr_db = 10 * np.log(snr)
@@ -1957,7 +1957,7 @@ snr_db = 10 * np.log(snr)
 deviation = 10 # meters
 # opti.subject_to(InSAR_resolution >= N_i * spatial_resolution)
 # p_thermal = 1 / (1 + snr_db ** -1)
-# p_position = 1 - (2 * deviation * range_resolution * (np.cosd(look_angle)) ** 2 / (center_wavelength * dist))
+# p_position = 1 - (2 * deviation * range_resolution * (np.cosd(look_angle)) ** 2 / (wavelength * dist))
 # p_time = -0.0021 * temporal_resolution + 0.95
 # decorrelation = p_thermal * p_position * p_time
 #
@@ -2437,7 +2437,7 @@ if __name__ == "__main__":
                             # "precision": fmt(avg_precision),
                             "pulse repetition frequency": fmt(pulse_rep_freq),
                             "bandwidth": fmt(bandwidth),
-                            "center wavelength": fmt(center_wavelength),
+                            "wavelength": fmt(wavelength),
                             "look angle": fmt(look_angle),
                             "SNR": fmt(avg_snr),
                         }.items():
@@ -2482,7 +2482,7 @@ if __name__ == "__main__":
                             #"precision": fmt(avg_precision),
                             "pulse repetition frequency": fmt(pulse_rep_freq),
                             "bandwidth": fmt(bandwidth),
-                            "center wavelength": fmt(center_wavelength),
+                            "wavelength": fmt(wavelength),
                             "look angle": fmt(look_angle),
                             "SNR": fmt(avg_snr),
                         }.items():
