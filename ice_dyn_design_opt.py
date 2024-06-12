@@ -23,7 +23,7 @@ import matplotlib.patches as patches
 import seaborn as sns
 from design_opt_utilities.fuselage import make_fuselage, aero_payload_pod
 from typing import Union, List
-from aerosandbox.modeling.interpolation import InterpolatedModel
+from sigma0 import sigma0_ice
 import pathlib
 from aerosandbox.tools.pretty_plots import plt, sns, mpl, show_plot
 
@@ -1618,6 +1618,8 @@ max_length_synth_ap = wavelength * dist / radar_length  # meters
 ground_area = swath_range * swath_azimuth * np.pi / 4  # meters ** 2
 radius = (swath_azimuth + swath_range) / 4  # meters
 ground_imaging_offset = np.tand(look_angle) * altitude  # meters
+#
+sigma0_db = sigma0_ice(wavelength, look_angle)
 sigma0 = 10 ** (sigma0_db / 10)
 # sigma0 = scattering_cross_sec / ground_area
 antenna_gain = 4 * np.pi * radar_aperture_area * 0.7 / wavelength ** 2
