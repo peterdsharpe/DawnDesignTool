@@ -34,13 +34,13 @@ path = str(
 sns.set(font_scale=1)
 
 ##### Section: Initialize Optimization
-output_file = "lawnmower=4_antarctica"
+output_file = "lawnmower_test"
 opti = asb.Opti(  # Normal mode - Design Optimization
     cache_filename=f"outputs/{output_file}/optimization_solution.json",
     save_to_cache_on_solve=True
 )
 # opti = asb.Opti( # Alternate mode - Frozen Design Optimization
-#     variable_categories_to_freeze=["aircraft"],
+#     variable_categories_to_freeze=["instrument"],
 #     cache_filename=f"outputs/{output_file}/optimization_solution.json",
 #     load_frozen_variables_from_cache=True,
 #     ignore_violated_parametric_constraints=True
@@ -132,7 +132,7 @@ min_speed = 0.5 # specify a minimum groundspeed (bad convergence if less than 0.
 wind_direction = 45 # degrees, the direction the wind is blowing from 0 being North and aligned with the x-axis
 run_with_95th_percentile_wind_condition = False # do we want to run the sizing with the 95th percentile wind condition?
 if mode == "multi-objective":
-    required_strain_temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0, upper_bound=24, **inst) # hours
+    required_strain_temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0, upper_bound=24, **ops) # hours
     required_spatial_coverage = opti.variable(init_guess=5000 * 1e6, scale=1000 * 1e6, lower_bound=3000 * 1e6, **ops)
     # required_spatial_coverage = opti.parameter(value=100000)
 if mode == "parameter_sweep":
@@ -155,15 +155,15 @@ trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
 mass_payload_base = 5 # kg, does not include data storage or aperture mass
 payload_volume = 0.023 * 1.5  # assuming payload mass from gamma remote sensing with 50% margin on volume
 tb_per_day = 4 # terabytes per day, the amount of data the payload collects per day, to account for storage
-strain_range_resolution = opti.variable(init_guess=0.5, scale=1, lower_bound=0, **inst) # meters
+strain_range_resolution = opti.variable(init_guess=0.5, scale=1, lower_bound=0, **ops) # meters
 if mode == "multi-objective":
-    strain_azimuth_resolution = opti.variable(init_guess=10, scale=1, lower_bound=0, upper_bound=50, **inst) # meters
+    strain_azimuth_resolution = opti.variable(init_guess=10, scale=1, lower_bound=0, upper_bound=50, **ops) # meters
 if mode == "parameter_sweep":
     strain_azimuth_resolution = opti.parameter(value=50) # meters
-strain_temporal_resolution = opti.variable(init_guess=4, scale=1, **inst) # hours
+strain_temporal_resolution = opti.variable(init_guess=4, scale=1, **ops) # hours
 # required_snr = 20  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
 if mode == "multi-objective":
-    required_strain_precision = opti.variable(init_guess=1E-4, scale=1E-5, lower_bound=0, upper_bound=1E-4, **inst)
+    required_strain_precision = opti.variable(init_guess=1E-4, scale=1E-5, lower_bound=0, upper_bound=1E-4, **ops)
 if mode == "parameter_sweep":
     required_strain_precision = opti.parameter(value=1E-4) # 1/yr, the required precision of the strain measurement
 # meters given from Brent based on the properties of the ice sampled by the radar
@@ -1623,9 +1623,9 @@ sigma0_db = sigma0_ice(wavelength, look_angle)
 sigma0 = 10 ** (sigma0_db / 10)
 # sigma0 = scattering_cross_sec / ground_area
 antenna_gain = 4 * np.pi * radar_aperture_area * 0.7 / wavelength ** 2
-max_swath_range = opti.variable(init_guess=8500,scale=1e3,lower_bound=0,**inst)
-max_swath_azimuth = opti.variable(init_guess=8500,scale=1e3,lower_bound=0,**inst)
-max_imaging_offset = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, **inst)
+max_swath_range = opti.variable(init_guess=8500,scale=1e3,lower_bound=0,**ops)
+max_swath_azimuth = opti.variable(init_guess=8500,scale=1e3,lower_bound=0,**ops)
+max_imaging_offset = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, **ops)
 
 # Assumed constants
 a_hs = 0.88  # aperture-illumination taper factor associated with the synthetic aperture (value from Ulaby and Long)
@@ -2005,9 +2005,9 @@ opti.subject_to([
 ])
 
 # translate to final data product Terms
-N_i_range = opti.variable(init_guess=5, scale=1, lower_bound=10, **inst)
-N_i_azimuth = opti.variable(init_guess=5, scale=1, lower_bound=10, **inst)
-N_i_time = opti.variable(init_guess=5, scale=1, lower_bound=1, **inst)
+N_i_range = opti.variable(init_guess=5, scale=1, lower_bound=10, **ops)
+N_i_azimuth = opti.variable(init_guess=5, scale=1, lower_bound=10, **ops)
+N_i_time = opti.variable(init_guess=5, scale=1, lower_bound=1, **ops)
 N_i = N_i_range * N_i_azimuth * N_i_time # number of pixels in the incoherent averaging window
 
 # assume deviation based on GPS uncertainty
