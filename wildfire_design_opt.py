@@ -102,7 +102,8 @@ sample_area_width = 10000  # meters, the width of the area the aircraft must sam
 
 # Instrument Parameters
 mass_payload_base = 5 # kg, does not include data storage or aperture mass
-payload_volume = 0.023 * 1.5  # assuming payload mass from gamma remote sensing with 50% margin on volume
+if optimization_mode == "wingspan":
+    payload_volume = 0.023 * 1.5  # assuming payload mass from gamma remote sensing with 50% margin on volume
 tb_per_day = 4 # terabytes per day, the amount of data the payload collects per day, to account for storage
 # spatial_resolution = opti.variable(init_guess=2.2, scale=1, lower_bound=0.015, category='des')  # meters from conversation with Brent on 3/7/2023
 spatial_resolution = opti.parameter(value=5)
@@ -1991,6 +1992,7 @@ if optimization_mode == 'payload_mass':
         mass=mass_payload,
         x_cg=payload_cg
     )
+    payload_volume = mass_payload / 145
 
 # region Propulsion
 
