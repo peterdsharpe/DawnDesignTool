@@ -24,6 +24,7 @@ from design_opt_utilities.fuselage import make_fuselage, aero_payload_pod
 from typing import Union, List
 from aerosandbox.modeling.interpolation import InterpolatedModel
 import pathlib
+from sigma0 import sigma0_soil
 from aerosandbox.tools.pretty_plots import plt, sns, mpl, show_plot
 
 path = str(
@@ -1565,6 +1566,7 @@ max_length_synth_ap = center_wavelength * dist / radar_length  # meters
 ground_area = swath_range * swath_azimuth * np.pi / 4  # meters ** 2
 radius = (swath_azimuth + swath_range) / 4  # meters
 ground_imaging_offset = np.tand(look_angle) * altitude  # meters
+sigma0_db = sigma0_soil(wavelength, look_angle)
 sigma0 = 10 ** (sigma0_db / 10)
 antenna_gain = 4 * np.pi * radar_aperture_area * 0.7 / center_wavelength ** 2
 max_swath_range = opti.variable(init_guess=8500,scale=1e3,lower_bound=0,**ops)
