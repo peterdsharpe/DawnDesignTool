@@ -166,7 +166,6 @@ if mode == "multi-objective":
 if mode == "parameter_sweep":
     required_strain_precision = opti.parameter(value=1E-4) # 1/yr, the required precision of the strain measurement
 # meters given from Brent based on the properties of the ice sampled by the radar
-sigma0_db = -20 # unitless ranges from -20 to 0 db according to Charles in 4/19/22 email
 
 # Margins
 structural_mass_margin_multiplier = 1.25
@@ -1616,15 +1615,23 @@ swath_range = wavelength * dist / (radar_width * np.cosd(look_angle))  # meters
 max_length_synth_ap = wavelength * dist / radar_length  # meters
 ground_area = swath_range * swath_azimuth * np.pi / 4  # meters ** 2
 radius = (swath_azimuth + swath_range) / 4  # meters
-ground_imaging_offset = np.tand(look_angle) * altitude  # meters
-#
-sigma0_db = sigma0_ice(wavelength, look_angle)
-sigma0 = 10 ** (sigma0_db / 10)
-# sigma0 = scattering_cross_sec / ground_area
+ground_imaging_offset = np.tand(look_angle) * altitude - swath_range / 2 # meters
+
 antenna_gain = 4 * np.pi * radar_aperture_area * 0.7 / wavelength ** 2
 max_swath_range = opti.variable(init_guess=8500,scale=1e3,lower_bound=0,**ops)
 max_swath_azimuth = opti.variable(init_guess=8500,scale=1e3,lower_bound=0,**ops)
 max_imaging_offset = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, **ops)
+
+max_incidence_angle = 90 - np.arctan2d(cruise_altitude, (max_imaging_offset + max_swath_range))
+min_incidence_angle = 90 - np.arctan2d(cruise_altitude, (max_imaging_offset))
+max_look_angle = np.arctan2d(cruise_altitude, (max_imaging_offset))
+min_look_angle = np.arctan2d(cruise_altitude, (max_imaging_offset + max_swath_range))
+opti.subject_to([min_look_angle >= 25,
+                 max_look_angle <= 65])
+
+sigma0_db = sigma0_ice(wavelength, look_angle)
+sigma0 = 10 ** (sigma0_db / 10)
+# sigma0 = scattering_cross_sec / ground_area
 
 # Assumed constants
 a_hs = 0.88  # aperture-illumination taper factor associated with the synthetic aperture (value from Ulaby and Long)
