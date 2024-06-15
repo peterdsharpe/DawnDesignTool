@@ -1625,7 +1625,10 @@ if trajectory == 'straight':
 if trajectory == 'circular':
     swath_overlap = opti.variable(init_guess=0.5, scale=0.1, lower_bound=0, upper_bound=1, **ops)
     coverage_radius = max_swath_range - (max_swath_range * swath_overlap) / 2
-    opti.subject_to(flight_path_radius == max_imaging_offset + coverage_radius)
+    if optimization_mode== "wingspan":
+        opti.subject_to(flight_path_radius == max_imaging_offset + coverage_radius)
+    if optimization_mode == "payload_mass":
+        opti.subject_to(flight_path_radius >= coverage_radius)
     spatial_coverage = np.pi * coverage_radius ** 2
     payload_power_adjusted = payload_power
     opti.subject_to([spatial_coverage >= required_spatial_coverage,
