@@ -144,12 +144,11 @@ if mode == "parameter_sweep":
 required_headway_per_day = 100000
 vehicle_heading = opti.parameter(value=0) # degrees
 
-# trajectory = 'circular' # do we want to assume a circular trajectory?
-# temporal_resolution = opti.variable(init_guess=6, scale=1, lower_bound=0.5, **des)  # hours
+trajectory = 'circular' # do we want to assume a circular trajectory?
 
 # trajectory = 'racetrack'
 
-trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
+# trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
 
 # Instrument Parameters
 mass_payload_base = 5 # kg, does not include data storage or aperture mass
