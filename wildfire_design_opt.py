@@ -111,7 +111,7 @@ spatial_resolution = opti.parameter(value=5)
 required_snr = opti.parameter(value=20)  # 6 dB min and 20 dB ideally from conversation w Brent on 2/18/22
 # required_precision = 1e-4 * 60 * 60 * 24 * 365 # 1/year
 # meters given from Brent based on the properties of the ice sampled by the radar
-sigma0_db = -30
+# sigma0_db = -30
 ## ranges from -15 to -30 dB for grassland
 ## ranges from -20 to -5 dB for forest regions (depending on biomass)
 
@@ -1566,13 +1566,20 @@ swath_range = wavelength * dist / (radar_width * np.cosd(look_angle))  # meters
 max_length_synth_ap = wavelength * dist / radar_length  # meters
 ground_area = swath_range * swath_azimuth * np.pi / 4  # meters ** 2
 radius = (swath_azimuth + swath_range) / 4  # meters
-ground_imaging_offset = np.tand(look_angle) * altitude  # meters
-sigma0_db = sigma0_soil(wavelength, look_angle)
-sigma0 = 10 ** (sigma0_db / 10)
+ground_imaging_offset = np.tand(look_angle) * altitude - swath_range / 2 # meters
+
 antenna_gain = 4 * np.pi * radar_aperture_area * 0.7 / wavelength ** 2
 max_swath_range = opti.variable(init_guess=8500,scale=1e3,lower_bound=0,**ops)
 max_swath_azimuth = opti.variable(init_guess=8500,scale=1e3,lower_bound=0,**ops)
 max_imaging_offset = opti.variable(init_guess=10000, scale=1e3, lower_bound=0, **ops)
+
+max_incidence_angle = 90 - np.arctan2d(cruise_altitude, (max_imaging_offset + max_swath_range))
+min_incidence_angle = 90 - np.arctan2d(cruise_altitude, (max_imaging_offset))
+if optimization_mode == 'wingspan':
+    opti.subject_to([min_incidence_angle >= 25,
+                    max_incidence_angle <= 65])
+sigma0_db = sigma0_soil(wavelength, look_angle)
+sigma0 = 10 ** (sigma0_db / 10)
 
 # Assumed constants
 a_hs = 0.88  # aperture-illumination taper factor associated with the synthetic aperture (value from Ulaby and Long)
