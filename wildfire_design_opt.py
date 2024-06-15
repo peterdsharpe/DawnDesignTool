@@ -90,7 +90,7 @@ vehicle_heading = 0 # degrees
 
 trajectory = 'circular' # do we want to assume a circular trajectory?
 required_revisit_rate = opti.parameter(value=2)
-required_spatial_coverage = opti.parameter(value=5000e6)
+required_spatial_coverage = opti.parameter(value=1000e6)
 
 # trajectory = 'racetrack'
 # required_revisit_rate = opti.parameter(value=2)
