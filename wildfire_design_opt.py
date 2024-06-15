@@ -2349,15 +2349,19 @@ def read_excel_data(excel_file):
     df = pd.read_excel(excel_file)
     return df.values.tolist()
 if __name__ == "__main__":
+    primals = np.load(f"cache/Wildfire/0_primals.npy")
+    duals = np.load(f"cache/Wildfire/0_duals.npy")
+    # opti.set_initial(opti.x, primals)
+    # opti.set_initial(opti.lam_g, duals)
     for run in range(0, 1):
                     opti.set_value(track_scaler, 1)
 
                     try:
                         # opti.set_value(wingspan_optimization_scaling_term, val)
                         sol = opti.solve(
-                            max_iter=10000,
+                            max_iter=100000,
                             options={
-                                "ipopt.max_cpu_time": 6000
+                                "ipopt.max_cpu_time": 60000
                             }
                         )
                         print("Success!")
