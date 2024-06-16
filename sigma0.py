@@ -5,7 +5,7 @@ sys.path.append("C:\\Users\\AnnickDewald\\PycharmProjects\\AeroSandbox")
 from aerosandbox.modeling.interpolation import InterpolatedModel
 
 # load the data
-sigma0_ice_vals = np.load('sigma0_hh.npy', allow_pickle=True)
+sigma0_ice_vals = np.load('sigma0_hh_ice.npy', allow_pickle=True)
 sigma0_soil_vals = np.load('sigma0_hh_soil.npy', allow_pickle=True)
 wavelengths = np.load('wavelengths.npy', allow_pickle=True)
 theta_values = np.load('theta_values.npy', allow_pickle=True)
@@ -104,8 +104,6 @@ if __name__ == '__main__':
     ax2.set_xlabel('Incidence Angle (degrees)')
     ax2.set_ylabel('Wavelength (m)')
     ax2.set_zlabel('Sigma0 HH Fit Value (dB)')
-
-
 
     plt.show()
 
