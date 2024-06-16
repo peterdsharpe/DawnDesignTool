@@ -1629,7 +1629,7 @@ min_look_angle = np.arctan2d(cruise_altitude, (max_imaging_offset + max_swath_ra
 opti.subject_to([min_look_angle >= 25,
                  max_look_angle <= 65])
 
-sigma0_db = sigma0_ice(wavelength, look_angle)
+sigma0_db = sigma0_ice(wavelength, 90 - look_angle)
 sigma0 = 10 ** (sigma0_db / 10)
 # sigma0 = scattering_cross_sec / ground_area
 
