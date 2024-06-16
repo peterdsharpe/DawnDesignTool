@@ -131,118 +131,39 @@ for num in range(6, 7):
 
     ### Plots the region of interest (arctic ice)
 
-    # ax.add_patch(
-    #     plt.Rectangle(
-    #         (1, -80),
-    #         width=(55),
-    #         height=(20),
-    #         linestyle="--",
-    #         color="k",
-    #         linewidth=1,
-    #         fill=False
-    #     )
-    # )
-    # ax.add_patch(
-    #     plt.Rectangle(
-    #         (365-22, -80),
-    #         width=(20),
-    #         height=(20),
-    #         linestyle="--",
-    #         color="k",
-    #         linewidth=1,
-    #         fill=False
-    #     )
-    # )
-    #
-    # ax.add_patch(
-    #     plt.Rectangle(
-    #         (152, 50),
-    #         width=(50),
-    #         height=(5),
-    #         linestyle="--",
-    #         color="r",
-    #         linewidth=1,
-    #         fill=False,
-    #         label="Canadian 2023 Wildfires"
-    #     )
-    # )
-    # ax.add_patch(
-    #     plt.Rectangle(
-    #         (320, -40),
-    #         width=(45),
-    #         height=(20),
-    #         linestyle="--",
-    #         color="w",
-    #         linewidth=1,
-    #         fill=False,
-    #         label="Australian 2019 Wildfires"
-    #     )
-    # )
-    # ax.add_patch(
-    #     plt.Rectangle(
-    #         (228, 40),
-    #         width=(60),
-    #         height=(5),
-    #         linestyle="--",
-    #         color="g",
-    #         linewidth=1,
-    #         fill=False,
-    #         label="August Complex 2020 Wildfire"
-    #     )
-    # )
-
-    # ### Plots the region of interest (CONUS)
-    # plt.plot(
-    #     244,
-    #     26,
-    #     ".--k",
-    #     label="Region of Interest\n& Sizing Case",
-    # )
-    # ax.add_patch(
-    #     plt.Rectangle(
-    #         (152, 26),
-    #         width=(244 - 152),
-    #         height=(49 - 26),
-    #         linestyle="--",
-    #         color="k",
-    #         linewidth=1,
-    #         fill=False
-    #     )
-    # )
-    ## Amazon Mission
-    # ax.add_patch(
-    #     plt.Rectangle(
-    #         (1, -11),
-    #         width=(362),
-    #         height=(15),
-    #         linestyle="--",
-    #         color="k",
-    #         linewidth=1,
-    #         fill=False
-    #     )
-    # )
-
-    # ### Plot the region of interest (hurricane)
-    # ax.add_patch(
-    #     plt.Rectangle(
-    #         (212, 5),
-    #         width=(90),
-    #         height=(45),
-    #         linestyle="--",
-    #         color="k",
-    #         linewidth=1,
-    #         fill=False
-    #     )
-    # )
-    #
-    plt.annotate(
-        text="Infeasible",
-        xy=(174, -65),
-        xycoords="data",
-        ha="center",
-        fontsize=10,
-        color='w',
+    ax.add_patch(
+        plt.Rectangle(
+            (121, 32),
+            width=(180),
+            height=(8),
+            linestyle="--",
+            color="r",
+            linewidth=1,
+            fill=False,
+            label="Californian Wildfire Seasonality/Latitude Range"
+        )
     )
+
+    ax.add_patch(
+        plt.Rectangle(
+            (121, 40),
+            width=(150),
+            height=(20),
+            linestyle="--",
+            color="b",
+            linewidth=1,
+            fill=False,
+            label="Canadian Wildfire Seasonality/Latitude Range"
+        )
+    )
+    # plt.annotate(
+    #     text="Infeasible",
+    #     xy=(174, -65),
+    #     xycoords="data",
+    #     ha="center",
+    #     fontsize=10,
+    #     color='w',
+    # )
     #
     plt.xticks(
         np.linspace(0, 365, 13)[:-1],
@@ -290,6 +211,7 @@ for num in range(6, 7):
     plt.xlabel("Day of Year")
     plt.ylabel("Latitude")
     plt.tight_layout()
+    plt.legend(loc='lower center')
     plt.savefig(f"cache/Wildfire/plot_{run_num}.png")
     plt.show()
     # show_plot(
