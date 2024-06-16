@@ -2349,10 +2349,10 @@ def read_excel_data(excel_file):
     df = pd.read_excel(excel_file)
     return df.values.tolist()
 if __name__ == "__main__":
-    primals = np.load(f"cache/Wildfire/0_primals.npy")
-    duals = np.load(f"cache/Wildfire/0_duals.npy")
-    # opti.set_initial(opti.x, primals)
-    # opti.set_initial(opti.lam_g, duals)
+    primals = np.load(f"cache/Wildfire/payload_mass_primals.npy")
+    duals = np.load(f"cache/Wildfire/payload_mass_duals.npy")
+    opti.set_initial(opti.x, primals)
+    opti.set_initial(opti.lam_g, duals)
     for run in range(0, 1):
                     opti.set_value(track_scaler, 1)
 
