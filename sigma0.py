@@ -13,35 +13,35 @@ dict = {'wavelength': wavelengths, 'look_angle': theta_values}
 
 # create the model
 sigma0_model_ice = InterpolatedModel(x_data_coordinates={'wavelength': wavelengths,
-                                                     'look_angle': theta_values},
+                                                     'incidence_angle': theta_values},
                                  y_data_structured=sigma0_ice_vals,
                                  method='bspline')
 sigma0_model_soil = InterpolatedModel(x_data_coordinates={'wavelength': wavelengths,
-                                                        'look_angle': theta_values},
+                                                        'incidence_angle': theta_values},
                                     y_data_structured=sigma0_soil_vals,
                                     method='bspline')
 
-def sigma0_ice(wavelength, look_angle):
+def sigma0_ice(wavelength, incidence_angle):
     """
-    Returns the sigma0 value for a given wavelength and look angle
-    :param wavelength: radar wavelength in meters
-    :param look_angle: aperture look angle in degrees
+    Returns the sigma0 value for a given wavelength and look angle for ice
+    :param wavelength: radar wavelength in meters (limited to L-band 0.015-0.03m)
+    :param incidence_angle: incidence angle in degrees (limited from 25-65 degrees acording to underlying physical eqs)
     :return: sigma0 value in dB fit to model from PSet3 in Brent's Remote Sensing Class
     """
     return sigma0_model_ice({
         'wavelength': wavelength,
-        'look_angle': look_angle
+        'incidence_angle': incidence_angle
     })
-def sigma0_soil(wavelength, look_angle):
+def sigma0_soil(wavelength, incidence_angle):
     """
-    Returns the sigma0 value for a given wavelength and look angle
-    :param wavelength: radar wavelength in meters
-    :param look_angle: aperture look angle in degrees
+    Returns the sigma0 value for a given wavelength and look angle for soil
+    :param wavelength: radar wavelength in meters (limited to L-band 0.015-0.03m)
+    :param incidence_angle: incidence angle in degrees (limited from 25-65 degrees acording to underlying physical eqs)
     :return: sigma0 value in dB fit to model from PSet3 in Brent's Remote Sensing Class
     """
     return sigma0_model_soil({
         'wavelength': wavelength,
-        'look_angle': look_angle
+        'incidence_angle': incidence_angle
     })
 
 if __name__ == '__main__':
