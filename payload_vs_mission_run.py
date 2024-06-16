@@ -6,7 +6,7 @@ import sys
 
 
 ### Turn parallelization on/off.
-parallel = False
+parallel = True
 
 def read_excel_data(excel_file):
     df = pd.read_excel(excel_file)
@@ -36,7 +36,7 @@ def run(day_val, lat_val):
         #     }
         # )
         sol = opti.solve(
-            max_iter=2000,
+            max_iter=4000,
             max_runtime=1200,
             verbose=False
         )
@@ -103,7 +103,7 @@ if __name__ == '__main__':
 
     ### Crunch the numbers
     if parallel:
-        with mp.Pool(mp.cpu_count()) as p:
+        with mp.Pool(48) as p:
             for day_val, lat_val, payload_val in p.imap_unordered(
                     func=run_wrapped,
                     iterable=inputs
