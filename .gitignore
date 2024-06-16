@@ -153,3 +153,51 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+/cache/Wildfire/0_duals.npy
+/cache/Wildfire/0_primals.npy
+/cache/Wildfire/optimization_solution.json
+/cache/Wildfire/payload_run_0.csv
+/cache/Wildfire/payload_run_1.csv
+/cache/Wildfire/payload_run_2.csv
+/cache/Wildfire/payload_run_3.csv
+/cache/Wildfire/payload_run_4.csv
+/cache/Wildfire/plot_0.png
+/cache/Wildfire/plot_0_labelled.png
+/cache/Wildfire/plot_0_payload.png
+/cache/Wildfire/plot_0_payload_power.png
+/cache/Wildfire/plot_1.png
+/cache/Wildfire/plot_1_payload.png
+/cache/Wildfire/plot_2.png
+/cache/Wildfire/plot_2_payload.png
+/cache/Wildfire/plot_3.png
+/cache/Wildfire/plot_3_payload.png
+/cache/Wildfire/plot_4.png
+/cache/Wildfire/plot_5.png
+/cache/Wildfire/plot_6.png
+/cache/Wildfire/plot_7.png
+/cache/Wildfire/plot_7_payload_power.png
+/cache/Wildfire/plot_8.png
+/cache/Wildfire/plot_9.png
+/cache/Wildfire/plot_10.png
+/cache/Wildfire/plot_11.png
+/cache/Wildfire/plot_12.png
+/cache/Wildfire/plot_13.png
+/cache/Wildfire/plot_payload.png
+/cache/Wildfire/run_0.csv
+/cache/Wildfire/run_0_payload_power.csv
+/cache/Wildfire/run_1.csv
+/cache/Wildfire/run_2.csv
+/cache/Wildfire/run_3.csv
+/cache/Wildfire/run_4.csv
+/cache/Wildfire/run_5.csv
+/cache/Wildfire/run_6.csv
+/cache/Wildfire/run_7.csv
+/cache/Wildfire/run_7_payload_power.csv
+/cache/Wildfire/run_8.csv
+/cache/Wildfire/run_9.csv
+/cache/Wildfire/run_10.csv
+/cache/Wildfire/run_11.csv
+/cache/Wildfire/run_12.csv
+/cache/Wildfire/run_13.csv
+/cache/Wildfire/old_runs w old battery and sigma0/
+/cache/Wildfire/old_runs w old battery and sigma0/
