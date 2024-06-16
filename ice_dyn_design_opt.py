@@ -34,17 +34,17 @@ path = str(
 sns.set(font_scale=1)
 
 ##### Section: Initialize Optimization
-output_file = "lawnmower_test"
-opti = asb.Opti(  # Normal mode - Design Optimization
-    cache_filename=f"outputs/{output_file}/optimization_solution.json",
-    save_to_cache_on_solve=True
-)
-# opti = asb.Opti( # Alternate mode - Frozen Design Optimization
-#     variable_categories_to_freeze=["instrument"],
+output_file = "lawnmower=4_fixed_instrument"
+# opti = asb.Opti(  # Normal mode - Design Optimization
 #     cache_filename=f"outputs/{output_file}/optimization_solution.json",
-#     load_frozen_variables_from_cache=True,
-#     ignore_violated_parametric_constraints=True
+#     save_to_cache_on_solve=True
 # )
+opti = asb.Opti( # Alternate mode - Frozen Design Optimization
+    variable_categories_to_freeze=["instrument"],
+    cache_filename=f"outputs/{output_file}/optimization_solution.json",
+    load_frozen_variables_from_cache=True,
+    ignore_violated_parametric_constraints=True
+)
 air = dict(category="aircraft")
 ops = dict(category="operations")
 inst = dict(category="instrument")
@@ -144,11 +144,11 @@ if mode == "parameter_sweep":
 required_headway_per_day = 100000
 vehicle_heading = opti.parameter(value=0) # degrees
 
-trajectory = 'circular' # do we want to assume a circular trajectory?
+# trajectory = 'circular' # do we want to assume a circular trajectory?
 
 # trajectory = 'racetrack'
 
-# trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
+trajectory = 'lawnmower'  # do we want to assume a lawnmower trajectory?
 
 # Instrument Parameters
 mass_payload_base = 5 # kg, does not include data storage or aperture mass
@@ -2415,8 +2415,8 @@ if __name__ == "__main__":
             # Append the row to the list
             combinations.append(row)
     # combinations = np.linspace(100, 10000, 23)
-    opti.set_initial(opti.x, primals)
-    opti.set_initial(opti.lam_g, duals)
+    # opti.set_initial(opti.x, primals)
+    # opti.set_initial(opti.lam_g, duals)
     for run_num in runs:
         # opti.set_value(wingspan_optimization_scaling_term, float(combinations[run_num][0]))
         # opti.set_value(azimuth_optimization_scaling_term, float(combinations[run_num][1]))
