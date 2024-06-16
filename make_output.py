@@ -95,6 +95,7 @@ def load_variables(output_file, runs):
     number_of_racetracks = []
     offset_distances = []
     max_power_outputs = []
+    l_over_ds = []
     for run_num in runs:
         try:
             csv_file = f"outputs/{output_file}/outputs_data_run_{run_num}.csv"
@@ -174,7 +175,9 @@ def load_variables(output_file, runs):
             max_power_output = df['max_power_out'].values[0]
             max_power_output = re.search(r'([\d.]+)', max_power_output).group(1)
             max_power_outputs.append(float(max_power_output)/ 1e3)
-
+            l_over_d = df["Average Cruise L/D"].values[0]
+            l_over_d = re.search(r'([\d.]+)', l_over_d).group(1)
+            l_over_ds.append(float(l_over_d))
 
 
         except FileNotFoundError:
@@ -186,10 +189,10 @@ def load_variables(output_file, runs):
             'Mass TOGW [kg]': mass_TOGWs, 'Payload Power [W]': payload_powers, 'Payload Mass [kg]': payload_masses,
             'Battery Mass [kg]': battery_mass, 'Average Airspeed [m/s]': airspeeds,
             'Cruise Altitude [km]': cruise_altitudes, 'Revisit Period [hrs]': revisit_period,
-            'Max Power Output [kW]': max_power_outputs,
+            'Max Power Output [kW]': max_power_outputs, 'Average Cruise L/D': l_over_ds,
 
             'Imaging Offset Distance [km]': offset_distances,
-            'Look Angle [deg]': look_angles, 'Swath Range Dimension [km]': swath_ranges,
+            'Look Angle [deg]': look_angles, 'Swath Overlap': swath_overlap, 'Swath Range Dimension [km]': swath_ranges,
             'Swath Azimuth Dimension [km]': swath_azimuths,
 
             'SAR Range Resolution [m]': SAR_range_resolutions, 'SAR Azimuth Resolution [m]': SAR_azimuth_resolutions,
