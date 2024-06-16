@@ -5,7 +5,7 @@ import aerosandbox.numpy as np
 from scipy import interpolate
 import pandas as pd
 
-runs = [0,1,2,3]
+runs = [0, 1]
 debug_mode = False
 
 
@@ -129,15 +129,40 @@ def plot(run_name, title1, title2, run_number):
     #         fill=False
     #     )
     # )
-
-    plt.annotate(
-        text="Infeasible",
-        xy=(174, -65),
-        xycoords="data",
-        ha="center",
-        fontsize=10,
-        color='w',
+    ax.add_patch(
+        plt.Rectangle(
+            (121, 32),
+            width=(183),
+            height=(8),
+            linestyle="--",
+            color="r",
+            linewidth=1,
+            fill=False,
+            label="Californian Wildfire Seasonality/Latitude Range"
+        )
     )
+
+    ax.add_patch(
+        plt.Rectangle(
+            (121, 45),
+            width=(153),
+            height=(15),
+            linestyle="--",
+            color="b",
+            linewidth=1,
+            fill=False,
+            label="Canadian Wildfire Seasonality/Latitude Range"
+        )
+    )
+
+    # plt.annotate(
+    #     text="Infeasible",
+    #     xy=(174, -65),
+    #     xycoords="data",
+    #     ha="center",
+    #     fontsize=10,
+    #     color='w',
+    # )
 
     plt.xticks(
         np.linspace(0, 365, 13)[:-1],
@@ -183,7 +208,10 @@ def plot(run_name, title1, title2, run_number):
     plt.xlabel("Day of Year")
     plt.ylabel("Latitude")
     plt.tight_layout()
-    plt.savefig(f"cache/Wildfire/plot_{run_num}_payload.png")
+    plt.legend(loc='lower center')
+
+    plt.savefig(f"cache/Wildfire/plot_{run_num}_payload_labelled.png")
+
     plt.show()
     plt.close()
 
