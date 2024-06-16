@@ -10,6 +10,9 @@ import plotly.graph_objects as go
 import seaborn as sns
 import itertools
 import plotly.graph_objects as go
+import plotly.express as px
+from dash import Dash, dcc, html, Input, Output, no_update, callback
+
 
 #### inputs
 file_name = ('lawnmower=4_antarctica')
@@ -466,6 +469,124 @@ def corr_heatmap(df):
 
     plt.show()
 
+def interactive_plot(df):
+    column_combinations = list(itertools.combinations(df.columns, 2))
+    df = df.reset_index(drop=False)
+    for i in column_combinations:
+        utopia_x = df[i[0]].min()
+        utopia_y = df[i[1]].min()
+
+        hover_data = [col for col in df.columns if col not in i]
+        fig = px.scatter(df, x=i[0], y=i[1], hover_data=hover_data)
+        fig.update_traces(marker=dict(size=14))  # Set marker size for all points
+
+        if df[i[0]].name == 'Spatial Coverage [km^2]' or df[i[0]].name == 'Temporal Coverage [days]':
+            fig.update_xaxes(range=[df[i[0]].max() * 1.1, df[i[0]].min() * 0.9])  # Inverting x-axis range
+            utopia_x = df[i[0]].max()
+        if df[i[1]].name == 'Spatial Coverage [km^2]' or df[i[1]].name == 'Temporal Coverage [days]':
+            fig.update_yaxes(range=[df[i[1]].max() * 1.1, df[i[1]].min() * 0.9])  # Inverting y-axis range
+            utopia_y = df[i[1]].max()
+        fig.add_trace(go.Scatter(x=[utopia_x], y=[utopia_y], mode='markers+text',
+                                 marker=dict(symbol='star', color='green', size=15),
+                                 name='Utopia', text=['Utopia'],textfont=dict(size=16),  # Text to display as label
+                                 textposition='top center'))
+        optimal_points = check_pareto_optimality(df[i[0]].name, df[i[1]].name)
+        optimal_points.sort(key=lambda point: point[-1])
+        x_values = [point[0] for point in optimal_points]
+        y_values = [point[1] for point in optimal_points]
+
+        # Example normalization function
+        def normalize(value, min_value, max_value):
+            return (value - min_value) / (max_value - min_value)
+
+        # Assuming x_values and y_values are lists of coordinates
+        min_x = min(x_values)
+        max_x = max(x_values)
+        min_y = min(y_values)
+        max_y = max(y_values)
+
+        normalized_x_values = [normalize(x, min_x, max_x) for x in x_values]
+        normalized_y_values = [normalize(y, min_y, max_y) for y in y_values]
+
+        distances_to_utopia = [
+            ((x - normalize(utopia_x, min_x, max_x)) ** 2 + (y - normalize(utopia_y, min_y, max_y)) ** 2) ** 0.5
+            for x, y in zip(normalized_x_values, normalized_y_values)
+        ]
+
+        # Find the index of the ideal point (minimizing distance to Utopia)
+        ideal_index = np.argmin(distances_to_utopia)
+
+        # Adding indicator for the closest Pareto optimal point
+        fig.add_trace(go.Scatter(x=[x_values[ideal_index]], y=[y_values[ideal_index]], mode='markers+text',
+                                 marker=dict(symbol='circle', color='yellow', size=15),
+                                 text=['Closest Point <br> to Utopia'], textfont=dict(size=16),
+                                 textposition='bottom left'))
+        fig.add_trace(
+            go.Scatter(x=x_values, y=y_values, mode='lines+text', name='Pareto Optimal Line', text=['Pareto Front'],
+                       textposition='bottom right',textfont=dict(size=16), line=dict(color='red', width=1)))
+        # fig.update_traces(hoverinfo='none', hover_template=None)
+
+        fig.update_layout(
+            title={
+                'text': f'Scatter Plot for {i[0]} vs {i[1]}',  # Add a title
+                'x': 0.5,  # Center the title
+                'xanchor': 'center',
+                'yanchor': 'top'
+            },
+            xaxis_title=i[0],
+            yaxis_title=i[1],
+            xaxis=dict(
+                title_font=dict(size=18),  # Font size for x-axis label
+                tickfont=dict(size=16)  # Font size for x-axis tick marks
+            ),
+            yaxis=dict(
+                title_font=dict(size=18),  # Font size for y-axis label
+                tickfont=dict(size=16)  # Font size for y-axis tick marks
+            ),
+            showlegend=False, # Remove legend
+            margin=dict(l=20, r=20, t=40, b=20)  # Adjust margins to achieve tight layout
+
+        )
+        # app = Dash(__name__)
+        # app.layout = html.Div([
+        #     dcc.Graph(id="graph-basic-2", figure=fig, clear_on_unhover=True),
+        #     dcc.Tooltip(id="graph-tooltip"),
+        # ])
+        #
+        # @callback(
+        #     Output("graph-tooltip", "show"),
+        #     Output("graph-tooltip", "bbox"),
+        #     Output("graph-tooltip", "children"),
+        #     Input("graph-basic-2", "hoverData"),
+        # )
+        # def display_hover(hoverData):
+        #     if hoverData is None:
+        #         return False, no_update, no_update
+        #
+        #     # demo only shows the first point, but other points may also be available
+        #     pt = hoverData["points"][0]
+        #     bbox = pt["bbox"]
+        #     num = pt["pointNumber"]
+        #
+        #     df_row = df.iloc[num]
+        #     img_src = df_row['IMG_URL']
+        #     name = df_row['NAME']
+        #     form = df_row['FORM']
+        #     desc = df_row['DESC']
+        #     if len(desc) > 300:
+        #         desc = desc[:100] + '...'
+        #
+        #     children = [
+        #         html.Div([
+        #             html.Img(src=img_src, style={"width": "100%"}),
+        #             html.H2(f"{name}", style={"color": "darkblue", "overflow-wrap": "break-word"}),
+        #             html.P(f"{form}"),
+        #             html.P(f"{desc}"),
+        #         ], style={'width': '200px', 'white-space': 'normal'})
+        #     ]
+        #
+        #     return True, bbox, children
+        fig.show(renderer='browser')
 def plot_distribution(df):
 
     df = df.reset_index(drop=True)
