@@ -641,10 +641,13 @@ for i, combination in enumerate(column_combinations):
 #     # plot_3D(*combination)
 #     # plot_3D_interactive(*combination)
 #     plot_2D(*combination)
-#
-# # optimal = check_pareto_optimality('Spatial Coverage [km^2]', 'Temporal Coverage [days]')
-# # optimal.sort(key=lambda point: point[0])
-# plot_parallel_coordinates(df, 'all', num_of_racetracks)
+# #
+# # # optimal = check_pareto_optimality('Spatial Coverage [km^2]', 'Temporal Coverage [days]')
+# # # optimal.sort(key=lambda point: point[0])
+plot_parallel_coordinates(df, 'all', num_of_racetracks)
 # plot_scatter_matrix(df)
-corr_heatmap(df)
-df_pareto_opt = check_optimality(df)
+# corr_heatmap(df)
+# df_pareto_opt = check_optimality(df)
+interactive_plot(df)
+# corr_heatmap(big_df)
+
